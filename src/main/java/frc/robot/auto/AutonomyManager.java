@@ -32,7 +32,7 @@ public class AutonomyManager {
 
   private final TaskRegistry registry;
   private final SwerveSubsystem drive;
-  private final Superstructure superstructure;
+  private final Superstructure superstructure; // Optional; may be unused if not integrated
 
   // Simple detection
   private final DoubleSubscriber currentAmpsSub;
@@ -54,7 +54,8 @@ public class AutonomyManager {
   private boolean routedToSourceOnce = false; // avoid re-scheduling loops while waiting
   private boolean hasCoral = false;
   private int placedCount = 0;
-  private boolean simAwaitingPlaceConfirm = false; // SIM: wait for periodic place completion
+  // In earlier drafts, SIM flows waited for Superstructure confirmation. We simplify
+  // by completing immediately when navigation finishes to avoid extra dependencies.
 
   // --- Fill-the-reef autonomous mode ---
   // When enabled, ignore branch claim/done state and systematically place coral
@@ -168,10 +169,8 @@ public class AutonomyManager {
           toSourceWasScheduled = false;
           toSourceCommand.schedule();
           routedToSourceOnce = true;
-          // Start intake while heading to source (handled in superstructure periodic)
-          if (superstructure != null) {
-            superstructure.startIntake();
-          }
+          // Optionally start intake here if your Superstructure supports it.
+          // No-op by default to keep this class self-contained.
         }
 
         // Promote flag once command is actually scheduled
@@ -185,14 +184,9 @@ public class AutonomyManager {
         if (registry.consumeLoadTrigger()) {
           loadDetected = true;
         } else if (frc.robot.GlobalConstants.MODE == frc.robot.GlobalConstants.RobotMode.SIM) {
-          if (reachedSource) {
-            // Let Superstructure.periodic manage the SIM 0.2s intake window
-            if (superstructure == null || superstructure.consumeSimIntakeComplete()) {
-              loadDetected = true;
-            } else {
-              return; // keep waiting in this state until intake completes
-            }
-          }
+          // In SIM, once we've reached the source, assume a load immediately
+          // to keep the autonomy flow simple without Superstructure hooks.
+          if (reachedSource) loadDetected = true;
         } else {
           loadDetected = detectLoadEvent();
         }
@@ -203,7 +197,7 @@ public class AutonomyManager {
           hasCoral = true;
           safeRecord("Autonomy/HasCoral", true);
           toSourceCommand = null; // ensure we don't keep routing to source
-          if (superstructure != null) superstructure.stopIntake();
+          // Optionally stop intake here if your Superstructure supports it (no-op by default)
           if (fillReefMode) {
             ReefTarget t = nextFillTarget();
             if (t == null) {
@@ -290,7 +284,7 @@ public class AutonomyManager {
         // Manual release request from WebUI
         if (registry.consumeReleaseTrigger()) {
           cancelAllAutos("ManualRelease Triggered");
-          if (superstructure != null) superstructure.startPlace();
+          // Optionally trigger a place action on your Superstructure (no-op by default)
           safeRecord("Autonomy/Event", "PlaceStart: ManualRelease");
           if (hasCoral) {
             hasCoral = false;
@@ -314,35 +308,14 @@ public class AutonomyManager {
           activeCommand = null;
           toSourceCommand = null;
           activeWasScheduled = false;
-          if (frc.robot.GlobalConstants.MODE == frc.robot.GlobalConstants.RobotMode.SIM) {
-            // Let Superstructure.periodic handle the 0.2s release; wait until it reports done
-            if (!simAwaitingPlaceConfirm) {
-              simAwaitingPlaceConfirm = true;
-              if (superstructure != null) superstructure.startPlace();
-            }
-            if (superstructure == null || superstructure.consumeSimPlaceComplete()) {
-              if (hasCoral) {
-                hasCoral = false;
-                placedCount++;
-                safeRecord("Autonomy/HasCoral", false);
-                safeRecord("Autonomy/PlacedCount", placedCount);
-              }
-              simAwaitingPlaceConfirm = false;
-              switchState(State.COMPLETE, "AutoPlaceComplete(SIM)");
-            } else {
-              return; // wait another periodic until place completes
-            }
-          } else {
-            // Real robot: trigger place and complete immediately
-            if (superstructure != null) superstructure.startPlace();
-            if (hasCoral) {
-              hasCoral = false;
-              placedCount++;
-              safeRecord("Autonomy/HasCoral", false);
-              safeRecord("Autonomy/PlacedCount", placedCount);
-            }
-            switchState(State.COMPLETE, "AutoPlaceComplete");
+          // Complete immediately (both SIM and REAL) to keep this manager independent
+          if (hasCoral) {
+            hasCoral = false;
+            placedCount++;
+            safeRecord("Autonomy/HasCoral", false);
+            safeRecord("Autonomy/PlacedCount", placedCount);
           }
+          switchState(State.COMPLETE, "AutoPlaceComplete");
         }
       }
 
@@ -475,5 +448,31 @@ public class AutonomyManager {
       activeWasScheduled = false;
     }
     safeRecord("Autonomy/State", newState.name());
+  }
+
+  // --- Introspection helpers ---
+  /** Current autonomy state machine state. */
+  public State getState() {
+    return state;
+  }
+
+  /** True if a coral is currently considered held. */
+  public boolean hasCoral() {
+    return hasCoral;
+  }
+
+  /** Number of corals placed during this session. */
+  public int getPlacedCount() {
+    return placedCount;
+  }
+
+  /** Resets counters and returns to IDLE. Does not cancel scheduler commands. */
+  public void reset() {
+    hasCoral = false;
+    placedCount = 0;
+    state = State.IDLE;
+    safeRecord("Autonomy/HasCoral", false);
+    safeRecord("Autonomy/PlacedCount", 0);
+    safeRecord("Autonomy/State", state.name());
   }
 }

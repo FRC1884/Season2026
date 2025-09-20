@@ -63,6 +63,32 @@ public class DriveCommands {
 
   private DriveCommands() {}
 
+  // --- Alignment context & telemetry helpers (used by autonomy helpers) ---
+  private static volatile String alignContext = "";
+  private static volatile String alignName = "";
+
+  public static void setAlignContext(String context, String name) {
+    alignContext = context == null ? "" : context;
+    alignName = name == null ? "" : name;
+    try {
+      Logger.recordOutput("Autonomy/AlignContext", alignContext);
+      Logger.recordOutput("Autonomy/AlignName", alignName);
+    } catch (Throwable ignored) {
+    }
+  }
+
+  public static void clearAlignTelemetry() {
+    alignContext = "";
+    alignName = "";
+    try {
+      Logger.recordOutput("Autonomy/AlignContext", "");
+      Logger.recordOutput("Autonomy/AlignName", "");
+      // Clear any controller overrides
+      PPHolonomicDriveController.clearXYFeedbackOverride();
+    } catch (Throwable ignored) {
+    }
+  }
+
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
     double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), DEADBAND);
@@ -272,6 +298,12 @@ public class DriveCommands {
         chasePoseRobotRelativeCommand(drive, targetOffset));
   }
 
+  // Overload that accepts a context string; delegates to the base implementation
+  public static Command pathfindThenPIDCommand(
+      SwerveSubsystem drive, Supplier<Pose2d> target, String context) {
+    return pathfindThenPIDCommand(drive, target);
+  }
+
   /** Updates the path to override for the coral offset */
   public static Command overridePathplannerCoralOffset(DoubleSupplier offset) {
     return Commands.run(
@@ -365,6 +397,14 @@ public class DriveCommands {
           return chasePoseRobotRelativeCommand(drive, correctedTargetOffset);
         },
         Set.of(drive));
+  }
+
+  // Convenience wrapper: faceIndex in [1..6], branchOffsetIndex: -1 for left (A), +1 for right (B)
+  public static Command alignToReefBranchCommandAuto(
+      SwerveSubsystem drive, int faceIndex, int branchOffsetIndex) {
+    BooleanSupplier left = () -> branchOffsetIndex < 0;
+    Supplier<Integer> face = () -> Math.max(1, Math.min(6, faceIndex));
+    return alignToReefCommandAuto(drive, left, face);
   }
 
   // align to target face
