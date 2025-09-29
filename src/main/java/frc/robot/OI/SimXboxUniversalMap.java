@@ -23,6 +23,10 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
     return button(7);
   }
 
+  public Trigger testing() {
+    return null;
+  }
+
   @Override
   public Trigger rightAlign() {
     return button(8);

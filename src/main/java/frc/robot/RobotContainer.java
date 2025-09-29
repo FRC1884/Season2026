@@ -17,6 +17,7 @@ import static frc.robot.Config.Controllers.getDriverController;
 import static frc.robot.Config.Controllers.getOperatorController;
 import static frc.robot.Config.Subsystems.*;
 import static frc.robot.GlobalConstants.MODE;
+import static frc.robot.subsystems.Superstructure.SuperStates.IDLING;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_LEFT;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_RIGHT;
 import static frc.robot.subsystems.swerve.SwerveConstants.FRONT_LEFT;
@@ -43,6 +44,7 @@ import frc.robot.OI.OperatorMap;
 import frc.robot.commands.AutoCommands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.Superstructure;
+import frc.robot.subsystems.Superstructure.SuperStates;
 import frc.robot.subsystems.swerve.GyroIO;
 import frc.robot.subsystems.swerve.GyroIONavX;
 import frc.robot.subsystems.swerve.GyroIOPigeon2;
@@ -249,7 +251,12 @@ public class RobotContainer {
     }
   }
 
-  private void configureOperatorButtonBindings() {}
+  private void configureOperatorButtonBindings() {
+    operator
+        .testing()
+        .onTrue(superstructure.setSuperStateCmd(SuperStates.TESTING))
+        .onFalse(superstructure.setSuperStateCmd(IDLING));
+  }
 
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.

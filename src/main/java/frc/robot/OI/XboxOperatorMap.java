@@ -5,6 +5,7 @@ import static edu.wpi.first.wpilibj2.command.Commands.startEnd;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 
 public class XboxOperatorMap extends CommandXboxController implements OperatorMap {
 
@@ -21,5 +22,9 @@ public class XboxOperatorMap extends CommandXboxController implements OperatorMa
   public Command rumble() {
     return startEnd(
         () -> getHID().setRumble(kBothRumble, 1), () -> getHID().setRumble(kBothRumble, 0));
+  }
+
+  public Trigger testing() {
+    return null;
   }
 }
