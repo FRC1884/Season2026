@@ -1,9 +1,11 @@
 package frc.robot.auto;
 
 import edu.wpi.first.networktables.BooleanPublisher;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.networktables.StringSubscriber;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -98,6 +100,19 @@ public class TaskRegistry {
   @Getter private volatile String targetName = "";
   private StringPublisher targetNamePub = null;
 
+  // UI->Robot control (subscribers)
+  private BooleanSubscriber ctlAutonomousEnabledSub = null;
+  private StringSubscriber ctlTargetFaceSub = null;
+  private StringSubscriber ctlTargetSideSub = null;
+  private StringSubscriber ctlTargetLevelSub = null;
+  private StringSubscriber ctlTargetNameSub = null;
+  private BooleanSubscriber ctlTriggerLoadSub = null;
+  private BooleanSubscriber ctlTriggerReleaseSub = null;
+  private BooleanSubscriber ctlSendSub = null;
+  private boolean lastCtlTriggerLoad = false;
+  private boolean lastCtlTriggerRelease = false;
+  private boolean lastCtlSend = false;
+
   public TaskRegistry() {
     this(true);
   }
@@ -128,6 +143,17 @@ public class TaskRegistry {
       targetSidePub = table.getStringTopic("TargetSide").publish();
       targetLevelPub = table.getStringTopic("TargetLevel").publish();
       targetNamePub = table.getStringTopic("TargetName").publish();
+
+      // UI->Robot control subscribers under a Control namespace to avoid echo loops
+      NetworkTable ctl = table.getSubTable("Control");
+      ctlAutonomousEnabledSub = ctl.getBooleanTopic("AutonomousEnabled").subscribe(false);
+      ctlTargetFaceSub = ctl.getStringTopic("TargetFace").subscribe("");
+      ctlTargetSideSub = ctl.getStringTopic("TargetSide").subscribe("");
+      ctlTargetLevelSub = ctl.getStringTopic("TargetLevel").subscribe("");
+      ctlTargetNameSub = ctl.getStringTopic("TargetName").subscribe("");
+      ctlTriggerLoadSub = ctl.getBooleanTopic("TriggerLoad").subscribe(false);
+      ctlTriggerReleaseSub = ctl.getBooleanTopic("TriggerRelease").subscribe(false);
+      ctlSendSub = ctl.getBooleanTopic("Send").subscribe(false);
     }
     publishSelection();
   }
@@ -327,6 +353,73 @@ public class TaskRegistry {
       if (targetLevelPub != null) targetLevelPub.set(selectedLevel.name());
     } catch (Throwable t) {
       // ignore
+    }
+  }
+
+  /**
+   * Polls NetworkTables Control topics and applies any changes. Call periodically from robot code
+   * (e.g., RobotContainer.periodic()). This enables an external UI to control autonomy without the
+   * embedded HTTP server.
+   */
+  public void pollNetworkControl() {
+    if (table == null) return;
+    try {
+      if (ctlAutonomousEnabledSub != null) {
+        boolean v = ctlAutonomousEnabledSub.get();
+        if (v != isAutonomousEnabled()) setAutonomousEnabled(v);
+      }
+
+      if (ctlTargetFaceSub != null) {
+        String v = ctlTargetFaceSub.get();
+        if (v != null && !v.isBlank()) {
+          try {
+            setSelectedFace(ReefFace.valueOf(v));
+          } catch (IllegalArgumentException ignored) {
+          }
+        }
+      }
+      if (ctlTargetSideSub != null) {
+        String v = ctlTargetSideSub.get();
+        if (v != null && !v.isBlank()) {
+          try {
+            setSelectedSide(ApproachSide.valueOf(v));
+          } catch (IllegalArgumentException ignored) {
+          }
+        }
+      }
+      if (ctlTargetLevelSub != null) {
+        String v = ctlTargetLevelSub.get();
+        if (v != null && !v.isBlank()) {
+          try {
+            setSelectedLevel(CoralLevel.valueOf(v));
+          } catch (IllegalArgumentException ignored) {
+          }
+        }
+      }
+      if (ctlTargetNameSub != null) {
+        String v = ctlTargetNameSub.get();
+        if (v != null && !v.isBlank() && !v.equals(targetName)) {
+          setTargetName(v);
+        }
+      }
+
+      // One-shot triggers on rising edge
+      if (ctlTriggerLoadSub != null) {
+        boolean cur = ctlTriggerLoadSub.get();
+        if (cur && !lastCtlTriggerLoad) triggerLoad();
+        lastCtlTriggerLoad = cur;
+      }
+      if (ctlTriggerReleaseSub != null) {
+        boolean cur = ctlTriggerReleaseSub.get();
+        if (cur && !lastCtlTriggerRelease) triggerRelease();
+        lastCtlTriggerRelease = cur;
+      }
+      if (ctlSendSub != null) {
+        boolean cur = ctlSendSub.get();
+        if (cur && !lastCtlSend) requestSend();
+        lastCtlSend = cur;
+      }
+    } catch (Throwable ignored) {
     }
   }
 

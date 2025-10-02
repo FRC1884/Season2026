@@ -137,6 +137,27 @@ tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
 
+tasks.register("runWebUITest", JavaExec) {
+    group = "application"
+    description = "Launches the standalone WebUI test server."
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass.set("frc.robot.auto.WebUITestMain")
+
+    def forwarded = System.properties.findAll { entry ->
+        entry.key instanceof String && entry.key.startsWith("webui.")
+    }
+    if (!forwarded.isEmpty()) {
+        systemProperties(forwarded.collectEntries { k, v -> [(k.toString()): v] })
+    }
+
+    if (project.hasProperty("webuiPort")) {
+        systemProperty("webui.port", project.property("webuiPort"))
+    }
+    if (project.hasProperty("webuiBind")) {
+        systemProperty("webui.bindAddress", project.property("webuiBind"))
+    }
+}
+
 // Create version file
 project.compileJava.dependsOn(createVersionFile)
 gversion {

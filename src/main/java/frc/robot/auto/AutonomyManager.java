@@ -5,7 +5,6 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
@@ -338,7 +337,8 @@ public class AutonomyManager {
   private void cancelAllAutos(String reason) {
     try {
       safeRecord("Autonomy/Event", "CancelAll: " + reason);
-      CommandScheduler.getInstance().cancelAll();
+      cancelCommandQuietly(activeCommand);
+      cancelCommandQuietly(toSourceCommand);
       // Also clear align telemetry to avoid stale UI values lingering
       try {
         frc.robot.commands.DriveCommands.clearAlignTelemetry();
@@ -350,6 +350,16 @@ public class AutonomyManager {
       activeBranch = null;
       activeWasScheduled = false;
       toSourceWasScheduled = false;
+    } catch (Throwable ignored) {
+    }
+  }
+
+  private static void cancelCommandQuietly(Command command) {
+    if (command == null) return;
+    try {
+      if (command.isScheduled()) {
+        command.cancel();
+      }
     } catch (Throwable ignored) {
     }
   }

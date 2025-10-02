@@ -14,10 +14,19 @@ import java.util.stream.Collectors;
 public class WebUI {
   private final HttpServer server;
   private final TaskRegistry registry;
+  private final String bindAddress;
+  private final int port;
 
   public WebUI(TaskRegistry registry, int port) throws IOException {
+    this(registry, null, port);
+  }
+
+  public WebUI(TaskRegistry registry, String bindAddress, int port) throws IOException {
     this.registry = registry;
-    this.server = HttpServer.create(new InetSocketAddress(port), 0);
+    String address = (bindAddress == null || bindAddress.isBlank()) ? "0.0.0.0" : bindAddress;
+    this.bindAddress = address;
+    this.port = port;
+    this.server = HttpServer.create(new InetSocketAddress(this.bindAddress, this.port), 0);
 
     server.createContext("/", new RootHandler());
     server.createContext("/api/state", new StateHandler());

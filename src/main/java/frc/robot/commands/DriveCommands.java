@@ -19,6 +19,7 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.HolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -34,7 +35,6 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.DeferredCommand;
 import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import frc.robot.GlobalConstants;
 import frc.robot.subsystems.swerve.SwerveConstants;
@@ -58,6 +58,19 @@ public class DriveCommands {
   // characterization
   private static final double FF_START_DELAY = 2.0; // Secs
   private static final double FF_RAMP_RATE = 0.1; // Volts/Sec
+
+  private static final double ALIGN_TRANSLATION_KP = 4.5;
+  private static final double ALIGN_TRANSLATION_KD = 0.25;
+  private static final double ALIGN_ROTATION_KP = 6.0;
+  private static final double ALIGN_ROTATION_KD = 0.0;
+  private static final TrapezoidProfile.Constraints ALIGN_ROTATION_CONSTRAINTS =
+      new TrapezoidProfile.Constraints(Math.toRadians(540.0), Math.toRadians(900.0));
+  private static final double ALIGN_MAX_TRANSLATIONAL_SPEED = Units.feetToMeters(8.0); // ~2.4 m/s
+  private static final double ALIGN_MAX_ANGULAR_SPEED = Math.toRadians(450.0);
+  private static final double ALIGN_TRANSLATION_SLEW_RATE = 4.0; // m/s^2
+  private static final double ALIGN_ROTATION_SLEW_RATE = Math.toRadians(720.0); // rad/s^2
+  private static final double ALIGN_MANUAL_MAX_SPEED = Units.feetToMeters(3.5);
+  private static final double REEF_TANGENT_BUFFER_METERS = 0.0;
   private static final double WHEEL_RADIUS_MAX_VELOCITY = 0.25; // Rad/Sec
   private static final double WHEEL_RADIUS_RAMP_RATE = 0.05; // Rad/Sec^2
 
@@ -197,105 +210,135 @@ public class DriveCommands {
         .beforeStarting(() -> angleController.reset(drive.getRotation().getRadians()));
   }
 
-  // use PID to align to a target
+  // use a holonomic controller to align to a target pose like elite FRC teams
   public static Command chasePoseRobotRelativeCommand(
       SwerveSubsystem drive, Supplier<Transform2d> targetOffset) {
-    TrapezoidProfile.Constraints X_CONSTRAINTS = new TrapezoidProfile.Constraints(10, 10);
-    TrapezoidProfile.Constraints Y_CONSTRAINTS = new TrapezoidProfile.Constraints(10, 10);
-    // TrapezoidProfile.Constraints OMEGA_CONSTRAINTS =   new TrapezoidProfile.Constraints(1, 1.5);
+    return holonomicAlignCommand(
+        drive, () -> drive.getPose().plus(targetOffset.get()), () -> 0.0, false, true);
+  }
 
-    ProfiledPIDController xController = new ProfiledPIDController(2, 0, 0.0, X_CONSTRAINTS);
-    ProfiledPIDController yController = new ProfiledPIDController(1.5, 0, 0.0, Y_CONSTRAINTS);
-    PIDController omegaPID = new PIDController(0.03, 0, 0.0);
+  /** Command to align the robot to a target while giving the driver tangent control in Y. */
+  public static Command chasePoseRobotRelativeCommandYOverride(
+      SwerveSubsystem drive, Supplier<Transform2d> targetOffset, DoubleSupplier yDriver) {
+    return holonomicAlignCommand(
+        drive, () -> drive.getPose().plus(targetOffset.get()), yDriver, true, false);
+  }
 
-    xController.setTolerance(0.01);
-    yController.setTolerance(0.01);
-    omegaPID.setTolerance(0.05);
-    omegaPID.enableContinuousInput(-180, 180);
+  private static Command holonomicAlignCommand(
+      SwerveSubsystem drive,
+      Supplier<Pose2d> targetSupplier,
+      DoubleSupplier manualTangentSupplier,
+      boolean allowManualTangent,
+      boolean finishWhenAligned) {
+    return Commands.defer(
+        () -> {
+          PIDController xController =
+              new PIDController(ALIGN_TRANSLATION_KP, 0.0, ALIGN_TRANSLATION_KD);
+          PIDController yController =
+              new PIDController(ALIGN_TRANSLATION_KP, 0.0, ALIGN_TRANSLATION_KD);
+          ProfiledPIDController thetaController =
+              new ProfiledPIDController(
+                  ALIGN_ROTATION_KP, 0.0, ALIGN_ROTATION_KD, ALIGN_ROTATION_CONSTRAINTS);
+          thetaController.enableContinuousInput(-Math.PI, Math.PI);
+          HolonomicDriveController holonomicController =
+              new HolonomicDriveController(xController, yController, thetaController);
+          holonomicController.setTolerance(
+              new Pose2d(
+                  new Translation2d(0.03, 0.03), new Rotation2d(Units.degreesToRadians(1.5))));
 
-    return new DeferredCommand(
-        () ->
-            new FunctionalCommand(
-                () -> {
-                  // Init
-                },
-                () -> {
-                  double ySpeed = yController.calculate(0, targetOffset.get().getY());
-                  double xSpeed = xController.calculate(0, targetOffset.get().getX());
-                  double omegaSpeed =
-                      omegaPID.calculate(0, targetOffset.get().getRotation().getDegrees());
-                  DriveCommands.robotRelativeChassisSpeedDrive(
-                      drive, new ChassisSpeeds(xSpeed * 1.2, ySpeed * 1.2, omegaSpeed * 1.2));
-                },
-                interrupted -> {
-                  DriveCommands.robotRelativeChassisSpeedDrive(drive, new ChassisSpeeds());
-                  omegaPID.close();
-                  System.out.println("aligned now");
-                },
-                () -> {
-                  return omegaPID.atSetpoint() && xController.atGoal() && yController.atGoal();
-                },
-                drive),
+          SlewRateLimiter vxLimiter = new SlewRateLimiter(ALIGN_TRANSLATION_SLEW_RATE);
+          SlewRateLimiter vyLimiter = new SlewRateLimiter(ALIGN_TRANSLATION_SLEW_RATE);
+          SlewRateLimiter omegaLimiter = new SlewRateLimiter(ALIGN_ROTATION_SLEW_RATE);
+
+          return new FunctionalCommand(
+              () -> thetaController.reset(drive.getRotation().getRadians()),
+              () -> {
+                Pose2d currentPose = drive.getPose();
+                Pose2d targetPose = targetSupplier.get();
+
+                ChassisSpeeds fieldRelativeSpeeds =
+                    holonomicController.calculate(
+                        currentPose, targetPose, 0.0, targetPose.getRotation());
+
+                if (allowManualTangent) {
+                  double manualMetersPerSecond =
+                      MathUtil.applyDeadband(manualTangentSupplier.getAsDouble(), 0.07)
+                          * ALIGN_MANUAL_MAX_SPEED;
+                  if (Math.abs(manualMetersPerSecond) > 1e-3) {
+                    Translation2d manualVelocity =
+                        new Translation2d(0.0, manualMetersPerSecond)
+                            .rotateBy(targetPose.getRotation());
+                    fieldRelativeSpeeds =
+                        new ChassisSpeeds(
+                            fieldRelativeSpeeds.vxMetersPerSecond + manualVelocity.getX(),
+                            fieldRelativeSpeeds.vyMetersPerSecond + manualVelocity.getY(),
+                            fieldRelativeSpeeds.omegaRadiansPerSecond);
+                  }
+                }
+
+                ChassisSpeeds limited = clampChassisSpeeds(fieldRelativeSpeeds);
+                double vx = vxLimiter.calculate(limited.vxMetersPerSecond);
+                double vy = vyLimiter.calculate(limited.vyMetersPerSecond);
+                double omega = omegaLimiter.calculate(limited.omegaRadiansPerSecond);
+
+                ChassisSpeeds robotRelativeSpeeds =
+                    ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation());
+                drive.runVelocity(robotRelativeSpeeds);
+
+                Pose2d errorPose = targetPose.relativeTo(currentPose);
+                Logger.recordOutput(
+                    "Autonomy/AlignErrorMeters",
+                    new double[] {
+                      errorPose.getX(), errorPose.getY(), errorPose.getRotation().getDegrees()
+                    });
+              },
+              interrupted -> drive.runVelocity(new ChassisSpeeds()),
+              () -> finishWhenAligned && holonomicController.atReference(),
+              drive);
+        },
         Set.of(drive));
   }
 
-  /**
-   * Command to align the robot to a target with robot relative driving with an override of the
-   * robot's x direction using the driver's y axis
-   */
-  public static Command chasePoseRobotRelativeCommandYOverride(
-      SwerveSubsystem drive, Supplier<Transform2d> targetOffset, DoubleSupplier yDriver) {
-    TrapezoidProfile.Constraints X_CONSTRAINTS = new TrapezoidProfile.Constraints(10, 10);
-    TrapezoidProfile.Constraints Y_CONSTRAINTS = new TrapezoidProfile.Constraints(10, 10);
-    // TrapezoidProfile.Constraints OMEGA_CONSTRAINTS =   new TrapezoidProfile.Constraints(1, 1.5);
+  private static ChassisSpeeds clampChassisSpeeds(ChassisSpeeds speeds) {
+    double maxComponent =
+        Math.max(
+            1.0,
+            Math.max(
+                Math.abs(speeds.vxMetersPerSecond) / ALIGN_MAX_TRANSLATIONAL_SPEED,
+                Math.abs(speeds.vyMetersPerSecond) / ALIGN_MAX_TRANSLATIONAL_SPEED));
+    double vx = speeds.vxMetersPerSecond / maxComponent;
+    double vy = speeds.vyMetersPerSecond / maxComponent;
+    double omega =
+        MathUtil.clamp(
+            speeds.omegaRadiansPerSecond, -ALIGN_MAX_ANGULAR_SPEED, ALIGN_MAX_ANGULAR_SPEED);
+    return new ChassisSpeeds(vx, vy, omega);
+  }
 
-    ProfiledPIDController xController = new ProfiledPIDController(0.5, 0, 0.0, X_CONSTRAINTS);
-    ProfiledPIDController yController = new ProfiledPIDController(0.5, 0, 0.0, Y_CONSTRAINTS);
-    PIDController omegaPID = new PIDController(0.03, 0, 0.0);
-
-    xController.setTolerance(0.05);
-    yController.setTolerance(0.03);
-    omegaPID.setTolerance(0.2);
-    omegaPID.enableContinuousInput(-180, 180);
-
-    return new DeferredCommand(
-        () ->
-            new FunctionalCommand(
-                () -> {
-                  // Init
-                },
-                () -> {
-                  double driverInputFactor = 1;
-                  double ySpeed = yDriver.getAsDouble() * driverInputFactor;
-                  double xSpeed = xController.calculate(0, targetOffset.get().getX());
-                  double omegaSpeed =
-                      omegaPID.calculate(0, targetOffset.get().getRotation().getDegrees());
-                  DriveCommands.robotRelativeChassisSpeedDrive(
-                      drive, new ChassisSpeeds(xSpeed, ySpeed, omegaSpeed));
-                },
-                interrupted -> {
-                  DriveCommands.robotRelativeChassisSpeedDrive(drive, new ChassisSpeeds());
-                  omegaPID.close();
-                  System.out.println("aligned now");
-                },
-                () -> {
-                  return false;
-                },
-                drive),
-        Set.of(drive));
+  private static Supplier<Pose2d> reefBranchTargetPose(
+      Supplier<Pose2d> faceSupplier,
+      BooleanSupplier leftAlignSupplier,
+      double forwardOffset,
+      double lateralOffset,
+      double tangentBuffer) {
+    return () -> {
+      Pose2d facePose = faceSupplier.get();
+      double sideSign = leftAlignSupplier.getAsBoolean() ? 1.0 : -1.0;
+      double totalLateral = lateralOffset * sideSign + tangentBuffer * sideSign;
+      Translation2d branchTransform =
+          new Translation2d(forwardOffset, totalLateral).rotateBy(facePose.getRotation());
+      return new Pose2d(facePose.getTranslation().plus(branchTransform), facePose.getRotation());
+    };
   }
 
   // run the pathfind then follow command and then use PID to align on termination
   public static Command pathfindThenPIDCommand(SwerveSubsystem drive, Supplier<Pose2d> target) {
-    Supplier<Transform2d> targetOffset = () -> target.get().minus(drive.getPose());
-
     PathConstraints constraints = new PathConstraints(0.5, 1, 0.5, 0.5);
 
     double endVelocity = 0.0;
 
     return Commands.sequence(
         AutoBuilder.pathfindToPose(target.get(), constraints, endVelocity),
-        chasePoseRobotRelativeCommand(drive, targetOffset));
+        holonomicAlignCommand(drive, target, () -> 0.0, false, true));
   }
 
   // Overload that accepts a context string; delegates to the base implementation
@@ -368,33 +411,15 @@ public class DriveCommands {
                   + GlobalConstants.AlignOffsets.REEF_TO_BUMPER_OFFSET;
 
           BooleanSupplier leftAlign = isFieldRelativeLeftAlign(targetFace, leftInput);
-          double yOffset =
-              GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET
-                  * (leftAlign.getAsBoolean() ? 1 : -1);
-          Rotation2d rotation = targetFace.get().getRotation();
-          Translation2d branchTransform = new Translation2d(xOffset, yOffset).rotateBy(rotation);
           Supplier<Pose2d> target =
-              () ->
-                  new Pose2d(
-                      targetFace.get().getTranslation().plus(branchTransform),
-                      targetFace.get().getRotation());
+              reefBranchTargetPose(
+                  targetFace,
+                  leftAlign,
+                  xOffset,
+                  GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET,
+                  REEF_TANGENT_BUFFER_METERS);
 
-          Supplier<Transform2d> targetOffset = () -> target.get().minus(drive.getPose());
-
-          boolean outsideApproach =
-              leftAlign.getAsBoolean()
-                  ? targetOffset.get().getMeasureY().magnitude() < 0
-                  : targetOffset.get().getMeasureY().magnitude() > 0;
-
-          Supplier<Transform2d> correctedTargetOffset =
-              () ->
-                  new Transform2d(
-                      new Translation2d(
-                          targetOffset.get().getMeasureX().magnitude(),
-                          targetOffset.get().getMeasureY().magnitude()),
-                      targetOffset.get().getRotation());
-
-          return chasePoseRobotRelativeCommand(drive, correctedTargetOffset);
+          return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
         },
         Set.of(drive));
   }
@@ -430,36 +455,15 @@ public class DriveCommands {
                   + GlobalConstants.AlignOffsets.REEF_TO_BUMPER_OFFSET;
 
           BooleanSupplier leftAlign = isFieldRelativeLeftAlign(targetFace, leftInput);
-          double yOffset =
-              GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET
-                  * (leftAlign.getAsBoolean() ? 1 : -1);
-          Rotation2d rotation = targetFace.get().getRotation();
-          Translation2d branchTransform = new Translation2d(xOffset, yOffset).rotateBy(rotation);
           Supplier<Pose2d> target =
-              () ->
-                  new Pose2d(
-                      targetFace.get().getTranslation().plus(branchTransform),
-                      targetFace.get().getRotation());
+              reefBranchTargetPose(
+                  targetFace,
+                  leftAlign,
+                  xOffset,
+                  GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET,
+                  0.0);
 
-          Supplier<Transform2d> targetOffset = () -> target.get().minus(drive.getPose());
-
-          boolean outsideApproach =
-              leftAlign.getAsBoolean()
-                  ? targetOffset.get().getMeasureY().magnitude() < 0
-                  : targetOffset.get().getMeasureY().magnitude() > 0;
-
-          // this number is the offset for approaching from the inside
-          double directionalIncrease = 0.15;
-          Supplier<Transform2d> correctedTargetOffset;
-          correctedTargetOffset =
-              () ->
-                  new Transform2d(
-                      new Translation2d(
-                          targetOffset.get().getMeasureX().magnitude(),
-                          targetOffset.get().getMeasureY().magnitude() + directionalIncrease),
-                      targetOffset.get().getRotation());
-
-          return chasePoseRobotRelativeCommand(drive, correctedTargetOffset);
+          return holonomicAlignCommand(drive, target, () -> 0.0, false, false);
         },
         Set.of(drive));
   }
@@ -511,18 +515,20 @@ public class DriveCommands {
       SwerveSubsystem drive, DoubleSupplier yDriver) {
     return Commands.defer(
         () -> {
-          DoubleSupplier driver =
+          DoubleSupplier driverOverride =
               () -> yDriver.getAsDouble() * (shouldFlipDriverOverride(drive) ? -1 : 1);
-          Supplier<Pose2d> target = () -> findClosestCoralStation(drive);
-          Supplier<Transform2d> bumperOffset =
-              () ->
-                  new Transform2d(
-                      new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-                          .rotateBy(target.get().getRotation()),
-                      new Rotation2d());
-          Supplier<Transform2d> robotRelativeOffset =
-              () -> target.get().minus(drive.getPose()).plus(bumperOffset.get());
-          return chasePoseRobotRelativeCommandYOverride(drive, robotRelativeOffset, driver);
+          Supplier<Pose2d> target =
+              () -> {
+                Pose2d station = findClosestCoralStation(drive);
+                Transform2d bumper =
+                    new Transform2d(
+                        new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
+                            .rotateBy(station.getRotation()),
+                        new Rotation2d());
+                return station.plus(bumper);
+              };
+
+          return holonomicAlignCommand(drive, target, driverOverride, true, false);
         },
         Set.of(drive));
   }
@@ -530,27 +536,23 @@ public class DriveCommands {
   public static Command alignToNearestCoralStationCommandAuto(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
-          Supplier<Pose2d> target = () -> findClosestCoralStation(drive);
-          Supplier<Transform2d> bumperOffset =
-              () ->
-                  new Transform2d(
-                      new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-                          .rotateBy(target.get().getRotation()),
-                      new Rotation2d());
-          Supplier<Transform2d> sideToSideOffset =
-              () ->
-                  new Transform2d(
-                      new Translation2d(GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO, 0)
-                          .rotateBy(target.get().getRotation()),
-                      new Rotation2d());
-          Supplier<Transform2d> robotRelativeOffset =
-              () ->
-                  target
-                      .get()
-                      .minus(drive.getPose())
-                      .plus(bumperOffset.get())
-                      .plus(sideToSideOffset.get());
-          return chasePoseRobotRelativeCommand(drive, robotRelativeOffset);
+          Supplier<Pose2d> target =
+              () -> {
+                Pose2d base = findClosestCoralStation(drive);
+                Transform2d bumper =
+                    new Transform2d(
+                        new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
+                            .rotateBy(base.getRotation()),
+                        new Rotation2d());
+                Transform2d sideToSide =
+                    new Transform2d(
+                        new Translation2d(GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO, 0)
+                            .rotateBy(base.getRotation()),
+                        new Rotation2d());
+                return base.plus(bumper).plus(sideToSide);
+              };
+
+          return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
         },
         Set.of(drive));
   }

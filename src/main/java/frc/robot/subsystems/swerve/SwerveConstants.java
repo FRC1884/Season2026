@@ -132,6 +132,7 @@ public final class SwerveConstants {
   public static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
 
   public static final double WHEEL_FRICTION_COEFF = COTS.WHEELS.SLS_PRINTED_WHEELS.cof;
+  private static final double MAPLE_SIM_WHEEL_FRICTION_COEFF = Math.min(WHEEL_FRICTION_COEFF, 1.5);
   /** Kilograms per square meter */
   public static final double ROBOT_INERTIA = 6.883;
   /** Kilograms */
@@ -218,7 +219,7 @@ public final class SwerveConstants {
               COTS.ofMAXSwerve(
                       DRIVE_GEARBOX, // Drive motor is a Neo Vortex
                       TURN_GEARBOX, // Steer motor is a Neo 550
-                      WHEEL_FRICTION_COEFF, // Use the COF for Spiky Treads
+                      MAPLE_SIM_WHEEL_FRICTION_COEFF, // Clamp for sim stability
                       2) // Medium Gear ratio
                   .get(),
           switch (GYRO_TYPE) {

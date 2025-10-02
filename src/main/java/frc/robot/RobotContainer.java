@@ -33,14 +33,19 @@ import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_ENAB
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.Config.WebUIConfig;
 import frc.robot.GlobalConstants.RobotMode;
 import frc.robot.OI.DriverMap;
 import frc.robot.OI.OperatorMap;
+import frc.robot.auto.AutonomyManager;
+import frc.robot.auto.TaskRegistry;
+import frc.robot.auto.WebUI;
 import frc.robot.commands.AutoCommands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.Superstructure;
@@ -81,12 +86,31 @@ public class RobotContainer {
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
+  private final LoggedDashboardChooser<Command> characterizationChooser;
+  private final Command autoIdleCommand;
+  private final Command characterizationIdleCommand;
 
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
+  private final TaskRegistry taskRegistry;
+  private final AutonomyManager autonomyManager;
+  private final WebUI webUI;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    characterizationChooser = new LoggedDashboardChooser<>("Characterization/Diagnostics");
+    characterizationIdleCommand = Commands.none();
+    characterizationChooser.addDefaultOption("None", characterizationIdleCommand);
+
+    autoIdleCommand = Commands.none();
+    if (AUTONOMOUS_ENABLED) {
+      autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+    } else {
+      autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+    }
+
     if (DRIVETRAIN_ENABLED) {
       drive =
           switch (MODE) {
@@ -132,29 +156,9 @@ public class RobotContainer {
       drive = null;
     }
     if (AUTONOMOUS_ENABLED) {
-
-      AutoCommands.registerAutoCommands(superstructure, drive);
-
-      // Set up auto routines
-      autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-
-      // Set up SysId routines
-      autoChooser.addOption(
-          "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
-      autoChooser.addOption(
-          "Drive Simple FF Characterization", DriveCommands.feedforwardCharacterization(drive));
-      autoChooser.addOption(
-          "Drive SysId (Quasistatic Forward)",
-          drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward));
-      autoChooser.addOption(
-          "Drive SysId (Quasistatic Reverse)",
-          drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse));
-      autoChooser.addOption(
-          "Drive SysId (Dynamic Forward)", drive.sysIdDynamic(SysIdRoutine.Direction.kForward));
-      autoChooser.addOption(
-          "Drive SysId (Dynamic Reverse)", drive.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-    } else {
-      autoChooser = null;
+      if (drive != null) {
+        AutoCommands.registerAutoCommands(superstructure, drive);
+      }
     }
 
     if (VISION_ENABLED) {
@@ -188,6 +192,58 @@ public class RobotContainer {
             default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
           };
     } else vision = null;
+
+    TaskRegistry registry = null;
+    AutonomyManager manager = null;
+    WebUI ui = null;
+    if (DRIVETRAIN_ENABLED && drive != null) {
+      registry = new TaskRegistry();
+      manager = new AutonomyManager(registry, drive, superstructure, 8.0);
+      if (WebUIConfig.ENABLED) {
+        try {
+          ui = new WebUI(registry, WebUIConfig.BIND_ADDRESS, WebUIConfig.PORT);
+          ui.start();
+          System.out.println(
+              "Autonomy WebUI listening on " + WebUIConfig.BIND_ADDRESS + ":" + WebUIConfig.PORT);
+        } catch (java.io.IOException e) {
+          DriverStation.reportWarning(
+              "Failed to start autonomy WebUI on "
+                  + WebUIConfig.BIND_ADDRESS
+                  + ":"
+                  + WebUIConfig.PORT
+                  + ": "
+                  + e.getMessage(),
+              e.getStackTrace());
+          ui = null;
+        }
+      }
+    }
+    taskRegistry = registry;
+    autonomyManager = manager;
+    webUI = ui;
+
+    if (DRIVETRAIN_ENABLED && drive != null) {
+      characterizationChooser.addOption(
+          "Drive | Wheel Radius Characterization",
+          DriveCommands.wheelRadiusCharacterization(drive).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Feedforward Characterization",
+          DriveCommands.feedforwardCharacterization(drive).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | SysId (Quasistatic Forward)",
+          drive.sysIdQuasistatic(SysIdRoutine.Direction.kForward).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | SysId (Quasistatic Reverse)",
+          drive.sysIdQuasistatic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | SysId (Dynamic Forward)",
+          drive.sysIdDynamic(SysIdRoutine.Direction.kForward).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | SysId (Dynamic Reverse)",
+          drive.sysIdDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+    }
+
+    superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
 
     // Configure the button bindings
     configureDriverButtonBindings();
@@ -264,8 +320,31 @@ public class RobotContainer {
    * @return the command to run in autonomous, or null if the auto chooser is not initialized.
    */
   public Command getAutonomousCommand() {
-    if (autoChooser == null) return null;
-    return autoChooser.get();
+    if (!AUTONOMOUS_ENABLED) return null;
+    Command selected = autoChooser.get();
+    return selected == autoIdleCommand ? null : selected;
+  }
+
+  public Command getCharacterizationCommand() {
+    Command selected = characterizationChooser.get();
+    return selected == characterizationIdleCommand ? null : selected;
+  }
+
+  public void periodic() {
+    if (taskRegistry != null) taskRegistry.pollNetworkControl();
+    if (autonomyManager != null) autonomyManager.periodic();
+  }
+
+  public TaskRegistry getTaskRegistry() {
+    return taskRegistry;
+  }
+
+  public AutonomyManager getAutonomyManager() {
+    return autonomyManager;
+  }
+
+  public WebUI getWebUI() {
+    return webUI;
   }
 
   public void resetSimulationField() {

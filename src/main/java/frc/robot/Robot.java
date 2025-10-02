@@ -36,6 +36,7 @@ import org.littletonrobotics.urcl.URCL;
  */
 public class Robot extends LoggedRobot {
   private Command autonomousCommand;
+  private Command characterizationCommand;
   private RobotContainer robotContainer;
 
   public Robot() {
@@ -103,6 +104,8 @@ public class Robot extends LoggedRobot {
     // the Command-based framework to work.
     CommandScheduler.getInstance().run();
 
+    robotContainer.periodic();
+
     // Return to normal thread priority
     Threads.setCurrentThreadPriority(false, 10);
   }
@@ -120,6 +123,10 @@ public class Robot extends LoggedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
+    if (characterizationCommand != null) {
+      characterizationCommand.cancel();
+      characterizationCommand = null;
+    }
     if (AUTONOMOUS_ENABLED) {
       autonomousCommand = robotContainer.getAutonomousCommand();
 
@@ -144,6 +151,10 @@ public class Robot extends LoggedRobot {
     if (autonomousCommand != null) {
       autonomousCommand.cancel();
     }
+    if (characterizationCommand != null) {
+      characterizationCommand.cancel();
+      characterizationCommand = null;
+    }
   }
 
   /** This function is called periodically during operator control. */
@@ -155,6 +166,15 @@ public class Robot extends LoggedRobot {
   public void testInit() {
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
+
+    characterizationCommand = robotContainer.getCharacterizationCommand();
+    if (characterizationCommand != null) {
+      characterizationCommand.schedule();
+      System.out.println(
+          "Characterization command scheduled: " + characterizationCommand.getName());
+    } else {
+      System.out.println("Characterization chooser set to None; nothing scheduled.");
+    }
   }
 
   /** This function is called periodically during test mode. */

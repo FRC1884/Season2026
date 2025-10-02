@@ -1,9 +1,11 @@
 package frc.robot.auto;
 
+import frc.robot.Config.WebUIConfig;
+
 /**
  * Standalone launcher to test the embedded Web UI on a laptop without deploying to the robot.
  *
- * <p>Usage: ./gradlew webUiTest Then open http://localhost:5801/ on your iPad or laptop browser.
+ * <p>Usage: ./gradlew runWebUITest [-Dwebui.port=5801 -Dwebui.bindAddress=127.0.0.1]
  */
 public class WebUITestMain {
   public static void main(String[] args) throws Exception {
@@ -14,13 +16,14 @@ public class WebUITestMain {
     registry.markClaimed(TaskRegistry.ReefBranch.F1_A);
     registry.markDone(TaskRegistry.ReefBranch.F1_B);
 
-    // Start the HTTP server on a desktop-friendly port
-    int port = 5801;
-    WebUI ui = new WebUI(registry, port);
+    String host = WebUIConfig.BIND_ADDRESS;
+    int port = WebUIConfig.PORT;
+    WebUI ui = new WebUI(registry, host, port);
     ui.start();
 
     System.out.println("WebUI test server running.");
-    System.out.println("Open: http://localhost:" + port + "/");
+    System.out.println(
+        "Open: http://" + ("0.0.0.0".equals(host) ? "localhost" : host) + ":" + port + "/");
     System.out.println("Toggle 'Autonomous Enabled' and click branch buttons to change state.");
     System.out.println("Press Ctrl+C to stop.");
 
