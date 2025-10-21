@@ -296,8 +296,6 @@ public class WebUI {
     }
   }
 
-  // Drop-in replacement for your pageHtml() using Java 17 text blocks.
-  // Visually represents the REEF with interactive branches, bays, and a status list.
   private String pageHtml() {
     return """
 <!doctype html>

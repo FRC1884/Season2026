@@ -460,7 +460,7 @@ public class AutonomyManager {
     safeRecord("Autonomy/State", newState.name());
   }
 
-  // --- Introspection helpers ---
+  //
   /** Current autonomy state machine state. */
   public State getState() {
     return state;
