@@ -225,6 +225,8 @@ public class RobotContainer {
 
     if (DRIVETRAIN_ENABLED && drive != null) {
       characterizationChooser.addOption(
+          "Drive | SysId (Full Routine)", drive.sysIdRoutine().ignoringDisable(true));
+      characterizationChooser.addOption(
           "Drive | Wheel Radius Characterization",
           DriveCommands.wheelRadiusCharacterization(drive).ignoringDisable(true));
       characterizationChooser.addOption(
@@ -329,6 +331,13 @@ public class RobotContainer {
   public Command getCharacterizationCommand() {
     Command selected = characterizationChooser.get();
     return selected == characterizationIdleCommand ? null : selected;
+  }
+
+  public Command getDriveSysIdCommand() {
+    if (!DRIVETRAIN_ENABLED || drive == null) {
+      return Commands.none();
+    }
+    return drive.sysIdRoutine().ignoringDisable(true);
   }
 
   public void periodic() {

@@ -42,6 +42,7 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.GlobalConstants;
@@ -246,6 +247,35 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   /** Returns a command to run a dynamic test in the specified direction. */
   public Command sysIdDynamic(SysIdRoutine.Direction direction) {
     return run(() -> runCharacterization(0.0)).withTimeout(1.0).andThen(sysId.dynamic(direction));
+  }
+
+  /** Runs the full SysId routine (quasistatic + dynamic, forward + reverse). */
+  public Command sysIdRoutine() {
+    return Commands.sequence(
+            Commands.runOnce(
+                () ->
+                    System.out.println(
+                        "[SysId] Drive Subsystem - Quasistatic (Forward) starting."),
+                this),
+            sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+            Commands.runOnce(
+                () ->
+                    System.out.println(
+                        "[SysId] Drive Subsystem - Quasistatic (Reverse) starting."),
+                this),
+            sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+            Commands.runOnce(
+                () ->
+                    System.out.println("[SysId] Drive Subsystem - Dynamic (Forward) starting."),
+                this),
+            sysIdDynamic(SysIdRoutine.Direction.kForward),
+            Commands.runOnce(
+                () ->
+                    System.out.println("[SysId] Drive Subsystem - Dynamic (Reverse) starting."),
+                this),
+            sysIdDynamic(SysIdRoutine.Direction.kReverse),
+            Commands.runOnce(() -> runCharacterization(0.0), this))
+        .withName("DriveSysIdRoutine");
   }
 
   /** Returns the module states (turn angles and drive velocities) for all of the modules. */

@@ -16,6 +16,9 @@ package frc.robot;
 import static frc.robot.Config.Subsystems.AUTONOMOUS_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
 
+import edu.wpi.first.wpilibj.DataLogManager;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -27,6 +30,11 @@ import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.urcl.URCL;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -35,6 +43,9 @@ import org.littletonrobotics.urcl.URCL;
  * project.
  */
 public class Robot extends LoggedRobot {
+  private static final DateTimeFormatter LOG_DIR_FORMAT =
+      DateTimeFormatter.ofPattern("'nt_'yyyy-MM-dd_HH-mm-ss");
+
   private Command autonomousCommand;
   private Command characterizationCommand;
   private RobotContainer robotContainer;
@@ -85,6 +96,8 @@ public class Robot extends LoggedRobot {
 
     // Start AdvantageKit logger
     Logger.start();
+
+    initNetworkTablesLogging();
 
     // Instantiate our RobotContainer. This will perform all our button bindings,
     // and put our autonomous chooser on the dashboard.
@@ -192,5 +205,43 @@ public class Robot extends LoggedRobot {
       SimulatedArena.getInstance().simulationPeriodic();
       robotContainer.displaySimFieldToAdvantageScope();
     }
+  }
+
+  private void initNetworkTablesLogging() {
+    if (MODE == GlobalConstants.RobotMode.REPLAY) {
+      return;
+    }
+
+    Path baseDir =
+        Filesystem.getOperatingDirectory().toPath().resolve("logs").resolve("networktables");
+    Path sessionDir = baseDir.resolve(LOG_DIR_FORMAT.format(LocalDateTime.now()));
+
+    boolean dataLogStarted = false;
+    try {
+      Files.createDirectories(sessionDir);
+      DataLogManager.start(sessionDir.toString());
+      dataLogStarted = true;
+      System.out.println("[NT Log] Writing to " + sessionDir);
+    } catch (IOException e) {
+      System.err.println(
+          "[NT Log] Failed to create log directory "
+              + sessionDir
+              + ": "
+              + e.getMessage()
+              + " — falling back to default datalog location.");
+    } catch (IllegalStateException alreadyStarted) {
+      dataLogStarted = true;
+    }
+
+    if (!dataLogStarted) {
+      try {
+        DataLogManager.start();
+      } catch (IllegalStateException alreadyStarted) {
+        // Already started elsewhere, that's fine.
+      }
+    }
+
+    DataLogManager.logNetworkTables(true);
+    DriverStation.startDataLog(DataLogManager.getLog(), true);
   }
 }
