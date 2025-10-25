@@ -36,8 +36,8 @@ import lombok.Getter;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.SIM;
-  public static final RobotType ROBOT = RobotType.SIMBOT;
+  public static final RobotMode MODE = RobotMode.REAL;
+  public static final RobotType ROBOT = RobotType.COMPBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
 
   public static boolean TUNING_MODE = false;
@@ -71,7 +71,7 @@ public final class GlobalConstants {
   // Blue origin, so we use blue side coords and tags
   public static final class FieldMap {
     public static AprilTagFieldLayout APRIL_TAG_FIELD_LAYOUT;
-    public static final boolean WELDED_FIELD = true;
+    public static final boolean WELDED_FIELD = false;
     public static final boolean COMP_FIELD = true;
 
     static {

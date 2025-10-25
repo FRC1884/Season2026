@@ -102,15 +102,6 @@ public class RobotContainer {
     characterizationIdleCommand = Commands.none();
     characterizationChooser.addDefaultOption("None", characterizationIdleCommand);
 
-    autoIdleCommand = Commands.none();
-    if (AUTONOMOUS_ENABLED) {
-      autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-    } else {
-      autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-    }
-
     if (DRIVETRAIN_ENABLED) {
       drive =
           switch (MODE) {
@@ -152,6 +143,16 @@ public class RobotContainer {
                   new ModuleIO() {},
                   new ModuleIO() {});
           };
+
+      autoIdleCommand = Commands.none();
+      if (AUTONOMOUS_ENABLED) {
+        autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+        autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+      } else {
+        autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+        autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+      }
+
     } else {
       drive = null;
     }
