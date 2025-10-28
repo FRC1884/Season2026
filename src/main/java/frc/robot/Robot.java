@@ -14,6 +14,7 @@
 package frc.robot;
 
 import static frc.robot.Config.Subsystems.AUTONOMOUS_ENABLED;
+import static frc.robot.Config.Subsystems.WEBUI_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
 
 import edu.wpi.first.wpilibj.DataLogManager;
@@ -22,6 +23,12 @@ import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -30,11 +37,6 @@ import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.urcl.URCL;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -49,6 +51,7 @@ public class Robot extends LoggedRobot {
   private Command autonomousCommand;
   private Command characterizationCommand;
   private RobotContainer robotContainer;
+  private ReefControlsIOServer reefControlServer;
 
   public Robot() {
     // Record metadata
@@ -102,6 +105,7 @@ public class Robot extends LoggedRobot {
     // Instantiate our RobotContainer. This will perform all our button bindings,
     // and put our autonomous chooser on the dashboard.
     robotContainer = new RobotContainer();
+    if (WEBUI_ENABLED) reefControlServer = new ReefControlsIOServer();
   }
 
   /** This function is called periodically during all modes. */
@@ -116,8 +120,6 @@ public class Robot extends LoggedRobot {
     // This must be called from the robot's periodic block in order for anything in
     // the Command-based framework to work.
     CommandScheduler.getInstance().run();
-
-    robotContainer.periodic();
 
     // Return to normal thread priority
     Threads.setCurrentThreadPriority(false, 10);
