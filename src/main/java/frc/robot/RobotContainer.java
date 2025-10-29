@@ -17,7 +17,6 @@ import static frc.robot.Config.Controllers.getDriverController;
 import static frc.robot.Config.Controllers.getOperatorController;
 import static frc.robot.Config.Subsystems.*;
 import static frc.robot.GlobalConstants.MODE;
-import static frc.robot.subsystems.Superstructure.SuperStates.IDLING;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_LEFT;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_RIGHT;
 import static frc.robot.subsystems.swerve.SwerveConstants.FRONT_LEFT;
@@ -33,32 +32,18 @@ import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_ENAB
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.Config.WebUIConfig;
 import frc.robot.GlobalConstants.RobotMode;
 import frc.robot.OI.DriverMap;
 import frc.robot.OI.OperatorMap;
-import frc.robot.auto.AutonomyManager;
-import frc.robot.auto.TaskRegistry;
-import frc.robot.auto.WebUI;
 import frc.robot.commands.AutoCommands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.Superstructure;
-import frc.robot.subsystems.Superstructure.SuperStates;
-import frc.robot.subsystems.swerve.GyroIO;
-import frc.robot.subsystems.swerve.GyroIONavX;
-import frc.robot.subsystems.swerve.GyroIOPigeon2;
-import frc.robot.subsystems.swerve.GyroIOSim;
-import frc.robot.subsystems.swerve.ModuleIO;
-import frc.robot.subsystems.swerve.ModuleIOSim;
-import frc.robot.subsystems.swerve.ModuleIOSpark;
-import frc.robot.subsystems.swerve.SwerveConstants;
-import frc.robot.subsystems.swerve.SwerveSubsystem;
+import frc.robot.subsystems.swerve.*;
 import frc.robot.subsystems.vision.AprilTagVisionIOPhotonVision;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
@@ -92,9 +77,6 @@ public class RobotContainer {
 
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
-  private final TaskRegistry taskRegistry;
-  private final AutonomyManager autonomyManager;
-  private final WebUI webUI;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -113,10 +95,12 @@ public class RobotContainer {
                     case NAVX -> new GyroIONavX();
                     case ADIS -> new GyroIO() {};
                   },
-                  new ModuleIOSpark(FRONT_LEFT),
-                  new ModuleIOSpark(FRONT_RIGHT),
-                  new ModuleIOSpark(BACK_LEFT),
-                  new ModuleIOSpark(BACK_RIGHT));
+                  (IsSwerveSpark) ? new ModuleIOSpark(FRONT_LEFT) : new ModuleIOKraken(FRONT_LEFT),
+                  (IsSwerveSpark)
+                      ? new ModuleIOSpark(FRONT_RIGHT)
+                      : new ModuleIOKraken(FRONT_RIGHT),
+                  (IsSwerveSpark) ? new ModuleIOSpark(BACK_LEFT) : new ModuleIOKraken(BACK_LEFT),
+                  (IsSwerveSpark) ? new ModuleIOSpark(BACK_RIGHT) : new ModuleIOKraken(BACK_RIGHT));
 
             case SIM:
               // Create a maple-sim swerve drive simulation instance
@@ -193,35 +177,6 @@ public class RobotContainer {
             default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
           };
     } else vision = null;
-
-    TaskRegistry registry = null;
-    AutonomyManager manager = null;
-    WebUI ui = null;
-    if (DRIVETRAIN_ENABLED && drive != null) {
-      registry = new TaskRegistry();
-      manager = new AutonomyManager(registry, drive, superstructure, 8.0);
-      if (WebUIConfig.ENABLED) {
-        try {
-          ui = new WebUI(registry, WebUIConfig.BIND_ADDRESS, WebUIConfig.PORT);
-          ui.start();
-          System.out.println(
-              "Autonomy WebUI listening on " + WebUIConfig.BIND_ADDRESS + ":" + WebUIConfig.PORT);
-        } catch (java.io.IOException e) {
-          DriverStation.reportWarning(
-              "Failed to start autonomy WebUI on "
-                  + WebUIConfig.BIND_ADDRESS
-                  + ":"
-                  + WebUIConfig.PORT
-                  + ": "
-                  + e.getMessage(),
-              e.getStackTrace());
-          ui = null;
-        }
-      }
-    }
-    taskRegistry = registry;
-    autonomyManager = manager;
-    webUI = ui;
 
     if (DRIVETRAIN_ENABLED && drive != null) {
       characterizationChooser.addOption(
@@ -310,15 +265,10 @@ public class RobotContainer {
     }
   }
 
-  private void configureOperatorButtonBindings() {
-    operator
-        .testing()
-        .onTrue(superstructure.setSuperStateCmd(SuperStates.TESTING))
-        .onFalse(superstructure.setSuperStateCmd(IDLING));
-  }
+  private void configureOperatorButtonBindings() {}
 
   /**
-   * Use this to pass the autonomous command to the main {@link Robot} class.
+   * Use this to pass the autonomwous command to the main {@link Robot} class.
    *
    * @return the command to run in autonomous, or null if the auto chooser is not initialized.
    */
@@ -338,23 +288,6 @@ public class RobotContainer {
       return Commands.none();
     }
     return drive.sysIdRoutine().ignoringDisable(true);
-  }
-
-  public void periodic() {
-    if (taskRegistry != null) taskRegistry.pollNetworkControl();
-    if (autonomyManager != null) autonomyManager.periodic();
-  }
-
-  public TaskRegistry getTaskRegistry() {
-    return taskRegistry;
-  }
-
-  public AutonomyManager getAutonomyManager() {
-    return autonomyManager;
-  }
-
-  public WebUI getWebUI() {
-    return webUI;
   }
 
   public void resetSimulationField() {

@@ -26,6 +26,7 @@ import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -56,6 +57,9 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsumer {
+  private static final double SYS_ID_MAX_VOLTAGE = 4.0;
+  private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
+
   static final Lock odometryLock = new ReentrantLock();
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
@@ -123,10 +127,10 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             new SysIdRoutine.Config(
                 null,
                 null,
-                Seconds.of(4),
+                Seconds.of(2.5),
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
-                (voltage) -> runCharacterization(voltage.in(Volts)), null, this));
+                (voltage) -> runSysIdVoltage(voltage.in(Volts)), null, this));
   }
 
   @Override
@@ -219,6 +223,10 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     }
   }
 
+  private void runSysIdVoltage(double voltage) {
+    runCharacterization(MathUtil.clamp(voltage, -SYS_ID_MAX_VOLTAGE, SYS_ID_MAX_VOLTAGE));
+  }
+
   /** Stops the drive. */
   public void stop() {
     runVelocity(new ChassisSpeeds());
@@ -254,24 +262,23 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return Commands.sequence(
             Commands.runOnce(
                 () ->
-                    System.out.println(
-                        "[SysId] Drive Subsystem - Quasistatic (Forward) starting."),
+                    System.out.println("[SysId] Drive Subsystem - Quasistatic (Forward) starting."),
                 this),
             sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () ->
-                    System.out.println(
-                        "[SysId] Drive Subsystem - Quasistatic (Reverse) starting."),
+                    System.out.println("[SysId] Drive Subsystem - Quasistatic (Reverse) starting."),
                 this),
             sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
-                () ->
-                    System.out.println("[SysId] Drive Subsystem - Dynamic (Forward) starting."),
+                () -> System.out.println("[SysId] Drive Subsystem - Dynamic (Forward) starting."),
                 this),
             sysIdDynamic(SysIdRoutine.Direction.kForward),
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
-                () ->
-                    System.out.println("[SysId] Drive Subsystem - Dynamic (Reverse) starting."),
+                () -> System.out.println("[SysId] Drive Subsystem - Dynamic (Reverse) starting."),
                 this),
             sysIdDynamic(SysIdRoutine.Direction.kReverse),
             Commands.runOnce(() -> runCharacterization(0.0), this))
