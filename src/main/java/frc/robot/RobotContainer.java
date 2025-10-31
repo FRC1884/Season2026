@@ -15,7 +15,11 @@ package frc.robot;
 
 import static frc.robot.Config.Controllers.getDriverController;
 import static frc.robot.Config.Controllers.getOperatorController;
-import static frc.robot.Config.Subsystems.*;
+import static frc.robot.Config.Subsystems.AUTONOMOUS_ENABLED;
+import static frc.robot.Config.Subsystems.DRIVETRAIN_ENABLED;
+import static frc.robot.Config.Subsystems.IsSwerveSpark;
+import static frc.robot.Config.Subsystems.VISION_ENABLED;
+import static frc.robot.Config.Subsystems.WEBUI_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_LEFT;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_RIGHT;
@@ -29,7 +33,13 @@ import static frc.robot.subsystems.vision.AprilTagVisionConstants.LEFT_CAM_ENABL
 import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_CONSTANTS;
 import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_ENABLED;
 
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+
 import com.pathplanner.lib.auto.AutoBuilder;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -43,15 +53,22 @@ import frc.robot.OI.OperatorMap;
 import frc.robot.commands.AutoCommands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.Superstructure;
-import frc.robot.subsystems.swerve.*;
+import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
+import frc.robot.subsystems.objectivetracker.TabletInterfaceTracker;
+import frc.robot.subsystems.swerve.GyroIO;
+import frc.robot.subsystems.swerve.GyroIONavX;
+import frc.robot.subsystems.swerve.GyroIOPigeon2;
+import frc.robot.subsystems.swerve.GyroIOSim;
+import frc.robot.subsystems.swerve.ModuleIO;
+import frc.robot.subsystems.swerve.ModuleIOKraken;
+import frc.robot.subsystems.swerve.ModuleIOSim;
+import frc.robot.subsystems.swerve.ModuleIOSpark;
+import frc.robot.subsystems.swerve.SwerveConstants;
+import frc.robot.subsystems.swerve.SwerveSubsystem;
 import frc.robot.subsystems.vision.AprilTagVisionIOPhotonVision;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
-import org.ironmaple.simulation.SimulatedArena;
-import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -77,6 +94,7 @@ public class RobotContainer {
 
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
+  private final TabletInterfaceTracker tabletInterfaceTracker;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -127,6 +145,8 @@ public class RobotContainer {
                   new ModuleIO() {},
                   new ModuleIO() {});
           };
+
+      if (WEBUI_ENABLED) tabletInterfaceTracker = new TabletInterfaceTracker(new ReefControlsIOServer());
 
       autoIdleCommand = Commands.none();
       if (AUTONOMOUS_ENABLED) {

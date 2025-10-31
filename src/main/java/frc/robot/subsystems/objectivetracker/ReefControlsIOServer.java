@@ -8,7 +8,9 @@
 package frc.robot.subsystems.objectivetracker;
 
 import edu.wpi.first.net.WebServer;
+import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.BooleanSubscriber;
+import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
@@ -35,6 +37,15 @@ public class ReefControlsIOServer implements ReefControlsIO {
   private final IntegerSubscriber algaeStateIn;
   private final BooleanSubscriber coopStateIn;
 
+  private final IntegerPublisher selectedLevelOut;
+  private final IntegerPublisher l1StateOut;
+  private final IntegerPublisher l2StateOut;
+  private final IntegerPublisher l3StateOut;
+  private final IntegerPublisher l4StateOut;
+  private final IntegerPublisher algaeStateOut;
+  private final BooleanPublisher coopStateOut;
+  private final BooleanPublisher isElimsOut;
+
   public ReefControlsIOServer() {
     // Create subscribers
     var inputTable = NetworkTableInstance.getDefault().getTable(toRobotTable);
@@ -58,7 +69,7 @@ public class ReefControlsIOServer implements ReefControlsIO {
             .subscribe(false, PubSubOption.keepDuplicates(true));
 
     // Create publishers
-    /*var outputTable = NetworkTableInstance.getDefault().getTable(toDashboardTable);
+    var outputTable = NetworkTableInstance.getDefault().getTable(toDashboardTable);
     selectedLevelOut = outputTable.getIntegerTopic(selectedLevelTopicName).publish();
     l1StateOut = outputTable.getIntegerTopic(l1TopicName).publish();
     l2StateOut = outputTable.getIntegerTopic(l2TopicName).publish();
@@ -66,7 +77,7 @@ public class ReefControlsIOServer implements ReefControlsIO {
     l4StateOut = outputTable.getIntegerTopic(l4TopicName).publish();
     algaeStateOut = outputTable.getIntegerTopic(algaeTopicName).publish();
     coopStateOut = outputTable.getBooleanTopic(coopTopicName).publish();
-    isElimsOut = outputTable.getBooleanTopic(isElimsTopicName).publish();*/
+    isElimsOut = outputTable.getBooleanTopic(isElimsTopicName).publish();
 
     // Start web server
     WebServer.start(
@@ -95,7 +106,7 @@ public class ReefControlsIOServer implements ReefControlsIO {
         coopStateIn.readQueue().length > 0 ? new boolean[] {coopStateIn.get()} : new boolean[] {};
   }
 
-  /*@Override
+  @Override
   public void setSelectedLevel(int value) {
     selectedLevelOut.set(value);
   }
@@ -133,5 +144,5 @@ public class ReefControlsIOServer implements ReefControlsIO {
   @Override
   public void setElims(boolean isElims) {
     isElimsOut.set(isElims);
-  }*/
+  }
 }
