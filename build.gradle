@@ -137,34 +137,6 @@ tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
 
-tasks.register("runWebUITest", JavaExec) {
-    group = "application"
-    description = "Launches the Reef controls web server locally."
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass.set("frc.robot.subsystems.objectivetracker.ReefControlsIOServerTest")
-
-    def forwarded = System.properties.findAll { entry ->
-        entry.key instanceof String && entry.key.startsWith("webui.")
-    }
-    if (!forwarded.isEmpty()) {
-        systemProperties(forwarded.collectEntries { k, v -> [(k.toString()): v] })
-    }
-
-    if (project.hasProperty("webuiPort")) {
-        systemProperty("webui.port", project.property("webuiPort"))
-    }
-    if (project.hasProperty("webuiBind")) {
-        systemProperty("webui.bindAddress", project.property("webuiBind"))
-    }
-}
-
-tasks.register("runReefControlsServer", JavaExec) {
-    group = "application"
-    description = "Launches the Reef controls web server locally."
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass.set("frc.robot.subsystems.objectivetracker.ReefControlsServerMain")
-}
-
 // Create version file
 project.compileJava.dependsOn(createVersionFile)
 gversion {
@@ -208,50 +180,7 @@ task(eventDeploy) {
     }
 }
 
-def npmCommand = System.getProperty("os.name").toLowerCase().contains("windows") ? "npm.cmd" : "npm"
-def webUiDir = file("WebUI")
 
-tasks.register("webuiNpmInstall", Exec) {
-    group = "build"
-    description = "Install WebUI npm dependencies."
-    onlyIf { webUiDir.exists() }
-    workingDir = webUiDir
-    inputs.files(fileTree(webUiDir) {
-        include "package.json", "package-lock.json", "pnpm-lock.yaml", "yarn.lock"
-    })
-    outputs.dir webUiDir.toPath().resolve("node_modules")
-    commandLine npmCommand, "install", "--no-progress"
-}
-
-tasks.register("webuiTest", Exec) {
-    group = "verification"
-    description = "Run the WebUI Vitest suite."
-    onlyIf { webUiDir.exists() }
-    dependsOn("webuiNpmInstall")
-    workingDir = webUiDir
-    commandLine npmCommand, "run", "test", "--", "--run"
-    environment "CI", "true"
-    inputs.dir webUiDir.toPath().resolve("src").toFile()
-    inputs.file webUiDir.toPath().resolve("package.json").toFile()
-    inputs.file webUiDir.toPath().resolve("tsconfig.json").toFile()
-    outputs.upToDateWhen { false }
-}
-
-tasks.register("webuiBuild", Exec) {
-    group = "build"
-    description = "Create a production build of the WebUI dashboard."
-    onlyIf { webUiDir.exists() }
-    dependsOn("webuiNpmInstall")
-    workingDir = webUiDir
-    commandLine npmCommand, "run", "build"
-    inputs.dir webUiDir.toPath().resolve("src").toFile()
-    inputs.file webUiDir.toPath().resolve("package.json").toFile()
-    outputs.dir webUiDir.toPath().resolve("dist").toFile()
-}
-
-tasks.named("check") {
-    dependsOn("webuiTest")
-}
 createVersionFile.dependsOn(eventDeploy)
 
 // Spotless formatting

@@ -14,9 +14,9 @@ public final class Config {
   public static final class Subsystems {
     public static final boolean DRIVETRAIN_ENABLED = true;
     public static final boolean AUTONOMOUS_ENABLED = true;
-    public static final boolean VISION_ENABLED = false;
+    public static final boolean VISION_ENABLED = true;
     public static final boolean LEDS_ENABLED = false;
-    public static final boolean WEBUI_ENABLED = true;
+    public static final boolean WEBUI_ENABLED = false;
     public static final boolean IsSwerveSpark = true;
   }
 

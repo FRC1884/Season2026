@@ -33,13 +33,7 @@ import static frc.robot.subsystems.vision.AprilTagVisionConstants.LEFT_CAM_ENABL
 import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_CONSTANTS;
 import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_ENABLED;
 
-import org.ironmaple.simulation.SimulatedArena;
-import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-
 import com.pathplanner.lib.auto.AutoBuilder;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -69,6 +63,10 @@ import frc.robot.subsystems.vision.AprilTagVisionIOPhotonVision;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -146,7 +144,9 @@ public class RobotContainer {
                   new ModuleIO() {});
           };
 
-      if (WEBUI_ENABLED) tabletInterfaceTracker = new TabletInterfaceTracker(new ReefControlsIOServer());
+      if (WEBUI_ENABLED)
+        tabletInterfaceTracker = new TabletInterfaceTracker(new ReefControlsIOServer());
+      else tabletInterfaceTracker = null;
 
       autoIdleCommand = Commands.none();
       if (AUTONOMOUS_ENABLED) {

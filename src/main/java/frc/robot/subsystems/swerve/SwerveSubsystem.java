@@ -57,7 +57,7 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsumer {
-  private static final double SYS_ID_MAX_VOLTAGE = 4.0;
+  private static final double SYS_ID_MAX_VOLTAGE = 40.0;
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
   static final Lock odometryLock = new ReentrantLock();
