@@ -13,17 +13,22 @@
 
 package frc.robot.subsystems.vision;
 
-import static frc.robot.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
-import java.util.*;
-import lombok.Getter;
 import org.photonvision.PhotonCamera;
 import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
+
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
+import static frc.robot.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
+import lombok.Getter;
 
 /**
  * IO implementation for a real PhotonVision camera running an AprilTag pipeline on the coprocessor.
@@ -84,11 +89,13 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
 
         // Calculate average tag distance
         double totalTagDistance = 0.0;
+        int totalTags = 0; // Num tags for multitag
         for (PhotonTrackedTarget target : result.targets) {
           double distanceToTarget;
           if ((distanceToTarget = target.bestCameraToTarget.getTranslation().getNorm())
               < cameraConstants.cameraType().noisyDistance) {
             totalTagDistance += distanceToTarget;
+            totalTags++;
             // Add detected tag IDs
             tagIds.add((short) target.fiducialId);
           }
@@ -100,8 +107,8 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
                 result.getTimestampSeconds(), // Timestamp
                 robotPose, // 3D pose estimate
                 multitagResult.estimatedPose.ambiguity, // Ambiguity
-                tagIds.size(), // Tag count
-                totalTagDistance / tagIds.size() // Average tag distance
+                totalTags, // Tag count
+                totalTagDistance / totalTags // Average tag distance
                 ));
 
       } else if (!result.targets.isEmpty()) {
