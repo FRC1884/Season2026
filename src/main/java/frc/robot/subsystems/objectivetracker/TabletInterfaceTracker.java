@@ -60,7 +60,6 @@ public class TabletInterfaceTracker extends SubsystemBase {
     io.setAlgaeState(algae);
   }
 
-  public boolean buttonClicked() {
-    return buttonClicked;
-  }
+  // public boolean buttonClicked() {return buttonClicked}
+
 }

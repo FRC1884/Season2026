@@ -13,26 +13,25 @@
 
 package frc.robot.subsystems.vision;
 
+import static frc.robot.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
+
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
+import frc.robot.subsystems.vision.VisionIO.CameraConstants;
+import frc.robot.subsystems.vision.VisionIO.PoseObservation;
+import frc.robot.subsystems.vision.VisionIO.TargetObservation;
+import frc.robot.subsystems.vision.VisionIO.VisionIOInputs;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
+import lombok.Getter;
 import org.photonvision.PhotonCamera;
 import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
 import org.photonvision.targeting.PhotonTrackedTarget;
-
-import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
-import static frc.robot.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
-import frc.robot.subsystems.vision.VisionIO.CameraConstants;
-import frc.robot.subsystems.vision.VisionIO.PoseObservation;
-import frc.robot.subsystems.vision.VisionIO.TargetObservation;
-import frc.robot.subsystems.vision.VisionIO.VisionIOInputs;
-import lombok.Getter;
 
 /**
  * IO implementation for a real PhotonVision camera running an AprilTag pipeline on the coprocessor.
@@ -66,7 +65,8 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
     Set<Short> tagIds = new HashSet<>();
     List<PoseObservation> poseObservations = new ArrayList<>();
 
-    List<PhotonPipelineResult> pipelineResults = camera.getAllUnreadResults(); // Call this ONCE per robot loop!
+    List<PhotonPipelineResult> pipelineResults =
+        camera.getAllUnreadResults(); // Call this ONCE per robot loop!
 
     for (PhotonPipelineResult result : pipelineResults) {
       // Update latest target observation (not for pose estimation)

@@ -92,7 +92,9 @@ public class RobotContainer {
 
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
-  private final TabletInterfaceTracker tabletInterfaceTracker;
+
+  private TabletInterfaceTracker tabletInterfaceTracker;
+  // private final TabletInterfaceTracker tabletInterfaceTracker;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
