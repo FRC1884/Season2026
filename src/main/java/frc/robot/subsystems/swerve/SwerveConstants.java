@@ -25,7 +25,7 @@ public final class SwerveConstants {
     ADIS,
   }
 
-  public static final GyroType GYRO_TYPE = GyroType.NAVX;
+  public static final GyroType GYRO_TYPE = GyroType.PIGEON;
 
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
