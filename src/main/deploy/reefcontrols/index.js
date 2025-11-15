@@ -116,10 +116,10 @@ function updateUI() {
   // Update background color
   switch (selectedLevel) {
     case 0:
-      document.body.style.backgroundColor = "#ccffff";
+      document.body.style.backgroundColor = "#5AB7ED";
       break;
     case 1:
-      document.body.style.backgroundColor = "#b5e5ff";
+      document.body.style.backgroundColor = "#0F486C";
       break;
     case 2:
       document.body.style.backgroundColor = "#dfbbfc";

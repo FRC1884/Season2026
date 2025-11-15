@@ -54,7 +54,8 @@ public final class GlobalConstants {
   public static enum RobotType {
     COMPBOT,
     DEVBOT,
-    SIMBOT
+    SIMBOT,
+    CRESCENDO
   }
 
   /**

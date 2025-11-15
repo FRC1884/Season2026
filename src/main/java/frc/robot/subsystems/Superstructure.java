@@ -3,7 +3,6 @@ package frc.robot.subsystems;
 import static frc.robot.Config.Subsystems.LEDS_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
 import static frc.robot.subsystems.Superstructure.SuperStates.IDLING;
-import static frc.robot.subsystems.Superstructure.SuperStates.TESTING;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -82,14 +81,7 @@ public class Superstructure extends SubsystemBase {
    * idling, testing, moving to a certain level, or performing intake and outtake operations.
    */
   @Override
-  public void periodic() {
-    if (currentState == TESTING) {
-      elevators.testing();
-    }
-    if (currentState == IDLING) {
-      elevators.idle();
-    }
-  }
+  public void periodic() {}
 
   public void registerSuperstructureCharacterization(
       Supplier<LoggedDashboardChooser<Command>> autoChooser) {}

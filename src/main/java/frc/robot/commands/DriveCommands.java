@@ -53,14 +53,14 @@ import org.littletonrobotics.junction.Logger;
 public class DriveCommands {
   // driving
   private static final double DEADBAND = 0.1;
-  private static final double ANGLE_MAX_VELOCITY = 8.0;
+  private static final double ANGLE_MAX_VELOCITY = 6.0;
   private static final double ANGLE_MAX_ACCELERATION = 20.0;
   // characterization
-  private static final double FF_START_DELAY = 2.0; // Secs
-  private static final double FF_RAMP_RATE = 0.1; // Volts/Sec
+  private static final double FF_START_DELAY = 0.5; // Secs
+  private static final double FF_RAMP_RATE = 0.2; // Volts/Sec
 
   private static final double ALIGN_TRANSLATION_KP = 4.5;
-  private static final double ALIGN_TRANSLATION_KD = 0.25;
+  private static final double ALIGN_TRANSLATION_KD = 1;
   private static final double ALIGN_ROTATION_KP = 6.0;
   private static final double ALIGN_ROTATION_KD = 0.0;
   private static final TrapezoidProfile.Constraints ALIGN_ROTATION_CONSTRAINTS =

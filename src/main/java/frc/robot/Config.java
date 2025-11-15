@@ -68,6 +68,7 @@ public final class Config {
     public static DriverMap getDriverController() {
       return switch (ROBOT) {
         case COMPBOT -> new XboxDriverMap(DRIVER_PORT);
+        case CRESCENDO -> new XboxDriverMap(DRIVER_PORT);
         case DEVBOT -> new XboxDriverMap(DRIVER_PORT);
         case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
       };
@@ -76,6 +77,9 @@ public final class Config {
     public static OperatorMap getOperatorController() {
       return switch (ROBOT) {
         case COMPBOT -> JOYSTICK_OPERATOR_ENABLED
+            ? new XboxOperatorMap(OPERATOR_PORT)
+            : new BoardOperatorMap(OPERATOR_PORT);
+        case CRESCENDO -> JOYSTICK_OPERATOR_ENABLED
             ? new XboxOperatorMap(OPERATOR_PORT)
             : new BoardOperatorMap(OPERATOR_PORT);
         case DEVBOT -> JOYSTICK_OPERATOR_ENABLED

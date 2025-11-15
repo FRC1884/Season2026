@@ -65,47 +65,56 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT -> 60;
         case COMPBOT, SIMBOT -> 60;
+        case CRESCENDO -> 40;
       };
   ;
   private static final int FRD_ID =
       switch (ROBOT) {
         case DEVBOT -> 31;
         case COMPBOT, SIMBOT -> 11;
+        case CRESCENDO -> 31;
       };
   private static final int FRR_ID =
       switch (ROBOT) {
         case DEVBOT -> 13;
         case COMPBOT, SIMBOT -> 21;
+        case CRESCENDO -> 5;
       };
   private static final int FLD_ID =
       switch (ROBOT) {
         case DEVBOT -> 32;
         case COMPBOT, SIMBOT -> 12;
+        case CRESCENDO -> 41;
       };
   private static final int FLR_ID =
       switch (ROBOT) {
         case DEVBOT -> 11;
         case COMPBOT, SIMBOT -> 22;
+        case CRESCENDO -> 1;
       };
   private static final int BRD_ID =
       switch (ROBOT) {
         case DEVBOT -> 33;
         case COMPBOT, SIMBOT -> 14;
+        case CRESCENDO -> 43;
       };
   private static final int BRR_ID =
       switch (ROBOT) {
         case DEVBOT -> 14;
         case COMPBOT, SIMBOT -> 24;
+        case CRESCENDO -> 7;
       };
   private static final int BLD_ID =
       switch (ROBOT) {
         case DEVBOT -> 34;
         case COMPBOT, SIMBOT -> 13;
+        case CRESCENDO -> 40;
       };
   private static final int BLR_ID =
       switch (ROBOT) {
         case DEVBOT -> 12;
         case COMPBOT, SIMBOT -> 23;
+        case CRESCENDO -> 3;
       };
 
   // Zeroed rotation values for each module, see setup instructions
@@ -155,6 +164,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT, COMPBOT -> new Gains(0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
         case SIMBOT -> new Gains(0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
+        case CRESCENDO -> new Gains(0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
       };
 
   // Drive encoder configuration
@@ -177,6 +187,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT, COMPBOT -> new Gains(2.0, 0.0, 0.0);
         case SIMBOT -> new Gains(8.0, 0.0, 0.0);
+        case CRESCENDO -> new Gains(2.0, 0.0, 0.0);
       };
   /** Radians */
   static final double ROTATOR_PID_MIN_INPUT = 0;

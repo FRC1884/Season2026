@@ -27,7 +27,7 @@ public final class AprilTagVisionConstants {
                 0.245,
                 new Rotation3d(0, degreesToRadians(-5), degreesToRadians(-20))),
             VisionIO.CameraType.OV9281);
-        case COMPBOT, SIMBOT -> new VisionIO.CameraConstants(
+        case COMPBOT, SIMBOT, CRESCENDO -> new VisionIO.CameraConstants(
             "lefttagcam",
             new Transform3d(
                 0.3006,
@@ -48,7 +48,7 @@ public final class AprilTagVisionConstants {
                 0.2405,
                 new Rotation3d(0, degreesToRadians(-20), degreesToRadians(20))),
             VisionIO.CameraType.OV9281);
-        case COMPBOT, SIMBOT -> new VisionIO.CameraConstants(
+        case COMPBOT, SIMBOT, CRESCENDO -> new VisionIO.CameraConstants(
             "righttagcam",
             new Transform3d(
                 0.3006,
@@ -69,7 +69,7 @@ public final class AprilTagVisionConstants {
                 0.275,
                 new Rotation3d(0, degreesToRadians(-14), degreesToRadians(180))),
             VisionIO.CameraType.OV9281);
-        case COMPBOT, SIMBOT -> new VisionIO.CameraConstants(
+        case COMPBOT, SIMBOT, CRESCENDO -> new VisionIO.CameraConstants(
             "backtagcam",
             new Transform3d(
                 -0.3006,
