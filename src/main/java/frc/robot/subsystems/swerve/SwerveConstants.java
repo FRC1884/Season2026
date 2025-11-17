@@ -189,6 +189,7 @@ public final class SwerveConstants {
         case SIMBOT -> new Gains(8.0, 0.0, 0.0);
         case CRESCENDO -> new Gains(2.0, 0.0, 0.0);
       };
+
   /** Radians */
   static final double ROTATOR_PID_MIN_INPUT = 0;
   /** Radians */

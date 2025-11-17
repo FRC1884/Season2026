@@ -557,6 +557,35 @@ public class DriveCommands {
         Set.of(drive));
   }
 
+  public static Command alignToCoralStationCommandAuto(SwerveSubsystem drive, boolean leftStation) {
+    return Commands.defer(
+        () -> {
+          Supplier<Pose2d> target =
+              () -> {
+                Pose2d base =
+                    leftStation
+                        ? Coordinates.LEFT_CORAL_STATION.getPose()
+                        : Coordinates.RIGHT_CORAL_STATION.getPose();
+                Transform2d bumper =
+                    new Transform2d(
+                        new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
+                            .rotateBy(base.getRotation()),
+                        new Rotation2d());
+                double sideSign = leftStation ? -1.0 : 1.0;
+                Transform2d sideToSide =
+                    new Transform2d(
+                        new Translation2d(
+                                GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO * sideSign, 0)
+                            .rotateBy(base.getRotation()),
+                        new Rotation2d());
+                return base.plus(bumper).plus(sideToSide);
+              };
+
+          return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
+        },
+        Set.of(drive));
+  }
+
   /** helper methods for alignment */
 
   // returns the coordinates of the nearest coral station

@@ -19,6 +19,8 @@ public interface ReefControlsIO {
     public int[] level4State = new int[] {}; // Bitfield
     public int[] algaeState = new int[] {}; // Bitfield
     public boolean[] coopState = new boolean[] {}; // Boolean
+    public String[] queueSpec = new String[] {}; // JSON payload from dashboard
+    public String[] queueCommand = new String[] {}; // JSON command payload from dashboard
   }
 
   default void updateInputs(ReefControlsIOInputs inputs) {}
@@ -38,4 +40,6 @@ public interface ReefControlsIO {
   default void setCoopState(boolean value) {}
 
   default void setElims(boolean isElims) {}
+
+  default void setQueueState(String stateJson) {}
 }

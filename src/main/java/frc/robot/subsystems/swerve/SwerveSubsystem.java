@@ -61,14 +61,16 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsumer {
-  private static final double SYS_ID_MAX_VOLTAGE = 40.0;
+  private static final double DRIVE_SYS_ID_MAX_VOLTAGE = 40.0;
+  private static final double TURN_SYS_ID_MAX_VOLTAGE = 12.0;
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
   static final Lock odometryLock = new ReentrantLock();
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
   private final Module[] modules = new Module[4]; // FL, FR, BL, BR
-  private final SysIdRoutine sysId;
+  private final SysIdRoutine driveSysId;
+  private final SysIdRoutine turnSysId;
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
 
@@ -125,19 +127,32 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
           Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
         });
 
-    Consumer<SysIdRoutineLog> sysIdLogCallback =
+    Consumer<SysIdRoutineLog> sysIdLogCallbackDrive =
         (log) -> {
           // Log per-module telemetry
-          // for (int i = 0; i < 4; i++) {
-          Module module = modules[0];
-
-          log.motor("drive")
-              .voltage(Volts.of(module.getVoltage()))
-              .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
-              .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+          for (int i = 0; i < 4; i++) {
+              Module module = modules[i];
+              log.motor("DriveM" + i)
+                      .voltage(Volts.of(module.getVoltage()))
+                      .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
+                      .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+          }
         };
-    // Configure SysId
-    sysId =
+
+      Consumer<SysIdRoutineLog> sysIdLogCallbackTurn =
+              (log) -> {
+                  // Log per-module telemetry
+                  for (int i = 0; i < 4; i++) {
+                      Module module = modules[i];
+                      log.motor("TurnM" + i)
+                              .voltage(Volts.of(module.getVoltage()))
+                              .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
+                              .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+                  }
+              };
+
+    // Configure drive SysId
+    driveSysId =
         new SysIdRoutine(
             new SysIdRoutine.Config(
                 null,
@@ -145,7 +160,18 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
                 Seconds.of(2.5),
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
-                (voltage) -> runSysIdVoltage(voltage.in(Volts)), sysIdLogCallback, this));
+                (voltage) -> runDriveSysIdVoltage(voltage.in(Volts)), sysIdLogCallbackDrive, this));
+
+    // Configure turn SysId
+    turnSysId =
+        new SysIdRoutine(
+            new SysIdRoutine.Config(
+                null,
+                null,
+                Seconds.of(2.5),
+                (state) -> Logger.recordOutput("Drive/TurnSysIdState", state.toString())),
+            new SysIdRoutine.Mechanism(
+                (voltage) -> runTurnSysIdVoltage(voltage.in(Volts)), sysIdLogCallbackTurn, this));
   }
 
   @Override
@@ -238,8 +264,21 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     }
   }
 
-  private void runSysIdVoltage(double voltage) {
-    runCharacterization(MathUtil.clamp(voltage, -SYS_ID_MAX_VOLTAGE, SYS_ID_MAX_VOLTAGE));
+  /** Runs the turn motors open-loop for SysId and tuning. */
+  public void runTurnCharacterization(double output) {
+    for (int i = 0; i < 4; i++) {
+      modules[i].runTurnCharacterization(output);
+    }
+  }
+
+  private void runDriveSysIdVoltage(double voltage) {
+    runCharacterization(
+        MathUtil.clamp(voltage, -DRIVE_SYS_ID_MAX_VOLTAGE, DRIVE_SYS_ID_MAX_VOLTAGE));
+  }
+
+  private void runTurnSysIdVoltage(double voltage) {
+    runTurnCharacterization(
+        MathUtil.clamp(voltage, -TURN_SYS_ID_MAX_VOLTAGE, TURN_SYS_ID_MAX_VOLTAGE));
   }
 
   /** Stops the drive. */
@@ -264,12 +303,14 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
     return run(() -> runCharacterization(0.0))
         .withTimeout(1.0)
-        .andThen(sysId.quasistatic(direction));
+        .andThen(driveSysId.quasistatic(direction));
   }
 
   /** Returns a command to run a dynamic test in the specified direction. */
   public Command sysIdDynamic(SysIdRoutine.Direction direction) {
-    return run(() -> runCharacterization(0.0)).withTimeout(1.0).andThen(sysId.dynamic(direction));
+    return run(() -> runCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(driveSysId.dynamic(direction));
   }
 
   /** Runs the full SysId routine (quasistatic + dynamic, forward + reverse). */
@@ -298,6 +339,48 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             sysIdDynamic(SysIdRoutine.Direction.kReverse),
             Commands.runOnce(() -> runCharacterization(0.0), this))
         .withName("DriveSysIdRoutine");
+  }
+
+  /** Returns a command to run a steer-motor quasistatic test. */
+  public Command sysIdTurnQuasistatic(SysIdRoutine.Direction direction) {
+    return run(() -> runTurnCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(turnSysId.quasistatic(direction));
+  }
+
+  /** Returns a command to run a steer-motor dynamic test. */
+  public Command sysIdTurnDynamic(SysIdRoutine.Direction direction) {
+    return run(() -> runTurnCharacterization(0.0))
+        .withTimeout(1.0)
+        .andThen(turnSysId.dynamic(direction));
+  }
+
+  /** Runs the full SysId routine for the steer motors. */
+  public Command sysIdTurnRoutine() {
+    return Commands.sequence(
+            Commands.runOnce(
+                () ->
+                    System.out.println("[SysId] Turn Subsystem - Quasistatic (Forward) starting."),
+                this),
+            sysIdTurnQuasistatic(SysIdRoutine.Direction.kForward),
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            Commands.runOnce(
+                () ->
+                    System.out.println("[SysId] Turn Subsystem - Quasistatic (Reverse) starting."),
+                this),
+            sysIdTurnQuasistatic(SysIdRoutine.Direction.kReverse),
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            Commands.runOnce(
+                () -> System.out.println("[SysId] Turn Subsystem - Dynamic (Forward) starting."),
+                this),
+            sysIdTurnDynamic(SysIdRoutine.Direction.kForward),
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            Commands.runOnce(
+                () -> System.out.println("[SysId] Turn Subsystem - Dynamic (Reverse) starting."),
+                this),
+            sysIdTurnDynamic(SysIdRoutine.Direction.kReverse),
+            Commands.runOnce(() -> runTurnCharacterization(0.0), this))
+        .withName("TurnSysIdRoutine");
   }
 
   /** Returns the module states (turn angles and drive velocities) for all of the modules. */

@@ -93,8 +93,7 @@ public class RobotContainer {
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
 
-  private TabletInterfaceTracker tabletInterfaceTracker;
-  // private final TabletInterfaceTracker tabletInterfaceTracker;
+  private final TabletInterfaceTracker tabletInterfaceTracker;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -146,10 +145,6 @@ public class RobotContainer {
                   new ModuleIO() {});
           };
 
-      if (WEBUI_ENABLED)
-        tabletInterfaceTracker = new TabletInterfaceTracker(new ReefControlsIOServer());
-      else tabletInterfaceTracker = null;
-
       autoIdleCommand = Commands.none();
       if (AUTONOMOUS_ENABLED) {
         autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
@@ -162,6 +157,13 @@ public class RobotContainer {
     } else {
       drive = null;
     }
+
+    if (WEBUI_ENABLED) {
+      tabletInterfaceTracker = new TabletInterfaceTracker(new ReefControlsIOServer(), drive);
+    } else {
+      tabletInterfaceTracker = null;
+    }
+
     if (AUTONOMOUS_ENABLED) {
       if (drive != null) {
         AutoCommands.registerAutoCommands(superstructure, drive);
@@ -221,6 +223,20 @@ public class RobotContainer {
       characterizationChooser.addOption(
           "Drive | SysId (Dynamic Reverse)",
           drive.sysIdDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turn | SysId (Full Routine)", drive.sysIdTurnRoutine().ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turn | SysId (Quasistatic Forward)",
+          drive.sysIdTurnQuasistatic(SysIdRoutine.Direction.kForward).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turn | SysId (Quasistatic Reverse)",
+          drive.sysIdTurnQuasistatic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turn | SysId (Dynamic Forward)",
+          drive.sysIdTurnDynamic(SysIdRoutine.Direction.kForward).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turn | SysId (Dynamic Reverse)",
+          drive.sysIdTurnDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
     }
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
