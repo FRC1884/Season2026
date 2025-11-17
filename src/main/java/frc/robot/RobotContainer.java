@@ -245,37 +245,34 @@ public class RobotContainer {
           Commands.run(
               () ->
                   DriveCommands.joystickDrive(
-                      drive,
-                      () -> (0.6 * driver.getYAxis().getAsDouble()),
-                      () -> (0.6 * driver.getXAxis().getAsDouble()),
-                      () -> (0.6 * driver.getRotAxis().getAsDouble())),
+                      drive, driver.getYAxis(), driver.getXAxis(), driver.getRotAxis()),
               drive));
 
       // Switch to X pattern when X button is pressed
-      // driver.stopWithX().onTrue(Commands.runOnce(drive::stopWithX, drive));
+      driver.stopWithX().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
-      // // right align to reef face when right bumper is pressed and the robot is in coral mode
-      // driver.rightAlign().whileTrue(DriveCommands.rightAlignToReefCommandTeleop(drive));
+      // right align to reef face when right bumper is pressed and the robot is in coral mode
+      driver.rightAlign().whileTrue(DriveCommands.rightAlignToReefCommandTeleop(drive));
 
-      // // left align to reef face when right numper is pressed and the robot is in coral mode
-      // driver.leftAlign().whileTrue(DriveCommands.leftAlignToReefCommandTeleop(drive));
+      // left align to reef face when right numper is pressed and the robot is in coral mode
+      driver.leftAlign().whileTrue(DriveCommands.leftAlignToReefCommandTeleop(drive));
 
-      // // align to coral station with position customization when right trigger is pressed
-      // driver
-      //     .coralStation()
-      //     .whileTrue(DriveCommands.alignToNearestCoralStationCommand(drive, driver.getYAxis()));
+      // align to coral station with position customization when right trigger is pressed
+      driver
+          .coralStation()
+          .whileTrue(DriveCommands.alignToNearestCoralStationCommand(drive, driver.getYAxis()));
 
-      // driver
-      //     .slowMode()
-      //     .whileTrue(
-      //         Commands.run(
-      //             () ->
-      //                 DriveCommands.joystickDrive(
-      //                     drive,
-      //                     () -> driver.getYAxis().getAsDouble() / 3.0,
-      //                     () -> driver.getXAxis().getAsDouble() / 3.0,
-      //                     () -> driver.getRotAxis().getAsDouble() / 3.0),
-      //             drive));
+      driver
+          .slowMode()
+          .whileTrue(
+              Commands.run(
+                  () ->
+                      DriveCommands.joystickDrive(
+                          drive,
+                          () -> driver.getYAxis().getAsDouble() / 3.0,
+                          () -> driver.getXAxis().getAsDouble() / 3.0,
+                          () -> driver.getRotAxis().getAsDouble() / 3.0),
+                  drive));
 
       // // Reset gyro to 0° when B button is pressed
       driver

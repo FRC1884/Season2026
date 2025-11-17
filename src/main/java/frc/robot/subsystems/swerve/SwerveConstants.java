@@ -25,7 +25,7 @@ public final class SwerveConstants {
     ADIS,
   }
 
-  public static final GyroType GYRO_TYPE = GyroType.PIGEON;
+  public static final GyroType GYRO_TYPE = GyroType.NAVX;
 
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
@@ -72,7 +72,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT -> 31;
         case COMPBOT, SIMBOT -> 11;
-        case CRESCENDO -> 31;
+        case CRESCENDO -> 43;
       };
   private static final int FRR_ID =
       switch (ROBOT) {
@@ -96,7 +96,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT -> 33;
         case COMPBOT, SIMBOT -> 14;
-        case CRESCENDO -> 43;
+        case CRESCENDO -> 40;
       };
   private static final int BRR_ID =
       switch (ROBOT) {
@@ -108,7 +108,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT -> 34;
         case COMPBOT, SIMBOT -> 13;
-        case CRESCENDO -> 40;
+        case CRESCENDO -> 31;
       };
   private static final int BLR_ID =
       switch (ROBOT) {
@@ -136,7 +136,7 @@ public final class SwerveConstants {
   /** Meters */
   public static final double WHEEL_RADIUS = Units.inchesToMeters(1.5);
   /** Meters per second */
-  public static final double MAX_LINEAR_SPEED = Units.feetToMeters(12.6);
+  public static final double MAX_LINEAR_SPEED = 5.4804;
   /** Radians per second */
   public static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
 
@@ -164,7 +164,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case DEVBOT, COMPBOT -> new Gains(0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
         case SIMBOT -> new Gains(0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
-        case CRESCENDO -> new Gains(0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
+        case CRESCENDO -> new Gains(0.0023439, 0.0, 0.0, 0.10953, 0.54241, 0.084571, 0.0);
       };
 
   // Drive encoder configuration

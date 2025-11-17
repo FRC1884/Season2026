@@ -13,6 +13,8 @@
 
 package frc.robot.subsystems.swerve;
 
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 import static frc.robot.GlobalConstants.RobotMode.SIM;
@@ -42,6 +44,7 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -52,6 +55,7 @@ import frc.robot.subsystems.vision.Vision;
 import frc.robot.util.LocalADStarAK;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -121,6 +125,17 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
           Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
         });
 
+    Consumer<SysIdRoutineLog> sysIdLogCallback =
+        (log) -> {
+          // Log per-module telemetry
+          // for (int i = 0; i < 4; i++) {
+          Module module = modules[0];
+
+          log.motor("drive")
+              .voltage(Volts.of(module.getVoltage()))
+              .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
+              .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+        };
     // Configure SysId
     sysId =
         new SysIdRoutine(
@@ -130,7 +145,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
                 Seconds.of(2.5),
                 (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
-                (voltage) -> runSysIdVoltage(voltage.in(Volts)), null, this));
+                (voltage) -> runSysIdVoltage(voltage.in(Volts)), sysIdLogCallback, this));
   }
 
   @Override
