@@ -7,15 +7,14 @@
 
 package frc.robot.subsystems.objectivetracker;
 
-import edu.wpi.first.net.WebServer;
 import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.IntegerSubscriber;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
-import edu.wpi.first.wpilibj.Filesystem;
-import java.nio.file.Paths;
+import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.networktables.StringSubscriber;
 
 public class ReefControlsIOServer implements ReefControlsIO {
   private static final String toRobotTable = "/ReefControls/ToRobot";
@@ -28,6 +27,9 @@ public class ReefControlsIOServer implements ReefControlsIO {
   private static final String algaeTopicName = "Algae";
   private static final String coopTopicName = "Coop";
   private static final String isElimsTopicName = "IsElims";
+  private static final String queueSpecTopicName = "QueueSpec";
+  private static final String queueCommandTopicName = "QueueCommand";
+  private static final String queueStateTopicName = "QueueState";
 
   private final IntegerSubscriber selectedLevelIn;
   private final IntegerSubscriber l1StateIn;
@@ -36,6 +38,8 @@ public class ReefControlsIOServer implements ReefControlsIO {
   private final IntegerSubscriber l4StateIn;
   private final IntegerSubscriber algaeStateIn;
   private final BooleanSubscriber coopStateIn;
+  private final StringSubscriber queueSpecIn;
+  private final StringSubscriber queueCommandIn;
 
   private final IntegerPublisher selectedLevelOut;
   private final IntegerPublisher l1StateOut;
@@ -45,6 +49,7 @@ public class ReefControlsIOServer implements ReefControlsIO {
   private final IntegerPublisher algaeStateOut;
   private final BooleanPublisher coopStateOut;
   private final BooleanPublisher isElimsOut;
+  private final StringPublisher queueStateOut;
 
   public ReefControlsIOServer() {
     // Create subscribers
@@ -67,6 +72,14 @@ public class ReefControlsIOServer implements ReefControlsIO {
         inputTable
             .getBooleanTopic(coopTopicName)
             .subscribe(false, PubSubOption.keepDuplicates(true));
+    queueSpecIn =
+        inputTable
+            .getStringTopic(queueSpecTopicName)
+            .subscribe("", PubSubOption.keepDuplicates(true));
+    queueCommandIn =
+        inputTable
+            .getStringTopic(queueCommandTopicName)
+            .subscribe("", PubSubOption.keepDuplicates(true));
 
     // Create publishers
     var outputTable = NetworkTableInstance.getDefault().getTable(toDashboardTable);
@@ -78,12 +91,7 @@ public class ReefControlsIOServer implements ReefControlsIO {
     algaeStateOut = outputTable.getIntegerTopic(algaeTopicName).publish();
     coopStateOut = outputTable.getBooleanTopic(coopTopicName).publish();
     isElimsOut = outputTable.getBooleanTopic(isElimsTopicName).publish();
-
-    // Start web server
-    WebServer.start(
-        5801,
-        Paths.get(Filesystem.getDeployDirectory().getAbsolutePath().toString(), "reefcontrols")
-            .toString());
+    queueStateOut = outputTable.getStringTopic(queueStateTopicName).publish();
   }
 
   @Override
@@ -104,6 +112,12 @@ public class ReefControlsIOServer implements ReefControlsIO {
         algaeStateIn.readQueue().length > 0 ? new int[] {(int) algaeStateIn.get()} : new int[] {};
     inputs.coopState =
         coopStateIn.readQueue().length > 0 ? new boolean[] {coopStateIn.get()} : new boolean[] {};
+    inputs.queueSpec =
+        queueSpecIn.readQueue().length > 0 ? new String[] {queueSpecIn.get()} : new String[] {};
+    inputs.queueCommand =
+        queueCommandIn.readQueue().length > 0
+            ? new String[] {queueCommandIn.get()}
+            : new String[] {};
   }
 
   @Override
@@ -144,5 +158,10 @@ public class ReefControlsIOServer implements ReefControlsIO {
   @Override
   public void setElims(boolean isElims) {
     isElimsOut.set(isElims);
+  }
+
+  @Override
+  public void setQueueState(String stateJson) {
+    queueStateOut.set(stateJson == null ? "" : stateJson);
   }
 }
