@@ -1,24 +1,33 @@
-# FRC 1884: REEFSCAPE Robot Code
+# FRC 1884 • 2026 REEFSCAPE Robot Code
 
-**Overview** <br>
-Welcome to FRC Team 1884 Griffins' repository for the 2025 FRC Season: REEFSCAPE! At the end of this season, this repository will be converted into a template that lives on this organization and can be drawn upon by the future generations of 1884, as well as our sister team 1797 Phoenix (currently inactive).
+> The official software stack for Team 1884 Griffins’ 2026 build season. Everything that hits the field—from drivetrain controls to the Reef Controls tablet—is developed and tested here.
 
-Starting this season, we've started doing things very differently than we have in the past. Feel free to explore the [ASL-Robotics](https://github.com/ASL-Robotics) and [FRC1884](https://github.com/frc1884) GitHub profiles to see our teams' repos from previous seasons!
+## 2026 Season Highlights
 
-**AdvantageKit** <br>
-The most notable structural switch is that to the AdvantageKit logging paradigm. This has been created and maintained by Team 6328 Mechanical Advantage, with the intent to aid teams in the debugging process via a novel universal logging system. Check out their [2023 Championship Conference](https://www.youtube.com/watch?v=mmNJjKJG8mw) for more information on how it works.
+- **Reef Controls v2** – A fully redesigned tablet web app with live counters, queue building, drag-and-drop reordering, and manual override for drivers and coaches.
+- **Queue-aware autonomy** – Tablet selections become real commands through `TabletInterfaceTracker`, which feeds alignment goals straight into the swerve.
+- **Drive + Turn SysId** – Separate characterization routines for the Kraken Pro drivetrain and steer stages so we can retune in the pit without touching code.
+- **State-first subsystems** – Everything from the superstructure down uses AdvantageKit logging, hardware abstraction, and command-based “verbs” instead of long procedural scripts.
+- **Simulation readiness** – maple-sim powered physics plus PathPlanner + Choreo let us vet autos and queue flows before the robot is wired.
 
-An important part of this change has been moving towards hardware abstraction throughout our codebase. This allows us to swap between hardware implementations of our robot's various mechanisms with very little effort.
+## Repository Layout
 
-**More notable changes**
-* The incorporation of [maple-sim](https://github.com/Shenzhen-Robotics-Alliance/maple-sim), courtesy of Team 5516 Iron Maple
-  * This is a library that bundles the dyn4j physics engine into user code and allows us to simulate how our robot interacts with field and game elements. This will be exceedingly helpful for testing new field-dependent features and autonomous routines whenever we don't have a physical robot, such as during the prototyping and alpha construction stages.
-* The creation of generic subsystems
-  * A taster of the template nature of this repository in the future, these skeleton subsystems follow hardware abstraction and AdvantageKit principles, and represent the foundation of virtually any mechanism we will use. They can be easily subclassed and modified to fit the specifics of each mechanism without unnecessary boilerplate, and vastly expedite our experience testing prototypes faithfully to their intended behavior.
-* State-based robot control
-  * Abstraction is incredibly powerful, and this format allows us to employ a more declarative approach to robot behavior ("align and score game piece" v.s. "drive up, fine align, lift elevator...") that, in turn, opens up far more complex sequences of automated actions to decrease driver burden.
-* *COMING SOON: System Identification*
-* *COMING SOON: Vision in a Box*
+| Path | Purpose |
+| --- | --- |
+| `src/main/java/frc/robot` | Main robot project (subsystems, commands, configs). |
+| `src/main/deploy/reefcontrols` | Tablet UI assets served by the robot (`index.html/css/js`). |
+| `docs/` | Supplemental notes, coordinate frames, tuning logs. |
+| `vendordeps/` | Vendor libraries pinned for 2026 (Phoenix 6, REVLib, etc.). |
+
+## Getting Started
+
+1. **Tools** – Install WPILib 2026 beta, JDK 17, and AdvantageScope.  
+2. **Clone** – `git clone https://github.com/frc1884/season2026.git`  
+3. **Build** – `./gradlew build` (desktop) or `./gradlew simulateJava` for sim run.  
+4. **Deploy** – `./gradlew deploy` (robot must be on the same network).  
+5. **Tablet UI** – With the robot running, browse to `http://<roboRIO>:5805` to launch Reef Controls v2.
+
+## Tech Stack
 
 **Credits** <br>
 There are way too many people to thank and the list gets longer virtually every day, but we'd like to extend a massive thank you to every FRC team for publicizing their 2023-24 season repositories as inspiration for this project! Without your gracious professionalism, we would not have been able to get this massive project off the ground. Of course, we are also extremely grateful to team 6328 and everyone who has helped maintain the incredible framework that is AdvantageKit, as well as the extensive documentation that it thankfully has.
@@ -34,4 +43,6 @@ Here's a full list of the software libraries we are using, and the vendors accre
 * Studica (Studica NavX2)
 * WPILib Suite (WPILib and the official FRC software ecosystem)
 
-*(Updated 19 Jan)*
+And to every team sharing 2024–2026 codebases—you continue to make FRC better. If you reuse anything here, let us know; we love contributing upstream.
+
+*(Updated for the 2026 build season)*
