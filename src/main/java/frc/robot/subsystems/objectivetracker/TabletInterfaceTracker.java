@@ -193,6 +193,7 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
         case REMOVE -> removeStep(payload.index());
         case MOVE -> moveStep(payload.fromIndex(), payload.toIndex());
         case MANUAL -> setManualOverride(payload.manual());
+        case ALIGN_SOURCE -> alignSource(SourcePreference.parse(payload.source()));
       }
     } catch (Exception ex) {
       DriverStation.reportError(
@@ -367,6 +368,23 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
       }
       queueMessage = "Manual override disabled. Queue ready.";
     }
+  }
+
+  private void alignSource(SourcePreference sourcePreference) {
+    SourcePreference pref = sourcePreference == null ? SourcePreference.NEAREST : sourcePreference;
+    QueueStepDto dto = new QueueStepDto("SOURCE", pref.name(), null, null, null);
+    QueueStep.fromDto(dto)
+        .ifPresent(
+            step -> {
+              queueSteps.add(step);
+              queueRevision++;
+              queueMessage = "Queued " + step.label() + ".";
+              if (queueRunning && activeCommand == null) {
+                startNextStep();
+              } else if (!queueRunning && !manualOverride) {
+                startQueue();
+              }
+            });
   }
 
   private void updatePreferredSourceSideFromQueue() {
@@ -628,7 +646,8 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
     ADD,
     REMOVE,
     MOVE,
-    MANUAL;
+    MANUAL,
+    ALIGN_SOURCE;
 
     private static QueueCommand from(String value) {
       if (value == null) {
@@ -709,7 +728,8 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
       Integer index,
       Boolean manual,
       Integer fromIndex,
-      Integer toIndex) {}
+      Integer toIndex,
+      String source) {}
 
   private record QueueStatePayload(
       int revision,

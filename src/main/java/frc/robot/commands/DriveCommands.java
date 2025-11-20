@@ -515,17 +515,17 @@ public class DriveCommands {
       SwerveSubsystem drive, DoubleSupplier yDriver) {
     return Commands.defer(
         () -> {
-          DoubleSupplier driverOverride =
-              () -> yDriver.getAsDouble() * (shouldFlipDriverOverride(drive) ? -1 : 1);
+          Supplier<Boolean> alignLeft = () -> chooseLeftCoralStation(drive);
+          DoubleSupplier driverOverride = () -> yDriver.getAsDouble() * (alignLeft.get() ? -1 : 1);
           Supplier<Pose2d> target =
               () -> {
-                Pose2d station = findClosestCoralStation(drive);
-                Transform2d bumper =
-                    new Transform2d(
-                        new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-                            .rotateBy(station.getRotation()),
-                        new Rotation2d());
-                return station.plus(bumper);
+                boolean leftStation = alignLeft.get();
+                Pose2d tagPose =
+                    leftStation
+                        ? Coordinates.LEFT_CORAL_STATION.getPose()
+                        : Coordinates.RIGHT_CORAL_STATION.getPose();
+                double sideSign = leftStation ? -1.0 : 1.0;
+                return coralStationTargetPose(tagPose, sideSign);
               };
 
           return holonomicAlignCommand(drive, target, driverOverride, true, false);
@@ -538,18 +538,13 @@ public class DriveCommands {
         () -> {
           Supplier<Pose2d> target =
               () -> {
-                Pose2d base = findClosestCoralStation(drive);
-                Transform2d bumper =
-                    new Transform2d(
-                        new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-                            .rotateBy(base.getRotation()),
-                        new Rotation2d());
-                Transform2d sideToSide =
-                    new Transform2d(
-                        new Translation2d(GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO, 0)
-                            .rotateBy(base.getRotation()),
-                        new Rotation2d());
-                return base.plus(bumper).plus(sideToSide);
+                boolean leftStation = chooseLeftCoralStation(drive);
+                Pose2d base =
+                    leftStation
+                        ? Coordinates.LEFT_CORAL_STATION.getPose()
+                        : Coordinates.RIGHT_CORAL_STATION.getPose();
+                double sideSign = leftStation ? -1.0 : 1.0;
+                return coralStationTargetPose(base, sideSign);
               };
 
           return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
@@ -566,19 +561,8 @@ public class DriveCommands {
                     leftStation
                         ? Coordinates.LEFT_CORAL_STATION.getPose()
                         : Coordinates.RIGHT_CORAL_STATION.getPose();
-                Transform2d bumper =
-                    new Transform2d(
-                        new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-                            .rotateBy(base.getRotation()),
-                        new Rotation2d());
                 double sideSign = leftStation ? -1.0 : 1.0;
-                Transform2d sideToSide =
-                    new Transform2d(
-                        new Translation2d(
-                                GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO * sideSign, 0)
-                            .rotateBy(base.getRotation()),
-                        new Rotation2d());
-                return base.plus(bumper).plus(sideToSide);
+                return coralStationTargetPose(base, sideSign);
               };
 
           return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
@@ -589,18 +573,29 @@ public class DriveCommands {
   /** helper methods for alignment */
 
   // returns the coordinates of the nearest coral station
-  private static Pose2d findClosestCoralStation(SwerveSubsystem drive) {
-    if (RotationalAllianceFlipUtil.apply(drive.getPose()).getTranslation().getY()
-        < FIELD_WIDTH_METERS / 2) {
-      return Coordinates.RIGHT_CORAL_STATION.getPose();
-    } else {
-      return Coordinates.LEFT_CORAL_STATION.getPose();
-    }
+  private static boolean chooseLeftCoralStation(SwerveSubsystem drive) {
+    double leftDistance =
+        drive
+            .getPose()
+            .getTranslation()
+            .getDistance(Coordinates.LEFT_CORAL_STATION.getPose().getTranslation());
+    double rightDistance =
+        drive
+            .getPose()
+            .getTranslation()
+            .getDistance(Coordinates.RIGHT_CORAL_STATION.getPose().getTranslation());
+    return leftDistance <= rightDistance;
   }
 
-  // returns whether the driver y-input for aligning should be flipped for the current coral station
-  private static boolean shouldFlipDriverOverride(SwerveSubsystem drive) {
-    return !findClosestCoralStation(drive).equals(Coordinates.RIGHT_CORAL_STATION.getPose());
+  private static Pose2d coralStationTargetPose(Pose2d tagPose, double sideSign) {
+    Rotation2d approachHeading = tagPose.getRotation().plus(Rotation2d.k180deg);
+    double forwardOffset =
+        GlobalConstants.AlignOffsets.SOURCE_TO_TAG_STANDOFF
+            - GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET;
+    double lateralOffset = GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO * sideSign;
+    Translation2d offsetVector =
+        new Translation2d(forwardOffset, lateralOffset).rotateBy(approachHeading);
+    return new Pose2d(tagPose.getTranslation().plus(offsetVector), approachHeading);
   }
 
   /**

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reef Controls Template Builder</title>
+    <link rel="stylesheet" href="builder.css" />
+  </head>
+  <body>
+    <header class="builder-header">
+      <div>
+        <h1>Reef Controls Template Builder</h1>
+        <p>Use this tool to craft JSON templates for the operator board without editing code.</p>
+      </div>
+      <div class="header-actions">
+        <button id="reset-template" type="button" title="Restore defaults">Reset</button>
+      </div>
+    </header>
+    <main class="builder-layout">
+      <section class="form-column">
+        <div id="builder-sections" class="builder-sections"></div>
+      </section>
+      <section class="preview-column">
+        <h2>Template JSON</h2>
+        <textarea id="template-output" readonly spellcheck="false"></textarea>
+        <div class="preview-actions">
+          <button id="copy-json" type="button">Copy JSON</button>
+          <button id="download-json" type="button">Download JSON</button>
+        </div>
+        <p class="preview-hint">
+          Save the JSON file as <code>src/main/deploy/reefcontrols/templates/&lt;year&gt;.json</code>, then pass
+          <code>?template=&lt;year&gt;</code> to the tablet UI.
+        </p>
+      </section>
+    </main>
+    <script type="module" src="builder.js"></script>
+  </body>
+</html>

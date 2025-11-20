@@ -36,8 +36,8 @@ import lombok.Getter;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.REAL;
-  public static final RobotType ROBOT = RobotType.COMPBOT;
+  public static final RobotMode MODE = RobotMode.SIM;
+  public static final RobotType ROBOT = RobotType.SIMBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
 
   public static boolean TUNING_MODE = false;
@@ -130,6 +130,7 @@ public final class GlobalConstants {
 
     public static final double REEF_TO_BUMPER_OFFSET = -32.0 / 100;
     public static final double REEF_TO_BRANCH_OFFSET = Units.inchesToMeters(13.0 / 2);
+    public static final double SOURCE_TO_TAG_STANDOFF = Units.inchesToMeters(12.0);
 
     public static final double SIDE_TO_SIDE_OFFSET_AUTO = Units.feetToMeters(1);
   }

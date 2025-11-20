@@ -7,6 +7,12 @@
 
 import { NT4_Client } from "./NT4.js";
 
+const templateDirectory = "templates";
+const defaultTemplateName = "2025";
+const defaultNt4Port = 5810;
+const queryParams = new URLSearchParams(window.location.search);
+const { host: ntHost, port: ntPort } = resolveNtConnectionParams(queryParams);
+
 // ***** NETWORKTABLES *****
 
 const toRobotPrefix = "/ReefControls/ToRobot/";
@@ -23,8 +29,35 @@ const queueSpecTopicName = "QueueSpec";
 const queueCommandTopicName = "QueueCommand";
 const queueStateTopicName = "QueueState";
 
+const ntSubscriptions = [
+  toDashboardPrefix + selectedLevelTopicName,
+  toDashboardPrefix + l1TopicName,
+  toDashboardPrefix + l2TopicName,
+  toDashboardPrefix + l3TopicName,
+  toDashboardPrefix + l4TopicName,
+  toDashboardPrefix + algaeTopicName,
+  toDashboardPrefix + coopTopicName,
+  toDashboardPrefix + isElimsTopicName,
+  toDashboardPrefix + queueStateTopicName,
+];
+
+let templateConfig = null;
+let templateName = defaultTemplateName;
+let queueUiInitialized = false;
+let canvasInitialized = false;
+let ntSessionStarted = false;
+
+const uiRefs = {
+  counters: [],
+  branchNodes: [],
+  algaeNodes: [],
+  controls: [],
+  reefFlag: null,
+  reefCanvas: null,
+};
+
 const ntClient = new NT4_Client(
-  window.location.hostname,
+  ntHost,
   "ReefControls",
   () => {
     // Topic announce
@@ -33,7 +66,6 @@ const ntClient = new NT4_Client(
     // Topic unannounce
   },
   (topic, _, value) => {
-    // New data
     if (topic.name === toDashboardPrefix + selectedLevelTopicName) {
       selectedLevel = clampSelectedLevel(value);
     } else if (topic.name === toDashboardPrefix + l1TopicName) {
@@ -63,30 +95,618 @@ const ntClient = new NT4_Client(
     // Connected
   },
   () => {
-    // Disconnected
-    document.body.style.backgroundColor = "red";
-  }
+    const disconnectedColor =
+      (templateConfig && templateConfig.theme && templateConfig.theme.disconnectedBackground) ||
+      "#b71c1c";
+    document.body.style.backgroundColor = disconnectedColor;
+  },
+  { port: ntPort }
 );
 
-// Start NT connection
-window.addEventListener("load", () => {
-  ntClient.subscribe(
-    [
-      toDashboardPrefix + selectedLevelTopicName,
-      toDashboardPrefix + l1TopicName,
-      toDashboardPrefix + l2TopicName,
-      toDashboardPrefix + l3TopicName,
-      toDashboardPrefix + l4TopicName,
-      toDashboardPrefix + algaeTopicName,
-      toDashboardPrefix + coopTopicName,
-      toDashboardPrefix + isElimsTopicName,
-      toDashboardPrefix + queueStateTopicName,
-    ],
-    false,
-    false,
-    0.02
-  );
+// Start everything once DOM is ready
+window.addEventListener("DOMContentLoaded", () => {
+  bootstrapTemplate();
+});
 
+async function bootstrapTemplate() {
+  try {
+    templateConfig = await loadTemplateFromQuery();
+    buildAppShell();
+    initQueueUi();
+    updateUI();
+    initReefCanvas();
+    startNetworkTables();
+  } catch (error) {
+    console.error("Failed to load template", error);
+    showTemplateError(error);
+  }
+}
+
+async function loadTemplateFromQuery() {
+  const requestedRaw = queryParams.get("template") || defaultTemplateName;
+  const requested = requestedRaw && requestedRaw.trim().length > 0 ? requestedRaw.trim() : defaultTemplateName;
+  templateName = requested;
+  try {
+    return await fetchTemplate(requested);
+  } catch (error) {
+    if (requested !== defaultTemplateName) {
+      console.warn(`Falling back to default template due to error loading ${requested}`, error);
+      return await fetchTemplate(defaultTemplateName);
+    }
+    throw error;
+  }
+}
+
+async function fetchTemplate(name) {
+  const response = await fetch(`${templateDirectory}/${name}.json`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Template ${name} not found`);
+  }
+  const config = await response.json();
+  config.__name = name;
+  return config;
+}
+
+function showTemplateError(error) {
+  const root = document.getElementById("app-root");
+  if (!root) {
+    return;
+  }
+  root.innerHTML = "";
+  const panel = document.createElement("div");
+  panel.className = "loading-panel";
+  panel.innerHTML = `
+    <div class="loading-title">Unable to load template</div>
+    <div class="loading-subtitle">${error && error.message ? error.message : error}</div>
+  `;
+  root.appendChild(panel);
+}
+
+function buildAppShell() {
+  const root = document.getElementById("app-root");
+  if (!root) {
+    return;
+  }
+  resetUiRefs();
+  root.classList.add("app-loaded");
+  root.innerHTML = "";
+
+  const shell = document.createElement("div");
+  shell.className = "app-shell";
+  root.appendChild(shell);
+
+  const header = buildHeader();
+  const main = buildMainLayout();
+  shell.appendChild(header);
+  shell.appendChild(main);
+  injectMetadata();
+}
+
+function resetUiRefs() {
+  uiRefs.counters = [];
+  uiRefs.branchNodes = [];
+  uiRefs.algaeNodes = [];
+  uiRefs.controls = [];
+  uiRefs.reefFlag = null;
+  uiRefs.reefCanvas = null;
+}
+
+function injectMetadata() {
+  const meta = (templateConfig && templateConfig.metadata) || {};
+  if (meta.title) {
+    document.title = meta.subtitle ? `${meta.title} — ${meta.subtitle}` : meta.title;
+  }
+  if (meta.favicon) {
+    const existing = document.querySelector("link[rel='icon']");
+    if (existing) {
+      existing.href = meta.favicon;
+    } else {
+      const link = document.createElement("link");
+      link.rel = "icon";
+      link.href = meta.favicon;
+      document.head.appendChild(link);
+    }
+  }
+}
+
+function buildHeader() {
+  const meta = (templateConfig && templateConfig.metadata) || {};
+  const header = document.createElement("header");
+  header.className = "app-header";
+
+  const title = document.createElement("div");
+  title.className = "app-title";
+  title.innerText = meta.title || "Reef Controls";
+
+  const subtitle = document.createElement("div");
+  subtitle.className = "app-subtitle";
+  subtitle.innerText = meta.subtitle || templateName.toUpperCase();
+
+  header.appendChild(title);
+  header.appendChild(subtitle);
+  return header;
+}
+
+function buildMainLayout() {
+  const main = document.createElement("main");
+  main.className = "main-layout";
+
+  const primaryColumn = document.createElement("div");
+  primaryColumn.className = "primary-column";
+  main.appendChild(primaryColumn);
+
+  const overviewSection = buildOverviewSection();
+  if (overviewSection) {
+    primaryColumn.appendChild(overviewSection);
+  }
+
+  const reefSection = buildReefSection();
+  if (reefSection) {
+    primaryColumn.appendChild(reefSection);
+  }
+
+  const controlsSection = buildControlsSection();
+  if (controlsSection) {
+    primaryColumn.appendChild(controlsSection);
+  }
+
+  const queueSection = buildQueueSection();
+  if (queueSection) {
+    main.appendChild(queueSection);
+  }
+
+  return main;
+}
+
+function buildOverviewSection() {
+  const overview = templateConfig && templateConfig.overview;
+  if (!overview || !Array.isArray(overview.counters) || overview.counters.length === 0) {
+    return null;
+  }
+
+  const section = document.createElement("section");
+  section.className = "overview-section";
+
+  overview.counters.forEach((counter, index) => {
+    const container = document.createElement("div");
+    container.className = "counter-container";
+
+    const area = document.createElement("div");
+    area.className = "counter-area";
+    area.dataset.counterId = counter.id || `counter-${index}`;
+
+    const valueEl = document.createElement("div");
+    valueEl.className = "counter";
+    valueEl.innerText = "0";
+
+    const labelEl = document.createElement("div");
+    labelEl.className = "counter-label";
+    labelEl.innerText = counter.label || `Counter ${index + 1}`;
+
+    area.appendChild(valueEl);
+    area.appendChild(labelEl);
+    container.appendChild(area);
+    section.appendChild(container);
+
+    if (typeof counter.selectsLevel === "number") {
+      bind(area, () => {
+        setSelectedLevel(counter.selectsLevel);
+      });
+    }
+
+    uiRefs.counters.push({ config: counter, area, valueEl });
+  });
+
+  return section;
+}
+
+function buildReefSection() {
+  const reef = templateConfig && templateConfig.reef;
+  if (!reef) {
+    return null;
+  }
+
+  const section = document.createElement("section");
+  section.className = "reef-section";
+
+  const branchImage = reef.branchImage || "coral.png";
+  const branchSize = reef.branchSizeVh || 12;
+  const algaeImage = reef.algaeImage || "algae.png";
+  const algaeSize = reef.algaeSizeVh || 14;
+
+  if (Array.isArray(reef.branchNodes)) {
+    reef.branchNodes.forEach((node, index) => {
+      const element = document.createElement("div");
+      element.className = "reef-node branch";
+      applyNodePosition(element, node, branchSize);
+
+      const img = document.createElement("img");
+      img.src = node.image || branchImage;
+      img.alt = node.alt || "Coral position";
+      element.appendChild(img);
+      section.appendChild(element);
+      bind(element, () => handleBranchToggle(index));
+      uiRefs.branchNodes.push({ element, config: node });
+    });
+  }
+
+  if (Array.isArray(reef.algaeNodes)) {
+    reef.algaeNodes.forEach((node, index) => {
+      const element = document.createElement("div");
+      element.className = "reef-node algae";
+      applyNodePosition(element, node, algaeSize);
+
+      const img = document.createElement("img");
+      img.src = node.image || algaeImage;
+      img.alt = node.alt || "Algae position";
+      element.appendChild(img);
+      section.appendChild(element);
+      bind(element, () => handleAlgaeToggle(index));
+      uiRefs.algaeNodes.push({ element, config: node });
+    });
+  }
+
+  const flag = document.createElement("div");
+  flag.className = "flag";
+  flag.hidden = true;
+  flag.innerText = reef.flagEmoji || "\uD83C\uDFC1";
+  section.appendChild(flag);
+  uiRefs.reefFlag = flag;
+
+  const canvas = document.createElement("canvas");
+  canvas.className = "reef-canvas";
+  canvas.setAttribute("aria-hidden", "true");
+  section.appendChild(canvas);
+  uiRefs.reefCanvas = canvas;
+
+  return section;
+}
+
+function applyNodePosition(element, config, defaultSize) {
+  const size = config.sizeVh || defaultSize;
+  element.style.left = config.x != null ? `${config.x}%` : "50%";
+  element.style.top = config.y != null ? `${config.y}%` : "50%";
+  element.style.width = `${size}vh`;
+  element.style.height = `${size}vh`;
+}
+
+function buildControlsSection() {
+  const controls = templateConfig && templateConfig.controls;
+  if (!Array.isArray(controls) || controls.length === 0) {
+    return null;
+  }
+
+  const section = document.createElement("section");
+  section.className = "controls-section";
+
+  controls.forEach((control, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "control-button";
+    button.dataset.controlId = control.id || `control-${index}`;
+
+    if (Array.isArray(control.classes)) {
+      control.classes.forEach((cls) => button.classList.add(cls));
+    }
+
+    if (control.style) {
+      if (control.style.background) {
+        button.style.background = control.style.background;
+      }
+      if (control.style.textColor) {
+        button.style.color = control.style.textColor;
+      }
+      if (control.style.borderColor) {
+        button.style.borderColor = control.style.borderColor;
+      }
+    }
+
+    const icon = document.createElement("div");
+    icon.className = "button-icon";
+    if (control.iconType === "image" && control.icon) {
+      button.classList.add("image-button");
+      const image = document.createElement("img");
+      image.src = control.icon;
+      image.alt = control.label || "control icon";
+      icon.appendChild(image);
+    } else {
+      icon.innerText = control.icon || "";
+    }
+    button.appendChild(icon);
+
+    const label = document.createElement("div");
+    label.className = "button-label";
+    label.innerText = control.label || `Button ${index + 1}`;
+    button.appendChild(label);
+
+    bind(button, () => handleControlAction(control));
+
+    uiRefs.controls.push({ element: button, config: control });
+    section.appendChild(button);
+  });
+
+  return section;
+}
+
+function buildQueueSection() {
+  const queue = templateConfig && templateConfig.queue;
+  if (queue === false) {
+    return null;
+  }
+  const section = document.createElement("section");
+  section.className = "queue-section";
+
+  const panel = document.createElement("div");
+  panel.className = "queue-panel";
+  section.appendChild(panel);
+
+  const header = document.createElement("div");
+  header.className = "queue-header";
+  panel.appendChild(header);
+
+  const headerText = document.createElement("div");
+  const title = document.createElement("div");
+  title.className = "queue-title";
+  title.innerText = (queue && queue.title) || "Tablet Queue";
+  const subtitle = document.createElement("div");
+  subtitle.className = "queue-subtitle";
+  subtitle.innerText = (queue && queue.subtitle) || "Plan the robot's next moves";
+  headerText.appendChild(title);
+  headerText.appendChild(subtitle);
+  header.appendChild(headerText);
+
+  const controls = document.createElement("div");
+  controls.className = "queue-controls";
+  header.appendChild(controls);
+
+  const manualToggle = document.createElement("button");
+  manualToggle.type = "button";
+  manualToggle.className = "queue-control queue-manual";
+  manualToggle.id = "queue-manual-toggle";
+  manualToggle.innerText = (queue && queue.manualToggle && queue.manualToggle.queueEnabledLabel) || "Disable Queue";
+  controls.appendChild(manualToggle);
+
+  const commandButtons = (queue && queue.commands) || [
+    { label: "Start", command: "start" },
+    { label: "Pause", command: "stop" },
+    { label: "Skip", command: "skip" },
+    { label: "Reset", command: "reset" },
+  ];
+
+  commandButtons.forEach((buttonConfig) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "queue-control";
+    button.dataset.queueCommand = buttonConfig.command;
+    button.innerText = buttonConfig.label || buttonConfig.command;
+    controls.appendChild(button);
+  });
+
+  const hint = document.createElement("div");
+  hint.className = "queue-hint";
+  hint.innerText =
+    (queue && queue.hint) ||
+    "Tap reef nodes to enqueue a source \u2192 reef pair for the selected level, then hit Start.";
+  panel.appendChild(hint);
+
+  const body = document.createElement("div");
+  body.className = "queue-body";
+  panel.appendChild(body);
+
+  const list = document.createElement("ul");
+  list.className = "queue-list";
+  list.id = "queue-plan";
+  body.appendChild(list);
+
+  const statusPanel = document.createElement("div");
+  statusPanel.className = "queue-status-panel";
+  body.appendChild(statusPanel);
+
+  const phase = document.createElement("div");
+  phase.className = "queue-phase";
+  const phaseLabel = document.createElement("span");
+  phaseLabel.id = "queue-phase";
+  phaseLabel.innerText = "IDLE";
+  const sync = document.createElement("span");
+  sync.id = "queue-sync-indicator";
+  sync.className = "queue-sync";
+  sync.hidden = true;
+  sync.innerText = "Idle";
+  phase.appendChild(phaseLabel);
+  phase.appendChild(sync);
+  statusPanel.appendChild(phase);
+
+  const message = document.createElement("div");
+  message.id = "queue-message";
+  message.className = "queue-message";
+  message.innerText = "Waiting for queue...";
+  statusPanel.appendChild(message);
+
+  const active = document.createElement("div");
+  active.id = "queue-active-step";
+  active.className = "queue-active";
+  active.innerText = "Active Step: --";
+  statusPanel.appendChild(active);
+
+  return section;
+}
+
+function setSelectedLevel(index) {
+  const newLevel = clampSelectedLevel(index);
+  ntClient.addSample(toRobotPrefix + selectedLevelTopicName, newLevel);
+  selectedLevel = newLevel;
+  updateUI();
+}
+
+function handleBranchToggle(index) {
+  const bit = 1 << index;
+  let currentState = 0;
+  let topic = l2TopicName;
+  const levelIndex = getSelectedLevelIndex();
+  switch (levelIndex) {
+    case 0:
+      currentState = l2State;
+      topic = l2TopicName;
+      break;
+    case 1:
+      currentState = l3State;
+      topic = l3TopicName;
+      break;
+    case 2:
+    default:
+      currentState = l4State;
+      topic = l4TopicName;
+      break;
+  }
+  const newState = currentState ^ bit;
+  ntClient.addSample(toRobotPrefix + topic, newState);
+  if (levelIndex === 0) {
+    l2State = newState;
+  } else if (levelIndex === 1) {
+    l3State = newState;
+  } else {
+    l4State = newState;
+  }
+  if ((newState & bit) > 0) {
+    addReefStepFromBranch(index);
+  }
+  updateUI();
+}
+
+function handleAlgaeToggle(index) {
+  const newState = algaeState ^ (1 << index);
+  ntClient.addSample(toRobotPrefix + algaeTopicName, newState);
+  algaeState = newState;
+  updateUI();
+}
+
+function handleControlAction(control) {
+  if (!control || !control.action) {
+    return;
+  }
+  const action = control.action;
+  let shouldRefresh = false;
+  switch (action.type) {
+    case "topic-delta":
+      shouldRefresh = handleTopicDelta(action);
+      break;
+    case "topic-set":
+      shouldRefresh = handleTopicSet(action);
+      break;
+    case "topic-toggle":
+      shouldRefresh = handleTopicToggle(action);
+      break;
+    case "align-source":
+      handleAlignSource(action);
+      break;
+    case "queue-command":
+      if (action.command) {
+        sendQueueCommand(action.command, action.extras);
+      }
+      break;
+    default:
+      break;
+  }
+  if (shouldRefresh) {
+    updateUI();
+  }
+}
+
+function handleTopicDelta(action) {
+  const topicInfo = resolveTopicInfo(action);
+  if (!topicInfo) {
+    return false;
+  }
+  const current = typeof topicInfo.getter === "function" ? topicInfo.getter() : 0;
+  let next = current + (action.delta || 0);
+  if (typeof action.min === "number") {
+    next = Math.max(action.min, next);
+  }
+  if (typeof action.max === "number") {
+    next = Math.min(action.max, next);
+  }
+  ntClient.addSample(toRobotPrefix + topicInfo.topic, next);
+  if (topicInfo.setter) {
+    topicInfo.setter(next);
+  }
+  return true;
+}
+
+function handleTopicSet(action) {
+  const topicInfo = resolveTopicInfo(action);
+  if (!topicInfo) {
+    return false;
+  }
+  ntClient.addSample(toRobotPrefix + topicInfo.topic, action.value);
+  if (topicInfo.setter) {
+    topicInfo.setter(action.value);
+  }
+  return true;
+}
+
+function handleTopicToggle(action) {
+  const topicInfo = resolveTopicInfo(action);
+  if (!topicInfo) {
+    return false;
+  }
+  const current = !!(topicInfo.getter ? topicInfo.getter() : action.defaultValue);
+  const next = !current;
+  ntClient.addSample(toRobotPrefix + topicInfo.topic, next);
+  if (topicInfo.setter) {
+    topicInfo.setter(next);
+  }
+  return true;
+}
+
+function handleAlignSource(action) {
+  const preference = normalizeSourcePreference(action && action.source);
+  sendQueueCommand("ALIGN_SOURCE", { source: preference });
+}
+
+function normalizeSourcePreference(source) {
+  if (typeof source !== "string") {
+    return "NEAREST";
+  }
+  const token = source.trim().toUpperCase();
+  if (token === "LEFT" || token === "RIGHT") {
+    return token;
+  }
+  return "NEAREST";
+}
+
+function resolveTopicInfo(action) {
+  const target = action.target;
+  if (action.topic) {
+    return { topic: action.topic };
+  }
+  switch (target) {
+    case "Level1":
+      return { topic: l1TopicName, getter: () => l1State, setter: (v) => (l1State = v) };
+    case "Level2":
+      return { topic: l2TopicName, getter: () => l2State, setter: (v) => (l2State = v) };
+    case "Level3":
+      return { topic: l3TopicName, getter: () => l3State, setter: (v) => (l3State = v) };
+    case "Level4":
+      return { topic: l4TopicName, getter: () => l4State, setter: (v) => (l4State = v) };
+    case "Coop":
+      return { topic: coopTopicName, getter: () => coopState, setter: (v) => (coopState = v) };
+    case "SelectedLevel":
+      return {
+        topic: selectedLevelTopicName,
+        getter: () => selectedLevel,
+        setter: (v) => (selectedLevel = clampSelectedLevel(v)),
+      };
+    default:
+      return null;
+  }
+}
+
+function startNetworkTables() {
+  if (ntSessionStarted) {
+    return;
+  }
+  ntSessionStarted = true;
+  ntClient.subscribe(ntSubscriptions, false, false, 0.02);
   ntClient.publishTopic(toRobotPrefix + selectedLevelTopicName, "int");
   ntClient.publishTopic(toRobotPrefix + l1TopicName, "int");
   ntClient.publishTopic(toRobotPrefix + l2TopicName, "int");
@@ -97,18 +717,88 @@ window.addEventListener("load", () => {
   ntClient.publishTopic(toRobotPrefix + queueSpecTopicName, "string");
   ntClient.publishTopic(toRobotPrefix + queueCommandTopicName, "string");
   ntClient.connect();
-});
+}
+
+// ***** QUERY PARAM HELPERS *****
+
+function resolveNtConnectionParams(params) {
+  const fallbackHost =
+    window.location.hostname && window.location.hostname.trim().length > 0
+      ? window.location.hostname
+      : "localhost";
+  const overrideKeys = ["nthost", "nt", "host", "rio"];
+  let hostCandidate = null;
+  for (const key of overrideKeys) {
+    const value = getQueryParamIgnoreCase(params, key);
+    if (value && value.trim().length > 0) {
+      hostCandidate = value.trim();
+      break;
+    }
+  }
+  const parsed = extractHostAndPort(hostCandidate);
+  let host = parsed.host || fallbackHost;
+  let port = parsed.port || defaultNt4Port;
+  const explicitPort = getQueryParamIgnoreCase(params, "ntport");
+  if (explicitPort && explicitPort.trim().length > 0) {
+    const candidate = Number(explicitPort);
+    if (Number.isFinite(candidate) && candidate > 0) {
+      port = candidate;
+    }
+  }
+  return { host, port };
+}
+
+function extractHostAndPort(rawValue) {
+  if (!rawValue) {
+    return { host: null, port: null };
+  }
+  let token = rawValue.trim();
+  if (!token) {
+    return { host: null, port: null };
+  }
+  token = token.replace(/^\s*(?:ws|wss|http|https):\/\//i, "");
+  token = token.replace(/\/.*$/, "");
+  let host = token;
+  let port = null;
+  const colonIndex = token.lastIndexOf(":");
+  if (colonIndex > -1) {
+    const portCandidate = token.slice(colonIndex + 1);
+    const parsedPort = Number(portCandidate);
+    if (Number.isFinite(parsedPort) && parsedPort > 0) {
+      port = parsedPort;
+      host = token.slice(0, colonIndex);
+    }
+  }
+  host = host.trim();
+  if (host.length === 0) {
+    host = null;
+  }
+  return { host, port };
+}
+
+function getQueryParamIgnoreCase(params, name) {
+  if (!params || typeof params.entries !== "function") {
+    return null;
+  }
+  const target = name.toLowerCase();
+  for (const [key, value] of params.entries()) {
+    if (key.toLowerCase() === target) {
+      return value;
+    }
+  }
+  return null;
+}
 
 // ***** STATE CACHE *****
 
-let selectedLevel = 2; // 0 = L2, 1 = L3, 2 = L4 (default to L4)
-let l1State = 0; // Count
-let l2State = 0; // Bitfield
-let l3State = 0; // Bitfield
-let l4State = 0; // Bitfield
-let algaeState = 0; // Bitfield
-let coopState = false; // Boolean
-let isElims = false; // Boolean
+let selectedLevel = 2; // 0 = L2, 1 = L3, 2 = L4
+let l1State = 0;
+let l2State = 0;
+let l3State = 0;
+let l4State = 0;
+let algaeState = 0;
+let coopState = false;
+let isElims = false;
 let queueState = { steps: [], manual: false };
 const queueDragState = { active: false, fromIndex: null };
 
@@ -133,89 +823,79 @@ function getSelectedLevelIndex() {
 
 /** Update the full UI based on the state cache. */
 function updateUI() {
+  if (!templateConfig) {
+    return;
+  }
   const levelIndex = getSelectedLevelIndex();
-
-  // Update counter highlight
-  Array.from(document.getElementsByClassName("counter-area")).forEach(
-    (element, index) => {
-      if (index > 0 && levelIndex === index - 1) {
-        element.classList.add("active");
-      } else {
-        element.classList.remove("active");
-      }
-    }
-  );
-
-  // Update background color
-  switch (levelIndex) {
-    case 0:
-      document.body.style.backgroundColor = "#5AB7ED";
-      break;
-    case 1:
-      document.body.style.backgroundColor = "#0F486C";
-      break;
-    case 2:
-      document.body.style.backgroundColor = "#dfbbfc";
-      break;
+  const theme = templateConfig.theme || {};
+  const levelColors = Array.isArray(theme.levelBackgrounds)
+    ? theme.levelBackgrounds
+    : ["#5AB7ED", "#0F486C", "#dfbbfc"];
+  if (levelColors[levelIndex]) {
+    document.body.style.backgroundColor = levelColors[levelIndex];
   }
 
-  // Update level counts
   let rpLevelCount = 0;
-  Array.from(document.getElementsByClassName("counter")).forEach(
-    (element, index) => {
-      if (index === 0) {
-        element.innerText = l1State;
-        if (l1State >= 7) rpLevelCount++;
-      } else {
-        let count = 0;
-        let levelState = [l2State, l3State, l4State][index - 1];
-        for (let i = 0; i < 12; i++) {
-          if (((1 << i) & levelState) > 0) {
-            count++;
-          }
+  const branchLength = (templateConfig.reef && templateConfig.reef.branchNodes && templateConfig.reef.branchNodes.length) || 12;
+
+  uiRefs.counters.forEach((entry) => {
+    const source = entry.config && entry.config.source;
+    if (source === "Level1") {
+      entry.valueEl.innerText = l1State;
+      if (l1State >= 7) {
+        rpLevelCount++;
+      }
+    } else if (source === "Level2" || source === "Level3" || source === "Level4") {
+      const levelState = source === "Level2" ? l2State : source === "Level3" ? l3State : l4State;
+      let count = 0;
+      for (let i = 0; i < branchLength; i++) {
+        if (((1 << i) & levelState) > 0) {
+          count++;
         }
-        element.innerText = count === 12 ? "\u2705" : count;
-        if (count >= 7) rpLevelCount++;
+      }
+      entry.valueEl.innerText = count === branchLength ? "\u2705" : count;
+      if (count >= 7) {
+        rpLevelCount++;
       }
     }
-  );
-
-  // Update coral buttons
-  Array.from(document.getElementsByClassName("branch")).forEach(
-    (element, index) => {
-      let levelState = [l2State, l3State, l4State][levelIndex];
-      if (((1 << index) & levelState) > 0) {
-        element.classList.add("active");
+    if (typeof entry.config.selectsLevel === "number") {
+      if (entry.config.selectsLevel === levelIndex) {
+        entry.area.classList.add("active");
       } else {
-        element.classList.remove("active");
+        entry.area.classList.remove("active");
       }
     }
-  );
+  });
 
-  // Update algae buttons
-  Array.from(document.getElementsByClassName("algae")).forEach(
-    (element, index) => {
-      if (((1 << index) & algaeState) > 0) {
-        element.classList.add("active");
-      } else {
-        element.classList.remove("active");
+  uiRefs.branchNodes.forEach((ref, index) => {
+    const levelState = [l2State, l3State, l4State][levelIndex] || 0;
+    if (((1 << index) & levelState) > 0) {
+      ref.element.classList.add("active");
+    } else {
+      ref.element.classList.remove("active");
+    }
+  });
+
+  uiRefs.algaeNodes.forEach((ref, index) => {
+    if (((1 << index) & algaeState) > 0) {
+      ref.element.classList.add("active");
+    } else {
+      ref.element.classList.remove("active");
+    }
+  });
+
+  uiRefs.controls.forEach((control) => {
+    if (control.config && control.config.action && control.config.action.type === "topic-toggle") {
+      if (control.config.action.target === "Coop") {
+        control.element.classList.toggle("active", !!coopState);
       }
     }
-  );
+  });
 
-  // Update coop button
-  let coopDiv = document.getElementsByClassName("coop")[0];
-  if (coopState) {
-    coopDiv.classList.add("active");
-  } else {
-    coopDiv.classList.remove("active");
+  if (uiRefs.reefFlag) {
+    uiRefs.reefFlag.hidden = isElims || rpLevelCount < (coopState ? 3 : 4);
   }
 
-  // Update RP flag
-  document.getElementsByClassName("flag")[0].hidden =
-    isElims || rpLevelCount < (coopState ? 3 : 4);
-
-  // Update elims state
   if (isElims) {
     document.body.classList.add("elims");
   } else {
@@ -258,7 +938,7 @@ function renderQueue() {
       const li = document.createElement("li");
       li.className = `queue-item status-${status.toLowerCase()}`;
       li.setAttribute("data-queue-index", String(index));
-       li.setAttribute("draggable", "true");
+      li.setAttribute("draggable", "true");
       li.innerHTML = `
         <div>
           <div class="queue-item-title">${formatStepTitle(step)}</div>
@@ -303,7 +983,10 @@ function renderQueue() {
 
   const manualToggle = document.getElementById("queue-manual-toggle");
   if (manualToggle) {
-    manualToggle.innerText = manualEnabled ? "Enable Queue" : "Disable Queue";
+    const manualConfig = templateConfig && templateConfig.queue && templateConfig.queue.manualToggle;
+    const queueEnabledLabel = (manualConfig && manualConfig.queueEnabledLabel) || "Disable Queue";
+    const manualEnabledLabel = (manualConfig && manualConfig.manualEnabledLabel) || "Enable Queue";
+    manualToggle.innerText = manualEnabled ? manualEnabledLabel : queueEnabledLabel;
     manualToggle.classList.toggle("queue-control-active", manualEnabled);
     manualToggle.setAttribute("aria-pressed", manualEnabled ? "true" : "false");
   }
@@ -359,14 +1042,24 @@ function sendAddStep(step) {
 function addReefStepFromBranch(index) {
   const face = Math.floor(index / 2) + 1;
   const side = index % 2 === 0 ? "LEFT" : "RIGHT";
+  const templateNode = templateConfig && templateConfig.reef && templateConfig.reef.branchNodes
+    ? templateConfig.reef.branchNodes[index]
+    : null;
+  const nodeFace = templateNode && templateNode.face ? templateNode.face : face;
+  const nodeSide = templateNode && templateNode.side ? templateNode.side : side;
   const levelTokens = ["L2", "L3", "L4"];
   const levelIndex = getSelectedLevelIndex();
   const level = levelTokens[levelIndex] || "L3";
-  sendAddStep({ type: "SOURCE", source: side });
-  sendAddStep({ type: "REEF", face, side, level });
+  sendAddStep({ type: "SOURCE", source: nodeSide });
+  sendAddStep({ type: "REEF", face: nodeFace, side: nodeSide, level });
 }
 
 function initQueueUi() {
+  if (queueUiInitialized) {
+    return;
+  }
+  queueUiInitialized = true;
+
   const queueList = document.getElementById("queue-plan");
   if (queueList) {
     queueList.addEventListener("click", (event) => {
@@ -533,103 +1226,26 @@ window.addEventListener("mousemove", () => {
   lastMouseEvent = now;
 });
 
-window.addEventListener("load", () => {
-  // Buttons to change selected level
-  Array.from(document.getElementsByClassName("counter-area")).forEach(
-    (element, index) => {
-      if (index > 0) {
-        bind(element, () => {
-          const newLevel = clampSelectedLevel(index - 1);
-          ntClient.addSample(toRobotPrefix + selectedLevelTopicName, newLevel);
-          selectedLevel = newLevel;
-          updateUI();
-        });
-      }
-    }
-  );
-
-  // Coral toggle buttons
-  Array.from(document.getElementsByClassName("branch")).forEach(
-    (element, index) => {
-      bind(element, () => {
-        const bit = 1 << index;
-        let currentState = 0;
-        let topic = l2TopicName;
-        const levelIndex = getSelectedLevelIndex();
-        switch (levelIndex) {
-          case 0:
-            currentState = l2State;
-            topic = l2TopicName;
-            break;
-          case 1:
-            currentState = l3State;
-            topic = l3TopicName;
-            break;
-          case 2:
-            currentState = l4State;
-            topic = l4TopicName;
-            break;
-        }
-        const newState = currentState ^ bit;
-        ntClient.addSample(toRobotPrefix + topic, newState);
-        if (levelIndex === 0) {
-          l2State = newState;
-        } else if (levelIndex === 1) {
-          l3State = newState;
-        } else {
-          l4State = newState;
-        }
-        if ((newState & bit) > 0) {
-          addReefStepFromBranch(index);
-        }
-      });
-    }
-  );
-
-  // Algae toggle buttons
-  Array.from(document.getElementsByClassName("algae")).forEach(
-    (element, index) => {
-      bind(element, () => {
-        ntClient.addSample(
-          toRobotPrefix + algaeTopicName,
-          algaeState ^ (1 << index)
-        );
-      });
-    }
-  );
-
-  // L1 count controls
-  bind(document.getElementsByClassName("subtract")[0], () => {
-    if (l1State > 0) {
-      ntClient.addSample(toRobotPrefix + l1TopicName, l1State - 1);
-    }
-  });
-  bind(document.getElementsByClassName("add")[0], () => {
-    ntClient.addSample(toRobotPrefix + l1TopicName, l1State + 1);
-  });
-
-  // Coop button
-  bind(document.getElementsByClassName("coop")[0], () => {
-    ntClient.addSample(toRobotPrefix + coopTopicName, !coopState);
-  });
-
-  initQueueUi();
-  updateUI();
-});
-
 // ***** REEF CANVAS *****
 
-window.addEventListener("load", () => {
-  const canvas = document.getElementsByTagName("canvas")[0];
+function initReefCanvas() {
+  if (canvasInitialized) {
+    return;
+  }
+  const canvas = uiRefs.reefCanvas;
+  if (!canvas) {
+    return;
+  }
+  canvasInitialized = true;
   const context = canvas.getContext("2d");
 
   let render = () => {
-    const devicePixelRatio = window.devicePixelRatio;
+    const devicePixelRatio = window.devicePixelRatio || 1;
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     canvas.width = width * devicePixelRatio;
     canvas.height = height * devicePixelRatio;
-    context.scale(devicePixelRatio, devicePixelRatio);
+    context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     context.clearRect(0, 0, width, height);
 
     const corners = [
@@ -661,4 +1277,4 @@ window.addEventListener("load", () => {
 
   render();
   window.addEventListener("resize", render);
-});
+}

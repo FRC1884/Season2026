@@ -115,7 +115,8 @@ export class NT4_Client {
     onTopicUnannounce,
     onNewTopicData,
     onConnect,
-    onDisconnect
+    onDisconnect,
+    options = {}
   ) {
     this.serverBaseAddr = serverAddr;
     this.appName = appName;
@@ -124,6 +125,13 @@ export class NT4_Client {
     this.onNewTopicData = onNewTopicData;
     this.onConnect = onConnect;
     this.onDisconnect = onDisconnect;
+    let requestedPort =
+      options && options.port != null ? Number(options.port) : NaN;
+    if (!Number.isFinite(requestedPort) || requestedPort <= 0) {
+      requestedPort = 5810;
+    }
+    this.serverPort = requestedPort;
+    this.useSecureWs = !!(options && options.secure);
     setInterval(() => {
       // Update timestamp
       this.ws_sendTimestamp();
@@ -531,8 +539,8 @@ export class NT4_Client {
     }
   }
   ws_connect() {
-    let port = 5810;
-    let prefix = "ws://";
+    let port = this.serverPort || 5810;
+    let prefix = this.useSecureWs ? "wss://" : "ws://";
     this.serverAddr =
       prefix +
       this.serverBaseAddr +

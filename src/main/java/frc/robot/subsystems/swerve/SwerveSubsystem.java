@@ -131,25 +131,25 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
         (log) -> {
           // Log per-module telemetry
           for (int i = 0; i < 4; i++) {
-              Module module = modules[i];
-              log.motor("DriveM" + i)
-                      .voltage(Volts.of(module.getVoltage()))
-                      .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
-                      .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+            Module module = modules[i];
+            log.motor("DriveM" + i)
+                .voltage(Volts.of(module.getVoltage()))
+                .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
+                .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
           }
         };
 
-      Consumer<SysIdRoutineLog> sysIdLogCallbackTurn =
-              (log) -> {
-                  // Log per-module telemetry
-                  for (int i = 0; i < 4; i++) {
-                      Module module = modules[i];
-                      log.motor("TurnM" + i)
-                              .voltage(Volts.of(module.getVoltage()))
-                              .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
-                              .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
-                  }
-              };
+    Consumer<SysIdRoutineLog> sysIdLogCallbackTurn =
+        (log) -> {
+          // Log per-module telemetry
+          for (int i = 0; i < 4; i++) {
+            Module module = modules[i];
+            log.motor("TurnM" + i)
+                .voltage(Volts.of(module.getVoltage()))
+                .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
+                .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+          }
+        };
 
     // Configure drive SysId
     driveSysId =

@@ -12,133 +12,18 @@
     <title>Reef Controls &mdash; FRC 1884</title>
   </head>
   <body>
-    <div class="app-shell">
-      <header class="app-header">
-        <div class="app-title">Reef Controls</div>
-        <div class="app-subtitle">FRC 1884</div>
-      </header>
-      <main class="main-layout">
-        <div class="primary-column">
-          <section class="overview-section">
-            <div class="counter-container">
-              <div class="counter-area">
-                <div class="counter">0</div>
-                <div class="counter-label">L1</div>
-              </div>
-            </div>
-            <div class="counter-container">
-              <div class="counter-area">
-                <div class="counter">0</div>
-                <div class="counter-label">L2</div>
-              </div>
-            </div>
-            <div class="counter-container">
-              <div class="counter-area">
-                <div class="counter">0</div>
-                <div class="counter-label">L3</div>
-              </div>
-            </div>
-            <div class="counter-container">
-              <div class="counter-area">
-                <div class="counter">0</div>
-                <div class="counter-label">L4</div>
-              </div>
-            </div>
-          </section>
-          <section class="reef-section">
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="branch"><img src="coral.png" alt="Coral position" /></div>
-            <div class="algae active">
-              <img src="algae.png" alt="Algae position" />
-            </div>
-            <div class="algae active">
-              <img src="algae.png" alt="Algae position" />
-            </div>
-            <div class="algae active">
-              <img src="algae.png" alt="Algae position" />
-            </div>
-            <div class="algae active">
-              <img src="algae.png" alt="Algae position" />
-            </div>
-            <div class="algae active">
-              <img src="algae.png" alt="Algae position" />
-            </div>
-            <div class="algae active">
-              <img src="algae.png" alt="Algae position" />
-            </div>
-            <div class="flag" hidden aria-label="Ranking point earned">
-              &#x1F3C1;
-            </div>
-            <canvas class="reef-canvas" aria-hidden="true"></canvas>
-          </section>
-          <section class="lower-section">
-            <div class="subtract">
-              <div class="button-icon" aria-hidden="true">&#x2796;</div>
-              <div class="button-label">-1 Algae</div>
-            </div>
-            <div class="add">
-              <div class="button-icon" aria-hidden="true">&#x2795;</div>
-              <div class="button-label">+1 Algae</div>
-            </div>
-            <div class="coop">
-              <div class="button-icon" aria-hidden="true">&#x1F91D;</div>
-              <div class="button-label">Co-Op</div>
-            </div>
-          </section>
+    <div id="app-root">
+      <div class="loading-panel">
+        <div class="loading-title">Loading operator board…</div>
+        <div class="loading-subtitle">
+          If this message does not disappear, make sure a template JSON exists.
         </div>
-        <section class="queue-section">
-          <div class="queue-panel">
-            <div class="queue-header">
-              <div>
-                <div class="queue-title">Tablet Queue</div>
-                <div class="queue-subtitle">Plan the robot's next moves</div>
-              </div>
-              <div class="queue-controls">
-                <button type="button" class="queue-control queue-manual" id="queue-manual-toggle">
-                  Disable Queue
-                </button>
-                <button type="button" class="queue-control" data-queue-command="start">
-                  Start
-                </button>
-                <button type="button" class="queue-control" data-queue-command="stop">
-                  Pause
-              </button>
-              <button type="button" class="queue-control" data-queue-command="skip">
-                Skip
-              </button>
-              <button type="button" class="queue-control" data-queue-command="reset">
-                Reset
-              </button>
-            </div>
-          </div>
-          <div class="queue-hint">
-            Tap reef nodes to enqueue a source &rarr; reef pair for the selected level, then hit
-            Start. Drag items to reorder them, tap to remove, and toggle manual mode when the driver
-            needs hands-on control.
-          </div>
-          <div class="queue-body">
-            <ul id="queue-plan" class="queue-list"></ul>
-            <div class="queue-status-panel">
-              <div class="queue-phase">
-                <span id="queue-phase">IDLE</span>
-                <span id="queue-sync-indicator" class="queue-sync" hidden>Idle</span>
-              </div>
-              <div id="queue-message" class="queue-message">Waiting for queue...</div>
-              <div id="queue-active-step" class="queue-active">Active Step: --</div>
-            </div>
-          </div>
-        </section>
-      </main>
+      </div>
+      <noscript>
+        <div class="loading-panel">
+          A modern browser with JavaScript enabled is required to render the operator board.
+        </div>
+      </noscript>
     </div>
   </body>
 </html>

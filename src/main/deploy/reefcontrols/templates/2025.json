@@ -1,0 +1,240 @@
+{
+  "templateVersion": 1,
+  "templateId": "2025-default",
+  "metadata": {
+    "title": "Reef Controls",
+    "subtitle": "FRC 1884"
+  },
+  "theme": {
+    "levelBackgrounds": [
+      "#5AB7ED",
+      "#0F486C",
+      "#dfbbfc"
+    ],
+    "disconnectedBackground": "#8b1e3f"
+  },
+  "overview": {
+    "counters": [
+      {
+        "id": "level1",
+        "label": "L1",
+        "source": "Level1"
+      },
+      {
+        "id": "level2",
+        "label": "L2",
+        "source": "Level2",
+        "selectsLevel": 0
+      },
+      {
+        "id": "level3",
+        "label": "L3",
+        "source": "Level3",
+        "selectsLevel": 1
+      },
+      {
+        "id": "level4",
+        "label": "L4",
+        "source": "Level4",
+        "selectsLevel": 2
+      }
+    ]
+  },
+  "reef": {
+    "branchImage": "coral.png",
+    "branchSizeVh": 12,
+    "algaeImage": "algae.png",
+    "algaeSizeVh": 14,
+    "flagEmoji": "🏁",
+    "branchNodes": [
+      {
+        "x": 60,
+        "y": 90,
+        "face": 1,
+        "side": "LEFT"
+      },
+      {
+        "x": 40,
+        "y": 90,
+        "face": 1,
+        "side": "RIGHT"
+      },
+      {
+        "x": 20,
+        "y": 80,
+        "face": 2,
+        "side": "LEFT"
+      },
+      {
+        "x": 10,
+        "y": 62,
+        "face": 2,
+        "side": "RIGHT"
+      },
+      {
+        "x": 10,
+        "y": 38,
+        "face": 3,
+        "side": "LEFT"
+      },
+      {
+        "x": 20,
+        "y": 20,
+        "face": 3,
+        "side": "RIGHT"
+      },
+      {
+        "x": 40,
+        "y": 10,
+        "face": 4,
+        "side": "LEFT"
+      },
+      {
+        "x": 60,
+        "y": 10,
+        "face": 4,
+        "side": "RIGHT"
+      },
+      {
+        "x": 80,
+        "y": 20,
+        "face": 5,
+        "side": "LEFT"
+      },
+      {
+        "x": 90,
+        "y": 38,
+        "face": 5,
+        "side": "RIGHT"
+      },
+      {
+        "x": 90,
+        "y": 62,
+        "face": 6,
+        "side": "LEFT"
+      },
+      {
+        "x": 80,
+        "y": 80,
+        "face": 6,
+        "side": "RIGHT"
+      }
+    ],
+    "algaeNodes": [
+      {
+        "x": 50,
+        "y": 70
+      },
+      {
+        "x": 32,
+        "y": 60
+      },
+      {
+        "x": 32,
+        "y": 40
+      },
+      {
+        "x": 50,
+        "y": 30
+      },
+      {
+        "x": 68,
+        "y": 40
+      },
+      {
+        "x": 68,
+        "y": 60
+      }
+    ]
+  },
+  "controls": [
+    {
+      "id": "l1-subtract",
+      "label": "-1 L1",
+      "icon": "➖",
+      "style": {
+        "background": "rgba(255,255,255,0.04)",
+        "textColor": "#f4fbff"
+      },
+      "action": {
+        "type": "topic-delta",
+        "target": "Level1",
+        "delta": -1,
+        "min": 0
+      }
+    },
+    {
+      "id": "l1-add",
+      "label": "+1 L1",
+      "icon": "➕",
+      "style": {
+        "background": "rgba(255,255,255,0.04)",
+        "textColor": "#f4fbff"
+      },
+      "action": {
+        "type": "topic-delta",
+        "target": "Level1",
+        "delta": 1
+      }
+    },
+    {
+      "id": "coop-toggle",
+      "label": "Co-Op",
+      "icon": "🤝",
+      "classes": [
+        "coop"
+      ],
+      "style": {
+        "background": "rgba(79,208,255,0.12)",
+        "textColor": "#f4fbff"
+      },
+      "action": {
+        "type": "topic-toggle",
+        "target": "Coop"
+      }
+    },
+    {
+      "id": "align-source",
+      "label": "Align Source",
+      "icon": "🎯",
+      "classes": [
+        "primary"
+      ],
+      "style": {
+        "background": "linear-gradient(135deg, #154f2f, #1e7a46)",
+        "textColor": "#e8f5e9"
+      },
+      "action": {
+        "type": "align-source",
+        "source": "NEAREST"
+      }
+    }
+  ],
+  "queue": {
+    "title": "Tablet Queue",
+    "subtitle": "Plan the robot's next moves",
+    "hint": "Tap reef nodes to enqueue a source → reef pair for the selected level, then hit Start. Drag items to reorder them, tap to remove, and toggle manual mode when the driver needs hands-on control.",
+    "manualToggle": {
+      "queueEnabledLabel": "Disable Queue",
+      "manualEnabledLabel": "Enable Queue"
+    },
+    "commands": [
+      {
+        "label": "Start",
+        "command": "start"
+      },
+      {
+        "label": "Pause",
+        "command": "stop"
+      },
+      {
+        "label": "Skip",
+        "command": "skip"
+      },
+      {
+        "label": "Reset",
+        "command": "reset"
+      }
+    ]
+  }
+}
