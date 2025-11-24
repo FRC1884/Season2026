@@ -21,11 +21,24 @@
 
 ## Getting Started
 
-1. **Tools** – Install WPILib 2026 beta, JDK 17, and AdvantageScope.  
-2. **Clone** – `git clone https://github.com/frc1884/season2026.git`  
-3. **Build** – `./gradlew build` (desktop) or `./gradlew simulateJava` for sim run.  
-4. **Deploy** – `./gradlew deploy` (robot must be on the same network).  
+1. **Tools** – Install WPILib 2026 beta, JDK 17, and AdvantageScope.
+2. **Clone** – `git clone https://github.com/frc1884/season2026.git`
+3. **Build** – `./gradlew build` (desktop) or `./gradlew simulateJava` for sim run.
+4. **Deploy** – `./gradlew deploy` (robot must be on the same network).
 5. **Tablet UI** – With the robot running, browse to `http://<roboRIO>:5805` to launch Reef Controls v2.
+6. **Remote tablets** – If you host the UI somewhere else (e.g., `reefcontrols.io` or a local file), add `?ntHost=<robot-ip>` (and optionally `&ntPort=<port>`) to the URL so the page knows which NT4 server to connect to.
+
+## Reef Controls Templates
+
+Reef Controls now renders from a year-specific JSON template so you can change layouts, buttons, assets, and queue text without touching `index.html`.
+
+- Templates live in `src/main/deploy/reefcontrols/templates`. The file name (without `.json`) becomes the template id (e.g., `2025.json` → `?template=2025`).
+- Point the tablet UI at a template with the `template` query param: `http://<roboRIO>:5805/?template=2025`. If omitted, the default template is used.
+- Every template can override metadata (title/subtitle/favicon), section colors, reef node placements, control buttons/styles/actions, and queue copy.
+- Use the visual builder at `docs/template-builder/index.html` to author templates. Open it locally in a browser, tweak metadata/counters/nodes/buttons, then click **Download JSON** and drop the file into the templates directory.
+- Actions support topic deltas, toggles, literal publishes, and queue commands. If a topic field is left empty, the builder falls back to the stock Reef Controls topics.
+
+After editing a template, redeploy (`./gradlew deploy`) or copy the JSON onto the RIO so the tablet can fetch the new layout.
 
 ## Tech Stack
 

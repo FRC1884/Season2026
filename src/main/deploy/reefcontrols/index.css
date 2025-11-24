@@ -50,6 +50,43 @@ body {
   transition: background-color 250ms ease;
 }
 
+#app-root {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app-root.app-loaded {
+  display: block;
+  min-height: auto;
+}
+
+.loading-panel {
+  width: min(480px, 92%);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 2rem;
+  text-align: center;
+  background: rgba(10, 21, 40, 0.75);
+  box-shadow: var(--glow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.loading-title {
+  font-size: clamp(1.2rem, 2.6vw, 1.5rem);
+  font-weight: 600;
+}
+
+.loading-subtitle {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
 .app-shell {
   width: min(var(--shell-max-width), 100%);
   margin: 0 auto;
@@ -184,8 +221,7 @@ body {
   opacity: 0.7;
 }
 
-.reef-section .branch,
-.reef-section .algae {
+.reef-node {
   position: absolute;
   transform: translate(-50%, -50%);
   display: flex;
@@ -203,43 +239,41 @@ body {
   z-index: 2;
 }
 
-.reef-section .branch {
+.reef-node.branch {
   width: 12vh;
   height: 12vh;
 }
 
-.reef-section .algae {
+.reef-node.algae {
   width: 14vh;
   height: 14vh;
 }
 
-.reef-section .branch img,
-.reef-section .algae img {
+.reef-node img {
   width: 70%;
   pointer-events: none;
   display: none;
 }
 
-.reef-section .branch.active img,
-.reef-section .algae.active img {
+.reef-node.branch.active img,
+.reef-node.algae.active img {
   display: block;
 }
 
-.reef-section .branch.active {
+.reef-node.branch.active {
   background-image: linear-gradient(145deg, #fdd5ff, #be63ff);
   border-color: rgba(255, 255, 255, 0.85);
   box-shadow: 0 0 30px rgba(212, 119, 255, 0.65);
   transform: translate(-50%, -50%) scale(1.02);
 }
 
-.reef-section .algae.active {
+.reef-node.algae.active {
   background-image: linear-gradient(145deg, #b5f5ff, #04befe);
   border-color: rgba(255, 255, 255, 0.85);
   box-shadow: 0 0 32px rgba(0, 187, 255, 0.55);
 }
 
-.reef-section .branch:hover,
-.reef-section .algae:hover {
+.reef-node:hover {
   transform: translate(-50%, -50%) scale(1.04);
 }
 
@@ -251,81 +285,6 @@ body {
   font-size: clamp(4rem, 12vh, 6rem);
   z-index: 4;
   text-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
-}
-
-/* Reef layout (matches the original geometry) */
-.reef-section .branch:nth-child(1) {
-  left: calc(50% + 10%);
-  top: calc(50% + 40%);
-}
-.reef-section .branch:nth-child(2) {
-  left: calc(50% - 10%);
-  top: calc(50% + 40%);
-}
-.reef-section .branch:nth-child(3) {
-  left: calc(50% - 30%);
-  top: calc(50% + 30%);
-}
-.reef-section .branch:nth-child(4) {
-  left: calc(50% - 40%);
-  top: calc(50% + 12%);
-}
-.reef-section .branch:nth-child(5) {
-  left: calc(50% - 40%);
-  top: calc(50% - 12%);
-}
-.reef-section .branch:nth-child(6) {
-  left: calc(50% - 30%);
-  top: calc(50% - 30%);
-}
-.reef-section .branch:nth-child(7) {
-  left: calc(50% - 10%);
-  top: calc(50% - 40%);
-}
-.reef-section .branch:nth-child(8) {
-  left: calc(50% + 10%);
-  top: calc(50% - 40%);
-}
-.reef-section .branch:nth-child(9) {
-  left: calc(50% + 30%);
-  top: calc(50% - 30%);
-}
-.reef-section .branch:nth-child(10) {
-  left: calc(50% + 40%);
-  top: calc(50% - 12%);
-}
-.reef-section .branch:nth-child(11) {
-  left: calc(50% + 40%);
-  top: calc(50% + 12%);
-}
-.reef-section .branch:nth-child(12) {
-  left: calc(50% + 30%);
-  top: calc(50% + 30%);
-}
-
-.reef-section .algae:nth-child(13) {
-  left: calc(50% + 0%);
-  top: calc(50% + 20%);
-}
-.reef-section .algae:nth-child(14) {
-  left: calc(50% - 18%);
-  top: calc(50% + 10%);
-}
-.reef-section .algae:nth-child(15) {
-  left: calc(50% - 18%);
-  top: calc(50% - 10%);
-}
-.reef-section .algae:nth-child(16) {
-  left: calc(50% + 0%);
-  top: calc(50% - 20%);
-}
-.reef-section .algae:nth-child(17) {
-  left: calc(50% + 18%);
-  top: calc(50% - 10%);
-}
-.reef-section .algae:nth-child(18) {
-  left: calc(50% + 18%);
-  top: calc(50% + 10%);
 }
 
 .queue-section {
@@ -550,18 +509,18 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.lower-section {
+.controls-section {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   border-radius: 1.5rem;
   padding: clamp(1rem, 1.8vw, 1.75rem);
   box-shadow: var(--glow);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: clamp(0.85rem, 1.5vw, 1.8rem);
 }
 
-.lower-section > div {
+.control-button {
   position: relative;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--panel-border);
@@ -575,45 +534,61 @@ body {
   color: #fff;
   font-size: clamp(2.3rem, 7vh, 3.2rem);
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.35);
-  transition: transform 160ms ease, border-color 160ms ease,
-    box-shadow 160ms ease, background 160ms ease;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease,
+    background 160ms ease;
+  cursor: pointer;
 }
 
-.lower-section .button-icon {
+.control-button .button-icon {
   line-height: 1;
 }
 
-.lower-section .coop .button-icon {
-  display: none;
+.control-button.image-button .button-icon img {
+  max-width: 4rem;
+  max-height: 4rem;
 }
 
-.lower-section .coop.active .button-icon {
+.control-button .button-icon img {
   display: block;
 }
 
-.lower-section > div .button-label {
+.control-button.coop .button-icon {
+  display: none;
+}
+
+.control-button.coop.active .button-icon {
+  display: block;
+}
+
+.control-button .button-label {
   font-size: 0.95rem;
   letter-spacing: 0.25em;
   text-transform: uppercase;
   color: var(--text-dim);
 }
 
-.lower-section > div:hover {
+.control-button:hover {
   transform: translateY(-3px);
   border-color: var(--panel-border-strong);
 }
 
-.lower-section .coop.active {
+.control-button.coop.active {
   background: rgba(79, 208, 255, 0.15);
   border-color: var(--accent);
   box-shadow: 0 12px 30px rgba(79, 208, 255, 0.4);
 }
 
-body.elims .lower-section {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.control-button.disabled,
+.control-button[aria-disabled="true"] {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
-body.elims .lower-section .coop {
+body.elims .controls-section {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+body.elims .control-button.coop {
   display: none;
 }
 
