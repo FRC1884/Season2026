@@ -17,10 +17,10 @@ import static frc.robot.Config.Controllers.getDriverController;
 import static frc.robot.Config.Controllers.getOperatorController;
 import static frc.robot.Config.Subsystems.AUTONOMOUS_ENABLED;
 import static frc.robot.Config.Subsystems.DRIVETRAIN_ENABLED;
-import static frc.robot.Config.Subsystems.IsSwerveSpark;
 import static frc.robot.Config.Subsystems.VISION_ENABLED;
 import static frc.robot.Config.Subsystems.WEBUI_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
+import static frc.robot.GlobalConstants.robotSwerveMotors;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_LEFT;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_RIGHT;
 import static frc.robot.subsystems.swerve.SwerveConstants.FRONT_LEFT;
@@ -41,6 +41,7 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import frc.robot.GlobalConstants.FieldMap.Coordinates;
 import frc.robot.GlobalConstants.RobotMode;
 import frc.robot.OI.DriverMap;
 import frc.robot.OI.OperatorMap;
@@ -49,16 +50,7 @@ import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
 import frc.robot.subsystems.objectivetracker.TabletInterfaceTracker;
-import frc.robot.subsystems.swerve.GyroIO;
-import frc.robot.subsystems.swerve.GyroIONavX;
-import frc.robot.subsystems.swerve.GyroIOPigeon2;
-import frc.robot.subsystems.swerve.GyroIOSim;
-import frc.robot.subsystems.swerve.ModuleIO;
-import frc.robot.subsystems.swerve.ModuleIOKraken;
-import frc.robot.subsystems.swerve.ModuleIOSim;
-import frc.robot.subsystems.swerve.ModuleIOSpark;
-import frc.robot.subsystems.swerve.SwerveConstants;
-import frc.robot.subsystems.swerve.SwerveSubsystem;
+import frc.robot.subsystems.swerve.*;
 import frc.robot.subsystems.vision.AprilTagVisionIOPhotonVision;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionIO;
@@ -112,13 +104,26 @@ public class RobotContainer {
                     case NAVX -> new GyroIONavX();
                     case ADIS -> new GyroIO() {};
                   },
-                  (IsSwerveSpark) ? new ModuleIOSpark(FRONT_LEFT) : new ModuleIOKraken(FRONT_LEFT),
-                  (IsSwerveSpark)
-                      ? new ModuleIOSpark(FRONT_RIGHT)
-                      : new ModuleIOKraken(FRONT_RIGHT),
-                  (IsSwerveSpark) ? new ModuleIOSpark(BACK_LEFT) : new ModuleIOKraken(BACK_LEFT),
-                  (IsSwerveSpark) ? new ModuleIOSpark(BACK_RIGHT) : new ModuleIOKraken(BACK_RIGHT));
-
+                  switch (robotSwerveMotors) {
+                    case FULLSPARK -> new ModuleIOSpark(FRONT_LEFT);
+                    case HALFSPARK -> new ModuleIOHalfSpark(FRONT_LEFT);
+                    case FULLKRACKENS -> new ModuleIOFullKraken(FRONT_LEFT);
+                  },
+                  switch (robotSwerveMotors) {
+                    case FULLSPARK -> new ModuleIOSpark(FRONT_RIGHT);
+                    case HALFSPARK -> new ModuleIOHalfSpark(FRONT_RIGHT);
+                    case FULLKRACKENS -> new ModuleIOFullKraken(FRONT_RIGHT);
+                  },
+                  switch (robotSwerveMotors) {
+                    case FULLSPARK -> new ModuleIOSpark(BACK_LEFT);
+                    case HALFSPARK -> new ModuleIOHalfSpark(BACK_LEFT);
+                    case FULLKRACKENS -> new ModuleIOFullKraken(BACK_LEFT);
+                  },
+                  switch (robotSwerveMotors) {
+                    case FULLSPARK -> new ModuleIOSpark(BACK_RIGHT);
+                    case HALFSPARK -> new ModuleIOHalfSpark(BACK_RIGHT);
+                    case FULLKRACKENS -> new ModuleIOFullKraken(BACK_RIGHT);
+                  });
             case SIM:
               // Create a maple-sim swerve drive simulation instance
               this.driveSimulation =
@@ -237,6 +242,13 @@ public class RobotContainer {
       characterizationChooser.addOption(
           "Turn | SysId (Dynamic Reverse)",
           drive.sysIdTurnDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Align Auto-Tune (FF + PID)",
+          DriveCommands.autoTuneAlignGains(drive, () -> Coordinates.PROCESSOR.getPose())
+              .ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Align Auto-Tune Full Field (Reef + Sources)",
+          DriveCommands.autoTuneAlignGainsFullField(drive).ignoringDisable(true));
     }
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);

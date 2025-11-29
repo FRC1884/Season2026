@@ -376,8 +376,21 @@ function buildControlsSection() {
     return null;
   }
 
+  const layout = (templateConfig && templateConfig.layout) || {};
+  const absoluteLayout = layout.controlsLayout === "absolute";
   const section = document.createElement("section");
   section.className = "controls-section";
+  if (absoluteLayout) {
+    section.classList.add("controls-layout-absolute");
+  }
+
+  const absoluteLayer = absoluteLayout ? document.createElement("div") : null;
+  if (absoluteLayer) {
+    absoluteLayer.className = "controls-absolute-layer";
+    section.appendChild(absoluteLayer);
+  }
+
+  const unplaced = [];
 
   controls.forEach((control, index) => {
     const button = document.createElement("button");
@@ -422,8 +435,35 @@ function buildControlsSection() {
     bind(button, () => handleControlAction(control));
 
     uiRefs.controls.push({ element: button, config: control });
-    section.appendChild(button);
+
+    if (absoluteLayout) {
+      const position = control.position || {};
+      const x = position.x;
+      const y = position.y;
+      if (isFiniteNumber(x) && isFiniteNumber(y)) {
+        button.classList.add("control-absolute");
+        button.style.left = `${x}%`;
+        button.style.top = `${y}%`;
+        absoluteLayer.appendChild(button);
+      } else {
+        button.classList.add("control-unplaced");
+        unplaced.push(button);
+      }
+    } else {
+      section.appendChild(button);
+    }
   });
+
+  if (absoluteLayout && unplaced.length > 0) {
+    const trayTitle = document.createElement("div");
+    trayTitle.className = "controls-unplaced-title";
+    trayTitle.innerText = "Unplaced controls";
+    const tray = document.createElement("div");
+    tray.className = "controls-unplaced";
+    unplaced.forEach((button) => tray.appendChild(button));
+    section.appendChild(trayTitle);
+    section.appendChild(tray);
+  }
 
   return section;
 }
@@ -601,7 +641,8 @@ function handleControlAction(control) {
       break;
     case "queue-command":
       if (action.command) {
-        sendQueueCommand(action.command, action.extras);
+        const topicPath = buildTopicPath(action, queueCommandTopicName);
+        sendQueueCommand(action.command, action.extras, topicPath);
       }
       break;
     default:
@@ -614,7 +655,7 @@ function handleControlAction(control) {
 
 function handleTopicDelta(action) {
   const topicInfo = resolveTopicInfo(action);
-  if (!topicInfo) {
+  if (!topicInfo || !topicInfo.topicPath) {
     return false;
   }
   const current = typeof topicInfo.getter === "function" ? topicInfo.getter() : 0;
@@ -625,7 +666,7 @@ function handleTopicDelta(action) {
   if (typeof action.max === "number") {
     next = Math.min(action.max, next);
   }
-  ntClient.addSample(toRobotPrefix + topicInfo.topic, next);
+  ntClient.addSample(topicInfo.topicPath, next);
   if (topicInfo.setter) {
     topicInfo.setter(next);
   }
@@ -634,10 +675,10 @@ function handleTopicDelta(action) {
 
 function handleTopicSet(action) {
   const topicInfo = resolveTopicInfo(action);
-  if (!topicInfo) {
+  if (!topicInfo || !topicInfo.topicPath) {
     return false;
   }
-  ntClient.addSample(toRobotPrefix + topicInfo.topic, action.value);
+  ntClient.addSample(topicInfo.topicPath, action.value);
   if (topicInfo.setter) {
     topicInfo.setter(action.value);
   }
@@ -646,12 +687,12 @@ function handleTopicSet(action) {
 
 function handleTopicToggle(action) {
   const topicInfo = resolveTopicInfo(action);
-  if (!topicInfo) {
+  if (!topicInfo || !topicInfo.topicPath) {
     return false;
   }
   const current = !!(topicInfo.getter ? topicInfo.getter() : action.defaultValue);
   const next = !current;
-  ntClient.addSample(toRobotPrefix + topicInfo.topic, next);
+  ntClient.addSample(topicInfo.topicPath, next);
   if (topicInfo.setter) {
     topicInfo.setter(next);
   }
@@ -660,7 +701,8 @@ function handleTopicToggle(action) {
 
 function handleAlignSource(action) {
   const preference = normalizeSourcePreference(action && action.source);
-  sendQueueCommand("ALIGN_SOURCE", { source: preference });
+  const topicPath = buildTopicPath(action, queueCommandTopicName);
+  sendQueueCommand("ALIGN_SOURCE", { source: preference }, topicPath);
 }
 
 function normalizeSourcePreference(source) {
@@ -675,30 +717,93 @@ function normalizeSourcePreference(source) {
 }
 
 function resolveTopicInfo(action) {
-  const target = action.target;
-  if (action.topic) {
-    return { topic: action.topic };
+  if (!action) {
+    return null;
   }
+  const target = action.target;
   switch (target) {
     case "Level1":
-      return { topic: l1TopicName, getter: () => l1State, setter: (v) => (l1State = v) };
+      return { topicPath: buildTopicPath(action, l1TopicName), getter: () => l1State, setter: (v) => (l1State = v) };
     case "Level2":
-      return { topic: l2TopicName, getter: () => l2State, setter: (v) => (l2State = v) };
+      return { topicPath: buildTopicPath(action, l2TopicName), getter: () => l2State, setter: (v) => (l2State = v) };
     case "Level3":
-      return { topic: l3TopicName, getter: () => l3State, setter: (v) => (l3State = v) };
+      return { topicPath: buildTopicPath(action, l3TopicName), getter: () => l3State, setter: (v) => (l3State = v) };
     case "Level4":
-      return { topic: l4TopicName, getter: () => l4State, setter: (v) => (l4State = v) };
+      return { topicPath: buildTopicPath(action, l4TopicName), getter: () => l4State, setter: (v) => (l4State = v) };
     case "Coop":
-      return { topic: coopTopicName, getter: () => coopState, setter: (v) => (coopState = v) };
+      return { topicPath: buildTopicPath(action, coopTopicName), getter: () => coopState, setter: (v) => (coopState = v) };
     case "SelectedLevel":
       return {
-        topic: selectedLevelTopicName,
+        topicPath: buildTopicPath(action, selectedLevelTopicName),
         getter: () => selectedLevel,
         setter: (v) => (selectedLevel = clampSelectedLevel(v)),
       };
-    default:
-      return null;
+    default: {
+      const topicPath = buildTopicPath(action);
+      return topicPath ? { topicPath } : null;
+    }
   }
+}
+
+function buildTopicPath(action, fallbackTopic) {
+  const fromTable = buildTableTopicPath(action);
+  if (fromTable) {
+    return fromTable;
+  }
+  const topicOverride = action && action.topic;
+  if (topicOverride) {
+    const topic = String(topicOverride || "").trim();
+    if (!topic) {
+      return null;
+    }
+    if (topic.startsWith("/")) {
+      return normalizeTopicPath(topic);
+    }
+    return toRobotPrefix + topic;
+  }
+  if (fallbackTopic) {
+    return toRobotPrefix + fallbackTopic;
+  }
+  return null;
+}
+
+function buildTableTopicPath(action) {
+  const table = action && typeof action.ntTable === "string" ? action.ntTable : "";
+  const key = action && typeof action.ntKey === "string" ? action.ntKey : "";
+  const cleanTable = normalizeSegment(table);
+  const cleanKey = normalizeSegment(key);
+  if (!cleanTable && !cleanKey) {
+    return null;
+  }
+  const pieces = [];
+  if (cleanTable) {
+    pieces.push(cleanTable);
+  }
+  if (cleanKey) {
+    pieces.push(cleanKey);
+  }
+  if (pieces.length === 0) {
+    return null;
+  }
+  return "/" + pieces.join("/");
+}
+
+function normalizeSegment(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.replace(/^\/+|\/+$/g, "").trim();
+}
+
+function normalizeTopicPath(path) {
+  if (typeof path !== "string") {
+    return null;
+  }
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.startsWith("/") ? trimmed : "/" + trimmed;
 }
 
 function startNetworkTables() {
@@ -1021,7 +1126,7 @@ function statusLabel(status) {
   return status.replace(/_/g, " ");
 }
 
-function sendQueueCommand(command, extras) {
+function sendQueueCommand(command, extras, topicPathOverride) {
   if (!command) {
     return;
   }
@@ -1029,7 +1134,8 @@ function sendQueueCommand(command, extras) {
     { command: command.toUpperCase(), at: Date.now() },
     extras || {}
   );
-  ntClient.addSample(toRobotPrefix + queueCommandTopicName, JSON.stringify(payload));
+  const topicPath = topicPathOverride || toRobotPrefix + queueCommandTopicName;
+  ntClient.addSample(topicPath, JSON.stringify(payload));
 }
 
 function sendAddStep(step) {

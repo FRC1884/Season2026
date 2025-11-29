@@ -584,6 +584,45 @@ body {
   pointer-events: none;
 }
 
+.controls-section.controls-layout-absolute {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.controls-absolute-layer {
+  position: relative;
+  min-height: clamp(320px, 50vh, 520px);
+  border: 1px dashed var(--panel-border);
+  border-radius: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.controls-absolute-layer .control-button {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 140px;
+}
+
+.controls-layout-absolute .control-button.control-unplaced {
+  position: relative;
+  transform: none;
+}
+
+.controls-unplaced-title {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.controls-unplaced {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: clamp(0.85rem, 1.5vw, 1.8rem);
+}
+
 body.elims .controls-section {
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }

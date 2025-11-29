@@ -39,6 +39,7 @@ public final class GlobalConstants {
   public static final RobotMode MODE = RobotMode.SIM;
   public static final RobotType ROBOT = RobotType.SIMBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
+  public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
   public static boolean TUNING_MODE = false;
 
@@ -56,6 +57,12 @@ public final class GlobalConstants {
     DEVBOT,
     SIMBOT,
     CRESCENDO
+  }
+
+  public static enum RobotSwerveMotors {
+    FULLSPARK,
+    HALFSPARK,
+    FULLKRACKENS
   }
 
   /**
