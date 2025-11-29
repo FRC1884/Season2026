@@ -62,7 +62,7 @@ import java.util.Queue;
 import java.util.function.DoubleSupplier;
 
 /** Module IO implementation for Kraken X60 drive motors with Neo 550 turn motors. */
-public class ModuleIOKraken implements ModuleIO {
+public class ModuleIOHalfSpark implements ModuleIO {
   private static final double TWO_PI = 2.0 * Math.PI;
 
   private final TalonFX driveMotor;
@@ -87,7 +87,7 @@ public class ModuleIOKraken implements ModuleIO {
   private final Queue<Double> drivePositionQueue;
   private final Queue<Double> turnPositionQueue;
 
-  public ModuleIOKraken(ModuleConstants moduleConstants) {
+  public ModuleIOHalfSpark(ModuleConstants moduleConstants) {
     zeroRotation = moduleConstants.zeroRotation();
 
     driveMotor = new TalonFX(moduleConstants.driveID());
