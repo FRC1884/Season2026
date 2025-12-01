@@ -13,6 +13,11 @@
     ],
     "disconnectedBackground": "#8b1e3f"
   },
+  "layout": {
+    "controlsLayout": "grid",
+    "snapToGrid": true,
+    "gridSize": 5
+  },
   "overview": {
     "counters": [
       {
@@ -42,9 +47,9 @@
   },
   "reef": {
     "branchImage": "coral.png",
-    "branchSizeVh": 12,
+    "branchSizeVh": 5,
     "algaeImage": "algae.png",
-    "algaeSizeVh": 14,
+    "algaeSizeVh": 7,
     "flagEmoji": "🏁",
     "branchNodes": [
       {

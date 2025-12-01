@@ -36,6 +36,7 @@ Reef Controls now renders from a year-specific JSON template so you can change l
 - Point the tablet UI at a template with the `template` query param: `http://<roboRIO>:5805/?template=2025`. If omitted, the default template is used.
 - Every template can override metadata (title/subtitle/favicon), section colors, reef node placements, control buttons/styles/actions, and queue copy.
 - Use the visual builder at `docs/template-builder/index.html` to author templates. Open it locally in a browser, tweak metadata/counters/nodes/buttons, then click **Download JSON** and drop the file into the templates directory.
+- The builder now supports snapping coordinates to a grid, switching between auto-grid and absolute x/y placement for controls, and binding any button to a specific NetworkTables table/key or full topic path.
 - Actions support topic deltas, toggles, literal publishes, and queue commands. If a topic field is left empty, the builder falls back to the stock Reef Controls topics.
 
 After editing a template, redeploy (`./gradlew deploy`) or copy the JSON onto the RIO so the tablet can fetch the new layout.

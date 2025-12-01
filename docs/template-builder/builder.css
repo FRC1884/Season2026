@@ -188,6 +188,12 @@ label.form-field textarea {
   margin-bottom: 0.4rem;
 }
 
+.field-hint {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .theme-color-list {
   margin-top: 0.5rem;
 }
@@ -229,6 +235,11 @@ label.form-field textarea {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.35rem;
+}
+
+.placement-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 .empty-row {

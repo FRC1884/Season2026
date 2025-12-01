@@ -55,11 +55,13 @@ public final class SwerveConstants {
    * @param zeroRotation in radians
    */
   public record ModuleConstants(
-      String name, int driveID, int rotatorID, int cancoderID, Rotation2d zeroRotation) {
-    public ModuleConstants(String name, int driveID, int rotatorID, Rotation2d encoderOffset) {
-      this(name, driveID, rotatorID, -1, encoderOffset);
-    }
-  }
+      String name,
+      int driveID,
+      int rotatorID,
+      int cancoderID,
+      Rotation2d zeroRotation,
+      boolean turnInverted,
+      boolean encoderInverted) {}
 
   static final int PIGEON_ID =
       switch (ROBOT) {
@@ -80,6 +82,12 @@ public final class SwerveConstants {
         case COMPBOT, SIMBOT -> 21;
         case CRESCENDO -> 5;
       };
+  private static final int FRR_CANCODER_ID =
+      switch (ROBOT) {
+        case DEVBOT -> -1;
+        case COMPBOT, SIMBOT -> -1;
+        case CRESCENDO -> -1;
+      };
   private static final int FLD_ID =
       switch (ROBOT) {
         case DEVBOT -> 32;
@@ -91,6 +99,12 @@ public final class SwerveConstants {
         case DEVBOT -> 11;
         case COMPBOT, SIMBOT -> 22;
         case CRESCENDO -> 1;
+      };
+  private static final int FLR_CANCODER_ID =
+      switch (ROBOT) {
+        case DEVBOT -> -1;
+        case COMPBOT, SIMBOT -> -1;
+        case CRESCENDO -> -1;
       };
   private static final int BRD_ID =
       switch (ROBOT) {
@@ -104,6 +118,12 @@ public final class SwerveConstants {
         case COMPBOT, SIMBOT -> 24;
         case CRESCENDO -> 7;
       };
+  private static final int BRR_CANCODER_ID =
+      switch (ROBOT) {
+        case DEVBOT -> -1;
+        case COMPBOT, SIMBOT -> -1;
+        case CRESCENDO -> -1;
+      };
   private static final int BLD_ID =
       switch (ROBOT) {
         case DEVBOT -> 34;
@@ -116,6 +136,12 @@ public final class SwerveConstants {
         case COMPBOT, SIMBOT -> 23;
         case CRESCENDO -> 3;
       };
+  private static final int BLR_CANCODER_ID =
+      switch (ROBOT) {
+        case DEVBOT -> -1;
+        case COMPBOT, SIMBOT -> -1;
+        case CRESCENDO -> -1;
+      };
 
   // Zeroed rotation values for each module, see setup instructions
   private static final Rotation2d FLR_ZERO = Rotation2d.fromRadians(-PI / 2);
@@ -123,15 +149,53 @@ public final class SwerveConstants {
   private static final Rotation2d BLR_ZERO = Rotation2d.fromRadians(PI);
   private static final Rotation2d BRR_ZERO = Rotation2d.fromRadians(PI / 2);
 
+  // Inverted encoders or turn motors
+  private static final boolean FLR_INVERTED = false;
+  private static final boolean FLR_ENCODER_INVERTED = false;
+  private static final boolean FRR_INVERTED = false;
+  private static final boolean FRR_ENCODER_INVERTED = false;
+  private static final boolean BLR_INVERTED = false;
+  private static final boolean BLR_ENCODER_INVERTED = false;
+  private static final boolean BRR_INVERTED = false;
+  private static final boolean BRR_ENCODER_INVERTED = false;
+
   // Constants for each module. Add the CANCoder id between the rotator id and offset params
   public static final ModuleConstants FRONT_LEFT =
-      new ModuleConstants("Front Left", FLD_ID, FLR_ID, FLR_ZERO);
+      new ModuleConstants(
+          "Front Left",
+          FLD_ID,
+          FLR_ID,
+          FLR_CANCODER_ID,
+          FLR_ZERO,
+          FLR_INVERTED,
+          FLR_ENCODER_INVERTED);
   public static final ModuleConstants FRONT_RIGHT =
-      new ModuleConstants("Front Right", FRD_ID, FRR_ID, FRR_ZERO);
+      new ModuleConstants(
+          "Front Right",
+          FRD_ID,
+          FRR_ID,
+          FRR_CANCODER_ID,
+          FRR_ZERO,
+          FRR_INVERTED,
+          FRR_ENCODER_INVERTED);
   public static final ModuleConstants BACK_LEFT =
-      new ModuleConstants("Back Left", BLD_ID, BLR_ID, BLR_ZERO);
+      new ModuleConstants(
+          "Back Left",
+          BLD_ID,
+          BLR_ID,
+          BLR_CANCODER_ID,
+          BLR_ZERO,
+          BLR_INVERTED,
+          BLR_ENCODER_INVERTED);
   public static final ModuleConstants BACK_RIGHT =
-      new ModuleConstants("Back Right", BRD_ID, BRR_ID, BRR_ZERO);
+      new ModuleConstants(
+          "Back Right",
+          BRD_ID,
+          BRR_ID,
+          BRR_CANCODER_ID,
+          BRR_ZERO,
+          BRR_INVERTED,
+          BRR_ENCODER_INVERTED);
 
   /** Meters */
   public static final double WHEEL_RADIUS = Units.inchesToMeters(1.5);

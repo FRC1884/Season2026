@@ -9,6 +9,11 @@ const defaultTemplate = {
     levelBackgrounds: ["#5AB7ED", "#0F486C", "#dfbbfc"],
     disconnectedBackground: "#8b1e3f",
   },
+  layout: {
+    controlsLayout: "grid",
+    snapToGrid: true,
+    gridSize: 5,
+  },
   overview: {
     counters: [
       { id: "level1", label: "L1", source: "Level1" },
@@ -78,6 +83,17 @@ const defaultTemplate = {
       },
       action: { type: "topic-toggle", target: "Coop" },
     },
+    {
+      id: "align-source",
+      label: "Align Source",
+      icon: "\uD83C\uDFAF",
+      classes: ["primary"],
+      style: {
+        background: "linear-gradient(135deg, #154f2f, #1e7a46)",
+        textColor: "#e8f5e9",
+      },
+      action: { type: "align-source", source: "NEAREST" },
+    },
   ],
   queue: {
     title: "Tablet Queue",
@@ -119,8 +135,12 @@ function handleFieldChange(event) {
   if (!path) {
     return;
   }
-  const value = readInputValue(target);
+  let value = readInputValue(target);
+  value = maybeSnapCoordinate(path, value);
   setByPath(state, path, value);
+  if (target.type === "number" && typeof value === "number") {
+    target.value = value;
+  }
   if (target.dataset.rerender === "true") {
     renderAll();
   } else {
@@ -215,6 +235,7 @@ function renderAll() {
   sectionsEl.innerHTML = "";
   sectionsEl.appendChild(createSection("Metadata", renderMetadataFields()));
   sectionsEl.appendChild(createSection("Theme", renderThemeFields()));
+  sectionsEl.appendChild(createSection("Layout & Placement", renderLayoutFields()));
   sectionsEl.appendChild(createSection("Counters", renderCountersFields()));
   sectionsEl.appendChild(createSection("Reef Layout", renderReefFields()));
   sectionsEl.appendChild(createSection("Controls", renderControlsFields()));
@@ -286,6 +307,39 @@ function renderThemeFields() {
   `;
 }
 
+function renderLayoutFields() {
+  if (!state.layout) {
+    state.layout = {};
+  }
+  const snapToGrid = state.layout.snapToGrid !== false;
+  const gridSize = state.layout.gridSize ?? 5;
+  return `
+    <div class="form-grid">
+      ${renderSelect(
+        "layout.controlsLayout",
+        state.layout.controlsLayout || "grid",
+        [
+          { value: "grid", label: "Grid (auto)" },
+          { value: "absolute", label: "Absolute (x/y)" },
+        ],
+        { rerender: true }
+      )}
+      ${renderInput("Grid Size (%)", "layout.gridSize", gridSize, {
+        type: "number",
+        valueType: "number",
+        step: 1,
+        rerender: true,
+      })}
+      ${renderInput("Snap to Grid", "layout.snapToGrid", snapToGrid, {
+        type: "checkbox",
+        valueType: "boolean",
+        rerender: true,
+      })}
+    </div>
+    <p class="field-hint">Choose grid to auto-flow controls, or absolute to drop switches/buttons/images at specific x/y percentages. Enable snap to round coordinates to the grid size.</p>
+  `;
+}
+
 function renderCountersFields() {
   if (!state.overview) {
     state.overview = {};
@@ -343,6 +397,7 @@ function renderReefFields() {
   }
   ensureArray(state.reef, "branchNodes");
   ensureArray(state.reef, "algaeNodes");
+  const coordinateStep = getCoordinateStep();
   const general = `
     <div class="form-grid">
       ${renderInput("Branch Image", "reef.branchImage", state.reef?.branchImage || "coral.png")}
@@ -373,10 +428,12 @@ function renderReefFields() {
         <td>${renderTableInput(`reef.branchNodes[${index}].x`, node.x ?? 50, {
           type: "number",
           valueType: "number",
+          step: coordinateStep,
         })}</td>
         <td>${renderTableInput(`reef.branchNodes[${index}].y`, node.y ?? 50, {
           type: "number",
           valueType: "number",
+          step: coordinateStep,
         })}</td>
         <td>${renderTableInput(`reef.branchNodes[${index}].sizeVh`, node.sizeVh || "", {
           type: "number",
@@ -395,10 +452,12 @@ function renderReefFields() {
         <td>${renderTableInput(`reef.algaeNodes[${index}].x`, node.x ?? 50, {
           type: "number",
           valueType: "number",
+          step: coordinateStep,
         })}</td>
         <td>${renderTableInput(`reef.algaeNodes[${index}].y`, node.y ?? 50, {
           type: "number",
           valueType: "number",
+          step: coordinateStep,
         })}</td>
         <td>${renderTableInput(`reef.algaeNodes[${index}].sizeVh`, node.sizeVh || "", {
           type: "number",
@@ -454,6 +513,8 @@ function renderReefFields() {
 
 function renderControlsFields() {
   ensureArray(state, "controls");
+  const layout = state.layout || {};
+  const absoluteLayout = layout.controlsLayout === "absolute";
   const rows = state.controls
     .map((control, index) => {
       const classes = Array.isArray(control.classes) ? control.classes.join(", ") : "";
@@ -471,6 +532,7 @@ function renderControlsFields() {
             ]
           )}</td>
           <td>${renderTableInput(`controls[${index}].classes`, classes, { valueType: "csv" })}</td>
+          <td>${renderPlacementFields(control, index, absoluteLayout)}</td>
           <td>${renderStyleFields(control, index)}</td>
           <td>${renderSelect(
             `controls[${index}].action.type`,
@@ -479,6 +541,7 @@ function renderControlsFields() {
               { value: "topic-delta", label: "Topic Delta" },
               { value: "topic-toggle", label: "Topic Toggle" },
               { value: "topic-set", label: "Topic Set" },
+              { value: "align-source", label: "Align Source" },
               { value: "queue-command", label: "Queue Command" },
             ],
             { rerender: true }
@@ -499,6 +562,7 @@ function renderControlsFields() {
           <th>Icon</th>
           <th>Icon Type</th>
           <th>Classes</th>
+          <th>Placement</th>
           <th>Styles</th>
           <th>Action</th>
           <th>Action Options</th>
@@ -510,6 +574,30 @@ function renderControlsFields() {
       </tbody>
     </table>
     <button type="button" class="add-row" data-action="add-control">Add Control</button>
+  `;
+}
+
+function renderPlacementFields(control, index, absoluteLayout) {
+  if (!absoluteLayout) {
+    return `<div class="placement-hint">Grid (auto)</div>`;
+  }
+  const position = control.position || {};
+  const coordinateStep = getCoordinateStep();
+  return `
+    <div class="action-field-grid">
+      ${renderTableInput(`controls[${index}].position.x`, position.x ?? "", {
+        type: "number",
+        valueType: "number",
+        placeholder: "X%",
+        step: coordinateStep,
+      })}
+      ${renderTableInput(`controls[${index}].position.y`, position.y ?? "", {
+        type: "number",
+        valueType: "number",
+        placeholder: "Y%",
+        step: coordinateStep,
+      })}
+    </div>
   `;
 }
 
@@ -532,6 +620,17 @@ function renderStyleFields(control, index) {
   `;
 }
 
+function renderNtBindingFields(action, index) {
+  return `
+    ${renderTableInput(`controls[${index}].action.ntTable`, action.ntTable || "", {
+      placeholder: "NT table (optional)",
+    })}
+    ${renderTableInput(`controls[${index}].action.ntKey`, action.ntKey || "", {
+      placeholder: "Key / tag (optional)",
+    })}
+  `;
+}
+
 function renderActionFields(action, index) {
   const baseTarget = renderSelect(
     `controls[${index}].action.target`,
@@ -543,11 +642,13 @@ function renderActionFields(action, index) {
     action.topic || "",
     { placeholder: "Override topic name" }
   );
+  const ntBinding = renderNtBindingFields(action, index);
   if (action.type === "topic-delta") {
     return `
       <div class="action-field-grid">
         ${baseTarget}
         ${topicOverride}
+        ${ntBinding}
         ${renderTableInput(`controls[${index}].action.delta`, action.delta ?? 1, {
           type: "number",
           valueType: "number",
@@ -568,6 +669,7 @@ function renderActionFields(action, index) {
       <div class="action-field-grid">
         ${baseTarget}
         ${topicOverride}
+        ${ntBinding}
       </div>
     `;
   }
@@ -576,6 +678,7 @@ function renderActionFields(action, index) {
       <div class="action-field-grid">
         ${baseTarget}
         ${topicOverride}
+        ${ntBinding}
         ${renderTableInput(`controls[${index}].action.value`, formatLiteral(action.value), {
           placeholder: "Value (auto-detected)",
           valueType: "literal",
@@ -583,12 +686,33 @@ function renderActionFields(action, index) {
       </div>
     `;
   }
+  if (action.type === "align-source") {
+    return `
+      <div class="action-field-grid">
+        ${renderSelect(
+          `controls[${index}].action.source`,
+          action.source || "NEAREST",
+          [
+            { value: "NEAREST", label: "Nearest" },
+            { value: "LEFT", label: "Left" },
+            { value: "RIGHT", label: "Right" },
+          ]
+        )}
+        ${ntBinding}
+      </div>
+    `;
+  }
   if (action.type === "queue-command") {
-    return renderTableInput(
-      `controls[${index}].action.command`,
-      action.command || "start",
-      { placeholder: "start" }
-    );
+    return `
+      <div class="action-field-grid">
+        ${renderTableInput(
+          `controls[${index}].action.command`,
+          action.command || "start",
+          { placeholder: "start" }
+        )}
+        ${ntBinding}
+      </div>
+    `;
   }
   return baseTarget;
 }
@@ -692,6 +816,7 @@ function inputAttributes(path, value, options = {}) {
     options.placeholder ? `placeholder="${escapeAttr(options.placeholder)}"` : "",
     options.type ? `type="${options.type}"` : options.textarea || options.isSelect ? "" : "type=\"text\"",
     options.valueType ? `data-value-type="${options.valueType}"` : "",
+    options.step != null ? `step="${escapeAttr(options.step)}"` : "",
     options.rerender ? `data-rerender="true"` : "",
   ].filter(Boolean);
   if (options.type === "checkbox") {
@@ -766,6 +891,40 @@ function parseLiteral(value) {
   } catch {
     return trimmed;
   }
+}
+
+function getGridSize() {
+  const size = state.layout && state.layout.gridSize;
+  const parsed = Number(size);
+  if (Number.isFinite(parsed) && parsed > 0) {
+    return parsed;
+  }
+  return 5;
+}
+
+function getCoordinateStep() {
+  if (state.layout && state.layout.snapToGrid) {
+    return getGridSize();
+  }
+  return 1;
+}
+
+function shouldSnapCoordinate(path) {
+  return typeof path === "string" && (path.endsWith(".x") || path.endsWith(".y"));
+}
+
+function maybeSnapCoordinate(path, value) {
+  if (!shouldSnapCoordinate(path) || !state.layout || state.layout.snapToGrid === false) {
+    return value;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return value;
+  }
+  const grid = getGridSize();
+  if (!grid) {
+    return value;
+  }
+  return Math.round(value / grid) * grid;
 }
 
 function setByPath(obj, path, value) {
