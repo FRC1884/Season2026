@@ -14,13 +14,14 @@
 package frc.robot.commands;
 
 import static frc.robot.GlobalConstants.FieldMap.*;
+import static frc.robot.commands.AlignConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
+import com.pathplanner.lib.trajectory.PathPlannerTrajectoryState;
+import com.pathplanner.lib.util.DriveFeedforwards;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.HolonomicDriveController;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -42,61 +43,19 @@ import frc.robot.subsystems.swerve.SwerveSubsystem;
 import frc.robot.util.RotationalAllianceFlipUtil;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import lombok.Getter;
+import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
-  // driving
-  private static final double DEADBAND = 0.1;
-  private static final double ANGLE_MAX_VELOCITY = 6.0;
-  private static final double ANGLE_MAX_ACCELERATION = 20.0;
-  // characterization
-  private static final double FF_START_DELAY = 0.5; // Secs
-  private static final double FF_RAMP_RATE = 0.2; // Volts/Sec
 
-  private static final double ALIGN_TRANSLATION_KP_DEFAULT = 4.5;
-  private static final double ALIGN_TRANSLATION_KD_DEFAULT = 1;
-  private static final double ALIGN_ROTATION_KP_DEFAULT = 6.0;
-  private static final double ALIGN_ROTATION_KD_DEFAULT = 0.0;
-  private static final TrapezoidProfile.Constraints ALIGN_ROTATION_CONSTRAINTS =
-      new TrapezoidProfile.Constraints(Math.toRadians(540.0), Math.toRadians(900.0));
-  private static final double ALIGN_MAX_TRANSLATIONAL_SPEED = 5; // ~5 m/s
-  private static final double ALIGN_MAX_ANGULAR_SPEED = Math.toRadians(450.0);
-  private static final double ALIGN_TRANSLATION_SLEW_RATE = 4.0; // m/s^2
-  private static final double ALIGN_ROTATION_SLEW_RATE = Math.toRadians(720.0); // rad/s^2
-  private static final double ALIGN_MANUAL_MAX_SPEED = 5;
-  private static final double ALIGN_TRANSLATION_FF_GAIN_DEFAULT =
-      3.0; // feedforward m/s per meter of error
-  private static final double ALIGN_TRANSLATION_FF_DEADBAND = 0.02; // meters
-  private static final double CENTRAL_REEF_RADIUS_METERS = 1.7;
-  private static final double CENTRAL_REEF_MARGIN_METERS = 0.4;
-  private static final double ALIGN_BYPASS_TIMEOUT_SECS = 1.8;
-  private static final double REEF_TANGENT_BUFFER_METERS = 0.0;
-  private static final double WHEEL_RADIUS_MAX_VELOCITY = 0.25; // Rad/Sec
-  private static final double WHEEL_RADIUS_RAMP_RATE = 0.05; // Rad/Sec^2
-  private static final AlignGains DEFAULT_ALIGN_GAINS =
-      new AlignGains(
-          ALIGN_TRANSLATION_KP_DEFAULT,
-          ALIGN_TRANSLATION_KD_DEFAULT,
-          ALIGN_ROTATION_KP_DEFAULT,
-          ALIGN_ROTATION_KD_DEFAULT,
-          ALIGN_TRANSLATION_FF_GAIN_DEFAULT);
-  private static final AtomicReference<AlignGains> ACTIVE_ALIGN_GAINS =
-      new AtomicReference<>(DEFAULT_ALIGN_GAINS);
-  private static final double ALIGN_TUNER_TIMEOUT_SECS = 3.5;
-  private static final double ALIGN_TUNER_KICKBACK_TIME = 0.6;
-  private static final double ALIGN_TUNER_KICKBACK_SPEED = 1.5;
-  private static final int ALIGN_TUNER_TRIAL_COUNT = 3;
-  private static final Translation2d CENTRAL_REEF_CENTER = calculateReefCenter();
+  @Setter @Getter public static AlignGains alignGains = DEFAULT_ALIGN_GAINS;
 
   private DriveCommands() {}
 
@@ -126,27 +85,9 @@ public class DriveCommands {
     }
   }
 
-  public static AlignGains getCurrentAlignGains() {
-    return ACTIVE_ALIGN_GAINS.get();
-  }
-
-  public static void setAlignGains(AlignGains gains) {
-    ACTIVE_ALIGN_GAINS.set(gains);
-    Logger.recordOutput(
-        "Autonomy/AlignGains",
-        new double[] {
-          gains.translationKp(), gains.translationKd(), gains.rotationKp(), gains.rotationKd()
-        });
-    Logger.recordOutput("Autonomy/AlignFeedforward", gains.feedforward());
-  }
-
-  public static void resetAlignGains() {
-    setAlignGains(DEFAULT_ALIGN_GAINS);
-  }
-
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
-    double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), DEADBAND);
+    double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), ALIGN_MANUAL_DEADBAND);
     Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
 
     // Square magnitude for more precise control
@@ -171,7 +112,7 @@ public class DriveCommands {
         getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
 
     // Apply rotation deadband
-    double omega = MathUtil.applyDeadband(omegaSupplier.getAsDouble(), DEADBAND);
+    double omega = MathUtil.applyDeadband(omegaSupplier.getAsDouble(), ALIGN_MANUAL_DEADBAND);
 
     // Square rotation value for more precise control
     omega = Math.copySign(omega * omega, omega);
@@ -215,7 +156,8 @@ public class DriveCommands {
             SwerveConstants.ROTATION_CONSTANTS.kP,
             0.0,
             SwerveConstants.ROTATION_CONSTANTS.kD,
-            new TrapezoidProfile.Constraints(ANGLE_MAX_VELOCITY, ANGLE_MAX_ACCELERATION));
+            new TrapezoidProfile.Constraints(
+                ALIGN_MAX_ANGULAR_SPEED, ALIGN_MAX_ANGULAR_ACCELERATION));
     angleController.enableContinuousInput(-Math.PI, Math.PI);
 
     // Construct command
@@ -266,123 +208,47 @@ public class DriveCommands {
         drive, () -> drive.getPose().plus(targetOffset.get()), yDriver, true, false);
   }
 
-  /** Runs an aggressive full-field alignment auto-tune across reefs, sources, and processor. */
-  public static Command autoTuneAlignGainsFullField(SwerveSubsystem drive) {
-    List<AlignTarget> targets =
-        List.of(
-            new AlignTarget("Reef 1", () -> GlobalConstants.FieldMap.Coordinates.REEF_1.getPose()),
-            new AlignTarget("Reef 2", () -> GlobalConstants.FieldMap.Coordinates.REEF_2.getPose()),
-            new AlignTarget("Reef 3", () -> GlobalConstants.FieldMap.Coordinates.REEF_3.getPose()),
-            new AlignTarget("Reef 4", () -> GlobalConstants.FieldMap.Coordinates.REEF_4.getPose()),
-            new AlignTarget("Reef 5", () -> GlobalConstants.FieldMap.Coordinates.REEF_5.getPose()),
-            new AlignTarget("Reef 6", () -> GlobalConstants.FieldMap.Coordinates.REEF_6.getPose()),
-            new AlignTarget(
-                "Left Source",
-                () -> GlobalConstants.FieldMap.Coordinates.LEFT_CORAL_STATION.getPose()),
-            new AlignTarget(
-                "Right Source",
-                () -> GlobalConstants.FieldMap.Coordinates.RIGHT_CORAL_STATION.getPose()),
-            new AlignTarget(
-                "Processor", () -> GlobalConstants.FieldMap.Coordinates.PROCESSOR.getPose()));
-
-    return Commands.defer(
-        () -> {
-          List<AlignTuningTrial> trials = new ArrayList<>();
-          List<Command> iterations = new ArrayList<>();
-          for (AlignTarget target : targets) {
-            iterations.add(
-                runAlignTuningIteration(drive, target.name(), target.poseSupplier(), trials, true));
-          }
-          Command[] iterationArray = iterations.toArray(new Command[0]);
-          return Commands.sequence(
-              Commands.runOnce(() -> setAlignContext("AutoTune", "FullField")),
-              Commands.runOnce(() -> setAlignGains(DEFAULT_ALIGN_GAINS)),
-              Commands.sequence(iterationArray),
-              Commands.runOnce(
-                  () -> {
-                    AlignGains chosen = pickBestAlignGains(trials);
-                    setAlignGains(chosen);
-                    Logger.recordOutput(
-                        "Autonomy/AlignAutoTuner/Recommended",
-                        new double[] {
-                          chosen.translationKp(),
-                          chosen.translationKd(),
-                          chosen.rotationKp(),
-                          chosen.rotationKd(),
-                          chosen.feedforward()
-                        });
-                  }),
-              Commands.runOnce(DriveCommands::clearAlignTelemetry));
-        },
-        Set.of(drive));
-  }
-
   private static Command holonomicAlignCommand(
       SwerveSubsystem drive,
       Supplier<Pose2d> targetSupplier,
       DoubleSupplier manualTangentSupplier,
       boolean allowManualTangent,
       boolean finishWhenAligned) {
-    return holonomicAlignCommand(
-        drive,
-        targetSupplier,
-        manualTangentSupplier,
-        allowManualTangent,
-        finishWhenAligned,
-        () -> ACTIVE_ALIGN_GAINS.get(),
-        telemetry -> {});
-  }
-
-  private static Command holonomicAlignCommand(
-      SwerveSubsystem drive,
-      Supplier<Pose2d> targetSupplier,
-      DoubleSupplier manualTangentSupplier,
-      boolean allowManualTangent,
-      boolean finishWhenAligned,
-      Supplier<AlignGains> gainsSupplier,
-      Consumer<AlignLoopTelemetry> loopTelemetryConsumer) {
     return Commands.defer(
         () -> {
-          AlignGains gains = gainsSupplier.get();
-          PIDController xController =
-              new PIDController(gains.translationKp(), 0.0, gains.translationKd());
-          PIDController yController =
-              new PIDController(gains.translationKp(), 0.0, gains.translationKd());
-          ProfiledPIDController thetaController =
-              new ProfiledPIDController(
-                  gains.rotationKp(), 0.0, gains.rotationKd(), ALIGN_ROTATION_CONSTRAINTS);
-          thetaController.enableContinuousInput(-Math.PI, Math.PI);
-          HolonomicDriveController holonomicController =
-              new HolonomicDriveController(xController, yController, thetaController);
-          holonomicController.setTolerance(
-              new Pose2d(
-                  new Translation2d(0.03, 0.03), new Rotation2d(Units.degreesToRadians(1.5))));
+          PPHolonomicDriveController holonomicController =
+              new PPHolonomicDriveController(
+                  alignGains.translationPidConstants(),
+                  alignGains.rotationPidConstants(),
+                  ALIGN_CONTROLLER_LOOP_PERIOD_SEC);
 
           SlewRateLimiter vxLimiter = new SlewRateLimiter(ALIGN_TRANSLATION_SLEW_RATE);
           SlewRateLimiter vyLimiter = new SlewRateLimiter(ALIGN_TRANSLATION_SLEW_RATE);
           SlewRateLimiter omegaLimiter = new SlewRateLimiter(ALIGN_ROTATION_SLEW_RATE);
-          Timer loopTimer = new Timer();
 
           return new FunctionalCommand(
-              () -> {
-                thetaController.reset(drive.getRotation().getRadians());
-                loopTimer.restart();
-              },
+              () -> holonomicController.reset(drive.getPose(), new ChassisSpeeds()),
               () -> {
                 Pose2d currentPose = drive.getPose();
-                Pose2d targetPose = targetSupplier.get();
+                Pose2d targetPose =
+                    new Pose2d(
+                        targetSupplier.get().getTranslation(), targetSupplier.get().getRotation());
 
-                ChassisSpeeds pidCorrection =
-                    holonomicController.calculate(
-                        currentPose, targetPose, 0.0, targetPose.getRotation());
-                Translation2d feedforwardVelocity =
-                    calculateAlignFeedforward(currentPose, targetPose, gains.feedforward());
-
-                ChassisSpeeds fieldRelativeSpeeds =
-                    new ChassisSpeeds(
-                        feedforwardVelocity.getX() + pidCorrection.vxMetersPerSecond,
-                        feedforwardVelocity.getY() + pidCorrection.vyMetersPerSecond,
-                        pidCorrection.omegaRadiansPerSecond);
+                Translation2d translationError =
+                    targetPose.getTranslation().minus(currentPose.getTranslation());
+                double feedforwardX =
+                    Math.copySign(
+                        alignGains
+                            .feedforwardGains()
+                            .calculateSpeed(Math.abs(translationError.getX())),
+                        translationError.getX());
+                double feedforwardY =
+                    Math.copySign(
+                        alignGains
+                            .feedforwardGains()
+                            .calculateSpeed(Math.abs(translationError.getY())),
+                        translationError.getY());
+                Translation2d feedforwardVector = new Translation2d(feedforwardX, feedforwardY);
 
                 if (allowManualTangent) {
                   double manualMetersPerSecond =
@@ -392,22 +258,35 @@ public class DriveCommands {
                     Translation2d manualVelocity =
                         new Translation2d(0.0, manualMetersPerSecond)
                             .rotateBy(targetPose.getRotation());
-                    fieldRelativeSpeeds =
-                        new ChassisSpeeds(
-                            fieldRelativeSpeeds.vxMetersPerSecond + manualVelocity.getX(),
-                            fieldRelativeSpeeds.vyMetersPerSecond + manualVelocity.getY(),
-                            fieldRelativeSpeeds.omegaRadiansPerSecond);
+                    feedforwardVector = feedforwardVector.plus(manualVelocity);
                   }
                 }
+
+                PathPlannerTrajectoryState targetState = new PathPlannerTrajectoryState();
+                targetState.pose = targetPose;
+                targetState.heading = targetPose.getRotation();
+                targetState.fieldSpeeds =
+                    new ChassisSpeeds(feedforwardVector.getX(), feedforwardVector.getY(), 0.0);
+                targetState.linearVelocity =
+                    Math.hypot(
+                        targetState.fieldSpeeds.vxMetersPerSecond,
+                        targetState.fieldSpeeds.vyMetersPerSecond);
+                targetState.feedforwards = DriveFeedforwards.zeros(4);
+
+                ChassisSpeeds robotRelativeSpeeds =
+                    holonomicController.calculateRobotRelativeSpeeds(currentPose, targetState);
+
+                ChassisSpeeds fieldRelativeSpeeds =
+                    ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeeds, drive.getRotation());
 
                 ChassisSpeeds limited = clampChassisSpeeds(fieldRelativeSpeeds);
                 double vx = vxLimiter.calculate(limited.vxMetersPerSecond);
                 double vy = vyLimiter.calculate(limited.vyMetersPerSecond);
                 double omega = omegaLimiter.calculate(limited.omegaRadiansPerSecond);
 
-                ChassisSpeeds robotRelativeSpeeds =
+                ChassisSpeeds commandedSpeeds =
                     ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation());
-                drive.runVelocity(robotRelativeSpeeds);
+                drive.runVelocity(commandedSpeeds);
 
                 Pose2d errorPose = targetPose.relativeTo(currentPose);
                 Logger.recordOutput(
@@ -415,28 +294,18 @@ public class DriveCommands {
                     new double[] {
                       errorPose.getX(), errorPose.getY(), errorPose.getRotation().getDegrees()
                     });
-                loopTelemetryConsumer.accept(
-                    new AlignLoopTelemetry(
-                        loopTimer.get(), errorPose, fieldRelativeSpeeds, feedforwardVelocity));
               },
               interrupted -> drive.runVelocity(new ChassisSpeeds()),
-              () -> finishWhenAligned && holonomicController.atReference(),
+              () ->
+                  finishWhenAligned
+                      && isAligned(
+                          drive.getPose(),
+                          new Pose2d(
+                              targetSupplier.get().getTranslation(),
+                              targetSupplier.get().getRotation())),
               drive);
         },
         Set.of(drive));
-  }
-
-  private static Translation2d calculateAlignFeedforward(
-      Pose2d currentPose, Pose2d targetPose, double feedforwardGain) {
-    Translation2d toTarget = targetPose.getTranslation().minus(currentPose.getTranslation());
-    double distance = toTarget.getNorm();
-    if (distance < ALIGN_TRANSLATION_FF_DEADBAND) {
-      return new Translation2d();
-    }
-
-    double feedforwardSpeed =
-        MathUtil.clamp(distance * feedforwardGain, 0.0, ALIGN_MAX_TRANSLATIONAL_SPEED);
-    return new Translation2d(feedforwardSpeed, toTarget.getAngle());
   }
 
   private static ChassisSpeeds clampChassisSpeeds(ChassisSpeeds speeds) {
@@ -454,300 +323,15 @@ public class DriveCommands {
     return new ChassisSpeeds(vx, vy, omega);
   }
 
-  public record AlignGains(
-      double translationKp,
-      double translationKd,
-      double rotationKp,
-      double rotationKd,
-      double feedforward) {
-    public AlignGains withTranslationKp(double kp) {
-      return new AlignGains(kp, translationKd, rotationKp, rotationKd, feedforward);
-    }
-
-    public AlignGains withRotationKp(double kp) {
-      return new AlignGains(translationKp, translationKd, kp, rotationKd, feedforward);
-    }
-
-    public AlignGains withFeedforward(double ff) {
-      return new AlignGains(translationKp, translationKd, rotationKp, rotationKd, ff);
-    }
+  private static boolean isAligned(Pose2d currentPose, Pose2d targetPose) {
+    Pose2d errorPose = targetPose.relativeTo(currentPose);
+    double translationTolerance =
+        Math.hypot(ALIGN_TRANSLATION_TOLERANCE_METERS, ALIGN_TRANSLATION_TOLERANCE_METERS);
+    boolean translationAligned = errorPose.getTranslation().getNorm() <= translationTolerance;
+    boolean rotationAligned =
+        Math.abs(errorPose.getRotation().getRadians()) <= ALIGN_ROTATION_TOLERANCE_RADIANS;
+    return translationAligned && rotationAligned;
   }
-
-  private record AlignLoopTelemetry(
-      double timestampSeconds,
-      Pose2d errorPose,
-      ChassisSpeeds fieldRelativeSpeeds,
-      Translation2d feedforwardVelocity) {}
-
-  private static class AlignTuningTrial {
-    String targetName = "";
-    AlignGains gainsUsed = DEFAULT_ALIGN_GAINS;
-    double initialDistance = 0.0;
-    double maxDistance = 0.0;
-    double finalDistance = 0.0;
-    double maxRotationErrorDeg = 0.0;
-    double settleTimeSec = 0.0;
-    double maxFieldSpeed = 0.0;
-    boolean timedOut = false;
-  }
-
-  /** Auto-tunes alignment feedforward and PID by running multiple align attempts. */
-  public static Command autoTuneAlignGains(SwerveSubsystem drive, Supplier<Pose2d> targetSupplier) {
-    return Commands.defer(
-        () -> {
-          List<AlignTuningTrial> trials = new ArrayList<>();
-          List<Command> iterations = new ArrayList<>();
-          for (int i = 0; i < ALIGN_TUNER_TRIAL_COUNT; i++) {
-            iterations.add(
-                runAlignTuningIteration(drive, "Custom Target", targetSupplier, trials, false));
-          }
-          Command[] iterationArray = iterations.toArray(new Command[0]);
-          return Commands.sequence(
-              Commands.runOnce(() -> setAlignContext("AutoTune", "Align")),
-              Commands.runOnce(() -> setAlignGains(DEFAULT_ALIGN_GAINS)),
-              Commands.sequence(iterationArray),
-              Commands.runOnce(
-                  () -> {
-                    AlignGains chosen = pickBestAlignGains(trials);
-                    setAlignGains(chosen);
-                    Logger.recordOutput(
-                        "Autonomy/AlignAutoTuner/Recommended",
-                        new double[] {
-                          chosen.translationKp(),
-                          chosen.translationKd(),
-                          chosen.rotationKp(),
-                          chosen.rotationKd(),
-                          chosen.feedforward()
-                        });
-                  }),
-              Commands.runOnce(DriveCommands::clearAlignTelemetry));
-        },
-        Set.of(drive));
-  }
-
-  private static Command runAlignTuningIteration(
-      SwerveSubsystem drive,
-      String targetName,
-      Supplier<Pose2d> targetSupplier,
-      List<AlignTuningTrial> trials,
-      boolean avoidCentralReef) {
-    return Commands.defer(
-        () -> {
-          AlignTuningTrial trial = new AlignTuningTrial();
-          trial.targetName = targetName;
-          trial.gainsUsed = ACTIVE_ALIGN_GAINS.get();
-          Timer timer = new Timer();
-          Consumer<AlignLoopTelemetry> telemetryConsumer =
-              telemetry -> {
-                double distance = telemetry.errorPose().getTranslation().getNorm();
-                if (trial.initialDistance < 1e-3) {
-                  trial.initialDistance = distance;
-                }
-                trial.maxDistance = Math.max(trial.maxDistance, distance);
-                trial.finalDistance = distance;
-                trial.maxRotationErrorDeg =
-                    Math.max(
-                        trial.maxRotationErrorDeg,
-                        Math.abs(telemetry.errorPose().getRotation().getDegrees()));
-                ChassisSpeeds speeds = telemetry.fieldRelativeSpeeds();
-                double fieldSpeed = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
-                trial.maxFieldSpeed = Math.max(trial.maxFieldSpeed, fieldSpeed);
-              };
-
-          Command detour =
-              avoidCentralReef ? createAlignTunerBypass(drive, targetSupplier) : Commands.none();
-
-          Command tuneAlign =
-              holonomicAlignCommand(
-                      drive,
-                      targetSupplier,
-                      () -> 0.0,
-                      false,
-                      true,
-                      () -> trial.gainsUsed,
-                      telemetryConsumer)
-                  .beforeStarting(timer::restart);
-
-          Command timeoutFlag =
-              Commands.sequence(
-                  Commands.waitSeconds(ALIGN_TUNER_TIMEOUT_SECS),
-                  Commands.runOnce(() -> trial.timedOut = true));
-
-          return Commands.sequence(
-                  createAlignTunerKickback(drive, targetSupplier),
-                  detour,
-                  Commands.race(tuneAlign, timeoutFlag))
-              .finallyDo(
-                  () -> {
-                    timer.stop();
-                    trial.settleTimeSec = timer.get();
-                    trials.add(trial);
-                    AlignGains updated = refineAlignGains(trial.gainsUsed, trial);
-                    setAlignGains(updated);
-                    Logger.recordOutput("Autonomy/AlignAutoTuner/LastTarget", trial.targetName);
-                    Logger.recordOutput(
-                        "Autonomy/AlignAutoTuner/LastTrialMetrics",
-                        new double[] {
-                          trial.initialDistance,
-                          trial.finalDistance,
-                          trial.maxFieldSpeed,
-                          trial.settleTimeSec,
-                          trial.maxRotationErrorDeg,
-                          trial.timedOut ? 1.0 : 0.0
-                        });
-                    Logger.recordOutput(
-                        "Autonomy/AlignAutoTuner/LastTrialSec", trial.settleTimeSec);
-                  });
-        },
-        Set.of(drive));
-  }
-
-  private static Command createAlignTunerKickback(
-      SwerveSubsystem drive, Supplier<Pose2d> targetSupplier) {
-    return Commands.sequence(
-        Commands.deadline(
-            Commands.waitSeconds(ALIGN_TUNER_KICKBACK_TIME),
-            Commands.run(
-                () -> {
-                  Pose2d target = targetSupplier.get();
-                  Rotation2d awayHeading = target.getRotation().plus(Rotation2d.k180deg);
-                  Translation2d retreatVector =
-                      new Translation2d(ALIGN_TUNER_KICKBACK_SPEED, 0.0).rotateBy(awayHeading);
-                  ChassisSpeeds speeds =
-                      ChassisSpeeds.fromFieldRelativeSpeeds(
-                          retreatVector.getX(), retreatVector.getY(), 0.0, drive.getRotation());
-                  drive.runVelocity(speeds);
-                },
-                drive)),
-        Commands.runOnce(() -> drive.runVelocity(new ChassisSpeeds())));
-  }
-
-  private static Command createAlignTunerBypass(
-      SwerveSubsystem drive, Supplier<Pose2d> targetSupplier) {
-    return Commands.defer(
-        () -> {
-          Pose2d start = drive.getPose();
-          Pose2d target = targetSupplier.get();
-          Pose2d waypoint = calculateReefBypassWaypoint(start, target);
-          if (waypoint == null) {
-            return Commands.none();
-          }
-          Supplier<Pose2d> waypointSupplier = () -> waypoint;
-          return holonomicAlignCommand(drive, waypointSupplier, () -> 0.0, false, true)
-              .withTimeout(ALIGN_BYPASS_TIMEOUT_SECS);
-        },
-        Set.of(drive));
-  }
-
-  private static AlignGains refineAlignGains(AlignGains current, AlignTuningTrial trial) {
-    AlignGains updated = current;
-    if (trial.timedOut) {
-      updated = updated.withFeedforward(current.feedforward() * 1.2);
-      updated = updated.withTranslationKp(current.translationKp() * 1.1);
-      return clampAlignGains(updated, current.translationKd(), current.rotationKd());
-    }
-
-    double speedTarget = ALIGN_MAX_TRANSLATIONAL_SPEED * 0.9;
-    if (trial.maxFieldSpeed < speedTarget) {
-      updated = updated.withFeedforward(current.feedforward() * 1.12);
-    }
-
-    if (trial.settleTimeSec > 1.2 || trial.finalDistance > 0.03) {
-      updated = updated.withTranslationKp(current.translationKp() * 1.08);
-    } else if (trial.maxDistance > trial.initialDistance * 1.15) {
-      updated = updated.withTranslationKp(current.translationKp() * 0.92);
-    }
-
-    if (trial.maxRotationErrorDeg > 7.0) {
-      updated = updated.withRotationKp(current.rotationKp() * 1.05);
-    }
-
-    return clampAlignGains(updated, current.translationKd(), current.rotationKd());
-  }
-
-  private static AlignGains clampAlignGains(
-      AlignGains gains, double translationKd, double rotationKd) {
-    double ff = MathUtil.clamp(gains.feedforward(), 0.5, 7.0);
-    double transKp = MathUtil.clamp(gains.translationKp(), 1.0, 10.0);
-    double rotKp = MathUtil.clamp(gains.rotationKp(), 2.0, 12.0);
-    return new AlignGains(transKp, translationKd, rotKp, rotationKd, ff);
-  }
-
-  private static AlignGains pickBestAlignGains(List<AlignTuningTrial> trials) {
-    return trials.stream()
-        .filter(trial -> !trial.timedOut)
-        .min(Comparator.comparingDouble(trial -> trial.settleTimeSec + trial.finalDistance * 5))
-        .map(trial -> trial.gainsUsed)
-        .orElse(ACTIVE_ALIGN_GAINS.get());
-  }
-
-  private static Pose2d calculateReefBypassWaypoint(Pose2d start, Pose2d target) {
-    if (!pathCrossesCentralReef(start, target)) {
-      return null;
-    }
-    Translation2d startT = start.getTranslation();
-    Translation2d targetT = target.getTranslation();
-    Translation2d delta = targetT.minus(startT);
-    double length = delta.getNorm();
-    if (length < 1e-3) {
-      return null;
-    }
-    Translation2d direction = new Translation2d(delta.getX() / length, delta.getY() / length);
-    Translation2d normal = new Translation2d(-direction.getY(), direction.getX());
-    Translation2d mid = startT.plus(delta.times(0.5));
-    double clearance = CENTRAL_REEF_RADIUS_METERS + CENTRAL_REEF_MARGIN_METERS;
-    Translation2d candidateA = mid.plus(normal.times(clearance));
-    Translation2d candidateB = mid.minus(normal.times(clearance));
-    double distA = candidateA.getDistance(CENTRAL_REEF_CENTER);
-    double distB = candidateB.getDistance(CENTRAL_REEF_CENTER);
-    Translation2d chosen = distA > distB ? candidateA : candidateB;
-    return new Pose2d(chosen, target.getRotation());
-  }
-
-  private static boolean pathCrossesCentralReef(Pose2d start, Pose2d target) {
-    double distance =
-        distanceFromPointToSegment(
-            CENTRAL_REEF_CENTER, start.getTranslation(), target.getTranslation());
-    return distance < CENTRAL_REEF_RADIUS_METERS + CENTRAL_REEF_MARGIN_METERS;
-  }
-
-  private static double distanceFromPointToSegment(
-      Translation2d point, Translation2d segmentStart, Translation2d segmentEnd) {
-    Translation2d seg = segmentEnd.minus(segmentStart);
-    double segLengthSquared = Math.pow(seg.getNorm(), 2);
-    if (segLengthSquared < 1e-6) {
-      return point.getDistance(segmentStart);
-    }
-    Translation2d startToPoint = point.minus(segmentStart);
-    double t =
-        (startToPoint.getX() * seg.getX() + startToPoint.getY() * seg.getY()) / segLengthSquared;
-    t = MathUtil.clamp(t, 0.0, 1.0);
-    Translation2d projection =
-        new Translation2d(
-            segmentStart.getX() + t * seg.getX(), segmentStart.getY() + t * seg.getY());
-    return point.getDistance(projection);
-  }
-
-  private static Translation2d calculateReefCenter() {
-    Pose2d[] faces =
-        new Pose2d[] {
-          GlobalConstants.FieldMap.Coordinates.REEF_1.getPose(),
-          GlobalConstants.FieldMap.Coordinates.REEF_2.getPose(),
-          GlobalConstants.FieldMap.Coordinates.REEF_3.getPose(),
-          GlobalConstants.FieldMap.Coordinates.REEF_4.getPose(),
-          GlobalConstants.FieldMap.Coordinates.REEF_5.getPose(),
-          GlobalConstants.FieldMap.Coordinates.REEF_6.getPose()
-        };
-    double x = 0.0;
-    double y = 0.0;
-    for (Pose2d pose : faces) {
-      x += pose.getX();
-      y += pose.getY();
-    }
-    return new Translation2d(x / faces.length, y / faces.length);
-  }
-
-  private record AlignTarget(String name, Supplier<Pose2d> poseSupplier) {}
 
   private static Supplier<Pose2d> reefBranchTargetPose(
       Supplier<Pose2d> faceSupplier,
@@ -760,7 +344,7 @@ public class DriveCommands {
       double sideSign = leftAlignSupplier.getAsBoolean() ? 1.0 : -1.0;
       double totalLateral = lateralOffset * sideSign + tangentBuffer * sideSign;
       Translation2d branchTransform =
-          new Translation2d(forwardOffset, totalLateral).rotateBy(facePose.getRotation());
+          new Translation2d(-forwardOffset, totalLateral).rotateBy(facePose.getRotation());
       return new Pose2d(facePose.getTranslation().plus(branchTransform), facePose.getRotation());
     };
   }
@@ -801,18 +385,13 @@ public class DriveCommands {
   /** align to processor */
   public static Command alignToProcessorCommand() {
     PathConstraints constraints = new PathConstraints(10, 5, 5, 5);
-    Pose2d tagPose = Coordinates.PROCESSOR.getPose();
-    Rotation2d tagHeading = tagPose.getRotation(); // tags face into the field
-    double standoffMeters =
-        Math.abs(GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-            + GlobalConstants.AlignOffsets.SOURCE_TO_TAG_STANDOFF
-            + Units.inchesToMeters(4); // small buffer away from the wall
-
-    // Place the robot in front of the processor (toward the field) and face the tag
-    Translation2d offsetVector = new Translation2d(-standoffMeters, 0.0).rotateBy(tagHeading);
-    Pose2d target =
-        new Pose2d(
-            tagPose.getTranslation().plus(offsetVector), tagHeading.plus(Rotation2d.k180deg));
+    Pose2d target = Coordinates.PROCESSOR.getPose();
+    Transform2d offset =
+        new Transform2d(
+            new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
+                .rotateBy(target.getRotation()),
+            new Rotation2d());
+    target = target.plus(offset);
     Logger.recordOutput("Targets/Processor", target);
     return AutoBuilder.pathfindToPose(target, constraints);
   }
@@ -902,7 +481,7 @@ public class DriveCommands {
                   xOffset,
                   GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET,
                   0.0);
-
+          Logger.recordOutput("Autonomy/AlignTargetReef", target.get());
           return holonomicAlignCommand(drive, target, () -> 0.0, false, false);
         },
         Set.of(drive));

@@ -41,7 +41,6 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import frc.robot.GlobalConstants.FieldMap.Coordinates;
 import frc.robot.GlobalConstants.RobotMode;
 import frc.robot.OI.DriverMap;
 import frc.robot.OI.OperatorMap;
@@ -242,13 +241,13 @@ public class RobotContainer {
       characterizationChooser.addOption(
           "Turn | SysId (Dynamic Reverse)",
           drive.sysIdTurnDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
-      characterizationChooser.addOption(
-          "Drive | Align Auto-Tune (FF + PID)",
-          DriveCommands.autoTuneAlignGains(drive, () -> Coordinates.PROCESSOR.getPose())
-              .ignoringDisable(true));
-      characterizationChooser.addOption(
-          "Drive | Align Auto-Tune Full Field (Reef + Sources)",
-          DriveCommands.autoTuneAlignGainsFullField(drive).ignoringDisable(true));
+      //      characterizationChooser.addOption(
+      //          "Drive | Align Auto-Tune (FF + PID)",
+      //          AlignAutoTuner.autoTuneAlignGains(drive, () -> Coordinates.PROCESSOR.getPose())
+      //              .ignoringDisable(true));
+      //      characterizationChooser.addOption(
+      //          "Drive | Align Auto-Tune Full Field (Reef + Sources)",
+      //          AlignAutoTuner.autoTuneAlignGainsFullField(drive).ignoringDisable(true));
     }
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
