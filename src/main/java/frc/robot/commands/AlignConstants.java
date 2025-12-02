@@ -10,12 +10,13 @@ public final class AlignConstants {
   private AlignConstants() {}
 
   public static final double ALIGN_MAX_TRANSLATIONAL_SPEED = 5.0; // m/s
+  public static final double ALIGN_MAX_TRANSLATIONAL_ACCELERATION = 8.0; // m/s
   public static final double ALIGN_MAX_ANGULAR_SPEED = 6.0; // m/s
   public static final double ALIGN_MAX_ANGULAR_ACCELERATION = 20.0; // m/s^2
   public static final double ALIGN_CONTROLLER_LOOP_PERIOD_SEC = 0.02; // PathPlanner controller dt
-  public static final double FF_START_DELAY = 0.5; // Secs
-  public static final double FF_RAMP_RATE = 0.2; // Volts/Sec
-  public static final double ALIGN_TRANSLATION_SLEW_RATE = 4.0; // m/s^2
+  public static final double FF_START_DELAY = 0.3; // Secs
+  public static final double FF_RAMP_RATE = 0.4; // Volts/Sec
+  public static final double ALIGN_TRANSLATION_SLEW_RATE = 6.0; // m/s^2
   public static final double ALIGN_ROTATION_SLEW_RATE = Math.toRadians(720.0); // rad/s^2
   public static final double ALIGN_MANUAL_MAX_SPEED = 5.0; // m/s
   public static final double ALIGN_MANUAL_DEADBAND = 0.1;
@@ -30,10 +31,10 @@ public final class AlignConstants {
 
   public static final AlignGains DEFAULT_ALIGN_GAINS =
       new AlignGains(
-          new PIDGains(3.5, 0.1, 2.5),
-          new PIDGains(3.5, 0.1, 2.5),
+          new PIDGains(5.5, 0.1, 1.0),
+          new PIDGains(5.5, 0.1, 1.0),
           new PIDGains(6.0, 0.0, 1.0),
-          new FeedforwardGains(3.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
+          new FeedforwardGains(6.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
 
   // Alignment tuning and navigation helpers
   public static final double CENTRAL_REEF_RADIUS_METERS = 1.7;
@@ -82,12 +83,20 @@ public final class AlignConstants {
       return xGains.kP();
     }
 
+    public double translationKi() {
+      return xGains.kI();
+    }
+
     public double translationKd() {
       return xGains.kD();
     }
 
     public double rotationKp() {
       return thetaGains.kP();
+    }
+
+    public double rotationKi() {
+      return thetaGains.kI();
     }
 
     public double rotationKd() {

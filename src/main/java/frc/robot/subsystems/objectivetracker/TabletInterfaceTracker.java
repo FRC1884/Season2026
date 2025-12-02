@@ -485,9 +485,9 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
                   : SourcePreference.RIGHT;
         }
         yield switch (preference) {
-          case LEFT -> DriveCommands.alignToNearestCoralStationCommandAuto(drive);
-          case RIGHT -> DriveCommands.alignToNearestCoralStationCommandAuto(drive);
-          case NEAREST -> DriveCommands.alignToNearestCoralStationCommandAuto(drive);
+          case LEFT -> DriveCommands.alignToNearestCoralStationCommand(drive);
+          case RIGHT -> DriveCommands.alignToNearestCoralStationCommand(drive);
+          case NEAREST -> DriveCommands.alignToNearestCoralStationCommand(drive);
         };
       }
       case REEF -> {

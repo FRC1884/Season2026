@@ -9,6 +9,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
+import org.littletonrobotics.junction.Logger;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -46,12 +48,12 @@ public class NamedTargets {
       Pose2d choreoPose = loadChoreoWaypoint(name);
       if (choreoPose != null) {
         try {
-          org.littletonrobotics.junction.Logger.recordOutput(
+          Logger.recordOutput(
               "Autonomy/ResolvedTargetPose", choreoPose);
         } catch (Throwable ignored) {
         }
         // Pathfind to pose, then PID finish
-        return DriveCommands.pathfindThenPIDCommand(drive, () -> choreoPose, "named:" + name)
+        return DriveCommands.pathfindThenAlignCommand(drive, () -> choreoPose, "named:" + name)
             .beforeStarting(() -> DriveCommands.setAlignContext("named:" + name, name))
             .finallyDo(DriveCommands::clearAlignTelemetry);
       }
@@ -61,7 +63,7 @@ public class NamedTargets {
     // Fallbacks based on naming convention
     String n = name == null ? "" : name.trim();
     if (n.equalsIgnoreCase("Source_Blue")) {
-      return DriveCommands.alignToNearestCoralStationCommandAuto(drive)
+      return DriveCommands.alignToNearestCoralStationCommand(drive)
           .beforeStarting(() -> DriveCommands.setAlignContext("source", name))
           .finallyDo(DriveCommands::clearAlignTelemetry);
     }
@@ -72,8 +74,7 @@ public class NamedTargets {
       if (parts.length >= 4 && parts[0].equalsIgnoreCase("Reef")) {
         int face = Integer.parseInt(parts[1]);
         boolean left = parts[2].equalsIgnoreCase("L");
-        int branchOffset = left ? -1 : 1;
-        return DriveCommands.alignToReefBranchCommandAuto(drive, face, branchOffset)
+        return DriveCommands.alignToReefCommandTeleop(drive, ()->left, ()->face)
             .beforeStarting(() -> DriveCommands.setAlignContext("reef", name))
             .finallyDo(DriveCommands::clearAlignTelemetry);
       }

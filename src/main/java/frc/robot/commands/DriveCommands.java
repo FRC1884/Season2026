@@ -17,10 +17,7 @@ import static frc.robot.GlobalConstants.FieldMap.*;
 import static frc.robot.commands.AlignConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
-import com.pathplanner.lib.trajectory.PathPlannerTrajectoryState;
-import com.pathplanner.lib.util.DriveFeedforwards;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -36,7 +33,6 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.FunctionalCommand;
 import frc.robot.GlobalConstants;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
@@ -79,8 +75,6 @@ public class DriveCommands {
     try {
       Logger.recordOutput("Autonomy/AlignContext", "");
       Logger.recordOutput("Autonomy/AlignName", "");
-      // Clear any controller overrides
-      PPHolonomicDriveController.clearXYFeedbackOverride();
     } catch (Throwable ignored) {
     }
   }
@@ -194,120 +188,6 @@ public class DriveCommands {
         .beforeStarting(() -> angleController.reset(drive.getRotation().getRadians()));
   }
 
-  // use a holonomic controller to align to a target pose like elite FRC teams
-  public static Command chasePoseRobotRelativeCommand(
-      SwerveSubsystem drive, Supplier<Transform2d> targetOffset) {
-    return holonomicAlignCommand(
-        drive, () -> drive.getPose().plus(targetOffset.get()), () -> 0.0, false, true);
-  }
-
-  /** Command to align the robot to a target while giving the driver tangent control in Y. */
-  public static Command chasePoseRobotRelativeCommandYOverride(
-      SwerveSubsystem drive, Supplier<Transform2d> targetOffset, DoubleSupplier yDriver) {
-    return holonomicAlignCommand(
-        drive, () -> drive.getPose().plus(targetOffset.get()), yDriver, true, false);
-  }
-
-  private static Command holonomicAlignCommand(
-      SwerveSubsystem drive,
-      Supplier<Pose2d> targetSupplier,
-      DoubleSupplier manualTangentSupplier,
-      boolean allowManualTangent,
-      boolean finishWhenAligned) {
-    return Commands.defer(
-        () -> {
-          PPHolonomicDriveController holonomicController =
-              new PPHolonomicDriveController(
-                  alignGains.translationPidConstants(),
-                  alignGains.rotationPidConstants(),
-                  ALIGN_CONTROLLER_LOOP_PERIOD_SEC);
-
-          SlewRateLimiter vxLimiter = new SlewRateLimiter(ALIGN_TRANSLATION_SLEW_RATE);
-          SlewRateLimiter vyLimiter = new SlewRateLimiter(ALIGN_TRANSLATION_SLEW_RATE);
-          SlewRateLimiter omegaLimiter = new SlewRateLimiter(ALIGN_ROTATION_SLEW_RATE);
-
-          return new FunctionalCommand(
-              () -> holonomicController.reset(drive.getPose(), new ChassisSpeeds()),
-              () -> {
-                Pose2d currentPose = drive.getPose();
-                Pose2d targetPose =
-                    new Pose2d(
-                        targetSupplier.get().getTranslation(), targetSupplier.get().getRotation());
-
-                Translation2d translationError =
-                    targetPose.getTranslation().minus(currentPose.getTranslation());
-                double feedforwardX =
-                    Math.copySign(
-                        alignGains
-                            .feedforwardGains()
-                            .calculateSpeed(Math.abs(translationError.getX())),
-                        translationError.getX());
-                double feedforwardY =
-                    Math.copySign(
-                        alignGains
-                            .feedforwardGains()
-                            .calculateSpeed(Math.abs(translationError.getY())),
-                        translationError.getY());
-                Translation2d feedforwardVector = new Translation2d(feedforwardX, feedforwardY);
-
-                if (allowManualTangent) {
-                  double manualMetersPerSecond =
-                      MathUtil.applyDeadband(manualTangentSupplier.getAsDouble(), 0.07)
-                          * ALIGN_MANUAL_MAX_SPEED;
-                  if (Math.abs(manualMetersPerSecond) > 1e-3) {
-                    Translation2d manualVelocity =
-                        new Translation2d(0.0, manualMetersPerSecond)
-                            .rotateBy(targetPose.getRotation());
-                    feedforwardVector = feedforwardVector.plus(manualVelocity);
-                  }
-                }
-
-                PathPlannerTrajectoryState targetState = new PathPlannerTrajectoryState();
-                targetState.pose = targetPose;
-                targetState.heading = targetPose.getRotation();
-                targetState.fieldSpeeds =
-                    new ChassisSpeeds(feedforwardVector.getX(), feedforwardVector.getY(), 0.0);
-                targetState.linearVelocity =
-                    Math.hypot(
-                        targetState.fieldSpeeds.vxMetersPerSecond,
-                        targetState.fieldSpeeds.vyMetersPerSecond);
-                targetState.feedforwards = DriveFeedforwards.zeros(4);
-
-                ChassisSpeeds robotRelativeSpeeds =
-                    holonomicController.calculateRobotRelativeSpeeds(currentPose, targetState);
-
-                ChassisSpeeds fieldRelativeSpeeds =
-                    ChassisSpeeds.fromRobotRelativeSpeeds(robotRelativeSpeeds, drive.getRotation());
-
-                ChassisSpeeds limited = clampChassisSpeeds(fieldRelativeSpeeds);
-                double vx = vxLimiter.calculate(limited.vxMetersPerSecond);
-                double vy = vyLimiter.calculate(limited.vyMetersPerSecond);
-                double omega = omegaLimiter.calculate(limited.omegaRadiansPerSecond);
-
-                ChassisSpeeds commandedSpeeds =
-                    ChassisSpeeds.fromFieldRelativeSpeeds(vx, vy, omega, drive.getRotation());
-                drive.runVelocity(commandedSpeeds);
-
-                Pose2d errorPose = targetPose.relativeTo(currentPose);
-                Logger.recordOutput(
-                    "Autonomy/AlignErrorMeters",
-                    new double[] {
-                      errorPose.getX(), errorPose.getY(), errorPose.getRotation().getDegrees()
-                    });
-              },
-              interrupted -> drive.runVelocity(new ChassisSpeeds()),
-              () ->
-                  finishWhenAligned
-                      && isAligned(
-                          drive.getPose(),
-                          new Pose2d(
-                              targetSupplier.get().getTranslation(),
-                              targetSupplier.get().getRotation())),
-              drive);
-        },
-        Set.of(drive));
-  }
-
   private static ChassisSpeeds clampChassisSpeeds(ChassisSpeeds speeds) {
     double maxComponent =
         Math.max(
@@ -321,16 +201,6 @@ public class DriveCommands {
         MathUtil.clamp(
             speeds.omegaRadiansPerSecond, -ALIGN_MAX_ANGULAR_SPEED, ALIGN_MAX_ANGULAR_SPEED);
     return new ChassisSpeeds(vx, vy, omega);
-  }
-
-  private static boolean isAligned(Pose2d currentPose, Pose2d targetPose) {
-    Pose2d errorPose = targetPose.relativeTo(currentPose);
-    double translationTolerance =
-        Math.hypot(ALIGN_TRANSLATION_TOLERANCE_METERS, ALIGN_TRANSLATION_TOLERANCE_METERS);
-    boolean translationAligned = errorPose.getTranslation().getNorm() <= translationTolerance;
-    boolean rotationAligned =
-        Math.abs(errorPose.getRotation().getRadians()) <= ALIGN_ROTATION_TOLERANCE_RADIANS;
-    return translationAligned && rotationAligned;
   }
 
   private static Supplier<Pose2d> reefBranchTargetPose(
@@ -347,53 +217,6 @@ public class DriveCommands {
           new Translation2d(-forwardOffset, totalLateral).rotateBy(facePose.getRotation());
       return new Pose2d(facePose.getTranslation().plus(branchTransform), facePose.getRotation());
     };
-  }
-
-  // run the pathfind then follow command and then use PID to align on termination
-  public static Command pathfindThenPIDCommand(SwerveSubsystem drive, Supplier<Pose2d> target) {
-    PathConstraints constraints = new PathConstraints(0.5, 1, 0.5, 0.5);
-
-    double endVelocity = 0.0;
-
-    return Commands.sequence(
-        AutoBuilder.pathfindToPose(target.get(), constraints, endVelocity),
-        holonomicAlignCommand(drive, target, () -> 0.0, false, true));
-  }
-
-  // Overload that accepts a context string; delegates to the base implementation
-  public static Command pathfindThenPIDCommand(
-      SwerveSubsystem drive, Supplier<Pose2d> target, String context) {
-    return pathfindThenPIDCommand(drive, target);
-  }
-
-  /** Updates the path to override for the coral offset */
-  public static Command overridePathplannerCoralOffset(DoubleSupplier offset) {
-    return Commands.run(
-        () ->
-            PPHolonomicDriveController.overrideYFeedback(
-                () -> {
-                  // Calculate feedback from your custom PID controller
-                  return offset.getAsDouble();
-                }));
-  }
-
-  /** clears all x and y overrides */
-  public static Command clearXYOverrides() {
-    return Commands.run(() -> PPHolonomicDriveController.clearXYFeedbackOverride());
-  }
-
-  /** align to processor */
-  public static Command alignToProcessorCommand() {
-    PathConstraints constraints = new PathConstraints(10, 5, 5, 5);
-    Pose2d target = Coordinates.PROCESSOR.getPose();
-    Transform2d offset =
-        new Transform2d(
-            new Translation2d(0, GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET)
-                .rotateBy(target.getRotation()),
-            new Rotation2d());
-    target = target.plus(offset);
-    Logger.recordOutput("Targets/Processor", target);
-    return AutoBuilder.pathfindToPose(target, constraints);
   }
 
   /** code for reef alignment */
@@ -438,17 +261,9 @@ public class DriveCommands {
                   GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET,
                   REEF_TANGENT_BUFFER_METERS);
 
-          return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
+          return new AutoAlignToPoseCommand(drive, target.get());
         },
         Set.of(drive));
-  }
-
-  // Convenience wrapper: faceIndex in [1..6], branchOffsetIndex: -1 for left (A), +1 for right (B)
-  public static Command alignToReefBranchCommandAuto(
-      SwerveSubsystem drive, int faceIndex, int branchOffsetIndex) {
-    BooleanSupplier left = () -> branchOffsetIndex < 0;
-    Supplier<Integer> face = () -> Math.max(1, Math.min(6, faceIndex));
-    return alignToReefCommandAuto(drive, left, face);
   }
 
   // align to target face
@@ -482,7 +297,7 @@ public class DriveCommands {
                   GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET,
                   0.0);
           Logger.recordOutput("Autonomy/AlignTargetReef", target.get());
-          return holonomicAlignCommand(drive, target, () -> 0.0, false, false);
+          return new AutoAlignToPoseCommand(drive, target.get());
         },
         Set.of(drive));
   }
@@ -498,6 +313,10 @@ public class DriveCommands {
     Logger.recordOutput("Targets/Facing Driver", facingDriver);
 
     return () -> facingDriver ? !leftInput.getAsBoolean() : leftInput.getAsBoolean();
+  }
+
+  public static Command pathfindThenAlignCommand(SwerveSubsystem drive, Pose2d target, String name) {
+      return DriveCommands.pathfindThenAlignCommand(drive, target, name);
   }
 
   // returns the nearest face of the reef
@@ -531,11 +350,10 @@ public class DriveCommands {
    * @return
    */
   public static Command alignToNearestCoralStationCommand(
-      SwerveSubsystem drive, DoubleSupplier yDriver) {
+      SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
           Supplier<Boolean> alignLeft = () -> chooseLeftCoralStation(drive);
-          DoubleSupplier driverOverride = () -> yDriver.getAsDouble() * (alignLeft.get() ? -1 : 1);
           Supplier<Pose2d> target =
               () -> {
                 boolean leftStation = alignLeft.get();
@@ -547,51 +365,15 @@ public class DriveCommands {
                 return coralStationTargetPose(tagPose, sideSign);
               };
 
-          return holonomicAlignCommand(drive, target, driverOverride, true, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToNearestCoralStationCommandAuto(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Supplier<Pose2d> target =
-              () -> {
-                boolean leftStation = chooseLeftCoralStation(drive);
-                Pose2d base =
-                    leftStation
-                        ? Coordinates.LEFT_CORAL_STATION.getPose()
-                        : Coordinates.RIGHT_CORAL_STATION.getPose();
-                double sideSign = leftStation ? -1.0 : 1.0;
-                return coralStationTargetPose(base, sideSign);
-              };
-
-          return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToCoralStationCommandAuto(SwerveSubsystem drive, boolean leftStation) {
-    return Commands.defer(
-        () -> {
-          Supplier<Pose2d> target =
-              () -> {
-                Pose2d base =
-                    leftStation
-                        ? Coordinates.LEFT_CORAL_STATION.getPose()
-                        : Coordinates.RIGHT_CORAL_STATION.getPose();
-                double sideSign = leftStation ? -1.0 : 1.0;
-                return coralStationTargetPose(base, sideSign);
-              };
-
-          return holonomicAlignCommand(drive, target, () -> 0.0, false, true);
+          Logger.recordOutput("Autonomy/AlignToNearestCoralStation", target.get());
+          return new AutoAlignToPoseCommand(drive, target.get());
         },
         Set.of(drive));
   }
 
   /** helper methods for alignment */
 
-  // returns the coordinates of the nearest coral station
+  // returns the boolean of the nearest coral station
   private static boolean chooseLeftCoralStation(SwerveSubsystem drive) {
     double leftDistance =
         drive
