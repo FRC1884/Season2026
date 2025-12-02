@@ -9,14 +9,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
-import org.littletonrobotics.junction.Logger;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Helpers for resolving and navigating to operator-defined targets created in PathPlanner/Choreo.
@@ -48,14 +47,16 @@ public class NamedTargets {
       Pose2d choreoPose = loadChoreoWaypoint(name);
       if (choreoPose != null) {
         try {
-          Logger.recordOutput(
-              "Autonomy/ResolvedTargetPose", choreoPose);
+          Logger.recordOutput("Autonomy/ResolvedTargetPose", choreoPose);
         } catch (Throwable ignored) {
         }
         // Pathfind to pose, then PID finish
-        return DriveCommands.pathfindThenAlignCommand(drive, () -> choreoPose, "named:" + name)
-            .beforeStarting(() -> DriveCommands.setAlignContext("named:" + name, name))
-            .finallyDo(DriveCommands::clearAlignTelemetry);
+        return DriveCommands.alignToReefCommandTeleop(drive, () -> false, () -> -1);
+        //        return DriveCommands.pathfindThenAlignCommand(
+        //                drive, () -> RotationalAllianceFlipUtil.apply(choreoPose), "named:" +
+        // name)
+        //            .beforeStarting(() -> DriveCommands.setAlignContext("named:" + name, name))
+        //            .finallyDo(DriveCommands::clearAlignTelemetry);
       }
     } catch (Throwable ignored) {
     }
@@ -74,7 +75,7 @@ public class NamedTargets {
       if (parts.length >= 4 && parts[0].equalsIgnoreCase("Reef")) {
         int face = Integer.parseInt(parts[1]);
         boolean left = parts[2].equalsIgnoreCase("L");
-        return DriveCommands.alignToReefCommandTeleop(drive, ()->left, ()->face)
+        return DriveCommands.alignToReefCommandTeleop(drive, () -> left, () -> face)
             .beforeStarting(() -> DriveCommands.setAlignContext("reef", name))
             .finallyDo(DriveCommands::clearAlignTelemetry);
       }

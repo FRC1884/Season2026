@@ -16,15 +16,10 @@ package frc.robot.commands;
 import static frc.robot.GlobalConstants.FieldMap.*;
 import static frc.robot.commands.AlignConstants.*;
 
-import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.path.PathConstraints;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
@@ -52,6 +47,10 @@ import org.littletonrobotics.junction.Logger;
 public class DriveCommands {
 
   @Setter @Getter public static AlignGains alignGains = DEFAULT_ALIGN_GAINS;
+  private static final double PATHFIND_STAGING_DISTANCE_METERS = 0.75;
+  private static final double PATHFIND_FIELD_MARGIN_METERS = 0.1;
+  private static final double PATHFIND_REEF_CLEARANCE_METERS =
+      CENTRAL_REEF_RADIUS_METERS + CENTRAL_REEF_MARGIN_METERS;
 
   private DriveCommands() {}
 
@@ -315,9 +314,126 @@ public class DriveCommands {
     return () -> facingDriver ? !leftInput.getAsBoolean() : leftInput.getAsBoolean();
   }
 
-  public static Command pathfindThenAlignCommand(SwerveSubsystem drive, Pose2d target, String name) {
-      return DriveCommands.pathfindThenAlignCommand(drive, target, name);
-  }
+  /**
+   * Test with Path Planner Dynamic obstacle avoider Doesn't work, but shows ground for what we
+   * could do
+   */
+  //  private static Translation2d clampToField(Translation2d translation) {
+  //    double x =
+  //        MathUtil.clamp(
+  //            translation.getX(),
+  //            PATHFIND_FIELD_MARGIN_METERS,
+  //            FIELD_LENGTH_METERS - PATHFIND_FIELD_MARGIN_METERS);
+  //    double y =
+  //        MathUtil.clamp(
+  //            translation.getY(),
+  //            PATHFIND_FIELD_MARGIN_METERS,
+  //            FIELD_WIDTH_METERS - PATHFIND_FIELD_MARGIN_METERS);
+  //    return new Translation2d(x, y);
+  //  }
+  //
+  //  private static Pose2d buildPathfindStagingPose(Pose2d target) {
+  //    Translation2d stagingTranslation =
+  //        clampToField(
+  //            target
+  //                .getTranslation()
+  //                .minus(
+  //                    new Translation2d(PATHFIND_STAGING_DISTANCE_METERS, 0.0)
+  //                        .rotateBy(target.getRotation())));
+  //    return new Pose2d(stagingTranslation, target.getRotation());
+  //  }
+  //
+  //  private static PathConstraints getPathfindConstraints(SwerveSubsystem drive) {
+  //    double maxLinear =
+  //        Math.min(ALIGN_MAX_TRANSLATIONAL_SPEED, drive.getMaxLinearSpeedMetersPerSec());
+  //    return new PathConstraints(
+  //        maxLinear,
+  //        ALIGN_MAX_TRANSLATIONAL_ACCELERATION,
+  //        ALIGN_MAX_ANGULAR_SPEED,
+  //        ALIGN_MAX_ANGULAR_ACCELERATION);
+  //  }
+  //
+  //  private static Translation2d getReefCenter() {
+  //    Pose2d[] reefTags =
+  //        new Pose2d[] {
+  //          Coordinates.REEF_1.getPose(),
+  //          Coordinates.REEF_2.getPose(),
+  //          Coordinates.REEF_3.getPose(),
+  //          Coordinates.REEF_4.getPose(),
+  //          Coordinates.REEF_5.getPose(),
+  //          Coordinates.REEF_6.getPose()
+  //        };
+  //    double sumX = 0.0;
+  //    double sumY = 0.0;
+  //    for (Pose2d pose : reefTags) {
+  //      sumX += pose.getX();
+  //      sumY += pose.getY();
+  //    }
+  //    return new Translation2d(sumX / reefTags.length, sumY / reefTags.length);
+  //  }
+  //
+  //  private static List<Pair<Translation2d, Translation2d>> buildPathfindObstacles() {
+  //    List<Pair<Translation2d, Translation2d>> obstacles = new LinkedList<>();
+  //
+  //    Translation2d reefCenter = getReefCenter();
+  //    double reefRadius = 0.5;
+  //    Translation2d reefMin =
+  //        clampToField(reefCenter.minus(new Translation2d(reefRadius, reefRadius)));
+  //    Translation2d reefMax =
+  //        clampToField(reefCenter.plus(new Translation2d(reefRadius, reefRadius)));
+  //    obstacles.add(new Pair<>(reefMin, reefMax));
+  //
+  //    Pose2d obstacle = new Pose2d(reefMin.getX(), reefMin.getY(), new Rotation2d());
+  //    try {
+  //      Logger.recordOutput("Autonomy/Pathfind/Obstacles", obstacle);
+  //    } catch (Throwable ignored) {
+  //    }
+  //
+  //    return obstacles;
+  //  }
+  //
+  //  public static Command pathfindThenAlignCommand(
+  //      SwerveSubsystem drive, Pose2d target, String name) {
+  //    return pathfindThenAlignCommand(drive, () -> target, name);
+  //  }
+  //
+  //  public static Command pathfindThenAlignCommand(
+  //      SwerveSubsystem drive, Supplier<Pose2d> targetSupplier, String name) {
+  //    return Commands.defer(
+  //        () -> {
+  //          Pose2d suppliedTarget = targetSupplier.get();
+  //          if (suppliedTarget == null) {
+  //            return Commands.print("Pathfind target unavailable: " + name);
+  //          }
+  //
+  //          Pose2d stagingPose = buildPathfindStagingPose(suppliedTarget);
+  //          try {
+  //            Logger.recordOutput("Autonomy/Pathfind/GoalPose", suppliedTarget);
+  //            Logger.recordOutput("Autonomy/Pathfind/StagingPose", stagingPose);
+  //          } catch (Throwable ignored) {
+  //          }
+  //
+  //          Command pathfindCommand =
+  //              AutoBuilder.isPathfindingConfigured()
+  //                  ? Commands.sequence(
+  //                      Commands.runOnce(
+  //                          () ->
+  //                              Pathfinding.setDynamicObstacles(
+  //                                  buildPathfindObstacles(), drive.getPose().getTranslation())),
+  //                      AutoBuilder.pathfindToPose(stagingPose, getPathfindConstraints(drive),
+  // 0.0))
+  //                  : Commands.print("Pathfinding not configured, driving direct: " + name);
+  //
+  //          Command alignCommand = new AutoAlignToPoseCommand(drive, suppliedTarget);
+  //
+  //          return Commands.sequence(
+  //                  Commands.runOnce(() -> setAlignContext("pathfind:" + name, name)),
+  //                  pathfindCommand,
+  //                  alignCommand)
+  //              .finallyDo(DriveCommands::clearAlignTelemetry);
+  //        },
+  //        Set.of(drive));
+  //  }
 
   // returns the nearest face of the reef
   public static Supplier<Pose2d> findClosestReefFace(SwerveSubsystem drive) {
@@ -349,8 +465,7 @@ public class DriveCommands {
    * @param drive
    * @return
    */
-  public static Command alignToNearestCoralStationCommand(
-      SwerveSubsystem drive) {
+  public static Command alignToNearestCoralStationCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
           Supplier<Boolean> alignLeft = () -> chooseLeftCoralStation(drive);

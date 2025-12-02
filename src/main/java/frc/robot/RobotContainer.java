@@ -285,9 +285,7 @@ public class RobotContainer {
       driver.leftAlign().whileTrue(DriveCommands.leftAlignToReefCommandTeleop(drive));
 
       // align to coral station with position customization when right trigger is pressed
-      driver
-          .coralStation()
-          .whileTrue(DriveCommands.alignToNearestCoralStationCommand(drive));
+      driver.coralStation().whileTrue(DriveCommands.alignToNearestCoralStationCommand(drive));
 
       driver
           .slowMode()
