@@ -18,11 +18,11 @@ import static edu.wpi.first.apriltag.AprilTagFieldLayout.loadField;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
-import frc.robot.util.RotationalAllianceFlipUtil;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import java.io.IOException;
 import java.nio.file.Path;
 import lombok.Getter;
@@ -39,7 +39,7 @@ public final class GlobalConstants {
   public static final RobotMode MODE = RobotMode.SIM;
   public static final RobotType ROBOT = RobotType.SIMBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
-  public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
+  public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLSPARK;
 
   public static boolean TUNING_MODE = false;
 
@@ -106,24 +106,31 @@ public final class GlobalConstants {
     // TODO set all alignment offsets from tags
     @Getter
     public static enum Coordinates {
-      REEF_1(APRIL_TAG_FIELD_LAYOUT.getTagPose(18).get().toPose2d()),
-      REEF_2(APRIL_TAG_FIELD_LAYOUT.getTagPose(17).get().toPose2d()),
-      REEF_3(APRIL_TAG_FIELD_LAYOUT.getTagPose(22).get().toPose2d()),
-      REEF_4(APRIL_TAG_FIELD_LAYOUT.getTagPose(21).get().toPose2d()),
-      REEF_5(APRIL_TAG_FIELD_LAYOUT.getTagPose(20).get().toPose2d()),
-      REEF_6(APRIL_TAG_FIELD_LAYOUT.getTagPose(19).get().toPose2d()),
-      LEFT_CORAL_STATION(APRIL_TAG_FIELD_LAYOUT.getTagPose(13).get().toPose2d()),
-      RIGHT_CORAL_STATION(APRIL_TAG_FIELD_LAYOUT.getTagPose(12).get().toPose2d()),
-      PROCESSOR(APRIL_TAG_FIELD_LAYOUT.getTagPose(16).get().toPose2d()),
-      LEFT_BARGE(APRIL_TAG_FIELD_LAYOUT.getTagPose(14).get().toPose2d()),
-      RIGHT_BARGE(APRIL_TAG_FIELD_LAYOUT.getTagPose(15).get().toPose2d());
+      REEF_1(18, 7),
+      REEF_2(17, 8),
+      REEF_3(22, 9),
+      REEF_4(21, 10),
+      REEF_5(20, 11),
+      REEF_6(19, 6),
+      LEFT_CORAL_STATION(13, 1),
+      RIGHT_CORAL_STATION(12, 2),
+      PROCESSOR(16, 3),
+      LEFT_BARGE(14, 4),
+      RIGHT_BARGE(15, 5);
 
-      private final Pose2d pose;
+      private final Pose2d bluePose;
+      private final Pose2d redPose;
 
-      Coordinates(Pose2d pose) {
-        this.pose =
-            RotationalAllianceFlipUtil.apply(
-                pose.rotateAround(pose.getTranslation(), Rotation2d.k180deg));
+      Coordinates(int blueTagId, int redTagId) {
+        this.bluePose = APRIL_TAG_FIELD_LAYOUT.getTagPose(blueTagId).get().toPose2d();
+        this.redPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(redTagId).get().toPose2d();
+      }
+
+      public Pose2d getPose() {
+        boolean isRed =
+            DriverStation.getAlliance().isPresent()
+                && DriverStation.getAlliance().get() == Alliance.Red;
+        return isRed ? redPose : bluePose;
       }
     }
 

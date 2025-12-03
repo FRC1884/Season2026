@@ -15,7 +15,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Config;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
-import frc.robot.util.NamedTargets;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -486,14 +485,16 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
                   : SourcePreference.RIGHT;
         }
         yield switch (preference) {
-          case LEFT -> DriveCommands.alignToCoralStationCommandAuto(drive, true);
-          case RIGHT -> DriveCommands.alignToCoralStationCommandAuto(drive, false);
-          case NEAREST -> DriveCommands.alignToNearestCoralStationCommandAuto(drive);
+          case LEFT -> DriveCommands.alignToNearestCoralStationCommand(drive);
+          case RIGHT -> DriveCommands.alignToNearestCoralStationCommand(drive);
+          case NEAREST -> DriveCommands.alignToNearestCoralStationCommand(drive);
         };
       }
       case REEF -> {
         String target = step.targetName();
-        yield NamedTargets.goTo(drive, target);
+        System.out.println(target);
+        yield DriveCommands.alignToReefCommandTeleop(
+            drive, () -> step.side == ApproachSide.LEFT, () -> step.face);
       }
     };
   }
