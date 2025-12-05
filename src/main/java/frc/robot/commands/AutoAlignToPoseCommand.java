@@ -27,15 +27,22 @@ public class AutoAlignToPoseCommand extends Command {
   private double thetaErrorAbs;
   private final double ffMinRadius = 0.0, ffMaxRadius = 0.1;
   private final Pose2d target;
+  private double endVelocity;
 
   public AutoAlignToPoseCommand(SwerveSubsystem drive, Pose2d target) {
-    this(drive, target, 1.0);
+    this(drive, target, 1.0, 0.0, AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS);
   }
 
-  public AutoAlignToPoseCommand(SwerveSubsystem drive, Pose2d target, double constraintFactor) {
+  public AutoAlignToPoseCommand(
+      SwerveSubsystem drive,
+      Pose2d target,
+      double constraintFactor,
+      double endVelocity,
+      double tolerance) {
     this.drive = drive;
     this.target = target;
     double clampedFactor = Math.max(0.0, constraintFactor);
+    this.endVelocity = endVelocity;
     this.driveController =
         new ProfiledPIDController(
             AlignConstants.DEFAULT_ALIGN_GAINS.translationKp(),
@@ -45,7 +52,7 @@ public class AutoAlignToPoseCommand extends Command {
                 AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED * clampedFactor,
                 AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION * clampedFactor),
             AlignConstants.ALIGN_CONTROLLER_LOOP_PERIOD_SEC);
-    this.driveController.setTolerance(1);
+    this.driveController.setTolerance(tolerance);
     addRequirements(drive);
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
   }
@@ -61,8 +68,6 @@ public class AutoAlignToPoseCommand extends Command {
     driveController.reset(currentPose.getTranslation().getDistance(target.getTranslation()), 0.0);
     thetaController.reset(currentPose.getRotation().getRadians(), 0.0);
     thetaController.setTolerance(Units.degreesToRadians(2.0));
-
-    driveController.setTolerance(0.04);
   }
 
   @Override
@@ -84,7 +89,8 @@ public class AutoAlignToPoseCommand extends Command {
     Logger.recordOutput("DriveToPose/ffScaler", ffScaler);
     double driveVelocityScalar =
         driveController.getSetpoint().velocity * ffScaler
-            + driveController.calculate(driveErrorAbs, 0.0);
+            + driveController.calculate(
+                driveErrorAbs, new TrapezoidProfile.State(0.0, endVelocity));
     if (currentDistance < driveController.getPositionTolerance()) driveVelocityScalar = 0.0;
     Logger.recordOutput("DriveToPose/DrivePoseError", driveErrorAbs);
 
