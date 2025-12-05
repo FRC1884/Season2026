@@ -214,7 +214,9 @@ public class DriveCommands {
       double totalLateral = lateralOffset * sideSign + tangentBuffer * sideSign;
       Translation2d branchTransform =
           new Translation2d(-forwardOffset, totalLateral).rotateBy(facePose.getRotation());
-      return new Pose2d(facePose.getTranslation().plus(branchTransform), facePose.getRotation());
+      return new Pose2d(
+          facePose.getTranslation().plus(branchTransform),
+          facePose.getRotation().rotateBy(new Rotation2d(Math.PI)));
     };
   }
 
