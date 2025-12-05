@@ -493,7 +493,7 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
       case REEF -> {
         String target = step.targetName();
         System.out.println(target);
-        yield DriveCommands.alignToReefCommandTeleop(
+        yield DriveCommands.PathWeaverThenAlingCommand(
             drive, () -> step.side == ApproachSide.LEFT, () -> step.face);
       }
     };

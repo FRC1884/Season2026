@@ -316,6 +316,41 @@ public class DriveCommands {
     return () -> facingDriver ? !leftInput.getAsBoolean() : leftInput.getAsBoolean();
   }
 
+  public static Command PathWeaverThenAlingCommand(
+      SwerveSubsystem drive, BooleanSupplier isLeft, Supplier<Integer> aprilTag) {
+    return Commands.defer(
+        () -> {
+          // find the coordinates of the selected face
+          Supplier<Pose2d> targetFace;
+          targetFace =
+              switch (aprilTag.get()) {
+                case 1 -> () -> Coordinates.REEF_1.getPose();
+                case 2 -> () -> Coordinates.REEF_2.getPose();
+                case 3 -> () -> Coordinates.REEF_3.getPose();
+                case 4 -> () -> Coordinates.REEF_4.getPose();
+                case 5 -> () -> Coordinates.REEF_5.getPose();
+                case 6 -> () -> Coordinates.REEF_6.getPose();
+                default -> findClosestReefFace(drive);
+              };
+
+          double xOffset =
+              GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET
+                  + GlobalConstants.AlignOffsets.REEF_TO_BUMPER_OFFSET;
+
+          BooleanSupplier leftAlign = isFieldRelativeLeftAlign(targetFace, isLeft);
+          Supplier<Pose2d> target =
+              reefBranchTargetPose(
+                  targetFace,
+                  leftAlign,
+                  xOffset,
+                  GlobalConstants.AlignOffsets.REEF_TO_BRANCH_OFFSET,
+                  0.0);
+          Logger.recordOutput("Autonomy/AlignTargetReef", target.get());
+          return new PathWeaveCommand(drive, target.get());
+        },
+        Set.of(drive));
+  }
+
   /**
    * Test with Path Planner Dynamic obstacle avoider Doesn't work, but shows ground for what we
    * could do
