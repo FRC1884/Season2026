@@ -45,6 +45,7 @@ public class AutoAlignToPoseCommand extends Command {
                 AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED * clampedFactor,
                 AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION * clampedFactor),
             AlignConstants.ALIGN_CONTROLLER_LOOP_PERIOD_SEC);
+    this.driveController.setTolerance(1);
     addRequirements(drive);
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
   }
@@ -85,6 +86,7 @@ public class AutoAlignToPoseCommand extends Command {
         driveController.getSetpoint().velocity * ffScaler
             + driveController.calculate(driveErrorAbs, 0.0);
     if (currentDistance < driveController.getPositionTolerance()) driveVelocityScalar = 0.0;
+    Logger.recordOutput("DriveToPose/DrivePoseError", driveErrorAbs);
 
     // Calculate theta speed
     double thetaVelocity =

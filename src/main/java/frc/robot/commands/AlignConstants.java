@@ -19,7 +19,7 @@ public final class AlignConstants {
   public static final double ALIGN_TRANSLATION_SLEW_RATE = 6.0; // m/s^2
   public static final double ALIGN_ROTATION_SLEW_RATE = Math.toRadians(720.0); // rad/s^2
   public static final double ALIGN_MANUAL_MAX_SPEED = 5.0; // m/s
-  public static final double ALIGN_MANUAL_DEADBAND = 0.1;
+  public static final double ALIGN_MANUAL_DEADBAND = 1;
   public static final double ALIGN_PID_BLEND_RANGE_METERS = 1.0; // distance where PID fully enabled
   public static final double ALIGN_PID_BLEND_MIN = 0.15; // keep some PID authority near target
   public static final double ALIGN_TRANSLATION_TOLERANCE_METERS = 0.03; // m
@@ -31,9 +31,9 @@ public final class AlignConstants {
 
   public static final AlignGains DEFAULT_ALIGN_GAINS =
       new AlignGains(
-          new PIDGains(5.5, 0.1, 1.0),
-          new PIDGains(5.5, 0.1, 1.0),
-          new PIDGains(6.0, 0.0, 1.0),
+          new PIDGains(6.5, 0.3, 1.0),
+          new PIDGains(6.5, 0.3, 1.0),
+          new PIDGains(6.0, 0.05, 1.0),
           new FeedforwardGains(6.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
 
   // Alignment tuning and navigation helpers

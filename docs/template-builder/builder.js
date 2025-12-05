@@ -24,9 +24,9 @@ const defaultTemplate = {
   },
   reef: {
     branchImage: "coral.png",
-    branchSizeVh: 12,
+     branchSizeVh: 5,
     algaeImage: "algae.png",
-    algaeSizeVh: 14,
+    algaeSizeVh: 7,
     flagEmoji: "\uD83C\uDFC1",
     branchNodes: [
       { x: 60, y: 90, face: 1, side: "LEFT" },
@@ -969,6 +969,15 @@ function escapeAttr(value) {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function ensureArray(obj, key) {
+  if (!obj || typeof obj !== "object") {
+    return;
+  }
+  if (!Array.isArray(obj[key])) {
+    obj[key] = [];
+  }
 }
 
 function removeByIndex(list, index) {
