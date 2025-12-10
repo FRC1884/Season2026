@@ -144,7 +144,7 @@ public final class GlobalConstants {
 
     public static final double REEF_TO_BUMPER_OFFSET = -32.0 / 100;
     public static final double REEF_TO_BRANCH_OFFSET = Units.inchesToMeters(13.0 / 2);
-    public static final double SOURCE_TO_TAG_STANDOFF = Units.inchesToMeters(12.0);
+    public static final double SOURCE_TO_TAG_STANDOFF = Units.inchesToMeters(40.0);
 
     public static final double SIDE_TO_SIDE_OFFSET_AUTO = Units.feetToMeters(1);
   }
