@@ -3,8 +3,10 @@ package frc.robot.commands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
+import frc.robot.util.ReefIntersectUtil;
 import frc.robot.util.RotationalAllianceFlipUtil;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,12 +41,12 @@ public class PathWeaveCommand extends Command {
   private int currentIndex = 0;
   private Pose2d lastEdge = edges.CORNER_1.getPose();
   private double currentLegHandoffDistance = 0.0;
-  private static final double MIN_HANDOFF_DISTANCE = 0.25; // m
-  private static final double MAX_HANDOFF_DISTANCE = 0.6; // m
+  private static final double MIN_HANDOFF_DISTANCE = 0.5; // m
+  private static final double MAX_HANDOFF_DISTANCE = 0.8; // m
   private static final Translation2d BLUE_REEF_CENTER = calculateBlueReefCenter();
   private static final double ANGLE_MATCH_EPSILON = Math.toRadians(5.0);
   private static final double ANGLE_DIVERGENCE_EPSILON = Math.toRadians(1.0);
-  private static final double TARGET_PASS_THROUGH_MARGIN = 0.2; // m
+  private static final double TARGET_PASS_THROUGH_MARGIN = 0.4; // m
 
   public PathWeaveCommand(SwerveSubsystem drive, Pose2d target) {
     this.drive = drive;
@@ -182,7 +184,8 @@ public class PathWeaveCommand extends Command {
     }
 
     // If the straight line is clear, skip the reef edges entirely.
-    if (!segmentHitsReef(startingPose, target)) {
+    if (!ReefIntersectUtil.willCollide(
+        startingPose, target, Units.inchesToMeters(40 * Math.sqrt(2)))) {
       plannedPath.add(target);
       return;
     }
@@ -199,6 +202,8 @@ public class PathWeaveCommand extends Command {
 
     List<Pose2d> bestWalk =
         clockwiseCost <= counterClockwiseCost ? clockwiseWalk : counterClockwiseWalk;
+
+    List<Pose2d> plannedCorners = new ArrayList<>();
 
     // Add corners until we have clear line-of-sight to the target, but stop if we start moving away
     // from the target side of the reef.
@@ -220,7 +225,7 @@ public class PathWeaveCommand extends Command {
         break; // We started moving away from the target side; don't wrap past it.
       }
 
-      plannedPath.add(corner);
+      plannedCorners.add(corner);
       addedCorner = true;
       cursor = corner;
       prevAngleDiff = cornerAngleDiff;
@@ -228,10 +233,24 @@ public class PathWeaveCommand extends Command {
       if (cornerAngleDiff <= ANGLE_MATCH_EPSILON) {
         break; // We are lined up with the target; stop wrapping.
       }
-      if (!segmentHitsReef(cursor, target)) {
-        break;
-      }
     }
+
+    boolean straightlineable = false;
+    int i = plannedCorners.size() - 1;
+
+    while (!straightlineable && i >= 0) {
+      plannedPath.add(0, plannedCorners.get(i));
+      straightlineable =
+          ReefIntersectUtil.willCollideVector(
+              startingPose, plannedCorners.get(0), Units.inchesToMeters(40 * Math.sqrt(2)));
+      i--;
+    }
+
+    //    plannedPath.clear();
+    //    for (Pose2d corner : plannedCorners) {
+    //      plannedPath.add(corner);
+    //    }
+
     if (plannedPath.isEmpty()
         || distanceBetween(plannedPath.get(plannedPath.size() - 1), target) > 1e-6) {
       plannedPath.add(target);

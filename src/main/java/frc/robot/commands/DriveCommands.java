@@ -543,7 +543,7 @@ public class DriveCommands {
   private static Pose2d coralStationTargetPose(Pose2d tagPose, double sideSign) {
     Rotation2d approachHeading = tagPose.getRotation().plus(Rotation2d.k180deg);
     double forwardOffset =
-        GlobalConstants.AlignOffsets.SOURCE_TO_TAG_STANDOFF
+        -GlobalConstants.AlignOffsets.SOURCE_TO_TAG_STANDOFF
             - GlobalConstants.AlignOffsets.BUMPER_TO_CENTER_OFFSET;
     double lateralOffset = GlobalConstants.AlignOffsets.SIDE_TO_SIDE_OFFSET_AUTO * sideSign;
     Translation2d offsetVector =

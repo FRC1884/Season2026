@@ -33,7 +33,7 @@ public final class AlignConstants {
       new AlignGains(
           new PIDGains(5.5, 0.1, 1.0),
           new PIDGains(5.5, 0.1, 1.0),
-          new PIDGains(6.0, 0.0, 1.0),
+          new PIDGains(10.0, 0.0, 3.0),
           new FeedforwardGains(6.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
 
   // Alignment tuning and navigation helpers
