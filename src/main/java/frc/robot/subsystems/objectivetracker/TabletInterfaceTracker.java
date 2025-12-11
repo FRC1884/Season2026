@@ -378,11 +378,6 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
               queueSteps.add(step);
               queueRevision++;
               queueMessage = "Queued " + step.label() + ".";
-              if (queueRunning && activeCommand == null) {
-                startNextStep();
-              } else if (!queueRunning && !manualOverride) {
-                startQueue();
-              }
             });
   }
 
