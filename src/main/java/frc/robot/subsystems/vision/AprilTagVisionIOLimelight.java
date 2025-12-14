@@ -11,6 +11,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
+
+import frc.robot.subsystems.swerve.SwerveSubsystem;
 import lombok.Getter;
 
 /**
@@ -30,12 +33,17 @@ public class AprilTagVisionIOLimelight implements VisionIO {
   private final NetworkTableEntry botposeBlueMegaEntry;
   // MegaTag2 pose topic (red orientation).
   private final NetworkTableEntry botposeRedMegaEntry;
+  private int currentImuMode = -1;
+  private final SwerveSubsystem drive;
   @Getter private final CameraConstants cameraConstants;
 
   // Wire up the Limelight topics and push the robot-to-camera transform so the camera can report
   // poses relative to the robot frame.
-  public AprilTagVisionIOLimelight(CameraConstants cameraConstants) {
+  public AprilTagVisionIOLimelight(
+          CameraConstants cameraConstants,
+          SwerveSubsystem drive) {
     this.cameraConstants = cameraConstants;
+    this.drive = drive;
     limelightName = cameraConstants.cameraName();
 
     // Pull the base table for this Limelight instance.
@@ -57,6 +65,23 @@ public class AprilTagVisionIOLimelight implements VisionIO {
    */
   @Override
   public void updateInputs(VisionIOInputs inputs) {
+    // Provide robot yaw (and optional yaw rate) so MegaTag2 can fuse IMU heading.
+    LimelightHelpers.SetRobotOrientation(
+        limelightName,
+        drive.getRotation().getDegrees(),
+            drive.getYawRateDegreesPerSec(),
+        0,
+        0,
+        0,
+        0);
+
+    // Keep LL4 IMU seeded while disabled (mode 1), then let LL4 use its IMU when enabled (mode 2).
+    int desiredImuMode = DriverStation.isDisabled() ? 1 : 2;
+    if (desiredImuMode != currentImuMode) {
+      LimelightHelpers.SetIMUMode(limelightName, desiredImuMode);
+      currentImuMode = desiredImuMode;
+    }
+
     // Determine the current alliance to pick the correct pose topic.
     boolean isRed =
         DriverStation.getAlliance().isPresent()
