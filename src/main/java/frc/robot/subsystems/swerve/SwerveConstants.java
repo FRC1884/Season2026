@@ -3,6 +3,7 @@ package frc.robot.subsystems.swerve;
 import static edu.wpi.first.units.Units.Kilograms;
 import static edu.wpi.first.units.Units.Meters;
 import static frc.robot.GlobalConstants.ROBOT;
+import static frc.robot.GlobalConstants.robotSwerveMotors;
 import static java.lang.Math.PI;
 
 import com.pathplanner.lib.config.ModuleConfig;
@@ -12,6 +13,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
+import frc.robot.GlobalConstants;
 import frc.robot.GlobalConstants.Gains;
 import frc.robot.GlobalConstants.RobotType;
 import org.ironmaple.simulation.drivesims.COTS;
@@ -212,9 +214,9 @@ public final class SwerveConstants {
   public static final double ROBOT_MASS = 45;
 
   // Drive motor configuration
-  public static final DCMotor DRIVE_GEARBOX = DCMotor.getNeoVortex(1);
+  public static final DCMotor DRIVE_GEARBOX = (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLSPARK) ? DCMotor.getNeoVortex(1) : DCMotor.getKrakenX60(1);
 
-  public static final double DRIVE_GEAR_RATIO = 5.08;
+  public static final double DRIVE_GEAR_RATIO = 5.08; // Spark Max
 
   static final boolean DRIVE_INVERTED = ROBOT == RobotType.DEVBOT;
 
