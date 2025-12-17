@@ -316,6 +316,23 @@ public class DriveCommands {
     return () -> facingDriver ? !leftInput.getAsBoolean() : leftInput.getAsBoolean();
   }
 
+  public static Command PathWeaverSource(SwerveSubsystem drive, Boolean leftInput) {
+    Supplier<Boolean> alignLeft;
+    if (leftInput == null) alignLeft = () -> chooseLeftCoralStation(drive);
+    else alignLeft = () -> leftInput;
+    Supplier<Pose2d> target =
+        () -> {
+          boolean leftStation = alignLeft.get();
+          Pose2d tagPose =
+              leftStation
+                  ? Coordinates.LEFT_CORAL_STATION.getPose()
+                  : Coordinates.RIGHT_CORAL_STATION.getPose();
+          double sideSign = leftStation ? -1.0 : 1.0;
+          return coralStationTargetPose(tagPose, sideSign);
+        };
+    return new PathWeaveCommand(drive, target.get());
+  }
+
   public static Command PathWeaverThenAlingCommand(
       SwerveSubsystem drive, BooleanSupplier isLeft, Supplier<Integer> aprilTag) {
     return Commands.defer(
@@ -527,17 +544,10 @@ public class DriveCommands {
 
   // returns the boolean of the nearest coral station
   private static boolean chooseLeftCoralStation(SwerveSubsystem drive) {
-    double leftDistance =
-        drive
-            .getPose()
-            .getTranslation()
-            .getDistance(Coordinates.LEFT_CORAL_STATION.getPose().getTranslation());
-    double rightDistance =
-        drive
-            .getPose()
-            .getTranslation()
-            .getDistance(Coordinates.RIGHT_CORAL_STATION.getPose().getTranslation());
-    return leftDistance <= rightDistance;
+    boolean isBlue =
+        DriverStation.getAlliance().isPresent()
+            && DriverStation.getAlliance().get() == Alliance.Blue;
+    return (isBlue) ? drive.getPose().getY() >= 4.0 : !(drive.getPose().getY() >= 4.0);
   }
 
   private static Pose2d coralStationTargetPose(Pose2d tagPose, double sideSign) {

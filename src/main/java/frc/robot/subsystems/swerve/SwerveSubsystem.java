@@ -428,6 +428,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return values;
   }
 
+  /** Returns the current robot-relative chassis speeds. */
+  public ChassisSpeeds getRobotRelativeSpeeds() {
+    return getChassisSpeeds();
+  }
+
   /** Returns the average velocity of the modules in rad/sec. */
   public double getFFCharacterizationVelocity() {
     double output = 0.0;

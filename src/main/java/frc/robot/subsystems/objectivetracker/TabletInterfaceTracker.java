@@ -28,6 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
 public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseable {
@@ -51,7 +52,7 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
   // Queue + autonomy state
   private final List<QueueStep> queueSteps = new ArrayList<>();
   private int queueRevision = 0;
-  private boolean queueRunning = false;
+  @Setter private boolean queueRunning = false;
   private boolean manualOverride = false;
   private QueuePhase phase = QueuePhase.IDLE;
   private Command activeCommand;
@@ -480,9 +481,9 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
                   : SourcePreference.RIGHT;
         }
         yield switch (preference) {
-          case LEFT -> DriveCommands.alignToNearestCoralStationCommand(drive);
-          case RIGHT -> DriveCommands.alignToNearestCoralStationCommand(drive);
-          case NEAREST -> DriveCommands.alignToNearestCoralStationCommand(drive);
+          case LEFT -> DriveCommands.PathWeaverSource(drive, true);
+          case RIGHT -> DriveCommands.PathWeaverSource(drive, false);
+          case NEAREST -> DriveCommands.PathWeaverSource(drive, null);
         };
       }
       case REEF -> {

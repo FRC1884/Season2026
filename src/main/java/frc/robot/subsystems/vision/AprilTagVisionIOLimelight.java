@@ -7,13 +7,11 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.RobotController;
+import frc.robot.subsystems.swerve.SwerveSubsystem;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.DoubleSupplier;
-
-import frc.robot.subsystems.swerve.SwerveSubsystem;
 import lombok.Getter;
 
 /**
@@ -39,9 +37,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
 
   // Wire up the Limelight topics and push the robot-to-camera transform so the camera can report
   // poses relative to the robot frame.
-  public AprilTagVisionIOLimelight(
-          CameraConstants cameraConstants,
-          SwerveSubsystem drive) {
+  public AprilTagVisionIOLimelight(CameraConstants cameraConstants, SwerveSubsystem drive) {
     this.cameraConstants = cameraConstants;
     this.drive = drive;
     limelightName = cameraConstants.cameraName();
@@ -60,16 +56,14 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         .accept(toRobotSpaceArray(cameraConstants.robotToCamera()));
   }
 
-  /**
-   * Pull the latest data from the Limelight and populate the VisionIOInputs structure.
-   */
+  /** Pull the latest data from the Limelight and populate the VisionIOInputs structure. */
   @Override
   public void updateInputs(VisionIOInputs inputs) {
     // Provide robot yaw (and optional yaw rate) so MegaTag2 can fuse IMU heading.
     LimelightHelpers.SetRobotOrientation(
         limelightName,
         drive.getRotation().getDegrees(),
-            drive.getYawRateDegreesPerSec(),
+        drive.getYawRateDegreesPerSec(),
         0,
         0,
         0,

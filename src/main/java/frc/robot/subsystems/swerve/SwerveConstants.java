@@ -3,7 +3,6 @@ package frc.robot.subsystems.swerve;
 import static edu.wpi.first.units.Units.Kilograms;
 import static edu.wpi.first.units.Units.Meters;
 import static frc.robot.GlobalConstants.ROBOT;
-import static frc.robot.GlobalConstants.robotSwerveMotors;
 import static java.lang.Math.PI;
 
 import com.pathplanner.lib.config.ModuleConfig;
@@ -27,7 +26,7 @@ public final class SwerveConstants {
     ADIS,
   }
 
-  public static final GyroType GYRO_TYPE = GyroType.NAVX;
+  public static final GyroType GYRO_TYPE = GyroType.PIGEON;
 
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
@@ -214,7 +213,10 @@ public final class SwerveConstants {
   public static final double ROBOT_MASS = 45;
 
   // Drive motor configuration
-  public static final DCMotor DRIVE_GEARBOX = (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLSPARK) ? DCMotor.getNeoVortex(1) : DCMotor.getKrakenX60(1);
+  public static final DCMotor DRIVE_GEARBOX =
+      (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLSPARK)
+          ? DCMotor.getNeoVortex(1)
+          : DCMotor.getKrakenX60(1);
 
   public static final double DRIVE_GEAR_RATIO = 5.08; // Spark Max
 

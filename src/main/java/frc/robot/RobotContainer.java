@@ -46,6 +46,7 @@ import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
 import frc.robot.subsystems.objectivetracker.TabletInterfaceTracker;
 import frc.robot.subsystems.swerve.*;
 import frc.robot.subsystems.vision.*;
+import lombok.Getter;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -75,8 +76,7 @@ public class RobotContainer {
 
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
-
-  private final TabletInterfaceTracker tabletInterfaceTracker;
+  @Getter private final TabletInterfaceTracker tabletInterfaceTracker;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -173,17 +173,13 @@ public class RobotContainer {
                 ? new Vision(
                     drive,
                     LEFT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(
-                            LEFT_CAM_CONSTANTS, drive)
+                        ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
                         : new VisionIO() {},
                     RIGHT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(
-                            RIGHT_CAM_CONSTANTS, drive)
+                        ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
                         : new VisionIO() {},
                     BACK_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(
-                            BACK_CAM_CONSTANTS,
-                           drive)
+                        ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
                         : new VisionIO() {})
                 : new Vision(
                     drive,
