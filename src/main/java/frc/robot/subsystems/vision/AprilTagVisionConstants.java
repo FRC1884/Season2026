@@ -16,6 +16,8 @@ import java.util.function.DoubleSupplier;
 // TODO tune all of these!! Make sure that the robot-relative coords are correct - this will cause
 // rapid pose oscillation
 public final class AprilTagVisionConstants {
+  public static final boolean IS_LIMELIGHT = false;
+  public static final boolean usingMegaTag = true;
   public static final boolean LEFT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {

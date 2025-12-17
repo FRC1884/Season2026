@@ -26,12 +26,7 @@ import static frc.robot.subsystems.swerve.SwerveConstants.BACK_RIGHT;
 import static frc.robot.subsystems.swerve.SwerveConstants.FRONT_LEFT;
 import static frc.robot.subsystems.swerve.SwerveConstants.FRONT_RIGHT;
 import static frc.robot.subsystems.swerve.SwerveConstants.GYRO_TYPE;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.BACK_CAM_CONSTANTS;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.BACK_CAM_ENABLED;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.LEFT_CAM_CONSTANTS;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.LEFT_CAM_ENABLED;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_CONSTANTS;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.RIGHT_CAM_ENABLED;
+import static frc.robot.subsystems.vision.AprilTagVisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -50,10 +45,8 @@ import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
 import frc.robot.subsystems.objectivetracker.TabletInterfaceTracker;
 import frc.robot.subsystems.swerve.*;
-import frc.robot.subsystems.vision.AprilTagVisionIOPhotonVision;
-import frc.robot.subsystems.vision.Vision;
-import frc.robot.subsystems.vision.VisionIO;
-import frc.robot.subsystems.vision.VisionIOPhotonVisionSim;
+import frc.robot.subsystems.vision.*;
+import lombok.Getter;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -83,8 +76,7 @@ public class RobotContainer {
 
   private final Superstructure superstructure = new Superstructure(null);
   private final Vision vision;
-
-  private final TabletInterfaceTracker tabletInterfaceTracker;
+  @Getter private final TabletInterfaceTracker tabletInterfaceTracker;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -177,17 +169,29 @@ public class RobotContainer {
     if (VISION_ENABLED) {
       vision =
           switch (MODE) {
-            case REAL -> new Vision(
-                drive,
-                LEFT_CAM_ENABLED
-                    ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS)
-                    : new VisionIO() {},
-                RIGHT_CAM_ENABLED
-                    ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS)
-                    : new VisionIO() {},
-                BACK_CAM_ENABLED
-                    ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS)
-                    : new VisionIO() {});
+            case REAL -> (IS_LIMELIGHT)
+                ? new Vision(
+                    drive,
+                    LEFT_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
+                        : new VisionIO() {},
+                    RIGHT_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
+                        : new VisionIO() {},
+                    BACK_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
+                        : new VisionIO() {})
+                : new Vision(
+                    drive,
+                    LEFT_CAM_ENABLED
+                        ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS)
+                        : new VisionIO() {},
+                    RIGHT_CAM_ENABLED
+                        ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS)
+                        : new VisionIO() {},
+                    BACK_CAM_ENABLED
+                        ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS)
+                        : new VisionIO() {});
             case SIM -> new Vision(
                 drive,
                 LEFT_CAM_ENABLED

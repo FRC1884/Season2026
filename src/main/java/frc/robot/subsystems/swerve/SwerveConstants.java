@@ -12,6 +12,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
+import frc.robot.GlobalConstants;
 import frc.robot.GlobalConstants.Gains;
 import frc.robot.GlobalConstants.RobotType;
 import org.ironmaple.simulation.drivesims.COTS;
@@ -25,7 +26,7 @@ public final class SwerveConstants {
     ADIS,
   }
 
-  public static final GyroType GYRO_TYPE = GyroType.NAVX;
+  public static final GyroType GYRO_TYPE = GyroType.PIGEON;
 
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
@@ -212,9 +213,12 @@ public final class SwerveConstants {
   public static final double ROBOT_MASS = 45;
 
   // Drive motor configuration
-  public static final DCMotor DRIVE_GEARBOX = DCMotor.getNeoVortex(1);
+  public static final DCMotor DRIVE_GEARBOX =
+      (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLSPARK)
+          ? DCMotor.getNeoVortex(1)
+          : DCMotor.getKrakenX60(1);
 
-  public static final double DRIVE_GEAR_RATIO = 5.08;
+  public static final double DRIVE_GEAR_RATIO = 5.08; // Spark Max
 
   static final boolean DRIVE_INVERTED = ROBOT == RobotType.DEVBOT;
 

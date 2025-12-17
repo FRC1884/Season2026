@@ -59,14 +59,36 @@ public class AutoAlignToPoseCommand extends Command {
 
   @Override
   public void initialize() {
-    if (target == null) {
-      return;
-    }
+    if (target == null) return;
 
     Pose2d currentPose = drive.getPose();
 
-    driveController.reset(currentPose.getTranslation().getDistance(target.getTranslation()), 0.0);
-    thetaController.reset(currentPose.getRotation().getRadians(), 0.0);
+    // Vector from robot to target
+    Translation2d toTarget = target.getTranslation().minus(currentPose.getTranslation());
+    double distance = toTarget.getNorm();
+
+    // Get robot-relative speeds and convert to field-relative
+    ChassisSpeeds robotSpeeds = drive.getRobotRelativeSpeeds();
+    ChassisSpeeds fieldSpeeds =
+        ChassisSpeeds.fromRobotRelativeSpeeds(robotSpeeds, currentPose.getRotation());
+
+    // Unit vector pointing from robot → target
+    double ux = (distance > 1e-6) ? toTarget.getX() / distance : 0.0;
+    double uy = (distance > 1e-6) ? toTarget.getY() / distance : 0.0;
+
+    // Project current velocity onto the robot→target direction
+    // Positive = moving toward target
+    double velocityTowardTarget =
+        fieldSpeeds.vxMetersPerSecond * ux + fieldSpeeds.vyMetersPerSecond * uy;
+
+    // Distance decreases as we move toward target → derivative is negative
+    double distanceRate = -velocityTowardTarget;
+
+    // Seed the profiled controllers with current state
+    driveController.reset(distance, distanceRate);
+    thetaController.reset(
+        currentPose.getRotation().getRadians(), fieldSpeeds.omegaRadiansPerSecond);
+
     thetaController.setTolerance(Units.degreesToRadians(2.0));
   }
 

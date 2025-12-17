@@ -428,6 +428,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return values;
   }
 
+  /** Returns the current robot-relative chassis speeds. */
+  public ChassisSpeeds getRobotRelativeSpeeds() {
+    return getChassisSpeeds();
+  }
+
   /** Returns the average velocity of the modules in rad/sec. */
   public double getFFCharacterizationVelocity() {
     double output = 0.0;
@@ -446,6 +451,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   /** Returns the current odometry rotation. */
   public Rotation2d getRotation() {
     return getPose().getRotation();
+  }
+
+  /** Returns the current yaw rate in degrees per second from the gyro. */
+  public double getYawRateDegreesPerSec() {
+    return Math.toDegrees(gyroInputs.yawVelocityRadPerSec);
   }
 
   /** Resets the current odometry pose. */
