@@ -15,18 +15,51 @@ package frc.robot.subsystems.swerve;
 
 import static frc.robot.subsystems.swerve.SwerveConstants.*;
 
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import frc.robot.GlobalConstants;
+import frc.robot.GlobalConstants.RobotSwerveMotors;
+import frc.robot.util.LoggedTunableNumber;
 import lombok.Getter;
 import org.littletonrobotics.junction.Logger;
 
 public class Module {
+  private static final LoggedTunableNumber krakenDrivekS =
+      new LoggedTunableNumber("Drive/Module/DrivekS");
+  private static final LoggedTunableNumber krakenDrivekV =
+      new LoggedTunableNumber("Drive/Module/DrivekV");
+  private static final LoggedTunableNumber krakenDrivekT =
+      new LoggedTunableNumber("Drive/Module/DrivekT");
+  private static final LoggedTunableNumber krakenDrivekP =
+      new LoggedTunableNumber("Drive/Module/DrivekP");
+  private static final LoggedTunableNumber krakenDrivekD =
+      new LoggedTunableNumber("Drive/Module/DrivekD");
+  private static final LoggedTunableNumber krakenTurnkP =
+      new LoggedTunableNumber("Drive/Module/TurnkP");
+  private static final LoggedTunableNumber krakenTurnkD =
+      new LoggedTunableNumber("Drive/Module/TurnkD");
+
+  static {
+    krakenDrivekS.initDefault(5.0);
+    krakenDrivekV.initDefault(0.0);
+    krakenDrivekT.initDefault(
+        SwerveConstants.KRAKEN_DRIVE_GEAR_RATIO / DCMotor.getKrakenX60Foc(1).KtNMPerAmp);
+    krakenDrivekP.initDefault(35.0);
+    krakenDrivekD.initDefault(0.0);
+    krakenTurnkP.initDefault(4000.0);
+    krakenTurnkD.initDefault(50.0);
+  }
+
   private final ModuleIO io;
   private final ModuleIOInputsAutoLogged inputs = new ModuleIOInputsAutoLogged();
   private final int index;
+  private SimpleMotorFeedforward krakenFfModel =
+      new SimpleMotorFeedforward(krakenDrivekS.get(), krakenDrivekV.get());
 
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
@@ -43,6 +76,18 @@ public class Module {
   }
 
   public void periodic() {
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
+      if (krakenDrivekS.hasChanged(hashCode()) || krakenDrivekV.hasChanged(hashCode())) {
+        krakenFfModel = new SimpleMotorFeedforward(krakenDrivekS.get(), krakenDrivekV.get());
+      }
+      if (krakenDrivekP.hasChanged(hashCode()) || krakenDrivekD.hasChanged(hashCode())) {
+        io.setDrivePID(krakenDrivekP.get(), 0.0, krakenDrivekD.get());
+      }
+      if (krakenTurnkP.hasChanged(hashCode()) || krakenTurnkD.hasChanged(hashCode())) {
+        io.setTurnPID(krakenTurnkP.get(), 0.0, krakenTurnkD.get());
+      }
+    }
+
     io.updateInputs(inputs);
     Logger.processInputs("Swerve/Module" + index, inputs);
 
@@ -62,7 +107,19 @@ public class Module {
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */
   public void runSetpoint(SwerveModuleState state) {
-    // Optimize velocity setpoint
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
+      // Mechanical Advantage-style control for full Kraken modules
+      double speedRadPerSec = state.speedMetersPerSecond / WHEEL_RADIUS;
+      io.setDriveVelocity(speedRadPerSec, krakenFfModel.calculate(speedRadPerSec));
+      if (Math.abs(state.angle.minus(getAngle()).getDegrees()) < TURN_DEADBAND_DEGREES) {
+        io.setTurnOpenLoop(0.0);
+      } else {
+        io.setTurnPosition(state.angle);
+      }
+      return;
+    }
+
+    // Default (Spark/HalfSpark) control path
     state.optimize(getAngle());
     state.cosineScale(inputs.turnPosition);
 

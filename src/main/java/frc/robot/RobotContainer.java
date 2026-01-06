@@ -152,6 +152,8 @@ public class RobotContainer {
 
     } else {
       drive = null;
+      autoChooser = null;
+      autoIdleCommand = null;
     }
 
     if (WEBUI_ENABLED) {

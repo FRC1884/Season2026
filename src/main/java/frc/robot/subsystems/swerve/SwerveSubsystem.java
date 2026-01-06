@@ -50,9 +50,12 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.GlobalConstants;
+import frc.robot.GlobalConstants.RobotSwerveMotors;
 import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.util.LocalADStarAK;
+import frc.robot.util.swerve.SwerveSetpoint;
+import frc.robot.util.swerve.SwerveSetpointGenerator;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -86,6 +89,18 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       };
   private SwerveDrivePoseEstimator poseEstimator =
       new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, lastModulePositions, new Pose2d());
+  private final SwerveSetpointGenerator krakenSetpointGenerator =
+      new SwerveSetpointGenerator(kinematics, SwerveConstants.MODULE_TRANSLATIONS);
+  private SwerveSetpoint krakenCurrentSetpoint =
+      new SwerveSetpoint(
+          new ChassisSpeeds(),
+          new SwerveModuleState[] {
+            new SwerveModuleState(),
+            new SwerveModuleState(),
+            new SwerveModuleState(),
+            new SwerveModuleState()
+          });
+  private boolean krakenVelocityMode = false;
 
   public SwerveSubsystem(
       GyroIO gyroIO,
@@ -103,7 +118,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
     // Start odometry thread
-    SparkOdometryThread.getInstance().start();
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
+      PhoenixOdometryThread.getInstance().start();
+    else SparkOdometryThread.getInstance().start();
 
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
@@ -201,6 +218,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     double[] sampleTimestamps =
         modules[0].getOdometryTimestamps(); // All signals are sampled together
     int sampleCount = sampleTimestamps.length;
+    int gyroSampleCount = gyroInputs.odometryYawPositions.length;
     for (int i = 0; i < sampleCount; i++) {
       // Read wheel positions and deltas from each module
       SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
@@ -218,7 +236,8 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       // Update gyro angle
       if (gyroInputs.connected) {
         // Use the real gyro angle
-        rawGyroRotation = gyroInputs.odometryYawPositions[i];
+        rawGyroRotation =
+            i < gyroSampleCount ? gyroInputs.odometryYawPositions[i] : rawGyroRotation;
       } else {
         // Use the angle delta from the kinematics and module deltas
         Twist2d twist = kinematics.toTwist2d(moduleDeltas);
@@ -227,6 +246,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
       // Apply update
       poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
+    }
+
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
+        && !krakenVelocityMode) {
+      krakenCurrentSetpoint = new SwerveSetpoint(getChassisSpeeds(), getModuleStates());
     }
 
     // Update gyro alert
@@ -239,6 +263,31 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
    * @param speeds Speeds in meters/sec
    */
   public void runVelocity(ChassisSpeeds speeds) {
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
+      krakenVelocityMode = true;
+      ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+      SwerveModuleState[] setpointStatesUnoptimized =
+          kinematics.toSwerveModuleStates(discreteSpeeds);
+      krakenCurrentSetpoint =
+          krakenSetpointGenerator.generateSetpoint(
+              SwerveConstants.KRAKEN_MODULE_LIMITS_FREE,
+              krakenCurrentSetpoint,
+              discreteSpeeds,
+              0.02);
+      SwerveModuleState[] setpointStates = krakenCurrentSetpoint.moduleStates();
+
+      Logger.recordOutput("SwerveStates/SetpointsUnoptimized", setpointStatesUnoptimized);
+      Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
+      Logger.recordOutput("SwerveChassisSpeeds/Setpoints", krakenCurrentSetpoint.chassisSpeeds());
+
+      for (int i = 0; i < 4; i++) {
+        modules[i].runSetpoint(setpointStates[i]);
+      }
+
+      Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
+      return;
+    }
+
     // Calculate module setpoints
     speeds = ChassisSpeeds.discretize(speeds, 0.02);
     SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(speeds);
@@ -259,6 +308,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
   /** Runs the drive in a straight line with the specified drive output. */
   public void runCharacterization(double output) {
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
+      krakenVelocityMode = false;
+    }
     for (int i = 0; i < 4; i++) {
       modules[i].runCharacterization(output);
     }
@@ -266,6 +318,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
   /** Runs the turn motors open-loop for SysId and tuning. */
   public void runTurnCharacterization(double output) {
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
+      krakenVelocityMode = false;
+    }
     for (int i = 0; i < 4; i++) {
       modules[i].runTurnCharacterization(output);
     }
@@ -296,7 +351,16 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       headings[i] = SwerveConstants.MODULE_TRANSLATIONS[i].getAngle();
     }
     kinematics.resetHeadings(headings);
-    stop();
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
+      // Bypass setpoint generator to lock wheels in an X.
+      SwerveModuleState[] states = kinematics.toSwerveModuleStates(new ChassisSpeeds());
+      for (int i = 0; i < 4; i++) {
+        states[i].optimize(modules[i].getAngle());
+        modules[i].runSetpoint(states[i]);
+      }
+    } else {
+      stop();
+    }
   }
 
   /** Returns a command to run a quasistatic test in the specified direction. */

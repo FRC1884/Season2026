@@ -30,14 +30,13 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.SensorDirectionValue;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
 import frc.robot.GlobalConstants;
-import frc.robot.subsystems.swerve.SwerveConstants.*;
+import frc.robot.subsystems.swerve.SwerveConstants.ModuleConstants;
 import frc.robot.util.PhoenixUtil;
 import java.util.Queue;
 import java.util.concurrent.Executor;
@@ -51,6 +50,9 @@ public class ModuleIOFullKraken implements ModuleIO {
   private final TalonFX turnMotor;
   private final CANcoder turnEncoder;
   private final Rotation2d zeroRotation;
+  private final Rotation2d encoderOffset;
+  private final boolean hasCancoder;
+  private static final double RADIANS_PER_ROTATION = TWO_PI;
 
   private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
   private final TalonFXConfiguration turnConfig = new TalonFXConfiguration();
@@ -85,60 +87,74 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   public ModuleIOFullKraken(ModuleConstants moduleConstants) {
     zeroRotation = moduleConstants.zeroRotation();
+    hasCancoder = moduleConstants.cancoderID() >= 0;
+    encoderOffset = hasCancoder ? new Rotation2d() : zeroRotation;
 
     driveMotor = new TalonFX(moduleConstants.driveID());
     turnMotor = new TalonFX(moduleConstants.rotatorID());
-    turnEncoder = new CANcoder(moduleConstants.cancoderID());
-    var cancoderConfig = new CANcoderConfiguration();
-    cancoderConfig.MagnetSensor.MagnetOffset = moduleConstants.zeroRotation().getRadians();
-    cancoderConfig.MagnetSensor.SensorDirection =
-        moduleConstants.encoderInverted()
-            ? SensorDirectionValue.Clockwise_Positive
-            : SensorDirectionValue.CounterClockwise_Positive;
-    tryUntilOk(5, () -> turnEncoder.getConfigurator().apply(cancoderConfig));
+    turnEncoder = hasCancoder ? new CANcoder(moduleConstants.cancoderID()) : null;
+    if (hasCancoder) {
+      var cancoderConfig = new CANcoderConfiguration();
+      // Match Mechanical Advantage: apply zeroRotation as the CANCoder magnet offset.
+      cancoderConfig.MagnetSensor.MagnetOffset = moduleConstants.zeroRotation().getRotations();
+      cancoderConfig.MagnetSensor.SensorDirection =
+          moduleConstants.encoderInverted()
+              ? SensorDirectionValue.Clockwise_Positive
+              : SensorDirectionValue.CounterClockwise_Positive;
+      tryUntilOk(5, () -> turnEncoder.getConfigurator().apply(cancoderConfig));
+    }
 
     // Configure drive motor (Kraken X60)
     driveConfig.MotorOutput.Inverted =
         DRIVE_INVERTED ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
     driveConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    driveConfig.TorqueCurrent.PeakForwardTorqueCurrent = DRIVE_MOTOR_CURRENT_LIMIT;
-    driveConfig.TorqueCurrent.PeakReverseTorqueCurrent = -DRIVE_MOTOR_CURRENT_LIMIT;
-    driveConfig.CurrentLimits.SupplyCurrentLimit = DRIVE_MOTOR_CURRENT_LIMIT;
+    driveConfig.TorqueCurrent.PeakForwardTorqueCurrent = KRAKEN_DRIVE_CURRENT_LIMIT;
+    driveConfig.TorqueCurrent.PeakReverseTorqueCurrent = -KRAKEN_DRIVE_CURRENT_LIMIT;
+    driveConfig.CurrentLimits.SupplyCurrentLimit = KRAKEN_DRIVE_CURRENT_LIMIT;
     driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    driveConfig.CurrentLimits.StatorCurrentLimit = KRAKEN_DRIVE_CURRENT_LIMIT;
+    driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
     driveConfig.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.02;
-    driveConfig.Slot0.kP = DRIVE_MOTOR_GAINS.kP();
-    driveConfig.Slot0.kI = DRIVE_MOTOR_GAINS.kI();
-    driveConfig.Slot0.kD = DRIVE_MOTOR_GAINS.kD();
-    driveConfig.Slot0.kS = DRIVE_MOTOR_GAINS.kS();
-    driveConfig.Slot0.kV = DRIVE_MOTOR_GAINS.kV();
-    driveConfig.Slot0.kA = DRIVE_MOTOR_GAINS.kA();
-    driveConfig.Feedback.SensorToMechanismRatio = DRIVE_GEAR_RATIO;
+    driveConfig.Slot0.kP = 0.0;
+    driveConfig.Slot0.kI = 0.0;
+    driveConfig.Slot0.kD = 0.0;
+    driveConfig.Slot0.kS = 0.0;
+    driveConfig.Slot0.kV = 0.0;
+    driveConfig.Slot0.kA = 0.0;
+    driveConfig.Feedback.SensorToMechanismRatio = KRAKEN_DRIVE_GEAR_RATIO;
     tryUntilOk(5, () -> driveMotor.getConfigurator().apply(driveConfig, 0.25));
     tryUntilOk(5, () -> driveMotor.setPosition(0.0));
     driveMotor.optimizeBusUtilization();
 
-    // Configure drive motor (Kraken X44)
+    // Configure turn motor (Kraken X44)
     turnConfig.MotorOutput.Inverted =
         moduleConstants.turnInverted()
             ? InvertedValue.Clockwise_Positive
             : InvertedValue.CounterClockwise_Positive;
     turnConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
-    turnConfig.Feedback.FeedbackRemoteSensorID = moduleConstants.cancoderID();
-    turnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
-    turnConfig.Feedback.RotorToSensorRatio = ROTATOR_GEAR_RATIO;
+    turnConfig.Feedback.RotorToSensorRatio = KRAKEN_ROTATOR_GEAR_RATIO;
+    if (hasCancoder) {
+      turnConfig.Feedback.FeedbackRemoteSensorID = moduleConstants.cancoderID();
+      turnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.FusedCANcoder;
+    } else {
+      // Fall back to the integrated sensor if a CANCoder is not present
+      turnConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+    }
     turnConfig.ClosedLoopGeneral.ContinuousWrap = true;
-    turnConfig.TorqueCurrent.PeakForwardTorqueCurrent = ROTATOR_MOTOR_CURRENT_LIMIT_AMPS;
-    turnConfig.TorqueCurrent.PeakReverseTorqueCurrent = -ROTATOR_MOTOR_CURRENT_LIMIT_AMPS;
-    turnConfig.CurrentLimits.StatorCurrentLimit = ROTATOR_MOTOR_CURRENT_LIMIT_AMPS;
+    turnConfig.TorqueCurrent.PeakForwardTorqueCurrent = KRAKEN_ROTATOR_CURRENT_LIMIT_AMPS;
+    turnConfig.TorqueCurrent.PeakReverseTorqueCurrent = -KRAKEN_ROTATOR_CURRENT_LIMIT_AMPS;
+    turnConfig.CurrentLimits.StatorCurrentLimit = KRAKEN_ROTATOR_CURRENT_LIMIT_AMPS;
     turnConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-    turnConfig.Slot0.kP = ROTATOR_GAINS.kP();
-    turnConfig.Slot0.kI = ROTATOR_GAINS.kI();
-    turnConfig.Slot0.kD = ROTATOR_GAINS.kD();
-    turnConfig.Slot0.kS = ROTATOR_GAINS.kS();
-    turnConfig.Slot0.kV = ROTATOR_GAINS.kV();
-    turnConfig.Slot0.kA = ROTATOR_GAINS.kA();
-    tryUntilOk(5, () -> turnMotor.getConfigurator().apply(driveConfig, 0.25));
-    tryUntilOk(5, () -> turnMotor.setPosition(0.0));
+    turnConfig.Slot0.kP = 0.0;
+    turnConfig.Slot0.kI = 0.0;
+    turnConfig.Slot0.kD = 0.0;
+    turnConfig.Slot0.kS = 0.0;
+    turnConfig.Slot0.kV = 0.0;
+    turnConfig.Slot0.kA = 0.0;
+    tryUntilOk(5, () -> turnMotor.getConfigurator().apply(turnConfig, 0.25));
+    if (!hasCancoder) {
+      tryUntilOk(5, () -> turnMotor.setPosition(zeroRotation.getRotations()));
+    }
     turnMotor.optimizeBusUtilization();
     // Create drive status signals
     drivePosition = driveMotor.getPosition();
@@ -150,7 +166,7 @@ public class ModuleIOFullKraken implements ModuleIO {
     driveTorqueCurrentAmps = driveMotor.getTorqueCurrent();
 
     // Create turn status signals
-    turnAbsolutePosition = turnEncoder.getAbsolutePosition();
+    turnAbsolutePosition = hasCancoder ? turnEncoder.getAbsolutePosition() : null;
     turnPosition = turnMotor.getPosition();
     turnPositionQueue =
         PhoenixOdometryThread.getInstance().registerSignal(turnMotor.getPosition().clone());
@@ -163,8 +179,13 @@ public class ModuleIOFullKraken implements ModuleIO {
     timestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
 
     // Configure periodic frames
-    BaseStatusSignal.setUpdateFrequencyForAll(
-        GlobalConstants.ODOMETRY_FREQUENCY, drivePosition, turnPosition, turnAbsolutePosition);
+    if (turnAbsolutePosition != null) {
+      BaseStatusSignal.setUpdateFrequencyForAll(
+          GlobalConstants.ODOMETRY_FREQUENCY, drivePosition, turnPosition, turnAbsolutePosition);
+    } else {
+      BaseStatusSignal.setUpdateFrequencyForAll(
+          GlobalConstants.ODOMETRY_FREQUENCY, drivePosition, turnPosition);
+    }
     BaseStatusSignal.setUpdateFrequencyForAll(
         50.0,
         driveVelocity,
@@ -175,23 +196,42 @@ public class ModuleIOFullKraken implements ModuleIO {
         turnAppliedVolts,
         turnSupplyCurrentAmps,
         turnTorqueCurrentAmps);
-    tryUntilOk(
-        5, () -> ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor, turnEncoder));
+    if (hasCancoder) {
+      tryUntilOk(
+          5, () -> ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor, turnEncoder));
+    } else {
+      tryUntilOk(5, () -> ParentDevice.optimizeBusUtilizationForAll(driveMotor, turnMotor));
+    }
 
     // Register signals for refresh
-    PhoenixUtil.registerSignals(
-        true,
-        drivePosition,
-        driveVelocity,
-        driveAppliedVolts,
-        driveSupplyCurrentAmps,
-        driveTorqueCurrentAmps,
-        turnPosition,
-        turnAbsolutePosition,
-        turnVelocity,
-        turnAppliedVolts,
-        turnSupplyCurrentAmps,
-        turnTorqueCurrentAmps);
+    if (turnAbsolutePosition != null) {
+      PhoenixUtil.registerSignals(
+          false, // Default to the RIO bus; swap to true if you move these onto a CANivore
+          drivePosition,
+          driveVelocity,
+          driveAppliedVolts,
+          driveSupplyCurrentAmps,
+          driveTorqueCurrentAmps,
+          turnPosition,
+          turnAbsolutePosition,
+          turnVelocity,
+          turnAppliedVolts,
+          turnSupplyCurrentAmps,
+          turnTorqueCurrentAmps);
+    } else {
+      PhoenixUtil.registerSignals(
+          false,
+          drivePosition,
+          driveVelocity,
+          driveAppliedVolts,
+          driveSupplyCurrentAmps,
+          driveTorqueCurrentAmps,
+          turnPosition,
+          turnVelocity,
+          turnAppliedVolts,
+          turnSupplyCurrentAmps,
+          turnTorqueCurrentAmps);
+    }
   }
 
   @Override
@@ -221,20 +261,22 @@ public class ModuleIOFullKraken implements ModuleIO {
             turnSupplyCurrentAmps,
             turnTorqueCurrentAmps);
 
-    inputs.turnConnected = driveStatus.equals(StatusCode.OK);
-    inputs.turnPosition = new Rotation2d(turnPosition.getValueAsDouble()).minus(zeroRotation);
+    inputs.turnConnected = turnStatus.equals(StatusCode.OK);
+    inputs.turnPosition =
+        new Rotation2d(turnPosition.getValueAsDouble() * RADIANS_PER_ROTATION).minus(encoderOffset);
     inputs.turnVelocityRadPerSec = turnVelocity.getValueAsDouble() * TWO_PI;
     inputs.turnAppliedVolts = turnAppliedVolts.getValueAsDouble();
     inputs.turnCurrentAmps = turnSupplyCurrentAmps.getValueAsDouble();
-    inputs.turnConnected = turnMotor.isConnected();
+    inputs.turnConnected &= turnMotor.isConnected();
 
     inputs.odometryTimestamps =
         timestampQueue.stream().mapToDouble((Double value) -> value).toArray();
     inputs.odometryDrivePositionsRad =
-        drivePositionQueue.stream().mapToDouble((Double value) -> value).toArray();
+        drivePositionQueue.stream().mapToDouble((Double value) -> value * TWO_PI).toArray();
     inputs.odometryTurnPositions =
         turnPositionQueue.stream()
-            .map((Double value) -> new Rotation2d(value).minus(zeroRotation))
+            .map(
+                (Double value) -> new Rotation2d(value * RADIANS_PER_ROTATION).minus(encoderOffset))
             .toArray(Rotation2d[]::new);
 
     timestampQueue.clear();
@@ -261,17 +303,57 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   @Override
   public void setDriveVelocity(double velocityRadPerSec) {
-    double ffVolts =
-        DRIVE_MOTOR_GAINS.kS() * Math.signum(velocityRadPerSec)
-            + DRIVE_MOTOR_GAINS.kV() * velocityRadPerSec;
+    setDriveVelocity(velocityRadPerSec, 0.0);
+  }
+
+  @Override
+  public void setDriveVelocity(double velocityRadPerSec, double feedforward) {
+    double wheelRotationsPerSecond = velocityRadPerSec / TWO_PI;
     driveMotor.setControl(
         velocityTorqueCurrentRequest
-            .withVelocity(Units.radiansToRotations(velocityRadPerSec))
-            .withFeedForward(ffVolts));
+            .withVelocity(wheelRotationsPerSecond)
+            .withFeedForward(feedforward));
   }
 
   @Override
   public void setTurnPosition(Rotation2d rotation) {
-    turnMotor.setControl(positionTorqueCurrentRequest.withPosition(rotation.getRotations()));
+    turnMotor.setControl(
+        positionTorqueCurrentRequest.withPosition(rotation.plus(encoderOffset).getRotations()));
+  }
+
+  @Override
+  public void setDrivePID(double kP, double kI, double kD) {
+    driveConfig.Slot0.kP = kP;
+    driveConfig.Slot0.kI = kI;
+    driveConfig.Slot0.kD = kD;
+    tryUntilOk(5, () -> driveMotor.getConfigurator().apply(driveConfig, 0.25));
+  }
+
+  @Override
+  public void setTurnPID(double kP, double kI, double kD) {
+    turnConfig.Slot0.kP = kP;
+    turnConfig.Slot0.kI = kI;
+    turnConfig.Slot0.kD = kD;
+    tryUntilOk(5, () -> turnMotor.getConfigurator().apply(turnConfig, 0.25));
+  }
+
+  @Override
+  public void setBrakeMode(boolean enabled) {
+    brakeModeExecutor.execute(
+        () -> {
+          synchronized (driveConfig) {
+            driveConfig.MotorOutput.NeutralMode =
+                enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+            tryUntilOk(5, () -> driveMotor.getConfigurator().apply(driveConfig, 0.25));
+          }
+        });
+    brakeModeExecutor.execute(
+        () -> {
+          synchronized (turnConfig) {
+            turnConfig.MotorOutput.NeutralMode =
+                enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+            tryUntilOk(5, () -> turnMotor.getConfigurator().apply(turnConfig, 0.25));
+          }
+        });
   }
 }

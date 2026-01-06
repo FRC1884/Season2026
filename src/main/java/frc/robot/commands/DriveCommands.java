@@ -13,13 +13,26 @@
 
 package frc.robot.commands;
 
-import static frc.robot.GlobalConstants.FieldMap.*;
-import static frc.robot.commands.AlignConstants.*;
+import static frc.robot.commands.AlignConstants.ALIGN_MANUAL_DEADBAND;
+import static frc.robot.commands.AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION;
+import static frc.robot.commands.AlignConstants.ALIGN_MAX_ANGULAR_SPEED;
+import static frc.robot.commands.AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED;
+import static frc.robot.commands.AlignConstants.CENTRAL_REEF_MARGIN_METERS;
+import static frc.robot.commands.AlignConstants.CENTRAL_REEF_RADIUS_METERS;
+import static frc.robot.commands.AlignConstants.DEFAULT_ALIGN_GAINS;
+import static frc.robot.commands.AlignConstants.FF_RAMP_RATE;
+import static frc.robot.commands.AlignConstants.FF_START_DELAY;
+import static frc.robot.commands.AlignConstants.REEF_TANGENT_BUFFER_METERS;
+import static frc.robot.commands.AlignConstants.WHEEL_RADIUS_MAX_VELOCITY;
+import static frc.robot.commands.AlignConstants.WHEEL_RADIUS_RAMP_RATE;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.*;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
@@ -29,6 +42,8 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.GlobalConstants;
+import frc.robot.GlobalConstants.FieldMap.Coordinates;
+import frc.robot.commands.AlignConstants.AlignGains;
 import frc.robot.subsystems.swerve.SwerveConstants;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
 import frc.robot.util.RotationalAllianceFlipUtil;
@@ -84,7 +99,7 @@ public class DriveCommands {
     Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
 
     // Square magnitude for more precise control
-    linearMagnitude = linearMagnitude * linearMagnitude;
+    linearMagnitude = Math.copySign(linearMagnitude * linearMagnitude, linearMagnitude);
 
     // Return new linear velocity
     return new Pose2d(new Translation2d(), linearDirection)

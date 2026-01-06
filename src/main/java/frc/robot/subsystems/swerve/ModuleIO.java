@@ -48,6 +48,20 @@ public interface ModuleIO {
   /** Run the drive motor at the specified velocity. */
   public default void setDriveVelocity(double velocityRadPerSec) {}
 
+  /** Run the drive motor at the specified velocity with a feedforward term. */
+  public default void setDriveVelocity(double velocityRadPerSec, double feedforward) {
+    setDriveVelocity(velocityRadPerSec);
+  }
+
   /** Run the turn motor to the specified rotation. */
   public default void setTurnPosition(Rotation2d rotation) {}
+
+  /** Set P, I, and D gains for closed loop control on drive motor. */
+  public default void setDrivePID(double kP, double kI, double kD) {}
+
+  /** Set P, I, and D gains for closed loop control on turn motor. */
+  public default void setTurnPID(double kP, double kI, double kD) {}
+
+  /** Set brake mode on drive motor. */
+  public default void setBrakeMode(boolean enabled) {}
 }
