@@ -24,6 +24,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import frc.robot.GlobalConstants;
 import java.util.Queue;
 
 /** IO implementation for Pigeon 2. */
@@ -40,8 +41,14 @@ public class GyroIOPigeon2 implements GyroIO {
     yaw.setUpdateFrequency(ODOMETRY_FREQUENCY);
     yawVelocity.setUpdateFrequency(50.0);
     pigeon.optimizeBusUtilization();
-    yawTimestampQueue = SparkOdometryThread.getInstance().makeTimestampQueue();
-    yawPositionQueue = SparkOdometryThread.getInstance().registerSignal(yaw::getValueAsDouble);
+    yawTimestampQueue =
+        (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLKRACKENS)
+            ? PhoenixOdometryThread.getInstance().makeTimestampQueue()
+            : SparkOdometryThread.getInstance().makeTimestampQueue();
+    yawPositionQueue =
+        (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLKRACKENS)
+            ? PhoenixOdometryThread.getInstance().registerSignal(yaw::getValueAsDouble)
+            : SparkOdometryThread.getInstance().registerSignal(yaw::getValueAsDouble);
   }
 
   @Override

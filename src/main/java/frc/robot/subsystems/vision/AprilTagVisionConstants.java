@@ -18,7 +18,7 @@ import java.util.function.DoubleSupplier;
 public final class AprilTagVisionConstants {
   public static final boolean IS_LIMELIGHT = true;
   public static final boolean usingMegaTag = true;
-  public static final boolean LEFT_CAM_ENABLED = false;
+  public static final boolean LEFT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {
         case DEVBOT -> new VisionIO.CameraConstants(
