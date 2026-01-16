@@ -3,9 +3,11 @@ package frc.robot.generic.arms;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -17,7 +19,19 @@ import org.littletonrobotics.junction.Logger;
 
 public abstract class GenericPositionArmSystem<G extends GenericPositionArmSystem.PivotGoal>
     extends SubsystemBase {
-  // Goals
+  public enum ControlMode {
+    CLOSED_LOOP,
+    OPEN_LOOP
+  }
+
+  public record ArmConfig(
+      GlobalConstants.Gains gains,
+      double positionTolerance,
+      boolean softLimitsEnabled,
+      double softLimitMin,
+      double softLimitMax,
+      double maxVoltage) {}
+
   public interface PivotGoal {
     DoubleSupplier getAngle();
   }
@@ -32,25 +46,37 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   protected final Timer stateTimer = new Timer();
   private G lastGoal;
 
-  // Movement
   private final PIDController pidController;
   private final ArmFeedforward feedforward;
   private final SysIdRoutine sysIdRoutine;
-  @Getter private double goalPosition;
+  private final ArmConfig config;
 
-  private double kS, kG, kV, kA;
+  @Getter private double goalPosition = 0.0;
+
+  private ControlMode controlMode = ControlMode.CLOSED_LOOP;
+  private double openLoopPercent = 0.0;
+  private boolean initialized = false;
+  private double zeroOffset = 0.0;
+  private boolean manualGoalActive = false;
+  private double manualGoalPosition = 0.0;
 
   public GenericPositionArmSystem(String name, GenericArmSystemIO io, GlobalConstants.Gains gains) {
+    this(name, io, new ArmConfig(gains, 0.0, false, 0.0, 0.0, 12.0));
+  }
+
+  public GenericPositionArmSystem(String name, GenericArmSystemIO io, ArmConfig config) {
     this.name = name;
     this.io = io;
-    this.pidController = new PIDController(gains.kP(), gains.kI(), gains.kD());
-    this.feedforward = new ArmFeedforward(kS, kG, kV, kA);
-    this.kS = gains.kS();
-    this.kG = gains.kG();
-    this.kV = gains.kV();
-    this.kA = gains.kA();
+    this.config = config;
 
-    this.sysIdRoutine =
+    pidController =
+        new PIDController(config.gains().kP(), config.gains().kI(), config.gains().kD());
+    pidController.setTolerance(config.positionTolerance());
+    feedforward =
+        new ArmFeedforward(
+            config.gains().kS(), config.gains().kG(), config.gains().kV(), config.gains().kA());
+
+    sysIdRoutine =
         new SysIdRoutine(
             new SysIdRoutine.Config(
                 null,
@@ -72,11 +98,6 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   }
 
   @Override
-  /**
-   * This method is called periodically, and is responsible for updating the state of the arm
-   * subsystem. It reads the current state of the arm and logs it to the advantage scope, checks for
-   * any disconnected motors, and applies the PID control to the arm.
-   */
   public void periodic() {
     io.updateInputs(inputs);
     Logger.processInputs(name, inputs);
@@ -95,16 +116,135 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
       lastGoal = getGoal();
     }
 
-    double currentPosition = inputs.encoderPosition;
-    double velocity = inputs.velocity;
+    double position = getPosition();
+    if (!initialized) {
+      goalPosition = position;
+      pidController.reset();
+      initialized = true;
+    }
 
-    double pidOutput = pidController.calculate(currentPosition, goalPosition);
-    double feedforwardOutput = feedforward.calculate(currentPosition, velocity);
-    double outputVoltage = pidOutput + feedforwardOutput;
+    double requestedGoal =
+        manualGoalActive ? manualGoalPosition : getGoal().getAngle().getAsDouble();
+    goalPosition = clampGoal(requestedGoal);
+    inputs.goal = goalPosition;
+
+    logOutputs(position);
+
+    if (DriverStation.isDisabled()) {
+      io.setVoltage(0.0);
+      return;
+    }
+
+    if (controlMode == ControlMode.OPEN_LOOP) {
+      double clampedPercent = clampOpenLoop(openLoopPercent, position);
+      io.setVoltage(clampedPercent * config.maxVoltage());
+      return;
+    }
+
+    double pidOutput = pidController.calculate(position, goalPosition);
+    double feedforwardOutput = feedforward.calculate(position, inputs.velocity);
+    double outputVoltage =
+        MathUtil.clamp(pidOutput + feedforwardOutput, -config.maxVoltage(), config.maxVoltage());
 
     io.setVoltage(outputVoltage);
 
-    Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
     Logger.recordOutput("Arms/" + name + "/Feedforward", feedforwardOutput);
+    Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
+  }
+
+  public void setGoalPosition(double position) {
+    manualGoalPosition = position;
+    manualGoalActive = true;
+    if (controlMode != ControlMode.CLOSED_LOOP) {
+      pidController.reset();
+    }
+    controlMode = ControlMode.CLOSED_LOOP;
+  }
+
+  public void clearGoalOverride() {
+    manualGoalActive = false;
+  }
+
+  public void setOpenLoop(double percent) {
+    openLoopPercent = MathUtil.clamp(percent, -1.0, 1.0);
+    controlMode = ControlMode.OPEN_LOOP;
+  }
+
+  public void stopOpenLoop() {
+    openLoopPercent = 0.0;
+    controlMode = ControlMode.CLOSED_LOOP;
+  }
+
+  public boolean isAtGoal() {
+    return Math.abs(goalPosition - getPosition()) <= config.positionTolerance();
+  }
+
+  public double getPosition() {
+    return inputs.encoderPosition + zeroOffset;
+  }
+
+  public double getVelocity() {
+    return inputs.velocity;
+  }
+
+  public double getAppliedVolts() {
+    return inputs.appliedVoltage;
+  }
+
+  public double getSupplyCurrentAmps() {
+    return inputs.supplyCurrentAmps;
+  }
+
+  public double getTorqueCurrentAmps() {
+    return inputs.torqueCurrentAmps;
+  }
+
+  public ControlMode getControlMode() {
+    return controlMode;
+  }
+
+  public void setBrakeMode(boolean enabled) {
+    io.setBrakeMode(enabled);
+  }
+
+  public void zeroPosition() {
+    zeroOffset = -inputs.encoderPosition;
+    openLoopPercent = 0.0;
+    controlMode = ControlMode.CLOSED_LOOP;
+    manualGoalActive = false;
+    goalPosition = 0.0;
+    pidController.reset();
+    initialized = true;
+    io.setPosition(0.0);
+  }
+
+  private double clampGoal(double goal) {
+    if (!config.softLimitsEnabled()) {
+      return goal;
+    }
+    return MathUtil.clamp(goal, config.softLimitMin(), config.softLimitMax());
+  }
+
+  private double clampOpenLoop(double percent, double position) {
+    double output = MathUtil.clamp(percent, -1.0, 1.0);
+    if (!config.softLimitsEnabled()) {
+      return output;
+    }
+    if (output > 0.0 && position >= config.softLimitMax()) {
+      return 0.0;
+    }
+    if (output < 0.0 && position <= config.softLimitMin()) {
+      return 0.0;
+    }
+    return output;
+  }
+
+  private void logOutputs(double position) {
+    Logger.recordOutput("Arms/" + name + "/Position", position);
+    Logger.recordOutput("Arms/" + name + "/GoalPosition", goalPosition);
+    Logger.recordOutput("Arms/" + name + "/Error", goalPosition - position);
+    Logger.recordOutput("Arms/" + name + "/AtGoal", isAtGoal());
+    Logger.recordOutput("Arms/" + name + "/ControlMode", controlMode.toString());
+    Logger.recordOutput("Arms/" + name + "/OpenLoopPercent", openLoopPercent);
   }
 }

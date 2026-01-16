@@ -17,14 +17,29 @@ public class GenericArmSystemIOSparkFlex implements GenericArmSystemIO {
   private final RelativeEncoder relativeEncoder;
   private SparkBaseConfig config;
   private final SparkFlex leader;
+  private final double positionCoefficient;
 
   public GenericArmSystemIOSparkFlex(
       int[] ids, int currentLimitAmps, boolean brake, double forwardLimit, double reverseLimit) {
+    this(ids, currentLimitAmps, brake, forwardLimit, reverseLimit, 1.0);
+  }
+
+  public GenericArmSystemIOSparkFlex(
+      int[] ids,
+      int currentLimitAmps,
+      boolean brake,
+      double forwardLimit,
+      double reverseLimit,
+      double positionCoefficient) {
+    this.positionCoefficient = positionCoefficient;
 
     motors = new SparkFlex[ids.length];
     config =
         new SparkFlexConfig().smartCurrentLimit(currentLimitAmps).idleMode(brake ? kBrake : kCoast);
-    config.softLimit.forwardSoftLimit(forwardLimit).reverseSoftLimit(reverseLimit);
+    config
+        .softLimit
+        .forwardSoftLimit(forwardLimit / positionCoefficient)
+        .reverseSoftLimit(reverseLimit / positionCoefficient);
 
     leader = motors[0] = new SparkFlex(ids[0], SparkLowLevel.MotorType.kBrushless);
     leader.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -44,12 +59,21 @@ public class GenericArmSystemIOSparkFlex implements GenericArmSystemIO {
 
   public void updateInputs(GenericArmSystemIOInputs inputs) {
     if (motors != null) {
-      inputs.encoderPosition =
+      if (inputs.connected.length != motors.length) {
+        inputs.connected = new boolean[motors.length];
+      }
+      for (int i = 0; i < motors.length; i++) {
+        inputs.connected[i] = true;
+      }
+      double positionRotations =
           (absoluteEncoder != null) ? absoluteEncoder.getPosition() : relativeEncoder.getPosition();
-      inputs.velocity =
+      double velocityRpm =
           (absoluteEncoder != null) ? absoluteEncoder.getVelocity() : relativeEncoder.getVelocity();
+      inputs.encoderPosition = positionRotations * positionCoefficient;
+      inputs.velocity = velocityRpm * positionCoefficient / 60.0;
       inputs.appliedVoltage = leader.getAppliedOutput() * leader.getBusVoltage();
       inputs.supplyCurrentAmps = leader.getOutputCurrent();
+      inputs.torqueCurrentAmps = leader.getOutputCurrent();
       inputs.tempCelsius = leader.getMotorTemperature();
     }
   }
@@ -57,6 +81,19 @@ public class GenericArmSystemIOSparkFlex implements GenericArmSystemIO {
   @Override
   public void setVoltage(double volts) {
     leader.setVoltage(volts);
+  }
+
+  @Override
+  public void setBrakeMode(boolean enabled) {
+    config = config.idleMode(enabled ? kBrake : kCoast);
+    leader.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+  }
+
+  @Override
+  public void setPosition(double position) {
+    if (relativeEncoder != null) {
+      relativeEncoder.setPosition(position / positionCoefficient);
+    }
   }
 
   protected void invert(int id) {

@@ -27,4 +27,29 @@ public class XboxOperatorMap extends CommandXboxController implements OperatorMa
   public Trigger testing() {
     return null;
   }
+
+  @Override
+  public Trigger turretZero() {
+    return a();
+  }
+
+  @Override
+  public Trigger turretPreset() {
+    return y();
+  }
+
+  @Override
+  public Trigger turretManualLeft() {
+    return leftBumper();
+  }
+
+  @Override
+  public Trigger turretManualRight() {
+    return rightBumper();
+  }
+
+  @Override
+  public Trigger turretAutoAim() {
+    return x();
+  }
 }

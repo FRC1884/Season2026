@@ -17,6 +17,7 @@ import static frc.robot.Config.Controllers.getDriverController;
 import static frc.robot.Config.Controllers.getOperatorController;
 import static frc.robot.Config.Subsystems.AUTONOMOUS_ENABLED;
 import static frc.robot.Config.Subsystems.DRIVETRAIN_ENABLED;
+import static frc.robot.Config.Subsystems.TURRET_ENABLED;
 import static frc.robot.Config.Subsystems.VISION_ENABLED;
 import static frc.robot.Config.Subsystems.WEBUI_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
@@ -41,10 +42,18 @@ import frc.robot.OI.DriverMap;
 import frc.robot.OI.OperatorMap;
 import frc.robot.commands.AutoCommands;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.TurretCommands;
 import frc.robot.subsystems.Superstructure;
 import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
 import frc.robot.subsystems.objectivetracker.TabletInterfaceTracker;
 import frc.robot.subsystems.swerve.*;
+import frc.robot.subsystems.turret.TurretConstants;
+import frc.robot.subsystems.turret.TurretIO;
+import frc.robot.subsystems.turret.TurretIOKraken;
+import frc.robot.subsystems.turret.TurretIOSim;
+import frc.robot.subsystems.turret.TurretIOSparkFlex;
+import frc.robot.subsystems.turret.TurretIOSparkMax;
+import frc.robot.subsystems.turret.TurretSubsystem;
 import frc.robot.subsystems.vision.*;
 import lombok.Getter;
 import org.ironmaple.simulation.SimulatedArena;
@@ -62,6 +71,7 @@ public class RobotContainer {
   // Subsystems
   private final SwerveSubsystem drive;
   private SwerveDriveSimulation driveSimulation;
+  private final TurretSubsystem turret;
 
   // Controller
   private final DriverMap driver = getDriverController();
@@ -74,7 +84,7 @@ public class RobotContainer {
   private final Command autoIdleCommand;
   private final Command characterizationIdleCommand;
 
-  private final Superstructure superstructure = new Superstructure(null);
+  private final Superstructure superstructure;
   private final Vision vision;
   @Getter private final TabletInterfaceTracker tabletInterfaceTracker;
 
@@ -140,6 +150,7 @@ public class RobotContainer {
                   new ModuleIO() {},
                   new ModuleIO() {});
           };
+      superstructure = new Superstructure(() -> drive.getPose());
 
       autoIdleCommand = Commands.none();
       if (AUTONOMOUS_ENABLED) {
@@ -154,6 +165,23 @@ public class RobotContainer {
       drive = null;
       autoChooser = null;
       autoIdleCommand = null;
+      superstructure = new Superstructure(null);
+    }
+
+    if (TURRET_ENABLED) {
+      turret =
+          switch (MODE) {
+            case REAL -> new TurretSubsystem(
+                switch (TurretConstants.MOTOR_CONTROLLER) {
+                  case SPARK_MAX -> new TurretIOSparkMax();
+                  case SPARK_FLEX -> new TurretIOSparkFlex();
+                  case KRAKEN_X60, KRAKEN_X40 -> new TurretIOKraken();
+                });
+            case SIM -> new TurretSubsystem(new TurretIOSim());
+            default -> new TurretSubsystem(new TurretIO() {});
+          };
+    } else {
+      turret = null;
     }
 
     if (WEBUI_ENABLED) {
@@ -257,6 +285,31 @@ public class RobotContainer {
     }
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
+    if (turret != null) {
+      Command turretSysIdFull =
+          Commands.sequence(
+                  turret.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+                  Commands.waitSeconds(0.5),
+                  turret.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+                  Commands.waitSeconds(0.5),
+                  turret.sysIdDynamic(SysIdRoutine.Direction.kForward),
+                  Commands.waitSeconds(0.5),
+                  turret.sysIdDynamic(SysIdRoutine.Direction.kReverse))
+              .ignoringDisable(true);
+      characterizationChooser.addOption("Turret | SysId (Full Routine)", turretSysIdFull);
+      characterizationChooser.addOption(
+          "Turret | SysId (Quasistatic Forward)",
+          turret.sysIdQuasistatic(SysIdRoutine.Direction.kForward).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turret | SysId (Quasistatic Reverse)",
+          turret.sysIdQuasistatic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turret | SysId (Dynamic Forward)",
+          turret.sysIdDynamic(SysIdRoutine.Direction.kForward).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Turret | SysId (Dynamic Reverse)",
+          turret.sysIdDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
+    }
 
     // Configure the button bindings
     configureDriverButtonBindings();
@@ -318,7 +371,35 @@ public class RobotContainer {
     }
   }
 
-  private void configureOperatorButtonBindings() {}
+  private void configureOperatorButtonBindings() {
+    if (turret == null) {
+      return;
+    }
+
+    operator
+        .turretZero()
+        .onTrue(Commands.runOnce(turret::zeroPosition, turret).ignoringDisable(true));
+
+    operator
+        .turretPreset()
+        .onTrue(TurretCommands.turretToAngle(turret, () -> TurretConstants.PRESET_ANGLE_RAD));
+
+    operator
+        .turretManualLeft()
+        .whileTrue(TurretCommands.turretOpenLoop(turret, () -> -TurretConstants.MANUAL_PERCENT));
+
+    operator
+        .turretManualRight()
+        .whileTrue(TurretCommands.turretOpenLoop(turret, () -> TurretConstants.MANUAL_PERCENT));
+
+    if (drive != null && vision != null) {
+      operator
+          .turretAutoAim()
+          .whileTrue(
+              TurretCommands.autoAimToTarget(
+                  turret, drive::getPose, vision::getBestTargetTranslation));
+    }
+  }
 
   /**
    * Use this to pass the autonomwous command to the main {@link Robot} class.

@@ -19,4 +19,10 @@ public interface GenericElevatorSystemIO {
   default void updateInputs(GenericElevatorSystemIOInputs inputs) {}
   /** Run elevator system to a height */
   default void setVoltage(double volts) {}
+
+  /** Enable or disable brake mode. */
+  default void setBrakeMode(boolean enabled) {}
+
+  /** Reset the encoder position to the provided value. */
+  default void setPosition(double position) {}
 }

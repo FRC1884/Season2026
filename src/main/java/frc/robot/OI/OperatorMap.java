@@ -11,4 +11,14 @@ public interface OperatorMap {
   }
 
   Trigger testing();
+
+  Trigger turretZero();
+
+  Trigger turretPreset();
+
+  Trigger turretManualLeft();
+
+  Trigger turretManualRight();
+
+  Trigger turretAutoAim();
 }

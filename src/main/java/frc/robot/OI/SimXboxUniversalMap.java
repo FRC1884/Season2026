@@ -28,6 +28,31 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
   }
 
   @Override
+  public Trigger turretZero() {
+    return a();
+  }
+
+  @Override
+  public Trigger turretPreset() {
+    return y();
+  }
+
+  @Override
+  public Trigger turretManualLeft() {
+    return leftBumper();
+  }
+
+  @Override
+  public Trigger turretManualRight() {
+    return rightBumper();
+  }
+
+  @Override
+  public Trigger turretAutoAim() {
+    return x();
+  }
+
+  @Override
   public Trigger rightAlign() {
     return button(8);
   }

@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.Config;
 import frc.robot.GlobalConstants;
 import frc.robot.generic.arms.Arms;
@@ -37,6 +38,7 @@ public class Superstructure extends SubsystemBase {
   private final Rollers rollers = new Rollers();
   private final Elevators elevators = new Elevators();
   private final Arms arms = new Arms();
+  private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
   public Superstructure(Supplier<Pose2d> drivePoseSupplier) {
     this.drivePoseSupplier = drivePoseSupplier;
@@ -84,5 +86,78 @@ public class Superstructure extends SubsystemBase {
   public void periodic() {}
 
   public void registerSuperstructureCharacterization(
-      Supplier<LoggedDashboardChooser<Command>> autoChooser) {}
+      Supplier<LoggedDashboardChooser<Command>> autoChooser) {
+    LoggedDashboardChooser<Command> chooser = autoChooser.get();
+    if (chooser == null) {
+      return;
+    }
+
+    addSysIdOptions(
+        chooser,
+        "Pivot",
+        arms.pivot.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+        arms.pivot.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+        arms.pivot.sysIdDynamic(SysIdRoutine.Direction.kForward),
+        arms.pivot.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+    addSysIdOptions(
+        chooser,
+        "Intake",
+        rollers.intake.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+        rollers.intake.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+        rollers.intake.sysIdDynamic(SysIdRoutine.Direction.kForward),
+        rollers.intake.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+    addSysIdOptions(
+        chooser,
+        "Shooter",
+        rollers.shooter.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+        rollers.shooter.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+        rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kForward),
+        rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+
+    addSysIdOptions(
+        chooser,
+        "Climber",
+        elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+        elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+        elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kForward),
+        elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+  }
+
+  private void addSysIdOptions(
+      LoggedDashboardChooser<Command> chooser,
+      String name,
+      Command quasistaticForward,
+      Command quasistaticReverse,
+      Command dynamicForward,
+      Command dynamicReverse) {
+    chooser.addOption(
+        name + " | SysId (Full Routine)",
+        sysIdRoutine(name, quasistaticForward, quasistaticReverse, dynamicForward, dynamicReverse)
+            .ignoringDisable(true));
+    chooser.addOption(
+        name + " | SysId (Quasistatic Forward)", quasistaticForward.ignoringDisable(true));
+    chooser.addOption(
+        name + " | SysId (Quasistatic Reverse)", quasistaticReverse.ignoringDisable(true));
+    chooser.addOption(name + " | SysId (Dynamic Forward)", dynamicForward.ignoringDisable(true));
+    chooser.addOption(name + " | SysId (Dynamic Reverse)", dynamicReverse.ignoringDisable(true));
+  }
+
+  private Command sysIdRoutine(
+      String name,
+      Command quasistaticForward,
+      Command quasistaticReverse,
+      Command dynamicForward,
+      Command dynamicReverse) {
+    return Commands.sequence(
+            quasistaticForward,
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            quasistaticReverse,
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            dynamicForward,
+            Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            dynamicReverse)
+        .withName(name + "SysIdRoutine");
+  }
 }

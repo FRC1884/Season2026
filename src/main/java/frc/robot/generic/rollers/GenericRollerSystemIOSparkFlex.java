@@ -5,6 +5,7 @@ import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkBaseConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import edu.wpi.first.math.util.Units;
@@ -12,6 +13,7 @@ import edu.wpi.first.math.util.Units;
 public abstract class GenericRollerSystemIOSparkFlex implements GenericRollerSystemIO {
   private final SparkFlex motor;
   private final RelativeEncoder encoder;
+  private SparkBaseConfig config;
 
   private final double reduction;
 
@@ -20,7 +22,7 @@ public abstract class GenericRollerSystemIOSparkFlex implements GenericRollerSys
     this.reduction = reduction;
     motor = new SparkFlex(id, MotorType.kBrushless);
 
-    var config =
+    config =
         new SparkFlexConfig()
             .smartCurrentLimit(currentLimitAmps)
             .inverted(invert)
@@ -33,11 +35,18 @@ public abstract class GenericRollerSystemIOSparkFlex implements GenericRollerSys
 
   @Override
   public void updateInputs(GenericRollerSystemIOInputs inputs) {
+    if (inputs.connected.length != 1) {
+      inputs.connected = new boolean[] {true};
+    } else {
+      inputs.connected[0] = true;
+    }
     inputs.positionRads = Units.rotationsToRadians(encoder.getPosition()) / reduction;
     inputs.velocityRadsPerSec =
         Units.rotationsPerMinuteToRadiansPerSecond(encoder.getVelocity()) / reduction;
+    inputs.velocity = encoder.getVelocity();
     inputs.appliedVoltage = motor.getAppliedOutput() * motor.getBusVoltage();
     inputs.supplyCurrentAmps = motor.getOutputCurrent();
+    inputs.torqueCurrentAmps = inputs.supplyCurrentAmps;
     inputs.tempCelsius = motor.getMotorTemperature();
   }
 
@@ -49,5 +58,11 @@ public abstract class GenericRollerSystemIOSparkFlex implements GenericRollerSys
   @Override
   public void stop() {
     motor.stopMotor();
+  }
+
+  @Override
+  public void setBrakeMode(boolean enabled) {
+    config = config.idleMode(enabled ? IdleMode.kBrake : IdleMode.kCoast);
+    motor.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
   }
 }

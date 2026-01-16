@@ -22,10 +22,17 @@ public class GenericRollerSystemIOSim implements GenericRollerSystemIO {
     }
 
     sim.update(0.02);
+    if (inputs.connected.length != 1) {
+      inputs.connected = new boolean[] {true};
+    } else {
+      inputs.connected[0] = true;
+    }
     inputs.positionRads = sim.getAngularPositionRad();
     inputs.velocityRadsPerSec = sim.getAngularVelocityRadPerSec();
+    inputs.velocity = sim.getAngularVelocityRPM();
     inputs.appliedVoltage = appliedVoltage;
     inputs.supplyCurrentAmps = sim.getCurrentDrawAmps();
+    inputs.torqueCurrentAmps = inputs.supplyCurrentAmps;
   }
 
   @Override

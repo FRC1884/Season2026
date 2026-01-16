@@ -9,6 +9,7 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.Alert;
@@ -77,6 +78,35 @@ public class Vision extends SubsystemBase {
     return inputs[cameraIndex].tagIds.length == 0
         ? Optional.empty()
         : Optional.of(inputs[cameraIndex].latestTargetObservation.ty());
+  }
+
+  /**
+   * Returns the field translation of the closest visible AprilTag. This is intended for
+   * field-relative targeting, using the robot pose estimate for distance selection.
+   */
+  public Optional<Translation2d> getBestTargetTranslation(Pose2d robotPose) {
+    Translation2d bestTranslation = null;
+    double bestDistance = Double.POSITIVE_INFINITY;
+
+    for (int cameraIndex = 0; cameraIndex < inputs.length; cameraIndex++) {
+      if (!inputs[cameraIndex].connected) {
+        continue;
+      }
+      for (int tagId : inputs[cameraIndex].tagIds) {
+        var tagPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(tagId);
+        if (tagPose.isEmpty()) {
+          continue;
+        }
+        Translation2d translation = tagPose.get().toPose2d().getTranslation();
+        double distance = translation.getDistance(robotPose.getTranslation());
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          bestTranslation = translation;
+        }
+      }
+    }
+
+    return Optional.ofNullable(bestTranslation);
   }
 
   /**

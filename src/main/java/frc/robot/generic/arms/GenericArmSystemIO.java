@@ -19,4 +19,10 @@ public interface GenericArmSystemIO {
   default void updateInputs(GenericArmSystemIOInputs inputs) {}
   /** Run arm system to an angle */
   default void setVoltage(double volts) {}
+
+  /** Enable or disable brake mode. */
+  default void setBrakeMode(boolean enabled) {}
+
+  /** Reset the encoder position to the provided value. */
+  default void setPosition(double position) {}
 }
