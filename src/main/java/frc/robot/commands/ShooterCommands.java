@@ -10,7 +10,7 @@ import java.util.Map;
 public class ShooterCommands {
     private static final Map<Double,Double> lookupTable = lookupTable();
 
-    public static double calc(Pose2d robot, DriverStation.Alliance alliance) {
+    public static double calc(Pose2d robot) {
         //Distance Vector Calculation
         Translation2d distance2d;
 
@@ -23,7 +23,7 @@ public class ShooterCommands {
         double theta;
 
         //Set hub pose based on alliance
-        if (alliance==DriverStation.Alliance.Red){
+        if (DriverStation.getAlliance().get()==DriverStation.Alliance.Red){
             distance2d = new Translation2d(robot.getX()-11.9,robot.getY()-4.03);
         }
         else{
