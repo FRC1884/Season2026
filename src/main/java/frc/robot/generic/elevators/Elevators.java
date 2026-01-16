@@ -8,14 +8,17 @@ import frc.robot.subsystems.climber.ClimberIOMax;
 import frc.robot.subsystems.climber.ClimberIOSim;
 import frc.robot.subsystems.climber.ClimberSubsystem;
 
+import static frc.robot.Config.Subsystems.CLIMBER_ENABLED;
+
 public class Elevators extends SubsystemBase {
-  public ClimberSubsystem climber =
+  public ClimberSubsystem climber = (CLIMBER_ENABLED) ?
       new ClimberSubsystem(
           "Elevator",
           (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
               ? new ClimberIOSim()
               : (ClimberConstants.isFlex) ? new ClimberIOFlex() : new ClimberIOMax(),
-          new ClimberSubsystem.ClimberConfig(ClimberConstants.MAX_VOLTAGE));
+          new ClimberSubsystem.ClimberConfig(ClimberConstants.MAX_VOLTAGE))
+          : null;
 
   @Override
   public void periodic() {}
