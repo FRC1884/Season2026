@@ -1,17 +1,24 @@
-package frc.robot.subsystems.exampleClasses.climber;
+package frc.robot.subsystems.climber;
+
+import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import frc.robot.util.LoggedTunableNumber;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
-public class ClimberSubsystem {
+public class ClimberSubsystem extends SubsystemBase {
   public enum ControlMode {
     GOAL,
     MANUAL
@@ -35,6 +42,7 @@ public class ClimberSubsystem {
   protected final ClimberIOInputsAutoLogged inputs = new ClimberIOInputsAutoLogged();
   private final Alert disconnected;
   protected final Timer stateTimer = new Timer();
+  private final SysIdRoutine sysIdRoutine;
   private final ClimberConfig config;
 
   private ControlMode controlMode = ControlMode.GOAL;
@@ -50,8 +58,30 @@ public class ClimberSubsystem {
     this.io = io;
     this.config = config;
 
+    Consumer<SysIdRoutineLog> sysIdLogCallbackDrive =
+        (log) -> {
+          log.motor("Climber").voltage(Volts.of(inputs.appliedVoltage));
+        };
+    sysIdRoutine =
+        new SysIdRoutine(
+            new SysIdRoutine.Config(
+                null,
+                null,
+                Seconds.of(4),
+                state -> Logger.recordOutput("Climber/" + name + "/SysIdState", state.toString())),
+            new SysIdRoutine.Mechanism(
+                (voltage) -> io.runVolts(voltage.in(Volts)), sysIdLogCallbackDrive, this));
+
     disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
     stateTimer.start();
+  }
+
+  public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.quasistatic(direction);
+  }
+
+  public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.dynamic(direction);
   }
 
   /**

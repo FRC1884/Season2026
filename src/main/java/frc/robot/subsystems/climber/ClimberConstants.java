@@ -1,4 +1,4 @@
-package frc.robot.subsystems.exampleClasses.climber;
+package frc.robot.subsystems.climber;
 
 import frc.robot.util.LoggedTunableNumber;
 import java.util.function.DoubleSupplier;

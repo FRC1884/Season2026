@@ -1,4 +1,4 @@
-package frc.robot.subsystems.exampleClasses.pivot;
+package frc.robot.subsystems.pivot;
 
 import frc.robot.GlobalConstants;
 

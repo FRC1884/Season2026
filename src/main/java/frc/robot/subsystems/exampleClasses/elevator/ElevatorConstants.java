@@ -21,4 +21,11 @@ public final class ElevatorConstants {
   public static final double kG = 0.0;
   public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains(kP, kI, kD, kS, kV, kA, kG);
+
+  // TODO: tune tolerance and limits once the elevator hardware is finalized.
+  public static final double POSITION_TOLERANCE = 0.0;
+  public static final boolean SOFT_LIMITS_ENABLED = false;
+  public static final double SOFT_LIMIT_MIN = 0.0;
+  public static final double SOFT_LIMIT_MAX = 0.0;
+  public static final double MAX_VOLTAGE = 12.0;
 }

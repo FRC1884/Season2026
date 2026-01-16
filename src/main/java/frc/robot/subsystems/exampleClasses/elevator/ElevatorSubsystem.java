@@ -29,6 +29,15 @@ public class ElevatorSubsystem
   private ElevatorGoal goal = ElevatorGoal.IDLING;
 
   public ElevatorSubsystem(String name, ElevatorIO io) {
-    super(name, io, ElevatorConstants.GAINS);
+    super(
+        name,
+        io,
+        new ElevatorConfig(
+            ElevatorConstants.GAINS,
+            ElevatorConstants.POSITION_TOLERANCE,
+            ElevatorConstants.SOFT_LIMITS_ENABLED,
+            ElevatorConstants.SOFT_LIMIT_MIN,
+            ElevatorConstants.SOFT_LIMIT_MAX,
+            ElevatorConstants.MAX_VOLTAGE));
   }
 }

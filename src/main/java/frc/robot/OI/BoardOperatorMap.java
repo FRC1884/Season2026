@@ -12,4 +12,29 @@ public class BoardOperatorMap extends CommandGenericHID implements OperatorMap {
   public Trigger testing() {
     return button(1);
   }
+
+  @Override
+  public Trigger turretZero() {
+    return button(2);
+  }
+
+  @Override
+  public Trigger turretPreset() {
+    return button(3);
+  }
+
+  @Override
+  public Trigger turretManualLeft() {
+    return button(4);
+  }
+
+  @Override
+  public Trigger turretManualRight() {
+    return button(5);
+  }
+
+  @Override
+  public Trigger turretAutoAim() {
+    return button(6);
+  }
 }

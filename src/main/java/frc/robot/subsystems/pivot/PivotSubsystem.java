@@ -1,4 +1,4 @@
-package frc.robot.subsystems.exampleClasses.pivot;
+package frc.robot.subsystems.pivot;
 
 import frc.robot.generic.arms.GenericPositionArmSystem;
 import frc.robot.util.LoggedTunableNumber;
@@ -17,7 +17,7 @@ public class PivotSubsystem extends GenericPositionArmSystem<PivotSubsystem.Pivo
     L2(() -> 0.3),
     L3(() -> 0.3),
     BARGE(() -> 0.38),
-    TESTING(new LoggedTunableNumber("AlgaePivot/TESTING", 0.1));
+    TESTING(new LoggedTunableNumber("Pivot/TESTING", 0.1));
 
     private final DoubleSupplier angleSupplier;
 
