@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.robot.Config;
 import frc.robot.subsystems.turret.TurretSubsystem;
 import frc.robot.util.TurretUtil;
 import java.util.Optional;
@@ -44,5 +45,16 @@ public final class TurretCommands {
           Logger.recordOutput("Turret/AutoAim/GoalRad", goalRad);
         },
         turret);
+  }
+
+  public static Command shootingWhileMoving(
+          TurretSubsystem turret,
+          Supplier<Pose2d> robotPoseSupplier,
+          Function<Pose2d, Optional<Translation2d>> targetSupplier) {
+      return Commands.run(
+          () -> {
+              Pose2d robotPose = robotPoseSupplier.get();
+
+          });
   }
 }

@@ -2,6 +2,8 @@ package frc.robot.subsystems.shooter;
 
 import edu.wpi.first.math.filter.Debouncer;
 import frc.robot.generic.rollers.GenericVelocityRollerSystem;
+import frc.robot.generic.rollers.GenericVelocityRollerSystem.VelocityGoal;
+
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

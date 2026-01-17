@@ -154,5 +154,9 @@ public class ShooterCommands {
 
     }
 
+    public double getShotTime(){
+        return 0.0; // TODO: make this return actual values
+    }
+
 }
 
