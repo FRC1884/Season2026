@@ -92,37 +92,45 @@ public class Superstructure extends SubsystemBase {
       return;
     }
 
-    addSysIdOptions(
-        chooser,
-        "Pivot",
-        arms.pivot.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
-        arms.pivot.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
-        arms.pivot.sysIdDynamic(SysIdRoutine.Direction.kForward),
-        arms.pivot.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    if (Config.Subsystems.PIVOT_ENABLED) {
+      addSysIdOptions(
+          chooser,
+          "Pivot",
+          arms.pivot.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+          arms.pivot.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+          arms.pivot.sysIdDynamic(SysIdRoutine.Direction.kForward),
+          arms.pivot.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    }
 
-    addSysIdOptions(
-        chooser,
-        "Intake",
-        rollers.intake.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
-        rollers.intake.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
-        rollers.intake.sysIdDynamic(SysIdRoutine.Direction.kForward),
-        rollers.intake.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    if (Config.Subsystems.INTAKE_ENABLED) {
+      addSysIdOptions(
+          chooser,
+          "Intake",
+          rollers.intake.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+          rollers.intake.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+          rollers.intake.sysIdDynamic(SysIdRoutine.Direction.kForward),
+          rollers.intake.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    }
 
-    addSysIdOptions(
-        chooser,
-        "Shooter",
-        rollers.shooter.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
-        rollers.shooter.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
-        rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kForward),
-        rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    if (Config.Subsystems.SHOOTER_ENABLED) {
+      addSysIdOptions(
+          chooser,
+          "Shooter",
+          rollers.shooter.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+          rollers.shooter.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+          rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kForward),
+          rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    }
 
-    addSysIdOptions(
-        chooser,
-        "Climber",
-        elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
-        elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
-        elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kForward),
-        elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    if (Config.Subsystems.CLIMBER_ENABLED) {
+      addSysIdOptions(
+          chooser,
+          "Climber",
+          elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
+          elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
+          elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kForward),
+          elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kReverse));
+    }
   }
 
   private void addSysIdOptions(
