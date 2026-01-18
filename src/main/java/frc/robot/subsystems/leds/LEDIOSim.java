@@ -34,7 +34,7 @@ public class LEDIOSim implements LEDIO {
 
     for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
       LEDConstants.Segment segment = LEDConstants.SEGMENTS[i];
-      views[i] = buffer.createView(segment.start(), segment.start() + segment.length());
+      views[i] = buffer.createView(segment.start(), segment.start() + segment.length() - 1);
 
       if (segment.reversed()) {
         views[i] = views[i].reversed();

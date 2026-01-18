@@ -61,7 +61,7 @@ public final class TurretConstants {
       new LoggedTunableNumber("Turret/SimTargetY", 4.0);
 
   public static final int SIM_MOTOR_COUNT = 1;
-  public static final double SIM_MOI = 0.002; // TODO: update if sim is used
+  public static final double SIM_MOI = 1; // TODO: update if sim is used
 
   public static Translation2d getSimTarget() {
     return new Translation2d(SIM_TARGET_X.get(), SIM_TARGET_Y.get());

@@ -26,7 +26,7 @@ public final class ClimberConstants {
   public static final double POSITION_COEFFICIENT =
       (2.0 * Math.PI * PULLEY_RADIUS_METERS) / GEAR_RATIO;
 
-  public static final GlobalConstants.Gains GAINS = new GlobalConstants.Gains(0.7, 0.0, 0.0);
+  public static final GlobalConstants.Gains GAINS = new GlobalConstants.Gains(6, 0.4, 2.0);
   public static final double POSITION_TOLERANCE = 0.01; // TODO: tune
   public static final boolean SOFT_LIMITS_ENABLED = false;
   public static final double SOFT_LIMIT_MIN = 0.0;

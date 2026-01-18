@@ -177,7 +177,13 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
 
       for (var observation : inputs[cameraIndex].poseObservations) {
+        if (observation == null || observation.pose() == null) {
+          continue;
+        }
         robotPoses.add(observation.pose());
+        if (!isObservationValid(observation)) {
+          continue;
+        }
         robotPosesAccepted.add(observation.pose());
 
         consumer.accept(
@@ -213,6 +219,32 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(
         "AprilTagVision/Summary/RobotPosesAccepted",
         allRobotPosesAccepted.toArray(new Pose3d[allRobotPosesAccepted.size()]));
+  }
+
+  private boolean isObservationValid(VisionIO.PoseObservation observation) {
+    if (observation.tagCount() <= 0) {
+      return false;
+    }
+    if (!isFinite(observation.timestamp()) || !isFinite(observation.averageTagDistance())) {
+      return false;
+    }
+    Pose3d pose = observation.pose();
+    if (!isFinite(pose.getX())
+        || !isFinite(pose.getY())
+        || !isFinite(pose.getZ())
+        || !isFinite(pose.getRotation().getX())
+        || !isFinite(pose.getRotation().getY())
+        || !isFinite(pose.getRotation().getZ())) {
+      return false;
+    }
+    Rotation2d rotation = pose.toPose2d().getRotation();
+    double cos = rotation.getCos();
+    double sin = rotation.getSin();
+    return isFinite(cos) && isFinite(sin) && !(Math.abs(cos) < 1e-9 && Math.abs(sin) < 1e-9);
+  }
+
+  private boolean isFinite(double value) {
+    return Double.isFinite(value);
   }
 
   private void periodicLimelight() {

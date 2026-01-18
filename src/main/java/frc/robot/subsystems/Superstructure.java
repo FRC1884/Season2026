@@ -274,6 +274,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyIdle() {
+    clearIdleOverrides();
     setIntakeGoal(intakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
@@ -281,6 +282,27 @@ public class Superstructure extends SubsystemBase {
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
     stopClimber();
+  }
+
+  private void clearIdleOverrides() {
+    if (rollers.intake != null) {
+      rollers.intake.clearGoalOverride();
+    }
+    if (rollers.indexer != null) {
+      rollers.indexer.clearGoalOverride();
+    }
+    if (rollers.shooter != null) {
+      rollers.shooter.stopOpenLoop();
+      rollers.shooter.clearGoalOverride();
+    }
+    if (arms.intakePivot != null) {
+      arms.intakePivot.stopOpenLoop();
+      arms.intakePivot.clearGoalOverride();
+    }
+    if (arms.shooterPivot != null) {
+      arms.shooterPivot.stopOpenLoop();
+      arms.shooterPivot.clearGoalOverride();
+    }
   }
 
   private void applyIntaking() {
@@ -600,14 +622,11 @@ public class Superstructure extends SubsystemBase {
       Command dynamicReverse) {
     chooser.addOption(
         name + " | SysId (Full Routine)",
-        sysIdRoutine(name, quasistaticForward, quasistaticReverse, dynamicForward, dynamicReverse)
-            .ignoringDisable(true));
-    chooser.addOption(
-        name + " | SysId (Quasistatic Forward)", quasistaticForward.ignoringDisable(true));
-    chooser.addOption(
-        name + " | SysId (Quasistatic Reverse)", quasistaticReverse.ignoringDisable(true));
-    chooser.addOption(name + " | SysId (Dynamic Forward)", dynamicForward.ignoringDisable(true));
-    chooser.addOption(name + " | SysId (Dynamic Reverse)", dynamicReverse.ignoringDisable(true));
+        sysIdRoutine(name, quasistaticForward, quasistaticReverse, dynamicForward, dynamicReverse));
+    chooser.addOption(name + " | SysId (Quasistatic Forward)", quasistaticForward);
+    chooser.addOption(name + " | SysId (Quasistatic Reverse)", quasistaticReverse);
+    chooser.addOption(name + " | SysId (Dynamic Forward)", dynamicForward);
+    chooser.addOption(name + " | SysId (Dynamic Reverse)", dynamicReverse);
   }
 
   private Command sysIdRoutine(

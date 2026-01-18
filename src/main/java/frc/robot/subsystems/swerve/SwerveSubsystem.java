@@ -246,6 +246,13 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
     }
 
+    Pose2d estimatedPose = poseEstimator.getEstimatedPosition();
+    if (!isFinitePose(estimatedPose)) {
+      Rotation2d safeRotation =
+          isValidRotation(rawGyroRotation) ? rawGyroRotation : new Rotation2d();
+      poseEstimator.resetPosition(safeRotation, getModulePositions(), new Pose2d());
+    }
+
     if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
         && !krakenVelocityMode) {
       krakenCurrentSetpoint = new SwerveSetpoint(getChassisSpeeds(), getModuleStates());
@@ -520,8 +527,62 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       Pose2d visionRobotPoseMeters,
       double timestampSeconds,
       Matrix<N3, N1> visionMeasurementStdDevs) {
+    if (visionRobotPoseMeters == null || visionMeasurementStdDevs == null) {
+      return;
+    }
+    if (!isFinitePose(visionRobotPoseMeters) || !isFiniteMatrix(visionMeasurementStdDevs)) {
+      return;
+    }
+
+    Pose2d currentPose = poseEstimator.getEstimatedPosition();
+    if (!isFinitePose(currentPose)) {
+      if (!isValidRotation(rawGyroRotation)) {
+        rawGyroRotation = visionRobotPoseMeters.getRotation();
+      }
+      poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), visionRobotPoseMeters);
+      return;
+    }
+
     poseEstimator.addVisionMeasurement(
         visionRobotPoseMeters, timestampSeconds, visionMeasurementStdDevs);
+  }
+
+  private static boolean isFinitePose(Pose2d pose) {
+    if (pose == null) {
+      return false;
+    }
+    if (!isFinite(pose.getX()) || !isFinite(pose.getY())) {
+      return false;
+    }
+    return isValidRotation(pose.getRotation());
+  }
+
+  private static boolean isValidRotation(Rotation2d rotation) {
+    if (rotation == null) {
+      return false;
+    }
+    double cos = rotation.getCos();
+    double sin = rotation.getSin();
+    if (!isFinite(cos) || !isFinite(sin)) {
+      return false;
+    }
+    return !(Math.abs(cos) < 1e-9 && Math.abs(sin) < 1e-9);
+  }
+
+  private static boolean isFiniteMatrix(Matrix<N3, N1> matrix) {
+    if (matrix == null) {
+      return false;
+    }
+    for (int row = 0; row < 3; row++) {
+      if (!isFinite(matrix.get(row, 0))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean isFinite(double value) {
+    return Double.isFinite(value);
   }
 
   /** Returns the maximum linear speed in meters per sec. */

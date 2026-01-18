@@ -17,15 +17,11 @@ import static edu.wpi.first.apriltag.AprilTagFieldLayout.loadField;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import java.io.IOException;
 import java.nio.file.Path;
-import lombok.Getter;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -36,8 +32,8 @@ import lombok.Getter;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.REAL;
-  public static final RobotType ROBOT = RobotType.DEVBOT;
+  public static final RobotMode MODE = RobotMode.SIM;
+  public static final RobotType ROBOT = RobotType.SIMBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
   public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
@@ -107,9 +103,7 @@ public final class GlobalConstants {
     public static final double FIELD_LENGTH_METERS = Units.feetToMeters(57 + (6.875 / 12));
   }
 
-  public static final class AlignOffsets {
-
-  }
+  public static final class AlignOffsets {}
 
   /** PID + FF gains, with overloaded constructors for disabling each term. */
   public record Gains(double kP, double kI, double kD, double kS, double kV, double kA, double kG) {
