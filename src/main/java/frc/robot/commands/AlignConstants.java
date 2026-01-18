@@ -36,12 +36,6 @@ public final class AlignConstants {
           new PIDGains(10.0, 0.0, 3.0),
           new FeedforwardGains(6.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
 
-  // Alignment tuning and navigation helpers
-  public static final double CENTRAL_REEF_RADIUS_METERS = 1.7;
-  public static final double CENTRAL_REEF_MARGIN_METERS = 0.4;
-  public static final double ALIGN_BYPASS_TIMEOUT_SECS = 1.8;
-  public static final double REEF_TANGENT_BUFFER_METERS = 0.0;
-
   public static final double ALIGN_TUNER_TIMEOUT_SECS = 3.5;
   public static final double ALIGN_TUNER_KICKBACK_TIME = 0.6;
   public static final double ALIGN_TUNER_KICKBACK_SPEED = 1.5;

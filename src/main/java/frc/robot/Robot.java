@@ -143,7 +143,7 @@ public class Robot extends LoggedRobot {
 
       // schedule the autonomous command (example)
       if (autonomousCommand != null) {
-        autonomousCommand.schedule();
+        CommandScheduler.getInstance().schedule(autonomousCommand);
       }
     }
   }
@@ -180,7 +180,7 @@ public class Robot extends LoggedRobot {
 
     characterizationCommand = robotContainer.getCharacterizationCommand();
     if (characterizationCommand != null) {
-      characterizationCommand.schedule();
+      CommandScheduler.getInstance().schedule(characterizationCommand);
       System.out.println(
           "Characterization command scheduled: " + characterizationCommand.getName());
     } else {

@@ -22,6 +22,7 @@ public final class Config {
     public static final boolean SHOOTER_ENABLED = false;
     public static final boolean PIVOT_ENABLED = false;
     public static final boolean INTAKE_ENABLED = false;
+    public static final boolean INDEXER_ENABLED = false;
     public static final boolean CLIMBER_ENABLED = false;
   }
 
@@ -51,15 +52,18 @@ public final class Config {
 
     public static OperatorMap getOperatorController() {
       return switch (ROBOT) {
-        case COMPBOT -> JOYSTICK_OPERATOR_ENABLED
-            ? new XboxOperatorMap(OPERATOR_PORT)
-            : new BoardOperatorMap(OPERATOR_PORT);
-        case CRESCENDO -> JOYSTICK_OPERATOR_ENABLED
-            ? new XboxOperatorMap(OPERATOR_PORT)
-            : new BoardOperatorMap(OPERATOR_PORT);
-        case DEVBOT -> JOYSTICK_OPERATOR_ENABLED
-            ? new XboxOperatorMap(OPERATOR_PORT)
-            : new BoardOperatorMap(OPERATOR_PORT);
+        case COMPBOT ->
+            JOYSTICK_OPERATOR_ENABLED
+                ? new XboxOperatorMap(OPERATOR_PORT)
+                : new BoardOperatorMap(OPERATOR_PORT);
+        case CRESCENDO ->
+            JOYSTICK_OPERATOR_ENABLED
+                ? new XboxOperatorMap(OPERATOR_PORT)
+                : new BoardOperatorMap(OPERATOR_PORT);
+        case DEVBOT ->
+            JOYSTICK_OPERATOR_ENABLED
+                ? new XboxOperatorMap(OPERATOR_PORT)
+                : new BoardOperatorMap(OPERATOR_PORT);
         case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
       };
     }

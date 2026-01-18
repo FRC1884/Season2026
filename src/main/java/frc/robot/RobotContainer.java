@@ -19,7 +19,6 @@ import static frc.robot.Config.Subsystems.AUTONOMOUS_ENABLED;
 import static frc.robot.Config.Subsystems.DRIVETRAIN_ENABLED;
 import static frc.robot.Config.Subsystems.TURRET_ENABLED;
 import static frc.robot.Config.Subsystems.VISION_ENABLED;
-import static frc.robot.Config.Subsystems.WEBUI_ENABLED;
 import static frc.robot.GlobalConstants.MODE;
 import static frc.robot.GlobalConstants.robotSwerveMotors;
 import static frc.robot.subsystems.swerve.SwerveConstants.BACK_LEFT;
@@ -32,6 +31,7 @@ import static frc.robot.subsystems.vision.AprilTagVisionConstants.*;
 import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -44,8 +44,6 @@ import frc.robot.commands.AutoCommands;
 import frc.robot.commands.DriveCommands;
 import frc.robot.commands.TurretCommands;
 import frc.robot.subsystems.Superstructure;
-import frc.robot.subsystems.objectivetracker.ReefControlsIOServer;
-import frc.robot.subsystems.objectivetracker.TabletInterfaceTracker;
 import frc.robot.subsystems.swerve.*;
 import frc.robot.subsystems.turret.TurretConstants;
 import frc.robot.subsystems.turret.TurretIO;
@@ -55,7 +53,7 @@ import frc.robot.subsystems.turret.TurretIOSparkFlex;
 import frc.robot.subsystems.turret.TurretIOSparkMax;
 import frc.robot.subsystems.turret.TurretSubsystem;
 import frc.robot.subsystems.vision.*;
-import lombok.Getter;
+import java.util.Optional;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -85,8 +83,7 @@ public class RobotContainer {
   private final Command characterizationIdleCommand;
 
   private final Superstructure superstructure;
-  private final Vision vision;
-  @Getter private final TabletInterfaceTracker tabletInterfaceTracker;
+  private final VisionTargetProvider vision;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -171,23 +168,29 @@ public class RobotContainer {
     if (TURRET_ENABLED) {
       turret =
           switch (MODE) {
-            case REAL -> new TurretSubsystem(
-                switch (TurretConstants.MOTOR_CONTROLLER) {
-                  case SPARK_MAX -> new TurretIOSparkMax();
-                  case SPARK_FLEX -> new TurretIOSparkFlex();
-                  case KRAKEN_X60, KRAKEN_X40 -> new TurretIOKraken();
-                });
+            case REAL ->
+                new TurretSubsystem(
+                    switch (TurretConstants.MOTOR_CONTROLLER) {
+                      case SPARK_MAX -> new TurretIOSparkMax();
+                      case SPARK_FLEX -> new TurretIOSparkFlex();
+                      case KRAKEN_X60, KRAKEN_X40 -> new TurretIOKraken();
+                    });
             case SIM -> new TurretSubsystem(new TurretIOSim());
             default -> new TurretSubsystem(new TurretIO() {});
           };
     } else {
       turret = null;
     }
-
-    if (WEBUI_ENABLED) {
-      tabletInterfaceTracker = new TabletInterfaceTracker(new ReefControlsIOServer(), drive);
-    } else {
-      tabletInterfaceTracker = null;
+    if (superstructure != null) {
+      superstructure.setTurret(turret);
+    }
+    if (MODE == RobotMode.SIM && turret != null && drive != null) {
+      turret.setDefaultCommand(
+          TurretCommands.autoAimToTarget(
+              turret, drive::getPose, pose -> Optional.of(TurretConstants.getSimTarget())));
+      if (superstructure != null) {
+        superstructure.setTurretExternalControl(true);
+      }
     }
 
     if (AUTONOMOUS_ENABLED) {
@@ -197,47 +200,73 @@ public class RobotContainer {
     }
 
     if (VISION_ENABLED) {
-      vision =
-          switch (MODE) {
-            case REAL -> (IS_LIMELIGHT)
-                ? new Vision(
-                    drive,
-                    LEFT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
-                        : new VisionIO() {},
-                    RIGHT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
-                        : new VisionIO() {},
-                    BACK_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
-                        : new VisionIO() {})
-                : new Vision(
-                    drive,
-                    LEFT_CAM_ENABLED
-                        ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS)
-                        : new VisionIO() {},
-                    RIGHT_CAM_ENABLED
-                        ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS)
-                        : new VisionIO() {},
-                    BACK_CAM_ENABLED
-                        ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS)
-                        : new VisionIO() {});
-            case SIM -> new Vision(
-                drive,
-                LEFT_CAM_ENABLED
-                    ? new VisionIOPhotonVisionSim(
-                        LEFT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                    : new VisionIO() {},
-                RIGHT_CAM_ENABLED
-                    ? new VisionIOPhotonVisionSim(
-                        RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                    : new VisionIO() {},
-                BACK_CAM_ENABLED
-                    ? new VisionIOPhotonVisionSim(
-                        BACK_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                    : new VisionIO() {});
-            default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
-          };
+      if (IS_LIMELIGHT) {
+        vision =
+            switch (MODE) {
+              case REAL ->
+                  new Vision(
+                      drive,
+                      drive::getPose,
+                      () -> Math.toRadians(drive.getYawRateDegreesPerSec()),
+                      LEFT_CAM_ENABLED
+                          ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
+                          : new VisionIO() {},
+                      RIGHT_CAM_ENABLED
+                          ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
+                          : new VisionIO() {},
+                      BACK_CAM_ENABLED
+                          ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
+                          : new VisionIO() {});
+              case SIM ->
+                  new Vision(
+                      drive,
+                      LEFT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              LEFT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      RIGHT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      BACK_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              BACK_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {});
+              default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
+            };
+      } else {
+        vision =
+            switch (MODE) {
+              case REAL ->
+                  new Vision(
+                      drive,
+                      LEFT_CAM_ENABLED
+                          ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS)
+                          : new VisionIO() {},
+                      RIGHT_CAM_ENABLED
+                          ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS)
+                          : new VisionIO() {},
+                      BACK_CAM_ENABLED
+                          ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS)
+                          : new VisionIO() {});
+              case SIM ->
+                  new Vision(
+                      drive,
+                      LEFT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              LEFT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      RIGHT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      BACK_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              BACK_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {});
+              default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
+            };
+      }
     } else vision = null;
 
     if (DRIVETRAIN_ENABLED && drive != null) {
@@ -275,13 +304,6 @@ public class RobotContainer {
       characterizationChooser.addOption(
           "Turn | SysId (Dynamic Reverse)",
           drive.sysIdTurnDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
-      //      characterizationChooser.addOption(
-      //          "Drive | Align Auto-Tune (FF + PID)",
-      //          AlignAutoTuner.autoTuneAlignGains(drive, () -> Coordinates.PROCESSOR.getPose())
-      //              .ignoringDisable(true));
-      //      characterizationChooser.addOption(
-      //          "Drive | Align Auto-Tune Full Field (Reef + Sources)",
-      //          AlignAutoTuner.autoTuneAlignGainsFullField(drive).ignoringDisable(true));
     }
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
@@ -337,14 +359,9 @@ public class RobotContainer {
       // Switch to X pattern when X button is pressed
       driver.stopWithX().onTrue(Commands.runOnce(drive::stopWithX, drive));
 
-      // right align to reef face when right bumper is pressed and the robot is in coral mode
-      driver.rightAlign().whileTrue(DriveCommands.rightAlignToReefCommandTeleop(drive));
-
-      // left align to reef face when right numper is pressed and the robot is in coral mode
-      driver.leftAlign().whileTrue(DriveCommands.leftAlignToReefCommandTeleop(drive));
-
-      // align to coral station with position customization when right trigger is pressed
-      driver.coralStation().whileTrue(DriveCommands.alignToNearestCoralStationCommand(drive));
+      // align to the climb target
+      driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));
+      driver.leftAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));
 
       driver
           .slowMode()
@@ -435,9 +452,19 @@ public class RobotContainer {
   public void displaySimFieldToAdvantageScope() {
     Logger.recordOutput(
         "FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
-    Logger.recordOutput(
-        "FieldSimulation/Coral", SimulatedArena.getInstance().getGamePiecesArrayByType("Coral"));
-    Logger.recordOutput(
-        "FieldSimulation/Algae", SimulatedArena.getInstance().getGamePiecesArrayByType("Algae"));
+    if (turret != null) {
+      Pose2d robotPose = driveSimulation.getSimulatedDriveTrainPose();
+      Translation2d turretTranslation =
+          robotPose
+              .getTranslation()
+              .plus(TurretConstants.MOUNT_OFFSET_METERS.rotateBy(robotPose.getRotation()));
+      Rotation2d turretRotation =
+          robotPose.getRotation().plus(Rotation2d.fromRadians(turret.getPositionRad()));
+      Logger.recordOutput(
+          "FieldSimulation/TurretPose", new Pose2d(turretTranslation, turretRotation));
+      Logger.recordOutput(
+          "FieldSimulation/TurretTarget",
+          new Pose2d(TurretConstants.getSimTarget(), new Rotation2d()));
+    }
   }
 }

@@ -41,7 +41,7 @@ public final class GlobalConstants {
   public static final double ODOMETRY_FREQUENCY = 250.0;
   public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
-  public static boolean TUNING_MODE = false;
+  public static boolean TUNING_MODE = true;
 
   public static enum RobotMode {
     /** Running on a real robot. */
@@ -79,7 +79,7 @@ public final class GlobalConstants {
   // Blue origin, so we use blue side coords and tags
   public static final class FieldMap {
     public static AprilTagFieldLayout APRIL_TAG_FIELD_LAYOUT;
-    public static final boolean WELDED_FIELD = false;
+    public static final boolean WELDED_FIELD = true;
     public static final boolean COMP_FIELD = true;
 
     static {
@@ -89,49 +89,18 @@ public final class GlobalConstants {
             COMP_FIELD
                 ? loadField(
                     WELDED_FIELD
-                        ? AprilTagFields.k2025ReefscapeWelded
-                        : AprilTagFields.k2025ReefscapeAndyMark)
+                        ? AprilTagFields.k2026RebuiltWelded
+                        : AprilTagFields.k2026RebuiltAndymark)
                 : new AprilTagFieldLayout(Path.of("tagfields/home_testing_1.json"));
       } catch (IOException e) {
         new Alert("Custom tag map not found, using default layout!", AlertType.kWarning).set(true);
         APRIL_TAG_FIELD_LAYOUT =
             loadField(
                 WELDED_FIELD
-                    ? AprilTagFields.k2025ReefscapeWelded
-                    : AprilTagFields.k2025ReefscapeAndyMark);
+                    ? AprilTagFields.k2026RebuiltWelded
+                    : AprilTagFields.k2026RebuiltAndymark);
       }
       // APRIL_TAG_FIELD_LAYOUT = new AprilTagFieldLayout(Path.of("tagfields/home_testing_1.json"));
-    }
-
-    // TODO set all alignment offsets from tags
-    @Getter
-    public static enum Coordinates {
-      REEF_1(18, 7),
-      REEF_2(17, 8),
-      REEF_3(22, 9),
-      REEF_4(21, 10),
-      REEF_5(20, 11),
-      REEF_6(19, 6),
-      LEFT_CORAL_STATION(13, 1),
-      RIGHT_CORAL_STATION(12, 2),
-      PROCESSOR(16, 3),
-      LEFT_BARGE(14, 4),
-      RIGHT_BARGE(15, 5);
-
-      private final Pose2d bluePose;
-      private final Pose2d redPose;
-
-      Coordinates(int blueTagId, int redTagId) {
-        this.bluePose = APRIL_TAG_FIELD_LAYOUT.getTagPose(blueTagId).get().toPose2d();
-        this.redPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(redTagId).get().toPose2d();
-      }
-
-      public Pose2d getPose() {
-        boolean isRed =
-            DriverStation.getAlliance().isPresent()
-                && DriverStation.getAlliance().get() == Alliance.Red;
-        return isRed ? redPose : bluePose;
-      }
     }
 
     public static final double FIELD_WIDTH_METERS = Units.feetToMeters(26 + (5.0 / 12));
@@ -139,14 +108,7 @@ public final class GlobalConstants {
   }
 
   public static final class AlignOffsets {
-    public static final double BUMPER_TO_CENTER_OFFSET =
-        Units.inchesToMeters(ROBOT == RobotType.DEVBOT ? -(26.0 / 2 + 3) : -(28.0 / 2 + 3.5));
 
-    public static final double REEF_TO_BUMPER_OFFSET = -32.0 / 100;
-    public static final double REEF_TO_BRANCH_OFFSET = Units.inchesToMeters(13.0 / 2);
-    public static final double SOURCE_TO_TAG_STANDOFF = Units.inchesToMeters(40.0);
-
-    public static final double SIDE_TO_SIDE_OFFSET_AUTO = Units.feetToMeters(1);
   }
 
   /** PID + FF gains, with overloaded constructors for disabling each term. */
