@@ -1,11 +1,10 @@
 package frc.robot.subsystems.vision;
 
 import static frc.robot.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.MAX_AMBIGUITY_CUTOFF;
-import static frc.robot.subsystems.vision.AprilTagVisionConstants.MAX_Z_ERROR;
 import static frc.robot.subsystems.vision.AprilTagVisionHelpers.generateDynamicStdDevs;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -13,36 +12,68 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import org.littletonrobotics.junction.Logger;
 
-public class Vision extends SubsystemBase {
+public class Vision extends SubsystemBase implements VisionTargetProvider {
+  private static final double HISTORY_WINDOW_SEC = 1.5;
+
   private final VisionConsumer consumer;
   private final VisionIO[] io;
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
+  private final boolean useLimelightFusion;
+  private final PoseHistory poseHistory;
+  private boolean useVision = true;
 
   /**
-   * Creates a Vision system.
+   * Creates a Vision system for PhotonVision inputs.
    *
    * @param consumer an object that processes the vision pose estimate (should be the drivetrain)
    * @param io the collection of {@link VisionIO}s instances that represent the cameras in the
    *     system.
    */
   public Vision(VisionConsumer consumer, VisionIO... io) {
+    this(consumer, null, null, io);
+  }
+
+  /**
+   * Creates a Vision system for Limelight inputs using pose-fusion.
+   *
+   * @param consumer an object that processes the vision pose estimate (should be the drivetrain)
+   * @param poseSupplier robot pose supplier for pose-history alignment
+   * @param yawRateRadPerSecSupplier yaw-rate supplier for alignment gating
+   * @param io the collection of {@link VisionIO}s instances that represent the cameras in the
+   *     system.
+   */
+  public Vision(
+      VisionConsumer consumer,
+      Supplier<Pose2d> poseSupplier,
+      DoubleSupplier yawRateRadPerSecSupplier,
+      VisionIO... io) {
     this.consumer = consumer;
     this.io = io;
+    this.useLimelightFusion = poseSupplier != null && yawRateRadPerSecSupplier != null;
+    this.poseHistory =
+        useLimelightFusion
+            ? new PoseHistory(HISTORY_WINDOW_SEC, poseSupplier, yawRateRadPerSecSupplier)
+            : null;
 
-    // Initialize inputs
     this.inputs = new VisionIOInputsAutoLogged[io.length];
     for (int i = 0; i < inputs.length; i++) {
       inputs[i] = new VisionIOInputsAutoLogged();
     }
 
-    // Initialize disconnected alerts
     this.disconnectedAlerts = new Alert[io.length];
     for (int i = 0; i < inputs.length; i++) {
       disconnectedAlerts[i] =
@@ -84,6 +115,7 @@ public class Vision extends SubsystemBase {
    * Returns the field translation of the closest visible AprilTag. This is intended for
    * field-relative targeting, using the robot pose estimate for distance selection.
    */
+  @Override
   public Optional<Translation2d> getBestTargetTranslation(Pose2d robotPose) {
     Translation2d bestTranslation = null;
     double bestDistance = Double.POSITIVE_INFINITY;
@@ -110,83 +142,50 @@ public class Vision extends SubsystemBase {
   }
 
   /**
-   * Updates vision inputs and logs relevant pose data. Filters out invalid observations and sends
-   * valid ones to the pose consumer for fused robot localization.
+   * Updates vision inputs and logs relevant pose data. Uses either PhotonVision observations or
+   * Limelight Megatag fusion depending on construction.
    */
   @Override
   public void periodic() {
+    if (useLimelightFusion) {
+      periodicLimelight();
+    } else {
+      periodicPhotonVision();
+    }
+  }
+
+  private void periodicPhotonVision() {
     for (int i = 0; i < io.length; i++) {
       io[i].updateInputs(inputs[i]);
       Logger.processInputs("AprilTagVision/" + io[i].getCameraConstants().cameraName(), inputs[i]);
     }
 
-    // Initialize logging values
     List<Pose3d> allTagPoses = new LinkedList<>();
     List<Pose3d> allRobotPoses = new LinkedList<>();
     List<Pose3d> allRobotPosesAccepted = new LinkedList<>();
-    List<Pose3d> allRobotPosesRejected = new LinkedList<>();
 
-    // Loop over cameras
     for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
-      // Update alert status for disconnected cameras
       disconnectedAlerts[cameraIndex].set(!inputs[cameraIndex].connected);
 
-      // Initialize logging values
       List<Pose3d> tagPoses = new LinkedList<>();
       List<Pose3d> robotPoses = new LinkedList<>();
       List<Pose3d> robotPosesAccepted = new LinkedList<>();
-      List<Pose3d> robotPosesRejected = new LinkedList<>();
 
-      // Add tag poses
       for (int tagId : inputs[cameraIndex].tagIds) {
         var tagPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(tagId);
         tagPose.ifPresent(tagPoses::add);
       }
 
-      // Loop over pose observations
       for (var observation : inputs[cameraIndex].poseObservations) {
-        // Check whether to reject pose
-        boolean rejectPose =
-            observation.tagCount() == 0 // Must have at least one tag
-                || (observation.tagCount() == 1
-                    && observation.ambiguity()
-                        > MAX_AMBIGUITY_CUTOFF) // Cannot be high ambiguity on single tag
-                || Math.abs(observation.pose().getZ())
-                    > MAX_Z_ERROR // Must have realistic Z coordinate
-                || observation.averageTagDistance()
-                    > io[cameraIndex]
-                        .getCameraConstants()
-                        .cameraType()
-                        .noisyDistance // Must be reliably detectable by this camera
-                || Math.abs(observation.pose().getRotation().getY())
-                    > 5 // Y-value makes sense -> camera mount isn't broken
-                // Must be within the field boundaries
-                || observation.pose().getX() < 0.0
-                || observation.pose().getX() > APRIL_TAG_FIELD_LAYOUT.getFieldLength()
-                || observation.pose().getY() < 0.0
-                || observation.pose().getY() > APRIL_TAG_FIELD_LAYOUT.getFieldWidth();
-
-        // Add pose to log
         robotPoses.add(observation.pose());
-        if (rejectPose) {
-          robotPosesRejected.add(observation.pose());
-        } else {
-          robotPosesAccepted.add(observation.pose());
-        }
+        robotPosesAccepted.add(observation.pose());
 
-        // Skip if rejected
-        if (rejectPose) {
-          continue;
-        }
-
-        // Send vision observation
         consumer.accept(
             observation.pose().toPose2d(),
             observation.timestamp(),
             generateDynamicStdDevs(observation, io[cameraIndex].getCameraConstants().cameraType()));
       }
 
-      // Log camera data
       Logger.recordOutput(
           "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/TagPoses",
           tagPoses.toArray(new Pose3d[tagPoses.size()]));
@@ -199,20 +198,13 @@ public class Vision extends SubsystemBase {
               + "/RobotPosesAccepted",
           robotPosesAccepted.toArray(new Pose3d[robotPosesAccepted.size()]));
       Logger.recordOutput(
-          "AprilTagVision/"
-              + io[cameraIndex].getCameraConstants().cameraName()
-              + "/RobotPosesRejected",
-          robotPosesRejected.toArray(new Pose3d[robotPosesRejected.size()]));
-      Logger.recordOutput(
           "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/CameraPose",
           io[cameraIndex].getCameraConstants().robotToCamera());
       allTagPoses.addAll(tagPoses);
       allRobotPoses.addAll(robotPoses);
       allRobotPosesAccepted.addAll(robotPosesAccepted);
-      allRobotPosesRejected.addAll(robotPosesRejected);
     }
 
-    // Log summary data
     Logger.recordOutput(
         "AprilTagVision/Summary/TagPoses", allTagPoses.toArray(new Pose3d[allTagPoses.size()]));
     Logger.recordOutput(
@@ -221,9 +213,178 @@ public class Vision extends SubsystemBase {
     Logger.recordOutput(
         "AprilTagVision/Summary/RobotPosesAccepted",
         allRobotPosesAccepted.toArray(new Pose3d[allRobotPosesAccepted.size()]));
-    Logger.recordOutput(
-        "AprilTagVision/Summary/RobotPosesRejected",
-        allRobotPosesRejected.toArray(new Pose3d[allRobotPosesRejected.size()]));
+  }
+
+  private void periodicLimelight() {
+    double startTime = Timer.getFPGATimestamp();
+    if (poseHistory != null) {
+      poseHistory.update(startTime);
+    }
+
+    List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
+
+    for (int i = 0; i < io.length; i++) {
+      io[i].updateInputs(inputs[i]);
+      Logger.processInputs("LimelightVision/" + io[i].getCameraConstants().cameraName(), inputs[i]);
+      disconnectedAlerts[i].set(!inputs[i].connected);
+
+      String cameraLabel = io[i].getCameraConstants().cameraName();
+      logCameraInputs("Vision/" + cameraLabel, inputs[i]);
+      estimates.add(buildLimelightEstimate(inputs[i]));
+    }
+
+    if (!useVision) {
+      Logger.recordOutput("Vision/usingVision", false);
+      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+      return;
+    }
+
+    Logger.recordOutput("Vision/usingVision", true);
+
+    Optional<VisionFieldPoseEstimate> accepted = Optional.empty();
+    for (Optional<VisionFieldPoseEstimate> estimate : estimates) {
+      if (estimate.isEmpty()) {
+        continue;
+      }
+      if (accepted.isEmpty()) {
+        accepted = estimate;
+      } else {
+        accepted = Optional.of(fuseEstimates(accepted.get(), estimate.get()));
+      }
+    }
+
+    accepted.ifPresent(
+        est -> {
+          Logger.recordOutput("Vision/fusedAccepted", est.visionRobotPoseMeters());
+          consumer.accept(
+              est.visionRobotPoseMeters(), est.timestampSeconds(), est.visionMeasurementStdDevs());
+        });
+
+    Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+  }
+
+  private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(VisionIO.VisionIOInputs cam) {
+    if (!cam.connected || cam.megatagPoseEstimate == null) {
+      return Optional.empty();
+    }
+
+    int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
+    int indexBase =
+        tagCount > 1
+            ? AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX
+            : AprilTagVisionConstants.LIMELIGHT_MEGATAG1_X_STDDEV_INDEX;
+
+    double scaleFactor = 1.0 / Math.max(cam.megatagPoseEstimate.quality(), 1e-6);
+    double xStd = getStdDev(cam, indexBase) * scaleFactor;
+    double yStd = getStdDev(cam, indexBase + 1) * scaleFactor;
+    double rotStd = getStdDev(cam, indexBase + 2) * scaleFactor;
+
+    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(xStd, yStd, rotStd);
+
+    return Optional.of(
+        new VisionFieldPoseEstimate(
+            cam.megatagPoseEstimate.fieldToRobot(),
+            cam.megatagPoseEstimate.timestampSeconds(),
+            visionStdDevs,
+            tagCount));
+  }
+
+  private VisionFieldPoseEstimate fuseEstimates(
+      VisionFieldPoseEstimate a, VisionFieldPoseEstimate b) {
+    if (poseHistory == null) {
+      return b;
+    }
+    if (b.timestampSeconds() < a.timestampSeconds()) {
+      VisionFieldPoseEstimate tmp = a;
+      a = b;
+      b = tmp;
+    }
+
+    Optional<Pose2d> poseAAtTime = poseHistory.getFieldToRobot(a.timestampSeconds());
+    Optional<Pose2d> poseBAtTime = poseHistory.getFieldToRobot(b.timestampSeconds());
+    if (poseAAtTime.isEmpty() || poseBAtTime.isEmpty()) {
+      return b;
+    }
+
+    var a_T_b = poseBAtTime.get().minus(poseAAtTime.get());
+    Pose2d poseA = a.visionRobotPoseMeters().transformBy(a_T_b);
+    Pose2d poseB = b.visionRobotPoseMeters();
+
+    var varianceA = a.visionMeasurementStdDevs().elementTimes(a.visionMeasurementStdDevs());
+    var varianceB = b.visionMeasurementStdDevs().elementTimes(b.visionMeasurementStdDevs());
+
+    Rotation2d fusedHeading =
+        new Rotation2d(
+            poseA.getRotation().getCos() / varianceA.get(2, 0)
+                + poseB.getRotation().getCos() / varianceB.get(2, 0),
+            poseA.getRotation().getSin() / varianceA.get(2, 0)
+                + poseB.getRotation().getSin() / varianceB.get(2, 0));
+
+    double weightAx = 1.0 / varianceA.get(0, 0);
+    double weightAy = 1.0 / varianceA.get(1, 0);
+    double weightBx = 1.0 / varianceB.get(0, 0);
+    double weightBy = 1.0 / varianceB.get(1, 0);
+
+    Pose2d fusedPose =
+        new Pose2d(
+            new Translation2d(
+                (poseA.getTranslation().getX() * weightAx
+                        + poseB.getTranslation().getX() * weightBx)
+                    / (weightAx + weightBx),
+                (poseA.getTranslation().getY() * weightAy
+                        + poseB.getTranslation().getY() * weightBy)
+                    / (weightAy + weightBy)),
+            fusedHeading);
+
+    Matrix<N3, N1> fusedStdDev =
+        VecBuilder.fill(
+            Math.sqrt(1.0 / (weightAx + weightBx)),
+            Math.sqrt(1.0 / (weightAy + weightBy)),
+            Math.sqrt(1.0 / (1.0 / varianceA.get(2, 0) + 1.0 / varianceB.get(2, 0))));
+
+    int numTags = a.numTags() + b.numTags();
+    double time = b.timestampSeconds();
+
+    return new VisionFieldPoseEstimate(fusedPose, time, fusedStdDev, numTags);
+  }
+
+  private void logCameraInputs(String prefix, VisionIO.VisionIOInputs cam) {
+    Logger.recordOutput(prefix + "/SeesTarget", cam.seesTarget);
+    Logger.recordOutput(prefix + "/MegatagCount", cam.megatagCount);
+
+    if (DriverStation.isDisabled()) {
+      SmartDashboard.putBoolean(prefix + "/SeesTarget", cam.seesTarget);
+      SmartDashboard.putNumber(prefix + "/MegatagCount", cam.megatagCount);
+    }
+
+    if (cam.pose3d != null) {
+      Logger.recordOutput(prefix + "/Pose3d", cam.pose3d);
+    }
+
+    if (cam.megatagPoseEstimate != null) {
+      Logger.recordOutput(prefix + "/MegatagPoseEstimate", cam.megatagPoseEstimate.fieldToRobot());
+      Logger.recordOutput(prefix + "/Quality", cam.megatagPoseEstimate.quality());
+      Logger.recordOutput(prefix + "/AvgTagArea", cam.megatagPoseEstimate.avgTagArea());
+    }
+
+    if (cam.fiducialObservations != null) {
+      Logger.recordOutput(prefix + "/FiducialCount", cam.fiducialObservations.length);
+    }
+  }
+
+  private double getStdDev(VisionIO.VisionIOInputs cam, int index) {
+    double[] stdDevs =
+        cam.standardDeviations == null || cam.standardDeviations.length <= index
+            ? AprilTagVisionConstants.LIMELIGHT_STANDARD_DEVIATIONS
+            : cam.standardDeviations;
+    if (stdDevs == null || stdDevs.length <= index) {
+      return 0.0;
+    }
+    return stdDevs[index];
+  }
+
+  public void setUseVision(boolean useVision) {
+    this.useVision = useVision;
   }
 
   /** Functional interface defining a consumer that processes vision-based pose estimates. */
@@ -242,4 +403,56 @@ public class Vision extends SubsystemBase {
         double timestampSeconds,
         Matrix<N3, N1> visionMeasurementStdDevs);
   }
+
+  private static final class PoseHistory {
+    private final double historyWindowSec;
+    private final Supplier<Pose2d> poseSupplier;
+    private final DoubleSupplier yawRateRadPerSecSupplier;
+    private final ArrayDeque<Sample> samples = new ArrayDeque<>();
+
+    private PoseHistory(
+        double historyWindowSec,
+        Supplier<Pose2d> poseSupplier,
+        DoubleSupplier yawRateRadPerSecSupplier) {
+      this.historyWindowSec = historyWindowSec;
+      this.poseSupplier = poseSupplier;
+      this.yawRateRadPerSecSupplier = yawRateRadPerSecSupplier;
+    }
+
+    private void update(double timestampSeconds) {
+      samples.addLast(
+          new Sample(timestampSeconds, poseSupplier.get(), yawRateRadPerSecSupplier.getAsDouble()));
+      while (!samples.isEmpty()
+          && timestampSeconds - samples.getFirst().timestampSeconds > historyWindowSec) {
+        samples.removeFirst();
+      }
+    }
+
+    private Optional<Pose2d> getFieldToRobot(double timestampSeconds) {
+      if (samples.isEmpty()) {
+        return Optional.empty();
+      }
+      if (timestampSeconds < samples.getFirst().timestampSeconds
+          || timestampSeconds > samples.getLast().timestampSeconds) {
+        return Optional.empty();
+      }
+
+      Sample previous = null;
+      for (Sample sample : samples) {
+        if (sample.timestampSeconds >= timestampSeconds) {
+          if (previous == null) {
+            return Optional.of(sample.pose);
+          }
+          double t =
+              (timestampSeconds - previous.timestampSeconds)
+                  / (sample.timestampSeconds - previous.timestampSeconds);
+          return Optional.of(previous.pose.interpolate(sample.pose, t));
+        }
+        previous = sample;
+      }
+      return Optional.empty();
+    }
+  }
+
+  private record Sample(double timestampSeconds, Pose2d pose, double yawRateRadPerSec) {}
 }

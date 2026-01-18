@@ -33,8 +33,14 @@ public interface VisionIO {
   @AutoLog
   public static class VisionIOInputs {
     public boolean connected = false;
+    public boolean seesTarget = false;
+    public int megatagCount = 0;
     public TargetObservation latestTargetObservation =
         new TargetObservation(new Rotation2d(), new Rotation2d());
+    public Pose3d pose3d = null;
+    public MegatagPoseEstimate megatagPoseEstimate = null;
+    public FiducialObservation[] fiducialObservations = new FiducialObservation[0];
+    public double[] standardDeviations = new double[0];
     public PoseObservation[] poseObservations = new PoseObservation[0];
     public int[] tagIds = new int[0];
   }

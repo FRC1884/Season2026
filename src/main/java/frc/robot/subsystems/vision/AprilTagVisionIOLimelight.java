@@ -58,6 +58,12 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     //        public int[] tagIds = new int[0];
 
     inputs.connected = table.getEntry("tv").getDouble(0) == 1.0;
+    inputs.seesTarget = LimelightHelpers.getTV(limelightName);
+    inputs.standardDeviations = AprilTagVisionConstants.LIMELIGHT_STANDARD_DEVIATIONS;
+    inputs.megatagPoseEstimate = null;
+    inputs.pose3d = null;
+    inputs.fiducialObservations = new FiducialObservation[0];
+    inputs.megatagCount = 0;
     if (inputs.connected) {
       try {
         LimelightHelpers.PoseEstimate megatag;
@@ -72,6 +78,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
           robotPose3d =
               LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiRed(limelightName));
         }
+        inputs.pose3d = robotPose3d;
         // Capture latest target offsets when the camera sees targets; otherwise provide zeros.
         if (LimelightHelpers.getTV(limelightName)) {
           inputs.latestTargetObservation =
@@ -91,6 +98,13 @@ public class AprilTagVisionIOLimelight implements VisionIO {
           // megatag.tagCount;
           fiducialObservation = FiducialObservation.fromLimelight(megatag.rawFiducials);
         }
+        if (megatagPoseEstimate != null) {
+          inputs.megatagPoseEstimate = megatagPoseEstimate;
+        }
+        if (fiducialObservation != null) {
+          inputs.fiducialObservations = fiducialObservation;
+        }
+        inputs.megatagCount = megatag != null ? megatag.tagCount : 0;
         Logger.recordOutput("AprilTagVision/TagPose", robotPose3d);
         // Track tag IDs and pose observations for the rest of the robot code to consume.
         Set<Short> tagIds = new HashSet<>();
