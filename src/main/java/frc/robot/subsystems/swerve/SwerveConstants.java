@@ -32,10 +32,13 @@ public final class SwerveConstants {
 
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
+
   /** Meters */
   public static final double WHEEL_BASE = Units.inchesToMeters(24.5);
+
   /** Meters */
   public static final double BUMPER_LENGTH = Units.inchesToMeters(34);
+
   /** Meters */
   public static final double BUMPER_WIDTH = Units.inchesToMeters(34);
 
@@ -46,6 +49,7 @@ public final class SwerveConstants {
         new Translation2d(-TRACK_WIDTH / 2.0, WHEEL_BASE / 2.0),
         new Translation2d(-TRACK_WIDTH / 2.0, -WHEEL_BASE / 2.0)
       };
+
   /** Meters */
   public static final double DRIVE_BASE_RADIUS = Math.hypot(TRACK_WIDTH / 2.0, WHEEL_BASE / 2.0);
 
@@ -214,19 +218,25 @@ public final class SwerveConstants {
 
   /** Meters */
   public static final double WHEEL_RADIUS = Units.inchesToMeters(1.5);
+
   /** Meters per second */
   public static final double MAX_LINEAR_SPEED = 5.4804;
+
   /** Radians per second */
   public static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
+
   /** Meters per second squared */
   public static final double MAX_LINEAR_ACCELERATION = 22.0;
+
   /** Radians per second */
   public static final double MAX_STEERING_VELOCITY = Units.degreesToRadians(1080.0);
 
   public static final double WHEEL_FRICTION_COEFF = COTS.WHEELS.SLS_PRINTED_WHEELS.cof;
   private static final double MAPLE_SIM_WHEEL_FRICTION_COEFF = Math.min(WHEEL_FRICTION_COEFF, 1.5);
+
   /** Kilograms per square meter */
   public static final double ROBOT_INERTIA = 6.883;
+
   /** Kilograms */
   public static final double ROBOT_MASS = 45;
 
@@ -245,6 +255,7 @@ public final class SwerveConstants {
   static final int DRIVE_MOTOR_CURRENT_LIMIT = 40;
 
   static final int KRAKEN_DRIVE_CURRENT_LIMIT = 40;
+
   /** Amps */
   static final double DRIVE_MOTOR_MAX_TORQUE = DRIVE_GEARBOX.getTorque(DRIVE_MOTOR_CURRENT_LIMIT);
 
@@ -266,6 +277,7 @@ public final class SwerveConstants {
   // Drive encoder configuration
   /** Wheel radians */
   static final double DRIVE_ENCODER_POSITION_FACTOR = 2 * Math.PI / DRIVE_GEAR_RATIO;
+
   /** Wheel radians per second */
   static final double DRIVE_ENCODER_VELOCITY_FACTOR = (2 * Math.PI) / 60.0 / DRIVE_GEAR_RATIO;
 
@@ -274,6 +286,7 @@ public final class SwerveConstants {
 
   public static final double ROTATOR_GEAR_RATIO = 9424.0 / 203.0;
   public static final double KRAKEN_ROTATOR_GEAR_RATIO = 287.0 / 11.0;
+
   /** Amps */
   static final int ROTATOR_MOTOR_CURRENT_LIMIT_AMPS = 20;
 
@@ -297,15 +310,19 @@ public final class SwerveConstants {
 
   /** Radians */
   static final double ROTATOR_PID_MIN_INPUT = 0;
+
   /** Radians */
   static final double ROTATOR_PID_MAX_INPUT = 2 * Math.PI;
+
   /** Degrees */
   static final double TURN_DEADBAND_DEGREES = 0.3;
 
   // Rotator encoder configuration
   static final boolean ROTATOR_ENCODER_INVERTED = true;
+
   /** Radians */
   static final double ROTATOR_ENCODER_POSITION_FACTOR = 2 * Math.PI; // Rotations -> Radians
+
   /** Radians per second */
   static final double ROTATOR_ENCODER_VELOCITY_FACTOR = (2 * Math.PI) / 60.0; // RPM -> Rad/Sec
 
@@ -338,16 +355,16 @@ public final class SwerveConstants {
           Meters.of(BUMPER_WIDTH),
           Meters.of(WHEEL_BASE),
           Meters.of(TRACK_WIDTH),
+          switch (GYRO_TYPE) {
+            case PIGEON -> COTS.ofPigeon2();
+            case NAVX -> COTS.ofNav2X();
+            case ADIS -> COTS.ofGenericGyro();
+          },
           () ->
               COTS.ofMAXSwerve(
                       DRIVE_GEARBOX, // Drive motor is a Neo Vortex
                       TURN_GEARBOX, // Steer motor is a Neo 550
                       MAPLE_SIM_WHEEL_FRICTION_COEFF, // Clamp for sim stability
                       2) // Medium Gear ratio
-                  .get(),
-          switch (GYRO_TYPE) {
-            case PIGEON -> COTS.ofPigeon2();
-            case NAVX -> COTS.ofNav2X();
-            case ADIS -> COTS.ofGenericGyro();
-          });
+                  .get());
 }

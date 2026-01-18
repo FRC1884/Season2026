@@ -31,18 +31,18 @@ import static frc.robot.util.SparkUtil.sparkStickyFault;
 import static frc.robot.util.SparkUtil.tryUntilOk;
 
 import com.revrobotics.AbsoluteEncoder;
+import com.revrobotics.PersistMode;
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.ResetMode;
 import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.SparkBase.ControlType;
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
 import com.revrobotics.spark.SparkFlex;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkMaxConfig;
@@ -105,9 +105,7 @@ public class ModuleIOSpark implements ModuleIO {
     driveConfig
         .closedLoop
         .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-        .pidf(
-            DRIVE_MOTOR_GAINS.kP(), 0.0,
-            DRIVE_MOTOR_GAINS.kD(), 0.0);
+        .pid(DRIVE_MOTOR_GAINS.kP(), 0.0, DRIVE_MOTOR_GAINS.kD());
     driveConfig
         .signals
         .primaryEncoderPositionAlwaysOn(true)
@@ -143,7 +141,7 @@ public class ModuleIOSpark implements ModuleIO {
         .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
         .positionWrappingEnabled(true)
         .positionWrappingInputRange(ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT)
-        .pidf(ROTATOR_GAINS.kP(), 0.0, ROTATOR_GAINS.kD(), 0.0);
+        .pid(ROTATOR_GAINS.kP(), 0.0, ROTATOR_GAINS.kD());
     turnConfig
         .signals
         .absoluteEncoderPositionAlwaysOn(true)
@@ -224,7 +222,7 @@ public class ModuleIOSpark implements ModuleIO {
     double ffVolts =
         DRIVE_MOTOR_GAINS.kS() * Math.signum(velocityRadPerSec)
             + DRIVE_MOTOR_GAINS.kV() * velocityRadPerSec;
-    driveController.setReference(
+    driveController.setSetpoint(
         velocityRadPerSec,
         ControlType.kVelocity,
         ClosedLoopSlot.kSlot0,
@@ -237,6 +235,6 @@ public class ModuleIOSpark implements ModuleIO {
     double setpoint =
         MathUtil.inputModulus(
             rotation.plus(zeroRotation).getRadians(), ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT);
-    turnController.setReference(setpoint, ControlType.kPosition);
+    turnController.setSetpoint(setpoint, ControlType.kPosition);
   }
 }

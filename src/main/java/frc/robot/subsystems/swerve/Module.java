@@ -63,6 +63,7 @@ public class Module {
 
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
+
   /** -- GETTER -- Returns the module positions received this cycle. */
   @Getter private SwerveModulePosition[] odometryPositions = new SwerveModulePosition[] {};
 

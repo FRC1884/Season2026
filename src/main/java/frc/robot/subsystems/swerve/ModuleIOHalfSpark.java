@@ -39,13 +39,13 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.AbsoluteEncoder;
+import com.revrobotics.PersistMode;
+import com.revrobotics.ResetMode;
+import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.SparkBase.ControlType;
-import com.revrobotics.spark.SparkBase.PersistMode;
-import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
@@ -140,7 +140,7 @@ public class ModuleIOHalfSpark implements ModuleIO {
         .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
         .positionWrappingEnabled(true)
         .positionWrappingInputRange(ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT)
-        .pidf(ROTATOR_GAINS.kP(), 0.0, ROTATOR_GAINS.kD(), 0.0);
+        .pid(ROTATOR_GAINS.kP(), 0.0, ROTATOR_GAINS.kD());
     turnConfig
         .signals
         .absoluteEncoderPositionAlwaysOn(true)
@@ -242,6 +242,6 @@ public class ModuleIOHalfSpark implements ModuleIO {
     double setpointRadians =
         MathUtil.inputModulus(
             rotation.plus(zeroRotation).getRadians(), ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT);
-    turnController.setReference(setpointRadians, ControlType.kPosition);
+    turnController.setSetpoint(setpointRadians, ControlType.kPosition);
   }
 }
