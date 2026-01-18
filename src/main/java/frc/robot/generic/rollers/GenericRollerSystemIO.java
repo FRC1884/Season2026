@@ -19,6 +19,7 @@ public interface GenericRollerSystemIO {
 
   /** Run roller system at volts */
   default void runVolts(double volts) {}
+
   /** Stop roller system */
   default void stop() {}
 

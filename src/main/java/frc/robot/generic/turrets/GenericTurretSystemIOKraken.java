@@ -43,6 +43,27 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
       double gearRatio,
       int cancoderId,
       boolean cancoderInverted,
+      double absoluteGearRatio) {
+    this(
+        id,
+        currentLimitAmps,
+        invert,
+        brake,
+        gearRatio,
+        cancoderId,
+        cancoderInverted,
+        absoluteGearRatio,
+        "");
+  }
+
+  public GenericTurretSystemIOKraken(
+      int id,
+      int currentLimitAmps,
+      boolean invert,
+      boolean brake,
+      double gearRatio,
+      int cancoderId,
+      boolean cancoderInverted,
       double absoluteGearRatio,
       String canBus) {
     this.gearRatio = gearRatio;

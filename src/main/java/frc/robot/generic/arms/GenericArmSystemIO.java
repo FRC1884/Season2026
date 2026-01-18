@@ -17,6 +17,7 @@ public interface GenericArmSystemIO {
   }
 
   default void updateInputs(GenericArmSystemIOInputs inputs) {}
+
   /** Run arm system to an angle */
   default void setVoltage(double volts) {}
 

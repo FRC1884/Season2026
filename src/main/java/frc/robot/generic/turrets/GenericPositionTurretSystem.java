@@ -183,6 +183,10 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     io.setBrakeMode(enabled);
   }
 
+  protected void enableContinuousInput(double minRad, double maxRad) {
+    controller.enableContinuousInput(minRad, maxRad);
+  }
+
   public void zeroPosition() {
     double sensorPosition = getSensorPositionRad();
     zeroOffsetRad = -sensorPosition;

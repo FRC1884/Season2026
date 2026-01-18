@@ -9,11 +9,18 @@ import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 
 public class GenericTurretSystemIOSim implements GenericTurretSystemIO {
   private final DCMotorSim sim;
+  private final double invertSign;
   private double appliedVolts = 0.0;
   private double positionOffsetRad = 0.0;
 
   public GenericTurretSystemIOSim(DCMotor motorModel, double gearRatio, double moi) {
+    this(motorModel, gearRatio, moi, false);
+  }
+
+  public GenericTurretSystemIOSim(
+      DCMotor motorModel, double gearRatio, double moi, boolean inverted) {
     sim = new DCMotorSim(createDCMotorSystem(motorModel, gearRatio, moi), motorModel);
+    invertSign = inverted ? -1.0 : 1.0;
   }
 
   @Override
@@ -27,8 +34,9 @@ public class GenericTurretSystemIOSim implements GenericTurretSystemIO {
     } else {
       inputs.connected[0] = true;
     }
-    inputs.positionRad = sim.getAngularPositionRad() + positionOffsetRad;
-    inputs.velocityRadPerSec = sim.getAngularVelocityRadPerSec();
+    double rawPositionRad = sim.getAngularPositionRad() * invertSign;
+    inputs.positionRad = rawPositionRad + positionOffsetRad;
+    inputs.velocityRadPerSec = sim.getAngularVelocityRadPerSec() * invertSign;
     inputs.appliedVoltage = appliedVolts;
     inputs.supplyCurrentAmps = sim.getCurrentDrawAmps();
     inputs.torqueCurrentAmps = inputs.supplyCurrentAmps;
@@ -40,11 +48,11 @@ public class GenericTurretSystemIOSim implements GenericTurretSystemIO {
   @Override
   public void setVoltage(double volts) {
     appliedVolts = MathUtil.clamp(volts, -12.0, 12.0);
-    sim.setInputVoltage(appliedVolts);
+    sim.setInputVoltage(appliedVolts * invertSign);
   }
 
   @Override
   public void setPosition(double positionRad) {
-    positionOffsetRad = positionRad - sim.getAngularPositionRad();
+    positionOffsetRad = positionRad - sim.getAngularPositionRad() * invertSign;
   }
 }

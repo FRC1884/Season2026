@@ -9,6 +9,7 @@ import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
 public class GenericElevatorSystemIOKraken implements GenericElevatorSystemIO {
@@ -56,7 +57,7 @@ public class GenericElevatorSystemIOKraken implements GenericElevatorSystemIO {
       for (int i = 1; i < ids.length; i++) {
         TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
         tryUntilOk(5, () -> follower.getConfigurator().apply(config, 0.25));
-        follower.setControl(new Follower(leader.getDeviceID(), false));
+        follower.setControl(new Follower(leader.getDeviceID(), MotorAlignmentValue.Aligned));
       }
     }
 

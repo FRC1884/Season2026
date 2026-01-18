@@ -17,6 +17,7 @@ public interface GenericElevatorSystemIO {
   }
 
   default void updateInputs(GenericElevatorSystemIOInputs inputs) {}
+
   /** Run elevator system to a height */
   default void setVoltage(double volts) {}
 
