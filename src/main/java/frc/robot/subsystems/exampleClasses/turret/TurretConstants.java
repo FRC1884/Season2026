@@ -17,7 +17,6 @@ public final class TurretConstants {
   public static final int CURRENT_LIMIT_AMPS = 40; // TODO: set current limit
   public static final boolean BRAKE_MODE = true;
 
-  public static final String CAN_BUS = ""; // TODO: set CAN bus name for Kraken/CANcoder
   public static final int CANCODER_ID = -1; // TODO: set to enable absolute encoder
   public static final boolean CANCODER_INVERTED = false; // TODO: set CANCoder inversion
 

@@ -1,9 +1,9 @@
 package frc.robot.subsystems.climber;
 
-import frc.robot.generic.elevators.GenericElevatorSystemIOSparkMax;
+import frc.robot.generic.elevators.GenericElevatorSystemIOKraken;
 
-public class ClimberIOMax extends GenericElevatorSystemIOSparkMax implements ClimberIO {
-  public ClimberIOMax() {
+public class ClimberIOKraken extends GenericElevatorSystemIOKraken implements ClimberIO {
+  public ClimberIOKraken() {
     super(
         new int[] {ClimberConstants.LEFT_CLIMBER, ClimberConstants.RIGHT_CLIMBER},
         ClimberConstants.CURRENT_LIMIT_AMPS,
@@ -11,6 +11,9 @@ public class ClimberIOMax extends GenericElevatorSystemIOSparkMax implements Cli
         ClimberConstants.POSITION_COEFFICIENT);
     if (ClimberConstants.LEFT_INVERTED) {
       invert(0);
+    }
+    if (ClimberConstants.RIGHT_INVERTED) {
+      invert(1);
     }
   }
 }

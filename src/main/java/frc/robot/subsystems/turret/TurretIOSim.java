@@ -8,6 +8,7 @@ public class TurretIOSim extends GenericTurretSystemIOSim implements TurretIO {
     super(
         DCMotor.getNeoVortex(TurretConstants.SIM_MOTOR_COUNT),
         TurretConstants.GEAR_RATIO,
-        TurretConstants.SIM_MOI);
+        TurretConstants.SIM_MOI,
+        TurretConstants.INVERTED);
   }
 }

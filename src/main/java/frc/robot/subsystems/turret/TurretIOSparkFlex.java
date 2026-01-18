@@ -5,7 +5,7 @@ import frc.robot.generic.turrets.GenericTurretSystemIOSparkFlex;
 public class TurretIOSparkFlex extends GenericTurretSystemIOSparkFlex implements TurretIO {
   public TurretIOSparkFlex() {
     super(
-        TurretConstants.MOTOR_ID,
+        TurretConstants.TURRET_ID,
         TurretConstants.CURRENT_LIMIT_AMPS,
         TurretConstants.INVERTED,
         TurretConstants.BRAKE_MODE,

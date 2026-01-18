@@ -13,7 +13,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Config;
-import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.swerve.SwerveSubsystem;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -468,31 +467,7 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
   }
 
   private Command buildCommand(QueueStep step) {
-    if (drive == null) {
-      return null;
-    }
-    return switch (step.type) {
-      case SOURCE -> {
-        SourcePreference preference = step.source == null ? SourcePreference.NEAREST : step.source;
-        if (preference == SourcePreference.NEAREST && preferredSourceSide != null) {
-          preference =
-              preferredSourceSide == ApproachSide.LEFT
-                  ? SourcePreference.LEFT
-                  : SourcePreference.RIGHT;
-        }
-        yield switch (preference) {
-          case LEFT -> DriveCommands.PathWeaverSource(drive, true);
-          case RIGHT -> DriveCommands.PathWeaverSource(drive, false);
-          case NEAREST -> DriveCommands.PathWeaverSource(drive, null);
-        };
-      }
-      case REEF -> {
-        String target = step.targetName();
-        System.out.println(target);
-        yield DriveCommands.PathWeaverThenAlingCommand(
-            drive, () -> step.side == ApproachSide.LEFT, () -> step.face);
-      }
-    };
+    return null;
   }
 
   private void publishQueueState() {
@@ -696,11 +671,12 @@ public class TabletInterfaceTracker extends SubsystemBase implements AutoCloseab
     private String label() {
       return switch (type) {
         case SOURCE -> "Source (" + source.name() + ")";
-        case REEF -> "Reef F"
-            + face
-            + " "
-            + (side == null ? "" : side.name())
-            + (level == null ? "" : " " + level.name());
+        case REEF ->
+            "Reef F"
+                + face
+                + " "
+                + (side == null ? "" : side.name())
+                + (level == null ? "" : " " + level.name());
       };
     }
 

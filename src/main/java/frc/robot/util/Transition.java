@@ -1,6 +1,7 @@
 package frc.robot.util;
 
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import lombok.Getter;
 
 public class Transition<E extends Enum<E>> {
@@ -43,7 +44,7 @@ public class Transition<E extends Enum<E>> {
    * @return whether the transition is finished
    */
   public void execute() {
-    command.schedule();
+    CommandScheduler.getInstance().schedule(command);
   }
 
   /** Cancel the transition (if it's currently running) */

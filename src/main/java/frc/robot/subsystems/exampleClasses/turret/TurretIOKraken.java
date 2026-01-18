@@ -12,7 +12,6 @@ public class TurretIOKraken extends GenericTurretSystemIOKraken implements Turre
         TurretConstants.GEAR_RATIO,
         TurretConstants.CANCODER_ID,
         TurretConstants.CANCODER_INVERTED,
-        TurretConstants.ABSOLUTE_ENCODER_GEAR_RATIO,
-        TurretConstants.CAN_BUS);
+        TurretConstants.ABSOLUTE_ENCODER_GEAR_RATIO);
   }
 }
