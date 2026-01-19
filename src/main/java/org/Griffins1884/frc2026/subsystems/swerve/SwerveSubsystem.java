@@ -356,15 +356,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       headings[i] = SwerveConstants.MODULE_TRANSLATIONS[i].getAngle();
     }
     kinematics.resetHeadings(headings);
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      // Bypass setpoint generator to lock wheels in an X.
-      SwerveModuleState[] states = kinematics.toSwerveModuleStates(new ChassisSpeeds());
-      for (int i = 0; i < 4; i++) {
-        states[i].optimize(modules[i].getAngle());
-        modules[i].runSetpoint(states[i]);
-      }
-    } else {
-      stop();
+    SwerveModuleState[] states = kinematics.toSwerveModuleStates(new ChassisSpeeds());
+    for (int i = 0; i < 4; i++) {
+      modules[i].runSetpoint(states[i]);
     }
   }
 
