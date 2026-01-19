@@ -16,11 +16,11 @@
 
 ## Subsystem + IO Pattern
 - IO abstraction with AdvantageKit AutoLog inputs:
-  - `frc.robot.subsystems.swerve.GyroIO`, `ModuleIO` with `*InputsAutoLogged`.
-  - `frc.robot.generic.arms.GenericArmSystemIO`,
-    `frc.robot.generic.elevators.GenericElevatorSystemIO`,
-    `frc.robot.generic.rollers.GenericRollerSystemIO`,
-    `frc.robot.generic.turrets.GenericTurretSystemIO`.
+  - `swerve.subsystems.org.Griffins1884.frc2026.GyroIO`, `ModuleIO` with `*InputsAutoLogged`.
+  - `arms.generic.org.Griffins1884.frc2026.GenericArmSystemIO`,
+    `elevators.generic.org.Griffins1884.frc2026.GenericElevatorSystemIO`,
+    `rollers.generic.org.Griffins1884.frc2026.GenericRollerSystemIO`,
+    `turrets.generic.org.Griffins1884.frc2026.GenericTurretSystemIO`.
 - Hardware ownership lives in IO implementations:
   - Swerve: `GyroIOPigeon2`, `GyroIONavX`, `ModuleIOSpark`, `ModuleIOHalfSpark`,
     `ModuleIOFullKraken`, `ModuleIOSim`.
@@ -55,7 +55,7 @@
 - `src/main/java/frc/robot/subsystems/Superstructure.java`: wraps `Rollers`, `Elevators`, `Arms`;
   currently minimal periodic logic.
 - `src/main/java/frc/robot/StateMachine.java` with
-  `frc.robot.util.StateGraph` and `frc.robot.util.Transition` provides a state-machine framework,
+  `util.org.Griffins1884.frc2026.StateGraph` and `util.org.Griffins1884.frc2026.Transition` provides a state-machine framework,
   but there are no current subclasses.
 
 ## Loop Scheduling / Timing
@@ -67,25 +67,25 @@
 
 ## Dependency Graph (Packages + Key Edges)
 ```
-frc.robot.Main
-  -> frc.robot.Robot
-     -> frc.robot.RobotContainer
-        -> frc.robot.subsystems.swerve.SwerveSubsystem
-            -> frc.robot.subsystems.swerve.Module (owns ModuleIO*)
-            -> frc.robot.subsystems.swerve.GyroIO*
-        -> frc.robot.subsystems.turret.TurretSubsystem
-        -> frc.robot.subsystems.vision.Vision (owns VisionIO*)
+org.Griffins1884.frc2026.Main
+  -> org.Griffins1884.frc2026.Robot
+     -> org.Griffins1884.frc2026.RobotContainer
+        -> swerve.subsystems.org.Griffins1884.frc2026.SwerveSubsystem
+            -> swerve.subsystems.org.Griffins1884.frc2026.Module (owns ModuleIO*)
+            -> swerve.subsystems.org.Griffins1884.frc2026.GyroIO*
+        -> turret.subsystems.org.Griffins1884.frc2026.TurretSubsystem
+        -> vision.subsystems.org.Griffins1884.frc2026.Vision (owns VisionIO*)
             -> VisionConsumer: SwerveSubsystem.accept(...)
-        -> frc.robot.subsystems.Superstructure
-            -> frc.robot.generic.rollers.Rollers
-                -> frc.robot.subsystems.intake.IntakeSubsystem
-                -> frc.robot.subsystems.shooter.ShooterSubsystem
-            -> frc.robot.generic.elevators.Elevators
-                -> frc.robot.subsystems.climber.ClimberSubsystem
-            -> frc.robot.generic.arms.Arms
+        -> subsystems.org.Griffins1884.frc2026.Superstructure
+            -> rollers.generic.org.Griffins1884.frc2026.Rollers
+                -> intake.subsystems.org.Griffins1884.frc2026.IntakeSubsystem
+                -> shooter.subsystems.org.Griffins1884.frc2026.ShooterSubsystem
+            -> elevators.generic.org.Griffins1884.frc2026.Elevators
+                -> climber.subsystems.org.Griffins1884.frc2026.ClimberSubsystem
+            -> arms.generic.org.Griffins1884.frc2026.Arms
                 -> frc.robot.subsystems.pivot.PivotSubsystem
-        -> frc.robot.subsystems.objectivetracker.TabletInterfaceTracker (optional)
-        -> frc.robot.OI.DriverMap / OperatorMap
+        -> objectivetracker.subsystems.org.Griffins1884.frc2026.TabletInterfaceTracker (optional)
+        -> OI.org.Griffins1884.frc2026.DriverMap / OperatorMap
 frc.robot.commands.* -> depends on subsystems + GlobalConstants + frc.robot.util.*
 frc.robot.util.* -> shared math/utilities used across commands/subsystems
 ```
