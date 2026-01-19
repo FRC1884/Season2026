@@ -3,6 +3,7 @@ package frc.robot.generic.arms;
 import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -41,7 +42,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
         reverseSoftLimit,
         positionCoefficient,
         false,
-        "");
+        new CANBus("rio"));
   }
 
   public GenericArmSystemIOKraken(
@@ -52,7 +53,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       double reverseSoftLimit,
       double positionCoefficient,
       boolean inverted,
-      String canBus) {
+      CANBus canBus) {
     this.positionCoefficient = positionCoefficient;
 
     motors = new TalonFX[ids.length];

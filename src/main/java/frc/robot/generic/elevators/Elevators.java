@@ -20,7 +20,7 @@ public class Elevators extends SubsystemBase {
                   ? new ClimberIOSim()
                   : switch (ClimberConstants.MOTOR_CONTROLLER) {
                     case SPARK_MAX -> new ClimberIOMax();
-                    case SPARK_FLEX, VORTEX -> new ClimberIOFlex();
+                    case SPARK_FLEX -> new ClimberIOFlex();
                     case KRAKEN_X60, KRAKEN_X40 -> new ClimberIOKraken();
                   })
           : null;

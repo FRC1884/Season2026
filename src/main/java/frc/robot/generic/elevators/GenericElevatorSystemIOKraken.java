@@ -3,6 +3,7 @@ package frc.robot.generic.elevators;
 import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
@@ -28,7 +29,7 @@ public class GenericElevatorSystemIOKraken implements GenericElevatorSystemIO {
 
   public GenericElevatorSystemIOKraken(
       int[] ids, int currentLimitAmps, boolean brake, double positionCoefficient) {
-    this(ids, currentLimitAmps, brake, positionCoefficient, false, "");
+    this(ids, currentLimitAmps, brake, positionCoefficient, false, new CANBus("rio"));
   }
 
   public GenericElevatorSystemIOKraken(
@@ -37,7 +38,7 @@ public class GenericElevatorSystemIOKraken implements GenericElevatorSystemIO {
       boolean brake,
       double positionCoefficient,
       boolean inverted,
-      String canBus) {
+      CANBus canBus) {
     this.positionCoefficient = positionCoefficient;
 
     motors = new TalonFX[ids.length];

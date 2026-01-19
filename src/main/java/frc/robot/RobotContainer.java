@@ -178,12 +178,13 @@ public class RobotContainer {
             case SIM -> new TurretSubsystem(new TurretIOSim());
             default -> new TurretSubsystem(new TurretIO() {});
           };
+      if (superstructure != null) {
+        superstructure.setTurret(turret);
+      }
     } else {
       turret = null;
     }
-    if (superstructure != null) {
-      superstructure.setTurret(turret);
-    }
+
     if (MODE == RobotMode.SIM && turret != null && drive != null) {
       turret.setDefaultCommand(
           TurretCommands.autoAimToTarget(

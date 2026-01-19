@@ -1,5 +1,6 @@
 package frc.robot.subsystems.intake;
 
+import com.ctre.phoenix6.CANBus;
 import frc.robot.GlobalConstants;
 
 public final class IntakePivotConstants {
@@ -8,11 +9,10 @@ public final class IntakePivotConstants {
     SPARK_FLEX,
     KRAKEN_X60,
     KRAKEN_X40,
-    VORTEX
   }
 
   public static final MotorController MOTOR_CONTROLLER = MotorController.SPARK_FLEX; // TODO
-  public static final String CAN_BUS = ""; // TODO: set CAN bus name if needed
+  public static final CANBus CAN_BUS = new CANBus("rio"); // TODO: set CAN bus name if needed
 
   public static final int PIVOT_ID = 63; // TODO: set intake pivot CAN ID
   public static final boolean INVERTED = false;

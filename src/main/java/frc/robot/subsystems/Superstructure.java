@@ -7,7 +7,6 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -34,6 +33,8 @@ import frc.robot.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import frc.robot.subsystems.turret.TurretSubsystem;
 import frc.robot.util.TurretUtil;
 import java.util.function.Supplier;
+import lombok.Getter;
+import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -68,10 +69,12 @@ public class Superstructure extends SubsystemBase {
   }
 
   private final Supplier<Pose2d> drivePoseSupplier;
-  private TurretSubsystem turret;
+  @Setter private TurretSubsystem turret;
 
+  @Getter
   private final LoggedDashboardChooser<SuperState> stateChooser =
       new LoggedDashboardChooser<>("Superstructure State");
+
   private SuperState requestedState = SuperState.IDLING;
   private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
@@ -82,9 +85,9 @@ public class Superstructure extends SubsystemBase {
   private ClimbPhase climbPhase = ClimbPhase.IDLE;
   private int climbLevel = 0;
   private ClimbMode activeClimbMode = null;
-  private boolean climbShootEnabled = false;
+  @Setter private boolean climbShootEnabled = false;
   private double climbHoldPosition = Double.NaN;
-  private boolean turretExternalControl = false;
+  @Setter private boolean turretExternalControl = false;
 
   private final LEDSubsystem leds =
       Config.Subsystems.LEDS_ENABLED
@@ -114,28 +117,12 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  public void setTurret(TurretSubsystem turret) {
-    this.turret = turret;
-  }
-
-  public LoggedDashboardChooser<SuperState> getStateChooser() {
-    return stateChooser;
-  }
-
   public Command setSuperStateCmd(SuperState stateRequest) {
     return Commands.runOnce(() -> requestState(stateRequest, true));
   }
 
   public void clearStateOverride() {
     stateOverrideActive = false;
-  }
-
-  public void setClimbShootEnabled(boolean enabled) {
-    climbShootEnabled = enabled;
-  }
-
-  public void setTurretExternalControl(boolean enabled) {
-    turretExternalControl = enabled;
   }
 
   @Override
@@ -158,7 +145,7 @@ public class Superstructure extends SubsystemBase {
     if (chooser == null) {
       return;
     }
-    if (arms.intakePivot != null) {
+    if (INTAKE_PIVOT_ENABLED) {
       addSysIdOptions(
           chooser,
           "Intake Pivot",
@@ -167,7 +154,7 @@ public class Superstructure extends SubsystemBase {
           arms.intakePivot.sysIdDynamic(SysIdRoutine.Direction.kForward),
           arms.intakePivot.sysIdDynamic(SysIdRoutine.Direction.kReverse));
     }
-    if (arms.shooterPivot != null) {
+    if (SHOOTER_PIVOT_ENABLED) {
       addSysIdOptions(
           chooser,
           "Shooter Pivot",
@@ -475,12 +462,8 @@ public class Superstructure extends SubsystemBase {
     if (pose == null) {
       return;
     }
-    double distance = pose.getTranslation().getDistance(target);
-    double roundedDistance = Math.round(distance * 10.0) / 10.0;
-    double angleDeg = ShooterCommands.find(roundedDistance);
-    double angle =
-        Units.degreesToRadians(angleDeg) + SuperstructureConstants.SHOOTER_PIVOT_OFFSET.get();
-    arms.shooterPivot.setGoalPosition(angle);
+
+    arms.shooterPivot.setGoalPosition(ShooterCommands.calc(pose));
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
   }
 

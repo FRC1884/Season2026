@@ -7,8 +7,7 @@ public final class ClimberConstants {
     SPARK_MAX,
     SPARK_FLEX,
     KRAKEN_X60,
-    KRAKEN_X40,
-    VORTEX
+    KRAKEN_X40
   }
 
   public static final MotorController MOTOR_CONTROLLER = MotorController.SPARK_FLEX; // TODO

@@ -1,6 +1,7 @@
 package frc.robot.generic.arms;
 
-import static frc.robot.Config.Subsystems.PIVOT_ENABLED;
+import static frc.robot.Config.Subsystems.INTAKE_PIVOT_ENABLED;
+import static frc.robot.Config.Subsystems.SHOOTER_PIVOT_ENABLED;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.GlobalConstants;
@@ -19,27 +20,27 @@ import frc.robot.subsystems.shooter.ShooterPivotSubsystem;
 
 public class Arms extends SubsystemBase {
   public IntakePivotSubsystem intakePivot =
-      (PIVOT_ENABLED)
+      (INTAKE_PIVOT_ENABLED)
           ? new IntakePivotSubsystem(
               "IntakePivot",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new IntakePivotIOSim()
                   : switch (IntakePivotConstants.MOTOR_CONTROLLER) {
                     case SPARK_MAX -> new IntakePivotIOMax();
-                    case SPARK_FLEX, VORTEX -> new IntakePivotIOFlex();
+                    case SPARK_FLEX -> new IntakePivotIOFlex();
                     case KRAKEN_X60, KRAKEN_X40 -> new IntakePivotIOKraken();
                   })
           : null;
 
   public ShooterPivotSubsystem shooterPivot =
-      (PIVOT_ENABLED)
+      (SHOOTER_PIVOT_ENABLED)
           ? new ShooterPivotSubsystem(
               "ShooterPivot",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new ShooterPivotIOSim()
                   : switch (ShooterPivotConstants.MOTOR_CONTROLLER) {
                     case SPARK_MAX -> new ShooterPivotIOMax();
-                    case SPARK_FLEX, VORTEX -> new ShooterPivotIOFlex();
+                    case SPARK_FLEX -> new ShooterPivotIOFlex();
                     case KRAKEN_X60, KRAKEN_X40 -> new ShooterPivotIOKraken();
                   })
           : null;

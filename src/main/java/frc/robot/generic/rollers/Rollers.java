@@ -17,10 +17,7 @@ import frc.robot.subsystems.intake.IntakeIOFlex;
 import frc.robot.subsystems.intake.IntakeIOMax;
 import frc.robot.subsystems.intake.IntakeIOSim;
 import frc.robot.subsystems.intake.IntakeSubsystem;
-import frc.robot.subsystems.shooter.ShooterIOFlex;
-import frc.robot.subsystems.shooter.ShooterIOMax;
-import frc.robot.subsystems.shooter.ShooterIOSim;
-import frc.robot.subsystems.shooter.ShooterSubsystem;
+import frc.robot.subsystems.shooter.*;
 
 public class Rollers extends SubsystemBase {
   public IntakeSubsystem intake =
@@ -37,7 +34,7 @@ public class Rollers extends SubsystemBase {
               "Shooter",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new ShooterIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : (IntakeConstants.isFlex) ? new ShooterIOFlex() : new ShooterIOMax())
+                  : (ShooterConstants.isFlex) ? new ShooterIOFlex() : new ShooterIOMax())
           : null;
   public IndexerSubsystem indexer =
       (INDEXER_ENABLED)

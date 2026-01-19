@@ -3,6 +3,7 @@ package frc.robot.generic.turrets;
 import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -32,7 +33,7 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
 
   public GenericTurretSystemIOKraken(
       int id, int currentLimitAmps, boolean invert, boolean brake, double gearRatio) {
-    this(id, currentLimitAmps, invert, brake, gearRatio, -1, false, 1.0, "");
+    this(id, currentLimitAmps, invert, brake, gearRatio, -1, false, 1.0, new CANBus("rio"));
   }
 
   public GenericTurretSystemIOKraken(
@@ -53,7 +54,7 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
         cancoderId,
         cancoderInverted,
         absoluteGearRatio,
-        "");
+        new CANBus("rio"));
   }
 
   public GenericTurretSystemIOKraken(
@@ -65,7 +66,7 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
       int cancoderId,
       boolean cancoderInverted,
       double absoluteGearRatio,
-      String canBus) {
+      CANBus canBus) {
     this.gearRatio = gearRatio;
     this.absoluteGearRatio = absoluteGearRatio;
     motor = new TalonFX(id, canBus);

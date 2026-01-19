@@ -3,6 +3,7 @@ package frc.robot.generic.rollers;
 import static frc.robot.util.PhoenixUtil.tryUntilOk;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.VoltageOut;
@@ -26,7 +27,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
   public GenericRollerSystemIOKraken(
       int id, int currentLimitAmps, boolean invert, boolean brake, double reduction) {
-    this(id, currentLimitAmps, invert, brake, reduction, "");
+    this(id, currentLimitAmps, invert, brake, reduction, new CANBus("rio"));
   }
 
   public GenericRollerSystemIOKraken(
@@ -35,7 +36,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
       boolean invert,
       boolean brake,
       double reduction,
-      String canBus) {
+      CANBus canBus) {
     this.reduction = reduction;
     motor = new TalonFX(id, canBus);
 
