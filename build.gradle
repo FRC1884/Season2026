@@ -6,12 +6,16 @@ plugins {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17   // ensures major version 61 output
+    options.compilerArgs.add '-XDstringConcat=inline'
+}
+
 
 def ROBOT_MAIN_CLASS = "org.Griffins1884.frc2026.Main"
 
