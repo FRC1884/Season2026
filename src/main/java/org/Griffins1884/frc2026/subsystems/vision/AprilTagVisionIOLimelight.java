@@ -41,7 +41,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
       cameraConstants.robotToCamera().getY(),
       cameraConstants.robotToCamera().getX(),
       cameraConstants.robotToCamera().getZ(),
-      0.0,
+      cameraConstants.robotToCamera().getRotation().getX(),
       cameraConstants.robotToCamera().getRotation().getY(),
       cameraConstants.robotToCamera().getRotation().getZ()
     };
