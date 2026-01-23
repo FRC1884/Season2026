@@ -75,7 +75,7 @@ public class Superstructure extends SubsystemBase {
       new LoggedDashboardChooser<>("Superstructure State");
 
   private SuperState requestedState = SuperState.IDLING;
-  private SuperState currentState = SuperState.IDLING;
+  @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
 
   private final Debouncer ballPresentDebouncer =
@@ -257,6 +257,7 @@ public class Superstructure extends SubsystemBase {
       case CLIMB_DETACH -> applyClimb(ClimbMode.DETACH);
       case TESTING -> applyTesting();
     }
+    requestState(state, false);
   }
 
   private void applyIdle() {
@@ -606,5 +607,11 @@ public class Superstructure extends SubsystemBase {
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             dynamicReverse)
         .withName(name + "SysIdRoutine");
+  }
+
+  public void close() {
+    if (leds != null) {
+      leds.close();
+    }
   }
 }
