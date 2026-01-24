@@ -22,7 +22,8 @@ public class ShooterCommands {
     double theta;
 
     // Set hub pose based on alliance
-    if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
+    if (DriverStation.getAlliance().isPresent()
+        && DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
       distance2d = new Translation2d(robot.getX() - 11.9, robot.getY() - 4.03);
     } else {
       distance2d = new Translation2d(robot.getX() - 4.63, robot.getY() - 4.03);
