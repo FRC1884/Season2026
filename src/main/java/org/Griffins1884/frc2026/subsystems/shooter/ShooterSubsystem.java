@@ -1,8 +1,6 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
 import edu.wpi.first.math.filter.Debouncer;
-import frc.robot.generic.rollers.GenericVelocityRollerSystem;
-import frc.robot.generic.rollers.GenericVelocityRollerSystem.VelocityGoal;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
