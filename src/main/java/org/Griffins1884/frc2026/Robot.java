@@ -215,18 +215,37 @@ public class Robot extends LoggedRobot {
     Path sessionDir = baseDir.resolve(LOG_DIR_FORMAT.format(LocalDateTime.now()));
 
     boolean dataLogStarted = false;
+    boolean sessionDirCreated = false;
+    int createAttempts = 0;
+    while (!sessionDirCreated) {
+      try {
+        Files.createDirectories(sessionDir);
+        sessionDirCreated = true;
+      } catch (IOException e) {
+        createAttempts++;
+        Logger.recordOutput("NTLog/DirCreateAttempts", createAttempts);
+        Logger.recordOutput("NTLog/SessionDirCreated", false);
+        System.err.println(
+            "[NT Log] Failed to create log directory "
+                + sessionDir
+                + ": "
+                + e.getMessage()
+                + " — retrying.");
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException interrupted) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+
     try {
-      Files.createDirectories(sessionDir);
-      DataLogManager.start(sessionDir.toString());
-      dataLogStarted = true;
-      System.out.println("[NT Log] Writing to " + sessionDir);
-    } catch (IOException e) {
-      System.err.println(
-          "[NT Log] Failed to create log directory "
-              + sessionDir
-              + ": "
-              + e.getMessage()
-              + " — falling back to default datalog location.");
+      if (sessionDirCreated) {
+        DataLogManager.start(sessionDir.toString());
+        dataLogStarted = true;
+        System.out.println("[NT Log] Writing to " + sessionDir);
+      }
     } catch (IllegalStateException alreadyStarted) {
       dataLogStarted = true;
     }
@@ -241,5 +260,8 @@ public class Robot extends LoggedRobot {
 
     DataLogManager.logNetworkTables(true);
     DriverStation.startDataLog(DataLogManager.getLog(), true);
+
+    Logger.recordOutput("NTLog/SessionDirCreated", sessionDirCreated);
+    Logger.recordOutput("NTLog/Started", dataLogStarted);
   }
 }
