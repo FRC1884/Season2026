@@ -301,10 +301,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
-    int indexBase =
-        tagCount > 1
-            ? AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX
-            : AprilTagVisionConstants.LIMELIGHT_MEGATAG1_X_STDDEV_INDEX;
+    int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
     double scaleFactor = 1.0 / Math.max(cam.megatagPoseEstimate.quality(), 1e-6);
     double xStd = getStdDev(cam, indexBase) * scaleFactor;

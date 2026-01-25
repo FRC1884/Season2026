@@ -67,6 +67,22 @@ public class Superstructure extends SubsystemBase {
     DETACH_RETRACT
   }
 
+  public record SuperstructureOutcome(
+      SuperState state,
+      SuperState requestedState,
+      intakeGoal intakeGoal,
+      IndexerGoal indexerGoal,
+      ShooterGoal shooterGoal,
+      IntakePivotGoal intakePivotGoal,
+      ShooterPivotGoal shooterPivotGoal,
+      boolean shooterPivotManual,
+      double shooterPivotPosition,
+      String turretAction,
+      Translation2d turretTarget,
+      String climbMode,
+      String climbPhase,
+      double climberGoalPosition) {}
+
   private final Supplier<Pose2d> drivePoseSupplier;
   @Setter private TurretSubsystem turret;
 
@@ -87,6 +103,17 @@ public class Superstructure extends SubsystemBase {
   @Setter private boolean climbShootEnabled = false;
   private double climbHoldPosition = Double.NaN;
   @Setter private boolean turretExternalControl = false;
+
+  private intakeGoal lastIntakeGoal = intakeGoal.IDLING;
+  private IndexerGoal lastIndexerGoal = IndexerGoal.IDLING;
+  private ShooterGoal lastShooterGoal = ShooterGoal.IDLING;
+  private IntakePivotGoal lastIntakePivotGoal = IntakePivotGoal.IDLING;
+  private ShooterPivotGoal lastShooterPivotGoal = ShooterPivotGoal.IDLING;
+  private boolean lastShooterPivotManual = false;
+  private double lastShooterPivotPosition = 0.0;
+  private String lastTurretAction = "HOLD";
+  private Translation2d lastTurretTarget = null;
+  private double lastClimberGoalPosition = Double.NaN;
 
   private final LEDSubsystem leds =
       Config.Subsystems.LEDS_ENABLED
@@ -250,14 +277,13 @@ public class Superstructure extends SubsystemBase {
     switch (state) {
       case IDLING -> applyIdle();
       case INTAKING -> applyIntaking();
-      case SHOOTING -> applyShooting(SuperstructureConstants.getHopperTarget(), true);
+      case SHOOTING -> applyShooting(GlobalConstants.Coordinates.getHopperTarget(), false);
       case FERRYING -> applyFerrying();
       case ENDGAME_CLIMB -> applyClimb(ClimbMode.ENDGAME);
       case AUTO_CLIMB -> applyClimb(ClimbMode.AUTO);
       case CLIMB_DETACH -> applyClimb(ClimbMode.DETACH);
       case TESTING -> applyTesting();
     }
-    requestState(state, false);
   }
 
   private void applyIdle() {
@@ -265,7 +291,7 @@ public class Superstructure extends SubsystemBase {
     setIntakeGoal(intakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
-    setIntakePivotGoal(IntakePivotGoal.IDLING, false, 0.0);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
     stopClimber();
@@ -297,8 +323,7 @@ public class Superstructure extends SubsystemBase {
     setIntakeGoal(intakeReady ? intakeGoal.FORWARD : intakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
-    setIntakePivotGoal(
-        IntakePivotGoal.IDLING, true, SuperstructureConstants.INTAKE_PIVOT_POSITION.get());
+    setIntakePivotGoal(IntakePivotGoal.INTAKE_PIVOT_GOAL);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
     stopClimber();
@@ -308,7 +333,7 @@ public class Superstructure extends SubsystemBase {
     setIntakeGoal(intakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
-    setIntakePivotGoal(IntakePivotGoal.IDLING, false, 0.0);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
     aimTurretAt(target);
     aimShooterPivotAt(target);
     stopClimber();
@@ -321,12 +346,11 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyFerrying() {
-    Translation2d target = SuperstructureConstants.getFerryTarget();
+    Translation2d target = GlobalConstants.Coordinates.getFerryTarget(drivePoseSupplier.get());
     setIntakeGoal(intakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
-    setIntakePivotGoal(
-        IntakePivotGoal.IDLING, true, SuperstructureConstants.INTAKE_PIVOT_POSITION.get());
+    setIntakePivotGoal(IntakePivotGoal.INTAKE_PIVOT_GOAL);
     aimTurretAt(target);
     aimShooterPivotAt(target);
     stopClimber();
@@ -334,12 +358,12 @@ public class Superstructure extends SubsystemBase {
 
   private void applyClimb(ClimbMode mode) {
     if (climbShootEnabled) {
-      applyShooting(SuperstructureConstants.getHopperTarget(), false);
+      applyShooting(GlobalConstants.Coordinates.getHopperTarget(), false);
     } else {
       setIntakeGoal(intakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.IDLING);
       setShooterGoal(ShooterGoal.IDLING);
-      setIntakePivotGoal(IntakePivotGoal.IDLING, false, 0.0);
+      setIntakePivotGoal(IntakePivotGoal.IDLING);
       setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
       holdTurret();
     }
@@ -350,43 +374,44 @@ public class Superstructure extends SubsystemBase {
     setIntakeGoal(intakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
-    setIntakePivotGoal(IntakePivotGoal.TESTING, false, 0.0);
+    setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
     holdTurret();
     stopClimber();
   }
 
   private void setIntakeGoal(intakeGoal goal) {
+    lastIntakeGoal = goal;
     if (rollers.intake != null) {
       rollers.intake.setGoal(goal);
     }
   }
 
   private void setIndexerGoal(IndexerGoal goal) {
+    lastIndexerGoal = goal;
     if (rollers.indexer != null) {
       rollers.indexer.setGoal(goal);
     }
   }
 
   private void setShooterGoal(ShooterGoal goal) {
+    lastShooterGoal = goal;
     if (rollers.shooter != null) {
       rollers.shooter.setGoal(goal);
     }
   }
 
-  private void setIntakePivotGoal(IntakePivotGoal goal, boolean manual, double manualPosition) {
-    if (arms.intakePivot == null) {
-      return;
+  private void setIntakePivotGoal(IntakePivotGoal goal) {
+    lastIntakePivotGoal = goal;
+    if (arms.intakePivot != null) {
+      arms.intakePivot.setGoal(goal);
     }
-    if (manual) {
-      arms.intakePivot.setGoalPosition(manualPosition);
-    } else {
-      arms.intakePivot.clearGoalOverride();
-    }
-    arms.intakePivot.setGoal(goal);
   }
 
   private void setShooterPivotGoal(ShooterPivotGoal goal, boolean manual, double manualPosition) {
+    lastShooterPivotGoal = goal;
+    lastShooterPivotManual = manual;
+    lastShooterPivotPosition = manualPosition;
     if (arms.shooterPivot == null) {
       return;
     }
@@ -399,18 +424,25 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void holdTurret() {
+    lastTurretTarget = null;
     if (turretExternalControl) {
+      lastTurretAction = "EXTERNAL";
       return;
     }
     if (turret != null) {
       if (turret.getControlMode() == ControlMode.OPEN_LOOP) {
+        lastTurretAction = "OPEN_LOOP";
         return;
       }
       turret.setGoalRad(turret.getPositionRad());
+      lastTurretAction = "HOLD";
+      return;
     }
+    lastTurretAction = "HOLD";
   }
 
   private void stopClimber() {
+    lastClimberGoalPosition = Double.NaN;
     if (elevators.climber != null) {
       elevators.climber.stopOpenLoop();
       elevators.climber.clearGoalOverride();
@@ -419,6 +451,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void setClimberGoalPosition(double positionMeters) {
+    lastClimberGoalPosition = positionMeters;
     if (elevators.climber == null) {
       return;
     }
@@ -439,6 +472,8 @@ public class Superstructure extends SubsystemBase {
 
   private void aimTurretAt(Translation2d target) {
     if (turretExternalControl) {
+      lastTurretAction = "EXTERNAL";
+      lastTurretTarget = null;
       return;
     }
     if (turret == null || drivePoseSupplier == null || target == null) {
@@ -447,6 +482,8 @@ public class Superstructure extends SubsystemBase {
     }
     TurretCommands.autoAimToTarget(
         turret, drivePoseSupplier, (Pose2d) -> java.util.Optional.of(target));
+    lastTurretAction = "AIM_TARGET";
+    lastTurretTarget = target;
   }
 
   private void aimShooterPivotAt(Translation2d target) {
@@ -458,7 +495,11 @@ public class Superstructure extends SubsystemBase {
       return;
     }
 
-    arms.shooterPivot.setGoalPosition(ShooterCommands.calc(pose));
+    double targetPosition = ShooterCommands.calc(pose);
+    lastShooterPivotGoal = ShooterPivotGoal.IDLING;
+    lastShooterPivotManual = true;
+    lastShooterPivotPosition = targetPosition;
+    arms.shooterPivot.setGoalPosition(targetPosition);
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
   }
 
@@ -477,22 +518,24 @@ public class Superstructure extends SubsystemBase {
   }
 
   private double getBallSenseCurrentAmps() {
+    double ind = 0, shoot = 0, intake = 0;
     if (rollers.indexer != null) {
-      return rollers.indexer.getSupplyCurrentAmps();
+      ind = rollers.indexer.getSupplyCurrentAmps();
     }
     if (rollers.shooter != null) {
-      return rollers.shooter.getSupplyCurrentAmps();
+      shoot = rollers.shooter.getSupplyCurrentAmps();
     }
     if (rollers.intake != null) {
-      return rollers.intake.getSupplyCurrentAmps();
+      intake = rollers.intake.getSupplyCurrentAmps();
     }
-    return 0.0;
+    return Math.max(ind, Math.max(shoot, intake));
   }
 
   private void startClimb(ClimbMode mode) {
     activeClimbMode = mode;
     climbLevel = 0;
     climbHoldPosition = Double.NaN;
+    lastClimberGoalPosition = Double.NaN;
     climbTimer.reset();
     climbPhase = mode == ClimbMode.DETACH ? ClimbPhase.DETACH_EXTEND : ClimbPhase.EXTEND;
   }
@@ -501,6 +544,7 @@ public class Superstructure extends SubsystemBase {
     activeClimbMode = null;
     climbLevel = 0;
     climbHoldPosition = Double.NaN;
+    lastClimberGoalPosition = Double.NaN;
     climbTimer.reset();
     climbPhase = ClimbPhase.IDLE;
   }
@@ -613,5 +657,24 @@ public class Superstructure extends SubsystemBase {
     if (leds != null) {
       leds.close();
     }
+  }
+
+  public SuperstructureOutcome getOutcomeSnapshot() {
+    String climbModeName = activeClimbMode == null ? "NONE" : activeClimbMode.toString();
+    return new SuperstructureOutcome(
+        currentState,
+        requestedState,
+        lastIntakeGoal,
+        lastIndexerGoal,
+        lastShooterGoal,
+        lastIntakePivotGoal,
+        lastShooterPivotGoal,
+        lastShooterPivotManual,
+        lastShooterPivotPosition,
+        lastTurretAction,
+        lastTurretTarget,
+        climbModeName,
+        climbPhase.toString(),
+        lastClimberGoalPosition);
   }
 }
