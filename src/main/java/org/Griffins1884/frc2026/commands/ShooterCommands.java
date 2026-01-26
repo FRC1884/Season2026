@@ -5,6 +5,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 public class ShooterCommands {
   private static final Map<Double, Double> lookupTable = lookupTable();
@@ -49,7 +51,6 @@ public class ShooterCommands {
      * Farthest point is 6.2m
      * */
 
-    // Uses loops and runs calculations once at compile time
     // Calculated manually and entered
 
     Map<Double, Double> table = new HashMap<Double, Double>();
@@ -130,6 +131,33 @@ public class ShooterCommands {
     table.put(6.0, 0.0);
     table.put(6.1, 0.0);
     table.put(6.2, 0.0);
+
+    return table;
+  }
+
+  /*
+   * Key: Distance From Hub (double)
+   * Value: Angle (double) (0-90)
+   * Keys are spaced out by increments of 0.1
+   *
+   * Closest point is 0m away
+   * Farthest point is 6.2m
+   */
+    public static Map<Double, Double> interpolate() {
+    double[] xKnownVals = {}; // Ranges between 0-6.2
+    double[] yKnownVals = {}; // Ranges between 0-360
+
+    SplineInterpolator interpolator = new SplineInterpolator();
+    PolynomialSplineFunction function = interpolator.interpolate(xKnownVals, yKnownVals);
+
+
+     // Calculated manually and entered
+
+    Map<Double, Double> table = new HashMap<Double, Double>();
+
+    for (double i=0;i<=6.2;i+=0.1){
+        table.put(i, function.value(i));
+    }
 
     return table;
   }
