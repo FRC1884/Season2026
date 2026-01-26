@@ -5,11 +5,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 public class ShooterCommands {
-  private static final Map<Double, Double> lookupTable = lookupTable();
+  private static final Map<Double, Double> lookupTable = interpolate();
 
   public static double calc(Pose2d robot) {
     // Distance Vector Calculation
@@ -144,15 +146,19 @@ public class ShooterCommands {
    * Farthest point is 6.2m
    */
     public static Map<Double, Double> interpolate() {
-    double[] xKnownVals = {}; // Ranges between 0-6.2
-    double[] yKnownVals = {}; // Ranges between 0-360
+    Map<Double, Double> temp = lookupTable();
+
+    double[] x = new double[temp.size()];
+    double[] y = new double[temp.size()];
+    for (int i = 0; i < temp.size(); i++) {
+        x[i] = (double) temp.keySet().toArray()[i];
+        y[i] = (double) temp.keySet().toArray()[i];
+    }
 
     SplineInterpolator interpolator = new SplineInterpolator();
-    PolynomialSplineFunction function = interpolator.interpolate(xKnownVals, yKnownVals);
+    PolynomialSplineFunction function = interpolator.interpolate(x,y);
 
-
-     // Calculated manually and entered
-
+    // Calculated manually and entered
     Map<Double, Double> table = new HashMap<Double, Double>();
 
     for (double i=0;i<=6.2;i+=0.1){
