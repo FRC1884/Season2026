@@ -83,6 +83,8 @@ public class Superstructure extends SubsystemBase {
       String climbPhase,
       double climberGoalPosition) {}
 
+  public record StateRequestResult(boolean accepted, String reason) {}
+
   private final Supplier<Pose2d> drivePoseSupplier;
   @Setter private TurretSubsystem turret;
 
@@ -149,6 +151,34 @@ public class Superstructure extends SubsystemBase {
 
   public void clearStateOverride() {
     stateOverrideActive = false;
+  }
+
+  public StateRequestResult requestStateFromDashboard(SuperState state) {
+    if (state == null) {
+      return new StateRequestResult(false, "Invalid state");
+    }
+    String rejectReason = getDashboardRejectReason(state);
+    if (rejectReason != null) {
+      return new StateRequestResult(false, rejectReason);
+    }
+    requestState(state, true);
+    return new StateRequestResult(true, "");
+  }
+
+  public SuperState getRequestedState() {
+    return requestedState;
+  }
+
+  public String getClimbPhaseName() {
+    return climbPhase.toString();
+  }
+
+  public int getClimbLevel() {
+    return climbLevel;
+  }
+
+  public boolean hasBall() {
+    return isBallPresent();
   }
 
   @Override
@@ -253,6 +283,11 @@ public class Superstructure extends SubsystemBase {
     if (override) {
       stateOverrideActive = true;
     }
+  }
+
+  private String getDashboardRejectReason(SuperState state) {
+    // Hook for future interlocks; return null to accept the request.
+    return null;
   }
 
   private void enterState(SuperState state) {

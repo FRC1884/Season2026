@@ -1,0 +1,177 @@
+// Copyright (c) 2025 FRC 6328
+// http://github.com/Mechanical-Advantage
+//
+// Use of this source code is governed by an MIT-style
+// license that can be found in the LICENSE file at
+// the root directory of this project.
+
+package org.Griffins1884.frc2026.subsystems.objectivetracker;
+
+import edu.wpi.first.networktables.BooleanPublisher;
+import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.IntegerPublisher;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.networktables.StringSubscriber;
+
+public class OperatorBoardIOServer implements OperatorBoardIO {
+  private final StringSubscriber requestedStateIn;
+
+  private final StringPublisher requestedStateOut;
+  private final StringPublisher currentStateOut;
+  private final BooleanPublisher requestAcceptedOut;
+  private final StringPublisher requestReasonOut;
+  private final StringPublisher climbPhaseOut;
+  private final IntegerPublisher climbLevelOut;
+  private final StringPublisher targetTypeOut;
+  private final DoubleArrayPublisher targetPoseOut;
+  private final BooleanPublisher targetPoseValidOut;
+  private final DoubleArrayPublisher robotPoseOut;
+  private final BooleanPublisher hasBallOut;
+  private final StringPublisher dsModeOut;
+  private final DoublePublisher batteryVoltageOut;
+  private final BooleanPublisher brownoutOut;
+  private final StringPublisher allianceOut;
+  private final DoublePublisher matchTimeOut;
+  private final BooleanPublisher turretAtSetpointOut;
+  private final StringPublisher turretModeOut;
+  private final StringPublisher visionStatusOut;
+
+  public OperatorBoardIOServer() {
+    var inputTable = NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_ROBOT);
+    requestedStateIn =
+        inputTable
+            .getStringTopic(OperatorBoardContract.REQUESTED_STATE)
+            .subscribe("", PubSubOption.keepDuplicates(true));
+
+    var outputTable =
+        NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_DASHBOARD);
+    requestedStateOut = outputTable.getStringTopic(OperatorBoardContract.REQUESTED_STATE).publish();
+    currentStateOut = outputTable.getStringTopic(OperatorBoardContract.CURRENT_STATE).publish();
+    requestAcceptedOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.REQUEST_ACCEPTED).publish();
+    requestReasonOut = outputTable.getStringTopic(OperatorBoardContract.REQUEST_REASON).publish();
+    climbPhaseOut = outputTable.getStringTopic(OperatorBoardContract.CLIMB_PHASE).publish();
+    climbLevelOut = outputTable.getIntegerTopic(OperatorBoardContract.CLIMB_LEVEL).publish();
+    targetTypeOut = outputTable.getStringTopic(OperatorBoardContract.TARGET_TYPE).publish();
+    targetPoseOut = outputTable.getDoubleArrayTopic(OperatorBoardContract.TARGET_POSE).publish();
+    targetPoseValidOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.TARGET_POSE_VALID).publish();
+    robotPoseOut = outputTable.getDoubleArrayTopic(OperatorBoardContract.ROBOT_POSE).publish();
+    hasBallOut = outputTable.getBooleanTopic(OperatorBoardContract.HAS_BALL).publish();
+    dsModeOut = outputTable.getStringTopic(OperatorBoardContract.DS_MODE).publish();
+    batteryVoltageOut = outputTable.getDoubleTopic(OperatorBoardContract.BATTERY_VOLTAGE).publish();
+    brownoutOut = outputTable.getBooleanTopic(OperatorBoardContract.BROWNOUT).publish();
+    allianceOut = outputTable.getStringTopic(OperatorBoardContract.ALLIANCE).publish();
+    matchTimeOut = outputTable.getDoubleTopic(OperatorBoardContract.MATCH_TIME).publish();
+    turretAtSetpointOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.TURRET_AT_SETPOINT).publish();
+    turretModeOut = outputTable.getStringTopic(OperatorBoardContract.TURRET_MODE).publish();
+    visionStatusOut = outputTable.getStringTopic(OperatorBoardContract.VISION_STATUS).publish();
+  }
+
+  @Override
+  public void updateInputs(OperatorBoardIOInputs inputs) {
+    inputs.requestedState =
+        requestedStateIn.readQueue().length > 0
+            ? new String[] {requestedStateIn.get()}
+            : new String[] {};
+  }
+
+  @Override
+  public void setRequestedState(String value) {
+    requestedStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setCurrentState(String value) {
+    currentStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setRequestAccepted(boolean value) {
+    requestAcceptedOut.set(value);
+  }
+
+  @Override
+  public void setRequestReason(String value) {
+    requestReasonOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setClimbPhase(String value) {
+    climbPhaseOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setClimbLevel(int value) {
+    climbLevelOut.set(value);
+  }
+
+  @Override
+  public void setTargetType(String value) {
+    targetTypeOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setTargetPose(double[] value) {
+    targetPoseOut.set(value == null ? new double[] {} : value);
+  }
+
+  @Override
+  public void setTargetPoseValid(boolean value) {
+    targetPoseValidOut.set(value);
+  }
+
+  @Override
+  public void setRobotPose(double[] value) {
+    robotPoseOut.set(value == null ? new double[] {} : value);
+  }
+
+  @Override
+  public void setHasBall(boolean value) {
+    hasBallOut.set(value);
+  }
+
+  @Override
+  public void setDsMode(String value) {
+    dsModeOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setBatteryVoltage(double value) {
+    batteryVoltageOut.set(value);
+  }
+
+  @Override
+  public void setBrownout(boolean value) {
+    brownoutOut.set(value);
+  }
+
+  @Override
+  public void setAlliance(String value) {
+    allianceOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setMatchTime(double value) {
+    matchTimeOut.set(value);
+  }
+
+  @Override
+  public void setTurretAtSetpoint(boolean value) {
+    turretAtSetpointOut.set(value);
+  }
+
+  @Override
+  public void setTurretMode(String value) {
+    turretModeOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setVisionStatus(String value) {
+    visionStatusOut.set(value == null ? "" : value);
+  }
+}

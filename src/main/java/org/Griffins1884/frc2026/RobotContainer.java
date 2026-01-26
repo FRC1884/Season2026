@@ -45,6 +45,8 @@ import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
+import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardIOServer;
+import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardTracker;
 import org.Griffins1884.frc2026.subsystems.swerve.*;
 import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIO;
@@ -70,6 +72,7 @@ public class RobotContainer {
   private final SwerveSubsystem drive;
   private SwerveDriveSimulation driveSimulation;
   private final TurretSubsystem turret;
+  private final OperatorBoardTracker operatorBoard;
 
   // Controller
   private final DriverMap driver = getDriverController();
@@ -192,6 +195,13 @@ public class RobotContainer {
       if (superstructure != null) {
         superstructure.setTurretExternalControl(true);
       }
+    }
+
+    if (Config.Subsystems.WEBUI_ENABLED) {
+      operatorBoard =
+          new OperatorBoardTracker(new OperatorBoardIOServer(), superstructure, drive, turret);
+    } else {
+      operatorBoard = null;
     }
 
     if (AUTONOMOUS_ENABLED) {

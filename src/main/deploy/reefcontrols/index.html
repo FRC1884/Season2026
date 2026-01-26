@@ -9,21 +9,167 @@
     <link rel="icon" type="image/x-icon" href="" />
     <link rel="stylesheet" href="index.css" />
     <script src="index.js" type="module"></script>
-    <title>Reef Controls &mdash; FRC 1884</title>
+    <title>Shooter Operator Board - FRC 1884</title>
   </head>
   <body>
-    <div id="app-root">
-      <div class="loading-panel">
-        <div class="loading-title">Loading operator board…</div>
-        <div class="loading-subtitle">
-          If this message does not disappear, make sure a template JSON exists.
+    <div class="app-shell">
+      <header class="app-header">
+        <div class="title-block">
+          <div class="app-title">Shooter Operator Board</div>
+          <div class="app-subtitle">FRC 1884 - Rebuilt</div>
         </div>
-      </div>
-      <noscript>
-        <div class="loading-panel">
-          A modern browser with JavaScript enabled is required to render the operator board.
+        <div class="status-strip">
+          <div class="status-chip" id="connection-chip">
+            <span class="status-label">Connection</span>
+            <span class="status-value" id="connection-status">Starting</span>
+          </div>
+          <div class="status-chip" id="data-chip">
+            <span class="status-label">Data</span>
+            <span class="status-value" id="data-status">Waiting</span>
+          </div>
+          <div class="status-chip" id="mode-chip">
+            <span class="status-label">Mode</span>
+            <span class="status-value" id="mode-status">Unknown</span>
+          </div>
         </div>
-      </noscript>
+      </header>
+
+      <div class="fault-banner" id="fault-banner" hidden></div>
+
+      <main class="board">
+        <div class="column column-left">
+          <section class="panel state-panel" style="--delay: 0.05s;">
+            <div class="panel-title">State Overview</div>
+            <div class="state-grid">
+              <div class="state-card">
+                <div class="state-label">Requested State</div>
+                <div class="state-value" id="requested-state">--</div>
+              </div>
+              <div class="state-card">
+                <div class="state-label">Current State</div>
+                <div class="state-value" id="current-state">--</div>
+              </div>
+            </div>
+            <div class="state-meta">
+              <div class="meta-row">
+                <span class="meta-label">Request Status</span>
+                <span class="meta-value" id="request-status">--</span>
+              </div>
+              <div class="meta-row">
+                <span class="meta-label">Reject Reason</span>
+                <span class="meta-value" id="request-reason">--</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel button-panel" style="--delay: 0.1s;">
+            <div class="panel-title">State Requests</div>
+            <div class="button-grid" id="state-buttons"></div>
+          </section>
+
+          <section class="panel climb-panel" style="--delay: 0.15s;">
+            <div class="panel-title">Climb</div>
+            <div class="kv-grid">
+              <div class="kv">
+                <span class="kv-label">Phase</span>
+                <span class="kv-value" id="climb-phase">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Step</span>
+                <span class="kv-value" id="climb-level">--</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel gamepiece-panel" style="--delay: 0.2s;">
+            <div class="panel-title">Gamepiece</div>
+            <div class="boolean-row">
+              <span class="boolean-label">Has Ball</span>
+              <span class="boolean-pill" id="has-ball">--</span>
+            </div>
+          </section>
+        </div>
+
+        <div class="column column-right">
+          <section class="panel field-panel" style="--delay: 0.08s;">
+            <div class="panel-title">Field Position</div>
+            <div class="field-frame" id="field-frame">
+              <img
+                id="field-image"
+                src="field-2026.png"
+                alt="2026 field map"
+                loading="lazy"
+              />
+              <canvas id="field-canvas"></canvas>
+              <div class="field-overlay" id="field-overlay" hidden>
+                Pose data unavailable
+              </div>
+            </div>
+            <div class="pose-readout">
+              <div class="kv">
+                <span class="kv-label">X</span>
+                <span class="kv-value" id="pose-x">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Y</span>
+                <span class="kv-value" id="pose-y">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Heading</span>
+                <span class="kv-value" id="pose-heading">--</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel target-panel" style="--delay: 0.13s;">
+            <div class="panel-title">Targeting</div>
+            <div class="kv-grid">
+              <div class="kv">
+                <span class="kv-label">Target Type</span>
+                <span class="kv-value" id="target-type">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Target Pose</span>
+                <span class="kv-value" id="target-pose">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Turret Status</span>
+                <span class="kv-value" id="turret-status">--</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel system-panel" style="--delay: 0.18s;">
+            <div class="panel-title">System Telemetry</div>
+            <div class="kv-grid">
+              <div class="kv">
+                <span class="kv-label">Alliance</span>
+                <span class="kv-value" id="alliance">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Match Time</span>
+                <span class="kv-value" id="match-time">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Battery</span>
+                <span class="kv-value" id="battery">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Brownout</span>
+                <span class="kv-value" id="brownout">--</span>
+              </div>
+              <div class="kv">
+                <span class="kv-label">Vision</span>
+                <span class="kv-value" id="vision-status">--</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
+
+    <noscript>
+      <div class="noscript">This dashboard requires JavaScript to run.</div>
+    </noscript>
   </body>
 </html>
