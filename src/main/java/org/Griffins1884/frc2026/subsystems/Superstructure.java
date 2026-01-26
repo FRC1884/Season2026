@@ -319,7 +319,6 @@ public class Superstructure extends SubsystemBase {
       case CLIMB_DETACH -> applyClimb(ClimbMode.DETACH);
       case TESTING -> applyTesting();
     }
-    requestState(state, false);
   }
 
   private void applyIdle() {
