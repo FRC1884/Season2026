@@ -35,8 +35,6 @@ public class ShooterCommands {
 
     distance = (double) Math.round(Math.hypot(distanceX, distanceY) * 10) / 10;
 
-    lookupTable();
-
     theta = find(distance);
     return theta;
   }
@@ -148,6 +146,4 @@ public class ShooterCommands {
     }
     return 0.0;
   }
-
-  public static void adjustAngle() {}
 }
