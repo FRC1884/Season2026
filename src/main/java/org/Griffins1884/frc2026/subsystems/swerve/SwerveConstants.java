@@ -223,7 +223,7 @@ public final class SwerveConstants {
   public static final double MAX_LINEAR_SPEED = 5.4804;
 
   /** Radians per second */
-  public static final double MAX_ANGULAR_SPEED = MAX_LINEAR_SPEED / DRIVE_BASE_RADIUS;
+  public static final double MAX_ANGULAR_SPEED = (0.5 * MAX_LINEAR_SPEED) / DRIVE_BASE_RADIUS;
 
   /** Meters per second squared */
   public static final double MAX_LINEAR_ACCELERATION = 22.0;
@@ -264,7 +264,7 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case COMPBOT -> new Gains(0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
         case SIMBOT -> new Gains(0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
-        case DEVBOT -> new Gains(0.023439, 0.0, 0.0, 0.2, 0.8, 0.12, 0.0);
+        case DEVBOT -> new Gains(1.0629, 0.0, 0.0, 0.23397, 0.72165, 0.039375, 0.0);
         case CRESCENDO -> new Gains(0.0023439, 0.0, 0.0, 0.10953, 0.54241, 0.084571, 0.0);
       };
   // Torque-current gains for Kraken FOC (amps-based, per-radian units)
@@ -304,7 +304,7 @@ public final class SwerveConstants {
   // Torque-current gains for Kraken turn control (amps-based, per-radian units)
   static final Gains KRAKEN_TURN_TORQUE_GAINS =
       switch (ROBOT) {
-        case DEVBOT, COMPBOT, CRESCENDO -> new Gains(4000, 0.0, 50.0);
+        case DEVBOT, COMPBOT, CRESCENDO -> new Gains(6000, 0.0, 50.0);
         case SIMBOT -> new Gains(0.0, 0.0, 0.0);
       };
 
