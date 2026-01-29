@@ -147,10 +147,22 @@ public class AprilTagVisionIOLimelight implements VisionIO {
 
   // Compute the mean ambiguity across all detected fiducials; default to 1.0 when none exist.
   private static double calculateAverageAmbiguity(FiducialObservation[] fiducials) {
-    double totalAmbiguity = 0.0;
-    for (FiducialObservation fiducial : fiducials) {
-      totalAmbiguity += fiducial.ambiguity();
+    if (fiducials == null || fiducials.length == 0) {
+      return 1.0;
     }
-    return totalAmbiguity / fiducials.length;
+    double totalAmbiguity = 0.0;
+    int count = 0;
+    for (FiducialObservation fiducial : fiducials) {
+      if (fiducial == null) {
+        continue;
+      }
+      double ambiguity = fiducial.ambiguity();
+      if (!Double.isFinite(ambiguity)) {
+        continue;
+      }
+      totalAmbiguity += ambiguity;
+      count++;
+    }
+    return count == 0 ? 1.0 : totalAmbiguity / count;
   }
 }

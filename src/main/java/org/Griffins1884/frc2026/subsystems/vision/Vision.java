@@ -262,6 +262,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
       String cameraLabel = io[i].getCameraConstants().cameraName();
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
+      logLimelightDiagnostics(cameraLabel, inputs[i]);
       estimates.add(buildLimelightEstimate(inputs[i]));
     }
 
@@ -303,12 +304,13 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
     int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
-    double scaleFactor = 1.0 / Math.max(cam.megatagPoseEstimate.quality(), 1e-6);
-    double xStd = getStdDev(cam, indexBase) * scaleFactor;
-    double yStd = getStdDev(cam, indexBase + 1) * scaleFactor;
-    double rotStd = getStdDev(cam, indexBase + 2) * scaleFactor;
+    double qualityUsed = sanitizeQuality(cam.megatagPoseEstimate.quality());
+    LimelightStdDevs stdDevs = computeLimelightStdDevs(cam, indexBase, qualityUsed);
+    if (stdDevs == null || !stdDevs.finite()) {
+      return Optional.empty();
+    }
 
-    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(xStd, yStd, rotStd);
+    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), stdDevs.theta());
 
     return Optional.of(
         new VisionFieldPoseEstimate(
@@ -409,8 +411,106 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     if (stdDevs == null || stdDevs.length <= index) {
       return 0.0;
     }
-    return stdDevs[index];
+    double value = stdDevs[index];
+    return Double.isFinite(value) ? value : 0.0;
   }
+
+  private static double sanitizeQuality(double quality) {
+    if (!Double.isFinite(quality)) {
+      return 0.0;
+    }
+    if (quality < 0.0) {
+      return 0.0;
+    }
+    if (quality > 1.0) {
+      return 1.0;
+    }
+    return quality;
+  }
+
+  private LimelightStdDevs computeLimelightStdDevs(
+      VisionIO.VisionIOInputs cam, int indexBase, double qualityUsed) {
+    double scaleFactor = 1.0 / Math.max(qualityUsed, 1e-6);
+    double xStd = getStdDev(cam, indexBase) * scaleFactor;
+    double yStd = getStdDev(cam, indexBase + 1) * scaleFactor;
+    double rotStd = getStdDev(cam, indexBase + 2) * scaleFactor;
+    boolean finite = isFinite(xStd) && isFinite(yStd) && isFinite(rotStd);
+    return new LimelightStdDevs(xStd, yStd, rotStd, finite);
+  }
+
+  private void logLimelightDiagnostics(String cameraLabel, VisionIO.VisionIOInputs cam) {
+    String prefix = "AprilTagVision/" + cameraLabel + "/LimelightDiagnostics";
+    boolean connected = cam.connected;
+    boolean seesTarget = cam.seesTarget;
+    boolean hasMegatag = cam.megatagPoseEstimate != null;
+    int fiducialCount = cam.fiducialObservations == null ? 0 : cam.fiducialObservations.length;
+    int tagCount = hasMegatag ? cam.megatagPoseEstimate.fiducialIds().length : 0;
+    double qualityRaw = hasMegatag ? cam.megatagPoseEstimate.quality() : Double.NaN;
+    double qualityUsed = sanitizeQuality(qualityRaw);
+    boolean qualityFinite = Double.isFinite(qualityRaw);
+    boolean poseFinite = hasMegatag && isFinitePose(cam.megatagPoseEstimate.fieldToRobot());
+
+    LimelightStdDevs stdDevs =
+        hasMegatag
+            ? computeLimelightStdDevs(
+                cam, AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX, qualityUsed)
+            : null;
+    boolean stdDevsFinite = stdDevs != null && stdDevs.finite();
+
+    boolean wouldAccept = useVision && connected && hasMegatag && poseFinite && stdDevsFinite;
+
+    String rejectReason;
+    if (!useVision) {
+      rejectReason = "VISION_DISABLED";
+    } else if (!connected) {
+      rejectReason = "DISCONNECTED";
+    } else if (!hasMegatag) {
+      rejectReason = "NO_MEGATAG";
+    } else if (!poseFinite) {
+      rejectReason = "POSE_NONFINITE";
+    } else if (!stdDevsFinite) {
+      rejectReason = "STDDEV_NONFINITE";
+    } else {
+      rejectReason = "ACCEPTED";
+    }
+
+    Logger.recordOutput(prefix + "/Connected", connected);
+    Logger.recordOutput(prefix + "/SeesTarget", seesTarget);
+    Logger.recordOutput(prefix + "/HasMegaTagPose", hasMegatag);
+    Logger.recordOutput(prefix + "/TagCount", tagCount);
+    Logger.recordOutput(prefix + "/FiducialCount", fiducialCount);
+    Logger.recordOutput(prefix + "/PoseFinite", poseFinite);
+    Logger.recordOutput(prefix + "/QualityRaw", qualityRaw);
+    Logger.recordOutput(prefix + "/QualityUsed", qualityUsed);
+    Logger.recordOutput(prefix + "/QualityFinite", qualityFinite);
+    Logger.recordOutput(prefix + "/StdDevX", stdDevs != null ? stdDevs.x() : Double.NaN);
+    Logger.recordOutput(prefix + "/StdDevY", stdDevs != null ? stdDevs.y() : Double.NaN);
+    Logger.recordOutput(prefix + "/StdDevTheta", stdDevs != null ? stdDevs.theta() : Double.NaN);
+    Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
+    Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
+    Logger.recordOutput(prefix + "/RejectReason", rejectReason);
+  }
+
+  private boolean isFinitePose(Pose2d pose) {
+    if (pose == null) {
+      return false;
+    }
+    if (!isFinite(pose.getX()) || !isFinite(pose.getY())) {
+      return false;
+    }
+    Rotation2d rotation = pose.getRotation();
+    if (rotation == null) {
+      return false;
+    }
+    double cos = rotation.getCos();
+    double sin = rotation.getSin();
+    if (!isFinite(cos) || !isFinite(sin)) {
+      return false;
+    }
+    return !(Math.abs(cos) < 1e-9 && Math.abs(sin) < 1e-9);
+  }
+
+  private record LimelightStdDevs(double x, double y, double theta, boolean finite) {}
 
   public void setUseVision(boolean useVision) {
     this.useVision = useVision;

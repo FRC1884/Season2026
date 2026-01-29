@@ -35,18 +35,38 @@ public record MegatagPoseEstimate(
     if (fieldToRobot == null) {
       fieldToRobot = new Pose2d();
     }
-    int[] fiducialIds = new int[poseEstimate.rawFiducials.length];
-    for (int i = 0; i < poseEstimate.rawFiducials.length; i++) {
-      if (poseEstimate.rawFiducials[i] != null) {
-        fiducialIds[i] = poseEstimate.rawFiducials[i].id;
+    LimelightHelpers.RawFiducial[] rawFiducials =
+        poseEstimate.rawFiducials != null
+            ? poseEstimate.rawFiducials
+            : new LimelightHelpers.RawFiducial[0];
+    int[] fiducialIds = new int[rawFiducials.length];
+    for (int i = 0; i < rawFiducials.length; i++) {
+      if (rawFiducials[i] != null) {
+        fiducialIds[i] = rawFiducials[i].id;
       }
+    }
+    double quality;
+    if (rawFiducials.length > 1) {
+      quality = 1.0;
+    } else if (rawFiducials.length == 1) {
+      double ambiguity = rawFiducials[0].ambiguity;
+      quality = Double.isFinite(ambiguity) ? 1.0 - ambiguity : 0.0;
+    } else {
+      quality = 0.0;
+    }
+    if (!Double.isFinite(quality)) {
+      quality = 0.0;
+    } else if (quality < 0.0) {
+      quality = 0.0;
+    } else if (quality > 1.0) {
+      quality = 1.0;
     }
     return new MegatagPoseEstimate(
         fieldToRobot,
         poseEstimate.timestampSeconds,
         poseEstimate.latency,
         poseEstimate.avgTagArea,
-        fiducialIds.length > 1 ? 1.0 : 1.0 - poseEstimate.rawFiducials[0].ambiguity,
+        quality,
         fiducialIds);
   }
 }
