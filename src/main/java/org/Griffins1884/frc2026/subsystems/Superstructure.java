@@ -533,7 +533,7 @@ public class Superstructure extends SubsystemBase {
       return;
     }
 
-    double targetPosition = ShooterCommands.calc(pose);
+    double targetPosition = ShooterCommands.calc(pose, target);
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
     lastShooterPivotPosition = targetPosition;

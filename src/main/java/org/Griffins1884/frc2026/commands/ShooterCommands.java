@@ -14,7 +14,7 @@ import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 public class ShooterCommands {
   private static final Map<Double, Double> lookupTable = interpolate();
 
-  public static double calc(Pose2d robot) {
+  public static double calc(Pose2d robot, Translation2d target) {
     // Distance Vector Calculation
     Translation2d distance2d;
 
@@ -26,13 +26,7 @@ public class ShooterCommands {
     // Angle
     double theta;
 
-    // Set hub pose based on alliance
-    if (DriverStation.getAlliance().isPresent()
-        && DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
-      distance2d = new Translation2d(Math.abs(robot.getX() - 11.9), Math.abs(robot.getY() - 4.03));
-    } else {
-      distance2d = new Translation2d(Math.abs(robot.getX() - 4.63), Math.abs(robot.getY() - 4.03));
-    }
+    distance2d = new Translation2d(Math.abs(robot.getX() - target.getX()), Math.abs(robot.getY() - target.getY()));
 
     // Calculate the Straight line distance in (m) to the hub
     distanceX = distance2d.getX();
