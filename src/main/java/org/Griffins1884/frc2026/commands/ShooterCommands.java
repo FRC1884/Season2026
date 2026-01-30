@@ -5,9 +5,13 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 public class ShooterCommands {
-  private static final Map<Double, Double> lookupTable = lookupTable();
+  private static final Map<Double, Double> lookupTable = interpolate();
 
   public static double calc(Pose2d robot) {
     // Distance Vector Calculation
@@ -37,8 +41,6 @@ public class ShooterCommands {
 
     distance = (double) Math.round(Math.hypot(distanceX, distanceY) * 10) / 10;
 
-    lookupTable();
-
     theta = find(distance);
     return theta;
   }
@@ -53,7 +55,6 @@ public class ShooterCommands {
      * Farthest point is 6.2m
      * */
 
-    // Uses loops and runs calculations once at compile time
     // Calculated manually and entered
 
     Map<Double, Double> table = new HashMap<Double, Double>();
@@ -138,6 +139,37 @@ public class ShooterCommands {
     return table;
   }
 
+  /*
+   * Key: Distance From Hub (double)
+   * Value: Angle (double) (0-90)
+   * Keys are spaced out by increments of 0.1
+   *
+   * Closest point is 0m away
+   * Farthest point is 6.2m
+   */
+    public static Map<Double, Double> interpolate() {
+    Map<Double, Double> temp = lookupTable();
+
+    double[] x = new double[temp.size()];
+    double[] y = new double[temp.size()];
+    for (int i = 0; i < temp.size(); i++) {
+        x[i] = (double) temp.keySet().toArray()[i];
+        y[i] = (double) temp.keySet().toArray()[i];
+    }
+
+    SplineInterpolator interpolator = new SplineInterpolator();
+    PolynomialSplineFunction function = interpolator.interpolate(x,y);
+
+    // Calculated manually and entered
+    Map<Double, Double> table = new HashMap<Double, Double>();
+
+    for (double i=0;i<=6.2;i+=0.1){
+        table.put(i, function.value(i));
+    }
+
+    return table;
+  }
+
   public static double find(double distance) {
     try {
       return lookupTable.get(distance);
@@ -150,6 +182,4 @@ public class ShooterCommands {
     }
     return 0.0;
   }
-
-  public static void adjustAngle() {}
 }

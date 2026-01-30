@@ -1,1 +1,6 @@
-{}
+{
+  "download": {
+    "remoteDir": "/home/lvuser/logs/networktables",
+    "serverTeam": "1884"
+  }
+}

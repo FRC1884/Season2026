@@ -21,4 +21,6 @@ public interface LEDIO {
   default void setAllPattern(LEDPattern pattern) {}
 
   public default void periodic() {}
+
+  public default void close() {}
 }

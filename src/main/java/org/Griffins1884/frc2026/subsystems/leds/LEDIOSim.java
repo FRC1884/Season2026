@@ -69,4 +69,9 @@ public class LEDIOSim implements LEDIO {
 
     led.setData(buffer);
   }
+
+  @Override
+  public void close() {
+    led.close();
+  }
 }

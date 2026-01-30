@@ -192,4 +192,8 @@ public class LEDSubsystem extends SubsystemBase {
       return LEDOutputValue.all(LEDPattern.solid(color).breathe(BREATHE_SPEED));
     }
   }
+
+  public void close() {
+    io.close();
+  }
 }

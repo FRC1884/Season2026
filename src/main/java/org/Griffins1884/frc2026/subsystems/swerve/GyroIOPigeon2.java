@@ -16,6 +16,7 @@ package org.Griffins1884.frc2026.subsystems.swerve;
 import static org.Griffins1884.frc2026.GlobalConstants.ODOMETRY_FREQUENCY;
 
 import com.ctre.phoenix6.BaseStatusSignal;
+import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.Pigeon2Configuration;
@@ -29,7 +30,7 @@ import org.Griffins1884.frc2026.GlobalConstants;
 
 /** IO implementation for Pigeon 2. */
 public class GyroIOPigeon2 implements GyroIO {
-  private final Pigeon2 pigeon = new Pigeon2(SwerveConstants.PIGEON_ID);
+  private final Pigeon2 pigeon = new Pigeon2(SwerveConstants.PIGEON_ID, new CANBus("DriveTrain"));
   private final StatusSignal<Angle> yaw = pigeon.getYaw();
   private final Queue<Double> yawPositionQueue;
   private final Queue<Double> yawTimestampQueue;

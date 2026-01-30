@@ -70,4 +70,9 @@ public class LEDIOPWM implements LEDIO {
     }
     led.setData(buffer);
   }
+
+  @Override
+  public void close() {
+    led.close();
+  }
 }

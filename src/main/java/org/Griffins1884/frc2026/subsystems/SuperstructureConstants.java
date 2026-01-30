@@ -1,15 +1,8 @@
 package org.Griffins1884.frc2026.subsystems;
 
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class SuperstructureConstants {
-  public static final Translation2d HOPPER_TARGET_BLUE = new Translation2d(4.63, 4.03);
-  public static final Translation2d HOPPER_TARGET_RED = new Translation2d(11.9, 4.03);
-  public static final Translation2d FERRY_TARGET_BLUE = HOPPER_TARGET_BLUE;
-  public static final Translation2d FERRY_TARGET_RED = HOPPER_TARGET_RED;
-
   public static final LoggedTunableNumber BALL_PRESENT_CURRENT_AMPS =
       new LoggedTunableNumber("Superstructure/BallCurrentAmps", 15.0);
   public static final LoggedTunableNumber BALL_PRESENCE_DEBOUNCE_SEC =
@@ -38,32 +31,6 @@ public final class SuperstructureConstants {
 
   public static final int ENDGAME_CLIMB_LEVELS = 3;
   public static final int AUTO_CLIMB_LEVELS = 1;
-
-  public static Translation2d getHopperTarget() {
-    boolean isRed =
-        (DriverStation.getAlliance().isPresent())
-            ? DriverStation.Alliance.Red == DriverStation.getAlliance().get()
-            : false;
-
-    if (isRed) {
-      return HOPPER_TARGET_RED;
-    } else {
-      return HOPPER_TARGET_BLUE;
-    }
-  }
-
-  public static Translation2d getFerryTarget() {
-    boolean isRed =
-        (DriverStation.getAlliance().isPresent())
-            ? DriverStation.Alliance.Red == DriverStation.getAlliance().get()
-            : false;
-
-    if (isRed) {
-      return FERRY_TARGET_RED;
-    } else {
-      return FERRY_TARGET_BLUE;
-    }
-  }
 
   private SuperstructureConstants() {}
 }

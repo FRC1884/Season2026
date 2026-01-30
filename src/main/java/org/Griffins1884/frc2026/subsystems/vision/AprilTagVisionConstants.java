@@ -25,10 +25,11 @@ public final class AprilTagVisionConstants {
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
-                    0.2498,
-                    0.2598,
-                    0.245,
-                    new Rotation3d(0, degreesToRadians(-5), degreesToRadians(-20))),
+                    0.290868,
+                    0.288925,
+                    0.205,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
                 VisionIO.CameraType.OV9281);
         case COMPBOT, SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
@@ -48,10 +49,11 @@ public final class AprilTagVisionConstants {
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
                 new Transform3d(
-                    0.2752,
-                    -0.2852,
-                    0.2405,
-                    new Rotation3d(0, degreesToRadians(-20), degreesToRadians(20))),
+                    0.290868,
+                    -0.288922,
+                    0.205,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
                 VisionIO.CameraType.OV9281);
         case COMPBOT, SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
@@ -71,10 +73,11 @@ public final class AprilTagVisionConstants {
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-back" : "backtagcam",
                 new Transform3d(
-                    -0.2927,
-                    0.3127,
-                    0.275,
-                    new Rotation3d(0, degreesToRadians(-14), degreesToRadians(180))),
+                    -0.29176,
+                    -0.289464,
+                    0.205,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(180))),
                 VisionIO.CameraType.OV9281);
         case COMPBOT, SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(

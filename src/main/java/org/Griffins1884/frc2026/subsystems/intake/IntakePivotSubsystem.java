@@ -15,6 +15,7 @@ public class IntakePivotSubsystem
   @Getter
   public enum IntakePivotGoal implements PivotGoal {
     IDLING(() -> IntakePivotConstants.STOW_ANGLE_RAD),
+    INTAKE_PIVOT_GOAL(new LoggedTunableNumber("IntakePivot/INTAKE_PIVOT_GOAL", 0.0)),
     TESTING(new LoggedTunableNumber("IntakePivot/Test", 0.0));
 
     private final DoubleSupplier angleSupplier;

@@ -1,11 +1,12 @@
 package org.Griffins1884.frc2026.subsystems.vision;
 
+import static edu.wpi.first.math.util.Units.radiansToDegrees;
+
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DriverStation;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -21,7 +22,6 @@ public class AprilTagVisionIOLimelight implements VisionIO {
   private static final double DISCONNECT_TIMEOUT_MICROS = 250_000.0;
 
   private final String limelightName;
-  private int currentImuMode = -1;
   private final SwerveSubsystem drive;
   @Getter private final CameraConstants cameraConstants;
   int imuMode = 1;
@@ -37,16 +37,16 @@ public class AprilTagVisionIOLimelight implements VisionIO {
 
   /** Configures Limelight camera poses in robot coordinate system. */
   private void setLLSettings() {
-    double[] cameraPose = {
-      cameraConstants.robotToCamera().getY(),
-      cameraConstants.robotToCamera().getX(),
-      cameraConstants.robotToCamera().getZ(),
-      0.0,
-      cameraConstants.robotToCamera().getRotation().getY(),
-      cameraConstants.robotToCamera().getRotation().getZ()
-    };
-
-    table.getEntry("camerapose_robotspace_set").setDoubleArray(cameraPose);
+    LimelightHelpers.SetIMUMode(limelightName, 1);
+    LimelightHelpers.setCameraPose_RobotSpace(
+        limelightName,
+        cameraConstants.robotToCamera().getX(),
+        cameraConstants.robotToCamera().getY(),
+        cameraConstants.robotToCamera().getZ(),
+        radiansToDegrees(cameraConstants.robotToCamera().getRotation().getX()),
+        radiansToDegrees(cameraConstants.robotToCamera().getRotation().getY()),
+        radiansToDegrees(cameraConstants.robotToCamera().getRotation().getZ()));
+    LimelightHelpers.SetIMUMode(limelightName, 2);
   }
 
   @Override
@@ -56,6 +56,16 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     //                new TargetObservation(new Rotation2d(), new Rotation2d());
     //        public PoseObservation[] poseObservations = new PoseObservation[0];
     //        public int[] tagIds = new int[0];
+    LimelightHelpers.SetIMUMode(limelightName, 0);
+    LimelightHelpers.SetRobotOrientation(
+        limelightName,
+        drive.getPose().getRotation().getRadians(),
+        drive.getYawRateDegreesPerSec(),
+        0,
+        0,
+        0,
+        0);
+    LimelightHelpers.SetIMUMode(limelightName, 2);
 
     inputs.connected = table.getEntry("tv").getDouble(0) == 1.0;
     inputs.seesTarget = LimelightHelpers.getTV(limelightName);
@@ -68,16 +78,8 @@ public class AprilTagVisionIOLimelight implements VisionIO {
       try {
         LimelightHelpers.PoseEstimate megatag;
         Pose3d robotPose3d;
-        if (DriverStation.getAlliance().isPresent()
-            && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
-          megatag = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
-          robotPose3d =
-              LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiBlue(limelightName));
-        } else {
-          megatag = LimelightHelpers.getBotPoseEstimate_wpiRed(limelightName);
-          robotPose3d =
-              LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiRed(limelightName));
-        }
+        megatag = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
+        robotPose3d = LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiBlue(limelightName));
         inputs.pose3d = robotPose3d;
         // Capture latest target offsets when the camera sees targets; otherwise provide zeros.
         if (LimelightHelpers.getTV(limelightName)) {
@@ -145,10 +147,22 @@ public class AprilTagVisionIOLimelight implements VisionIO {
 
   // Compute the mean ambiguity across all detected fiducials; default to 1.0 when none exist.
   private static double calculateAverageAmbiguity(FiducialObservation[] fiducials) {
-    double totalAmbiguity = 0.0;
-    for (FiducialObservation fiducial : fiducials) {
-      totalAmbiguity += fiducial.ambiguity();
+    if (fiducials == null || fiducials.length == 0) {
+      return 1.0;
     }
-    return totalAmbiguity / fiducials.length;
+    double totalAmbiguity = 0.0;
+    int count = 0;
+    for (FiducialObservation fiducial : fiducials) {
+      if (fiducial == null) {
+        continue;
+      }
+      double ambiguity = fiducial.ambiguity();
+      if (!Double.isFinite(ambiguity)) {
+        continue;
+      }
+      totalAmbiguity += ambiguity;
+      count++;
+    }
+    return count == 0 ? 1.0 : totalAmbiguity / count;
   }
 }
