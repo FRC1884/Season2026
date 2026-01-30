@@ -33,6 +33,7 @@ import org.Griffins1884.frc2026.subsystems.leds.LEDIOSim;
 import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
+import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -85,7 +86,7 @@ public class Superstructure extends SubsystemBase {
 
   public record StateRequestResult(boolean accepted, String reason) {}
 
-  private final Supplier<Pose2d> drivePoseSupplier;
+  private final SwerveSubsystem drive;
   @Setter private TurretSubsystem turret;
 
   @Getter
@@ -128,8 +129,8 @@ public class Superstructure extends SubsystemBase {
   private final Arms arms = new Arms();
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
-  public Superstructure(Supplier<Pose2d> drivePoseSupplier) {
-    this.drivePoseSupplier = drivePoseSupplier;
+  public Superstructure(SwerveSubsystem drive) {
+    this.drive = drive;
     configureStateChooser();
     climbTimer.start();
     if (LEDS_ENABLED) {
@@ -381,7 +382,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyFerrying() {
-    Translation2d target = GlobalConstants.Coordinates.getFerryTarget(drivePoseSupplier.get());
+    Translation2d target;
+    if (drive != null) target = GlobalConstants.Coordinates.getFerryTarget(drive.getPose());
+    else target = new Translation2d(0.0, 0.0);
     setIntakeGoal(intakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -511,21 +514,21 @@ public class Superstructure extends SubsystemBase {
       lastTurretTarget = null;
       return;
     }
-    if (turret == null || drivePoseSupplier == null || target == null) {
+    if (turret == null || drive == null || target == null) {
       holdTurret();
       return;
     }
-    TurretCommands.autoAimToTarget(
-        turret, drivePoseSupplier, (Pose2d) -> java.util.Optional.of(target));
+    TurretCommands.shootingWhileMoving(
+        turret, drive::getPose, () -> target, drive::getRobotRelativeSpeeds);
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;
   }
 
   private void aimShooterPivotAt(Translation2d target) {
-    if (arms.shooterPivot == null || drivePoseSupplier == null || target == null) {
+    if (arms.shooterPivot == null || drive == null || target == null) {
       return;
     }
-    Pose2d pose = drivePoseSupplier.get();
+    Pose2d pose = drive.getPose();
     if (pose == null) {
       return;
     }
