@@ -22,12 +22,15 @@ public class ShooterCommands {
     double theta;
 
     // Set hub pose based on alliance
-    if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
-      distance2d = new Translation2d(robot.getX() - 11.9, robot.getY() - 4.03);
-    } else {
-      distance2d = new Translation2d(robot.getX() - 4.63, robot.getY() - 4.03);
+    if (DriverStation.getAlliance().isEmpty()){
+      return 0.0;
+    }else{
+        if (DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
+          distance2d = new Translation2d(robot.getX() - 11.9, robot.getY() - 4.03);
+        } else {
+          distance2d = new Translation2d(robot.getX() - 4.63, robot.getY() - 4.03);
+        }
     }
-
     // Calculate the Straight line distance in (m) to the hub
     distanceX = distance2d.getX();
     distanceY = distance2d.getY();
