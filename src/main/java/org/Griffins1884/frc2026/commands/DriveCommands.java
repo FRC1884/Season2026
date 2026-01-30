@@ -59,30 +59,6 @@ public class DriveCommands {
 
   private DriveCommands() {}
 
-  // --- Alignment context & telemetry helpers (used by autonomy helpers) ---
-  private static volatile String alignContext = "";
-  private static volatile String alignName = "";
-
-  public static void setAlignContext(String context, String name) {
-    alignContext = context == null ? "" : context;
-    alignName = name == null ? "" : name;
-    try {
-      Logger.recordOutput("Autonomy/AlignContext", alignContext);
-      Logger.recordOutput("Autonomy/AlignName", alignName);
-    } catch (Throwable ignored) {
-    }
-  }
-
-  public static void clearAlignTelemetry() {
-    alignContext = "";
-    alignName = "";
-    try {
-      Logger.recordOutput("Autonomy/AlignContext", "");
-      Logger.recordOutput("Autonomy/AlignName", "");
-    } catch (Throwable ignored) {
-    }
-  }
-
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
     double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), ALIGN_MANUAL_DEADBAND);
@@ -207,7 +183,11 @@ public class DriveCommands {
   public static Command alignToClimbCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
-          Translation2d target = GlobalConstants.Coordinates.getClimbTarget();
+          Translation2d target =
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.Tower.centerPoint
+                  : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
           Logger.recordOutput("Autonomy/AlignTargetClimb", target);
           return new AutoAlignToPoseCommand(
               drive, new Pose2d(target.getX(), target.getY(), target.getAngle()));
