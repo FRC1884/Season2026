@@ -93,6 +93,7 @@ public class Superstructure extends SubsystemBase {
   private final LoggedDashboardChooser<SuperState> stateChooser =
       new LoggedDashboardChooser<>("Superstructure State");
 
+  @Getter
   private SuperState requestedState = SuperState.IDLING;
   @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
@@ -101,6 +102,7 @@ public class Superstructure extends SubsystemBase {
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   private final Timer climbTimer = new Timer();
   private ClimbPhase climbPhase = ClimbPhase.IDLE;
+  @Getter
   private int climbLevel = 0;
   private ClimbMode activeClimbMode = null;
   @Setter private boolean climbShootEnabled = false;
@@ -166,19 +168,11 @@ public class Superstructure extends SubsystemBase {
     return new StateRequestResult(true, "");
   }
 
-  public SuperState getRequestedState() {
-    return requestedState;
-  }
-
-  public String getClimbPhaseName() {
+    public String getClimbPhaseName() {
     return climbPhase.toString();
   }
 
-  public int getClimbLevel() {
-    return climbLevel;
-  }
-
-  public boolean hasBall() {
+    public boolean hasBall() {
     return isBallPresent();
   }
 
@@ -313,7 +307,13 @@ public class Superstructure extends SubsystemBase {
     switch (state) {
       case IDLING -> applyIdle();
       case INTAKING -> applyIntaking();
-      case SHOOTING -> applyShooting(GlobalConstants.Coordinates.getHopperTarget(), false);
+      case SHOOTING ->
+          applyShooting(
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+                  : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
+              false);
       case FERRYING -> applyFerrying();
       case ENDGAME_CLIMB -> applyClimb(ClimbMode.ENDGAME);
       case AUTO_CLIMB -> applyClimb(ClimbMode.AUTO);
@@ -383,7 +383,7 @@ public class Superstructure extends SubsystemBase {
 
   private void applyFerrying() {
     Translation2d target;
-    if (drive != null) target = GlobalConstants.Coordinates.getFerryTarget(drive.getPose());
+    if (drive != null) target = new Translation2d(0, 0); // TODO: find a way to get the ferry target
     else target = new Translation2d(0.0, 0.0);
     setIntakeGoal(intakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
@@ -396,7 +396,12 @@ public class Superstructure extends SubsystemBase {
 
   private void applyClimb(ClimbMode mode) {
     if (climbShootEnabled) {
-      applyShooting(GlobalConstants.Coordinates.getHopperTarget(), false);
+      applyShooting(
+          (DriverStation.getAlliance().isPresent()
+                  && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+              ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+              : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
+          false);
     } else {
       setIntakeGoal(intakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.IDLING);
