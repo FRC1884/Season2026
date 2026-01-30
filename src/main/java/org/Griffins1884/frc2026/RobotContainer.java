@@ -150,7 +150,7 @@ public class RobotContainer {
                   new ModuleIO() {},
                   new ModuleIO() {});
           };
-      superstructure = new Superstructure(() -> drive.getPose());
+      superstructure = new Superstructure(drive);
 
       autoIdleCommand = Commands.none();
       if (AUTONOMOUS_ENABLED) {
