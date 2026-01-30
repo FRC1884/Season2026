@@ -174,20 +174,19 @@ public class ShooterCommands {
   }
 
   public static double find(double distance) throws NumberFormatException {
-      distance = (double) Math.round(distance* 10) / 10;
+    distance = (double) Math.round(distance * 10) / 10;
 
-      if (lookupTable.get(distance) != null) {
-          return lookupTable.get(distance);
-      } else {
-          if (distance > 6.2) {
-              return lookupTable.get(6.2);
-          } else if (distance < 0.0) {
-              return lookupTable.get(0.0);
-          }
-          else if (Double.isNaN(distance)) {
-              throw new NumberFormatException("Distance is NaN");
-          }
-          return 0.0;
-        }
+    if (lookupTable.get(distance) != null) {
+      return lookupTable.get(distance);
+    } else {
+      if (distance > 6.2) {
+        return lookupTable.get(6.2);
+      } else if (distance < 0.0) {
+        return lookupTable.get(0.0);
+      } else if (Double.isNaN(distance)) {
+        throw new NumberFormatException("Distance is NaN");
+      }
+      return 0.0;
     }
+  }
 }

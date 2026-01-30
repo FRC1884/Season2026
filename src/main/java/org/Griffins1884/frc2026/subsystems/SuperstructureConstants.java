@@ -8,12 +8,6 @@ public final class SuperstructureConstants {
   public static final LoggedTunableNumber BALL_PRESENCE_DEBOUNCE_SEC =
       new LoggedTunableNumber("Superstructure/BallPresenceDebounceSec", 0.15);
   public static final boolean AUTO_STOP_ON_EMPTY = true;
-
-  public static final LoggedTunableNumber INTAKE_PIVOT_POSITION =
-      new LoggedTunableNumber("Superstructure/IntakePivotPosition", 0.07);
-  public static final LoggedTunableNumber SHOOTER_PIVOT_OFFSET =
-      new LoggedTunableNumber("Superstructure/ShooterPivotOffset", 0.0);
-
   public static final LoggedTunableNumber CLIMB_EXTEND_HEIGHT_METERS =
       new LoggedTunableNumber("Superstructure/ClimbExtendHeightMeters", 1.0);
   public static final LoggedTunableNumber CLIMB_LATCH_HEIGHT_METERS =

@@ -4,7 +4,7 @@ import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import java.util.Optional;
-import org.Griffins1884.frc2026.GlobalConstants.FieldMap;
+import org.Griffins1884.frc2026.GlobalConstants.FieldConstants;
 
 /**
  * Utility functions for flipping from the blue (default) to red alliance for mirrored fields. All
@@ -19,7 +19,7 @@ public class RotationalAllianceFlipUtil {
    */
   public static double applyX(double xCoordinate) {
     if (shouldFlip()) {
-      return FieldMap.FIELD_LENGTH_METERS - xCoordinate;
+      return FieldConstants.fieldLength - xCoordinate;
     } else {
       return xCoordinate;
     }
@@ -27,7 +27,7 @@ public class RotationalAllianceFlipUtil {
 
   public static double applyY(double yCoordinate) {
     if (shouldFlip()) {
-      return FieldMap.FIELD_WIDTH_METERS - yCoordinate;
+      return FieldConstants.fieldWidth - yCoordinate;
     } else {
       return yCoordinate;
     }

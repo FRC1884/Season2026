@@ -13,7 +13,7 @@
 
 package org.Griffins1884.frc2026.subsystems.vision;
 
-import static org.Griffins1884.frc2026.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
+import static org.Griffins1884.frc2026.GlobalConstants.FieldConstants;
 
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -114,7 +114,8 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
       } else if (!result.targets.isEmpty()) {
         // Process single-tag estimations
         PhotonTrackedTarget target = result.targets.get(0);
-        Optional<Pose3d> tagPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(target.fiducialId);
+        Optional<Pose3d> tagPose =
+            FieldConstants.defaultAprilTagType.getLayout().getTagPose(target.fiducialId);
 
         if (tagPose.isPresent()) {
           // Calculate field-relative robot pose using a single tag

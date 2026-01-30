@@ -181,9 +181,8 @@ public class RobotContainer {
             case SIM -> new TurretSubsystem(new TurretIOSim());
             default -> new TurretSubsystem(new TurretIO() {});
           };
-      if (superstructure != null) {
-        superstructure.setTurret(turret);
-      }
+
+      superstructure.setTurret(turret);
     } else {
       turret = null;
     }
@@ -192,9 +191,7 @@ public class RobotContainer {
       turret.setDefaultCommand(
           TurretCommands.autoAimToTarget(
               turret, drive::getPose, pose -> Optional.of(TurretConstants.getSimTarget())));
-      if (superstructure != null) {
-        superstructure.setTurretExternalControl(true);
-      }
+      superstructure.setTurretExternalControl(true);
     }
 
     if (Config.Subsystems.WEBUI_ENABLED) {
