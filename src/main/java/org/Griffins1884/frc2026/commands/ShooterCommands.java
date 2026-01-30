@@ -3,10 +3,11 @@ package org.Griffins1884.frc2026.commands;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
@@ -28,9 +29,9 @@ public class ShooterCommands {
     // Set hub pose based on alliance
     if (DriverStation.getAlliance().isPresent()
         && DriverStation.getAlliance().get() == DriverStation.Alliance.Red) {
-      distance2d = new Translation2d(robot.getX() - 11.9, robot.getY() - 4.03);
+      distance2d = new Translation2d(Math.abs(robot.getX() - 11.9), Math.abs(robot.getY() - 4.03));
     } else {
-      distance2d = new Translation2d(robot.getX() - 4.63, robot.getY() - 4.03);
+      distance2d = new Translation2d(Math.abs(robot.getX() - 4.63), Math.abs(robot.getY() - 4.03));
     }
 
     // Calculate the Straight line distance in (m) to the hub
@@ -55,7 +56,7 @@ public class ShooterCommands {
 
     // Calculated manually and entered
 
-    Map<Double, Double> table = new HashMap<Double, Double>();
+    Map<Double, Double> table = new HashMap<>();
 
     // 0.0-0.9
     table.put(0.0, 0.0);
@@ -145,39 +146,43 @@ public class ShooterCommands {
    * Closest point is 0m away
    * Farthest point is 6.2m
    */
-    public static Map<Double, Double> interpolate() {
+  public static Map<Double, Double> interpolate() {
     Map<Double, Double> temp = lookupTable();
+
+    List<Double> sortedKeys = new ArrayList<>(temp.keySet());
+    Collections.sort(sortedKeys);
 
     double[] x = new double[temp.size()];
     double[] y = new double[temp.size()];
     for (int i = 0; i < temp.size(); i++) {
-        x[i] = (double) temp.keySet().toArray()[i];
-        y[i] = (double) temp.keySet().toArray()[i];
+      x[i] = sortedKeys.get(i);
+      y[i] = temp.get(sortedKeys.get(i));
     }
 
     SplineInterpolator interpolator = new SplineInterpolator();
-    PolynomialSplineFunction function = interpolator.interpolate(x,y);
+    PolynomialSplineFunction function = interpolator.interpolate(x, y);
 
     // Calculated manually and entered
-    Map<Double, Double> table = new HashMap<Double, Double>();
+    Map<Double, Double> table = new HashMap<>();
 
-    for (double i=0;i<=6.2;i+=0.1){
-        table.put(i, function.value(i));
+    for (double i = 0; i <= 6.2; i += 0.1) {
+      i = (double) Math.round(i * 10) / 10;
+      table.put(i, function.value(i));
     }
 
     return table;
   }
 
   public static double find(double distance) {
-    try {
+    if (lookupTable.get(distance) != null) {
       return lookupTable.get(distance);
-    } catch (Exception e) {
+    } else {
       if (distance > 6.2) {
         return lookupTable.get(6.2);
       } else if (distance < 0.0) {
         return lookupTable.get(0.0);
       }
+      return 0.0;
     }
-    return 0.0;
   }
 }
