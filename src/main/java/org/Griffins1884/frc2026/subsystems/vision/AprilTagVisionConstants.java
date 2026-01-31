@@ -26,7 +26,7 @@ public final class AprilTagVisionConstants {
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
                     0.290868,
-                    0.288925,
+                    -0.288925,
                     0.205,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
@@ -42,7 +42,7 @@ public final class AprilTagVisionConstants {
                 VisionIO.CameraType.OV9281);
       };
 
-  public static final boolean RIGHT_CAM_ENABLED = true;
+  public static final boolean RIGHT_CAM_ENABLED = false;
   public static final VisionIO.CameraConstants RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
         case DEVBOT ->
@@ -50,7 +50,7 @@ public final class AprilTagVisionConstants {
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
                 new Transform3d(
                     0.290868,
-                    -0.288922,
+                    0.288922,
                     0.205,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
@@ -66,7 +66,7 @@ public final class AprilTagVisionConstants {
                 VisionIO.CameraType.OV9281);
       };
 
-  public static final boolean BACK_CAM_ENABLED = false;
+  public static final boolean BACK_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants BACK_CAM_CONSTANTS =
       switch (ROBOT) {
         case DEVBOT ->
@@ -74,7 +74,7 @@ public final class AprilTagVisionConstants {
                 (IS_LIMELIGHT) ? "limelight-back" : "backtagcam",
                 new Transform3d(
                     -0.29176,
-                    -0.289464,
+                    0.289464,
                     0.205,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(180))),

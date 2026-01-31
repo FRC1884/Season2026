@@ -13,6 +13,7 @@
 
 package org.Griffins1884.frc2026.commands;
 
+import static java.lang.Math.PI;
 import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MANUAL_DEADBAND;
 import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION;
 import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MAX_ANGULAR_SPEED;
@@ -190,7 +191,7 @@ public class DriveCommands {
                   : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
           Logger.recordOutput("Autonomy/AlignTargetClimb", target);
           return new AutoAlignToPoseCommand(
-              drive, new Pose2d(target.getX(), target.getY(), target.getAngle()));
+              drive, new Pose2d(target.getX(), target.getY(), new Rotation2d(PI)));
         },
         Set.of(drive));
   }

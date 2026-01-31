@@ -2,13 +2,11 @@ package org.Griffins1884.frc2026.subsystems.vision;
 
 import static edu.wpi.first.math.util.Units.radiansToDegrees;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DriverStation;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -65,18 +63,15 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     //                new TargetObservation(new Rotation2d(), new Rotation2d());
     //        public PoseObservation[] poseObservations = new PoseObservation[0];
     //        public int[] tagIds = new int[0];
-    int desiredImuMode = DriverStation.isDisabled() ? 1 : 4;
-    applyImuMode(desiredImuMode);
+
+    applyImuMode(0);
 
     double yawDeg = drive.getRawGyroRotation().getDegrees();
-    if (DriverStation.getAlliance().orElse(DriverStation.Alliance.Blue)
-        == DriverStation.Alliance.Red) {
-      yawDeg += 180.0;
-    }
-    yawDeg = MathUtil.inputModulus(yawDeg, -180.0, 180.0);
 
     LimelightHelpers.SetRobotOrientation(
         limelightName, yawDeg, drive.getYawRateDegreesPerSec(), 0, 0, 0, 0);
+
+    applyImuMode(4);
 
     inputs.connected = table.getEntry("tv").getDouble(0) == 1.0;
     inputs.seesTarget = LimelightHelpers.getTV(limelightName);

@@ -93,8 +93,7 @@ public class Superstructure extends SubsystemBase {
   private final LoggedDashboardChooser<SuperState> stateChooser =
       new LoggedDashboardChooser<>("Superstructure State");
 
-  @Getter
-  private SuperState requestedState = SuperState.IDLING;
+  @Getter private SuperState requestedState = SuperState.IDLING;
   @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
 
@@ -102,8 +101,7 @@ public class Superstructure extends SubsystemBase {
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   private final Timer climbTimer = new Timer();
   private ClimbPhase climbPhase = ClimbPhase.IDLE;
-  @Getter
-  private int climbLevel = 0;
+  @Getter private int climbLevel = 0;
   private ClimbMode activeClimbMode = null;
   @Setter private boolean climbShootEnabled = false;
   private double climbHoldPosition = Double.NaN;
@@ -168,11 +166,11 @@ public class Superstructure extends SubsystemBase {
     return new StateRequestResult(true, "");
   }
 
-    public String getClimbPhaseName() {
+  public String getClimbPhaseName() {
     return climbPhase.toString();
   }
 
-    public boolean hasBall() {
+  public boolean hasBall() {
     return isBallPresent();
   }
 

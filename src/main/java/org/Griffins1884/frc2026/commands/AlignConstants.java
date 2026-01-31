@@ -2,39 +2,36 @@ package org.Griffins1884.frc2026.commands;
 
 import com.pathplanner.lib.config.PIDConstants;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 
 /** Shared constants and gain containers for drive alignment routines. */
 public final class AlignConstants {
   private AlignConstants() {}
 
-  public static final double ALIGN_MAX_TRANSLATIONAL_SPEED = 5.0; // m/s
-  public static final double ALIGN_MAX_TRANSLATIONAL_ACCELERATION = 8.0; // m/s
-  public static final double ALIGN_MAX_ANGULAR_SPEED = 6.0; // m/s
-  public static final double ALIGN_MAX_ANGULAR_ACCELERATION = 20.0; // m/s^2
+  public static final double ALIGN_MAX_TRANSLATIONAL_SPEED = 1.0; // m/s
+  public static final double ALIGN_MAX_TRANSLATIONAL_ACCELERATION = 2.0; // m/s
+  public static final double ALIGN_MAX_ANGULAR_SPEED = 0.3; // m/s
+  public static final double ALIGN_MAX_ANGULAR_ACCELERATION = 0.3; // m/s^2
   public static final double ALIGN_CONTROLLER_LOOP_PERIOD_SEC = 0.02; // PathPlanner controller dt
   public static final double FF_START_DELAY = 0.3; // Secs
   public static final double FF_RAMP_RATE = 0.4; // Volts/Sec
-  public static final double ALIGN_TRANSLATION_SLEW_RATE = 6.0; // m/s^2
+  public static final double ALIGN_TRANSLATION_SLEW_RATE = 1.0; // m/s^2
   public static final double ALIGN_ROTATION_SLEW_RATE = Math.toRadians(720.0); // rad/s^2
-  public static final double ALIGN_MANUAL_MAX_SPEED = 5.0; // m/s
+  public static final double ALIGN_MANUAL_MAX_SPEED = 0.3; // m/s
   public static final double ALIGN_MANUAL_DEADBAND = 0.1;
   public static final double ALIGN_PID_BLEND_RANGE_METERS = 1.0; // distance where PID fully enabled
   public static final double ALIGN_PID_BLEND_MIN = 0.15; // keep some PID authority near target
-  public static final double ALIGN_TRANSLATION_TOLERANCE_METERS = 0.03; // m
-  public static final double ALIGN_ROTATION_TOLERANCE_RADIANS = Units.degreesToRadians(1.5); // rad
+  public static final double ALIGN_TRANSLATION_TOLERANCE_METERS = 0.2; // m
+  public static final double ALIGN_ROTATION_TOLERANCE_RADIANS = Units.degreesToRadians(4); // rad
   public static final double WHEEL_RADIUS_MAX_VELOCITY = 0.25; // Rad/Sec
   public static final double WHEEL_RADIUS_RAMP_RATE = 0.05; // Rad/Sec^2
-  public static final TrapezoidProfile.Constraints ALIGN_ROTATION_CONSTRAINTS =
-      new TrapezoidProfile.Constraints(Math.toRadians(540.0), Math.toRadians(900.0));
 
   public static final AlignGains DEFAULT_ALIGN_GAINS =
       new AlignGains(
-          new PIDGains(5.5, 0.1, 1.0),
-          new PIDGains(5.5, 0.1, 1.0),
-          new PIDGains(10.0, 0.0, 3.0),
-          new FeedforwardGains(6.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
+          new PIDGains(0.4, 0.001, 0.4),
+          new PIDGains(1, 0.0, 0.0),
+          new PIDGains(2, 0., 0.0),
+          new FeedforwardGains(1.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
 
   public static final double ALIGN_TUNER_TIMEOUT_SECS = 3.5;
   public static final double ALIGN_TUNER_KICKBACK_TIME = 0.6;

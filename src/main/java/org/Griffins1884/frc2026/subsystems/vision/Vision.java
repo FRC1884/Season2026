@@ -184,6 +184,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         if (!isObservationValid(observation)) {
           continue;
         }
+
         robotPosesAccepted.add(observation.pose());
 
         consumer.accept(

@@ -532,7 +532,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Pose2d currentPose = poseEstimator.getEstimatedPosition();
     if (!isFinitePose(currentPose)) {
       if (!isValidRotation(rawGyroRotation)) {
-        rawGyroRotation = visionRobotPoseMeters.getRotation();
+        // rawGyroRotation = visionRobotPoseMeters.getRotation();
       }
       poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), visionRobotPoseMeters);
       return;
