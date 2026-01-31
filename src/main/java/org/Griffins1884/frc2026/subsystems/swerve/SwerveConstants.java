@@ -30,6 +30,8 @@ public final class SwerveConstants {
 
   public static final GyroType GYRO_TYPE = GyroType.PIGEON;
 
+  public static final String DRIVE_CAN_BUS_NAME = "DriveTrain";
+
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
 

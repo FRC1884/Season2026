@@ -7,6 +7,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -19,7 +20,6 @@ import lombok.Setter;
 import org.Griffins1884.frc2026.Config;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.commands.ShooterCommands;
-import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.generic.arms.Arms;
 import org.Griffins1884.frc2026.generic.elevators.Elevators;
 import org.Griffins1884.frc2026.generic.rollers.Rollers;
@@ -35,6 +35,7 @@ import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.Shooter
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
+import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -523,8 +524,24 @@ public class Superstructure extends SubsystemBase {
       holdTurret();
       return;
     }
-    TurretCommands.shootingWhileMoving(
-        turret, drive::getPose, () -> target, drive::getRobotRelativeSpeeds);
+    Pose2d pose = drive.getPose();
+    if (pose == null) {
+      holdTurret();
+      return;
+    }
+    ChassisSpeeds speeds = drive.getRobotRelativeSpeeds();
+    if (speeds == null) {
+      speeds = new ChassisSpeeds();
+    }
+    Translation2d currentTranslation = pose.getTranslation();
+    double dist = target.getDistance(currentTranslation);
+    double shotTime = ShooterCommands.find(dist);
+    double futureX = currentTranslation.getX() + speeds.vxMetersPerSecond * shotTime;
+    double futureY = currentTranslation.getY() + speeds.vyMetersPerSecond * shotTime;
+    Translation2d futureTranslation = new Translation2d(futureX, futureY);
+    Translation2d newTarget = target.minus(futureTranslation);
+    double goalRad = TurretUtil.turretAngleToTarget(pose, newTarget);
+    turret.setGoalRad(goalRad);
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;
   }

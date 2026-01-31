@@ -11,6 +11,7 @@ public class IntakePivotIOKraken extends GenericArmSystemIOKraken implements Int
         IntakePivotConstants.FORWARD_LIMIT,
         IntakePivotConstants.REVERSE_LIMIT,
         IntakePivotConstants.POSITION_COEFFICIENT,
+        IntakePivotConstants.SOFT_LIMITS_ENABLED,
         IntakePivotConstants.INVERTED,
         IntakePivotConstants.CAN_BUS);
   }

@@ -5,8 +5,10 @@ import static edu.wpi.first.math.util.Units.radiansToDegrees;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.RobotController;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,6 +27,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
   private final SwerveSubsystem drive;
   @Getter private final CameraConstants cameraConstants;
   int imuMode = 1;
+  private final DoubleSubscriber latencySubscriber;
 
   /** Creates a new Limelight vision IO instance. */
   public AprilTagVisionIOLimelight(CameraConstants cameraConstants, SwerveSubsystem drive) {
@@ -32,6 +35,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     this.drive = drive;
     this.limelightName = cameraConstants.cameraName();
     this.table = NetworkTableInstance.getDefault().getTable(this.limelightName);
+    this.latencySubscriber = table.getDoubleTopic("tl").subscribe(0.0);
     setLLSettings();
   }
 
@@ -59,7 +63,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     LimelightHelpers.SetIMUMode(limelightName, 0);
     LimelightHelpers.SetRobotOrientation(
         limelightName,
-        drive.getPose().getRotation().getRadians(),
+        drive.getRawGyroRotation().getRadians(),
         drive.getYawRateDegreesPerSec(),
         0,
         0,
@@ -67,7 +71,9 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         0);
     LimelightHelpers.SetIMUMode(limelightName, 2);
 
-    inputs.connected = table.getEntry("tv").getDouble(0) == 1.0;
+    inputs.connected =
+        (RobotController.getFPGATime() - latencySubscriber.getLastChange())
+            < DISCONNECT_TIMEOUT_MICROS;
     inputs.seesTarget = LimelightHelpers.getTV(limelightName);
     inputs.standardDeviations = AprilTagVisionConstants.LIMELIGHT_STANDARD_DEVIATIONS;
     inputs.megatagPoseEstimate = null;

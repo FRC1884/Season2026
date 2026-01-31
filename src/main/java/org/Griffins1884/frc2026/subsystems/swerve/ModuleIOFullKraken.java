@@ -90,7 +90,7 @@ public class ModuleIOFullKraken implements ModuleIO {
     zeroRotation = moduleConstants.zeroRotation();
     hasCancoder = moduleConstants.cancoderID() >= 0;
     encoderOffset = hasCancoder ? new Rotation2d() : zeroRotation;
-    CANBus canBus = new CANBus("DriveTrain");
+    CANBus canBus = new CANBus(DRIVE_CAN_BUS_NAME);
 
     driveMotor = new TalonFX(moduleConstants.driveID(), canBus);
     turnMotor = new TalonFX(moduleConstants.rotatorID(), canBus);

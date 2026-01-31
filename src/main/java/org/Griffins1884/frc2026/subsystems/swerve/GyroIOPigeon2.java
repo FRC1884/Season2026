@@ -30,7 +30,8 @@ import org.Griffins1884.frc2026.GlobalConstants;
 
 /** IO implementation for Pigeon 2. */
 public class GyroIOPigeon2 implements GyroIO {
-  private final Pigeon2 pigeon = new Pigeon2(SwerveConstants.PIGEON_ID, new CANBus("DriveTrain"));
+  private final Pigeon2 pigeon =
+      new Pigeon2(SwerveConstants.PIGEON_ID, new CANBus(SwerveConstants.DRIVE_CAN_BUS_NAME));
   private final StatusSignal<Angle> yaw = pigeon.getYaw();
   private final Queue<Double> yawPositionQueue;
   private final Queue<Double> yawTimestampQueue;

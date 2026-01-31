@@ -16,7 +16,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   private final TalonFX[] motors;
   private final TalonFX leader;
-  private final TalonFXConfiguration config = new TalonFXConfiguration();
+  private final TalonFXConfiguration config;
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
   private final double positionCoefficient;
 
@@ -41,6 +41,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
         forwardSoftLimit,
         reverseSoftLimit,
         positionCoefficient,
+        true,
         false,
         new CANBus("rio"));
   }
@@ -52,6 +53,27 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       double forwardSoftLimit,
       double reverseSoftLimit,
       double positionCoefficient,
+      boolean softLimitsEnabled) {
+    this(
+        ids,
+        currentLimitAmps,
+        brake,
+        forwardSoftLimit,
+        reverseSoftLimit,
+        positionCoefficient,
+        softLimitsEnabled,
+        false,
+        new CANBus("rio"));
+  }
+
+  public GenericArmSystemIOKraken(
+      int[] ids,
+      int currentLimitAmps,
+      boolean brake,
+      double forwardSoftLimit,
+      double reverseSoftLimit,
+      double positionCoefficient,
+      boolean softLimitsEnabled,
       boolean inverted,
       CANBus canBus) {
     this.positionCoefficient = positionCoefficient;
@@ -59,17 +81,15 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     motors = new TalonFX[ids.length];
     leader = motors[0] = new TalonFX(ids[0], canBus);
 
-    config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-    config.MotorOutput.Inverted =
-        inverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
-    config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
-    config.CurrentLimits.StatorCurrentLimitEnable = true;
-    config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
-    config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = forwardSoftLimit / positionCoefficient;
-    config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
-    config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = reverseSoftLimit / positionCoefficient;
+    config =
+        buildConfiguration(
+            brake,
+            currentLimitAmps,
+            inverted,
+            forwardSoftLimit,
+            reverseSoftLimit,
+            positionCoefficient,
+            softLimitsEnabled);
 
     tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
 
@@ -87,6 +107,29 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     supplyCurrentSignal = leader.getSupplyCurrent();
     torqueCurrentSignal = leader.getTorqueCurrent();
     tempSignal = leader.getDeviceTemp();
+  }
+
+  static TalonFXConfiguration buildConfiguration(
+      boolean brake,
+      int currentLimitAmps,
+      boolean inverted,
+      double forwardSoftLimit,
+      double reverseSoftLimit,
+      double positionCoefficient,
+      boolean softLimitsEnabled) {
+    TalonFXConfiguration config = new TalonFXConfiguration();
+    config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+    config.MotorOutput.Inverted =
+        inverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+    config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
+    config.CurrentLimits.SupplyCurrentLimitEnable = true;
+    config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
+    config.CurrentLimits.StatorCurrentLimitEnable = true;
+    config.SoftwareLimitSwitch.ForwardSoftLimitEnable = softLimitsEnabled;
+    config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = forwardSoftLimit / positionCoefficient;
+    config.SoftwareLimitSwitch.ReverseSoftLimitEnable = softLimitsEnabled;
+    config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = reverseSoftLimit / positionCoefficient;
+    return config;
   }
 
   @Override

@@ -551,6 +551,7 @@ public abstract class StateMachine<E extends Enum<E>> extends SubsystemBase {
     currentTransition.execute();
     queuedTransition = null;
     transitionTimer.reset();
+    transitionTimer.start();
     clearFlags();
   }
 

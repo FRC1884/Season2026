@@ -228,6 +228,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     if (!isFinite(observation.timestamp()) || !isFinite(observation.averageTagDistance())) {
       return false;
     }
+    if (!isFinite(observation.ambiguity())
+        || observation.ambiguity() > AprilTagVisionConstants.MAX_AMBIGUITY_CUTOFF) {
+      return false;
+    }
     Pose3d pose = observation.pose();
     if (!isFinite(pose.getX())
         || !isFinite(pose.getY())
@@ -235,6 +239,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         || !isFinite(pose.getRotation().getX())
         || !isFinite(pose.getRotation().getY())
         || !isFinite(pose.getRotation().getZ())) {
+      return false;
+    }
+    if (Math.abs(pose.getZ()) > AprilTagVisionConstants.MAX_Z_ERROR) {
       return false;
     }
     Rotation2d rotation = pose.toPose2d().getRotation();

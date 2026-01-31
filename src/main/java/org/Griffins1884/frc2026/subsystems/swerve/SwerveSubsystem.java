@@ -505,6 +505,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return getPose().getRotation();
   }
 
+  /** Returns the raw gyro rotation used for odometry updates. */
+  public Rotation2d getRawGyroRotation() {
+    return rawGyroRotation;
+  }
+
   /** Returns the current yaw rate in degrees per second from the gyro. */
   public double getYawRateDegreesPerSec() {
     return Math.toDegrees(gyroInputs.yawVelocityRadPerSec);

@@ -35,6 +35,7 @@ import org.littletonrobotics.junction.networktables.NT4Publisher;
 import org.littletonrobotics.junction.wpilog.WPILOGReader;
 import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.urcl.URCL;
+import org.Griffins1884.frc2026.util.StartupValidation;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -96,6 +97,8 @@ public class Robot extends LoggedRobot {
 
     // Start AdvantageKit logger
     Logger.start();
+
+    StartupValidation.checkAndReport();
 
     initNetworkTablesLogging();
 
