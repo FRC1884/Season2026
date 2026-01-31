@@ -53,10 +53,18 @@ public final class Config {
 
     public static OperatorMap getOperatorController() {
       return switch (ROBOT) {
-        case COMPBOT, CRESCENDO, DEVBOT ->
+        case COMPBOT->
             JOYSTICK_OPERATOR_ENABLED
                 ? new XboxOperatorMap(OPERATOR_PORT)
                 : new BoardOperatorMap(OPERATOR_PORT);
+        case DEVBOT ->
+                JOYSTICK_OPERATOR_ENABLED
+                        ? new XboxOperatorMap(OPERATOR_PORT)
+                        : new BoardOperatorMap(OPERATOR_PORT);
+        case CRESCENDO ->
+                JOYSTICK_OPERATOR_ENABLED
+                        ? new XboxOperatorMap(OPERATOR_PORT)
+                        : new BoardOperatorMap(OPERATOR_PORT);
         case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
       };
     }
