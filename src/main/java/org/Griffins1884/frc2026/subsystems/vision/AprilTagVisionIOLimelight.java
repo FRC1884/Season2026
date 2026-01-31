@@ -67,7 +67,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         0);
     LimelightHelpers.SetIMUMode(limelightName, 2);
 
-    inputs.connected = table.getEntry("tv").getDouble(0) == 1.0;
+    inputs.connected = LimelightHelpers.getTV(limelightName);
     inputs.seesTarget = LimelightHelpers.getTV(limelightName);
     inputs.standardDeviations = AprilTagVisionConstants.LIMELIGHT_STANDARD_DEVIATIONS;
     inputs.megatagPoseEstimate = null;
