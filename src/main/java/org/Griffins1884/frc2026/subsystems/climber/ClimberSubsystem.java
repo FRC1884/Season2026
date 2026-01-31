@@ -20,7 +20,7 @@ public class ClimberSubsystem extends GenericPositionElevatorSystem<ClimberSubsy
 
     @Override
     public DoubleSupplier getHeight() {
-      return () -> heightSupplier.getAsDouble();
+      return heightSupplier;
     }
   }
 

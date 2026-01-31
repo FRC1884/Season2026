@@ -22,11 +22,13 @@ public final class TurretConstants {
   public static final int CANCODER_ID = -1; // TODO: set to enable absolute encoder
   public static final boolean CANCODER_INVERTED = false; // TODO: set CANCoder inversion
 
-  public static final double GEAR_RATIO = 1.0; // TODO: motor rotations per turret rotation
+  public static final double GEAR_RATIO = 40.0; // TODO: motor rotations per turret rotation
+                                                //this code is accurate for the 2026 season!
   public static final double ABSOLUTE_ENCODER_GEAR_RATIO =
       1.0; // TODO: absolute encoder rotations per turret rotation
   public static final boolean USE_ABSOLUTE_ENCODER =
       false; // TODO: set true if absolute encoder is available
+            //this code is accurate for the 2026 season as of 30/1/26!
   public static final double ABSOLUTE_ENCODER_OFFSET_RAD = 0.0; // TODO: set absolute offset
 
   public static final boolean SOFT_LIMITS_ENABLED = true;

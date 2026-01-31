@@ -45,6 +45,4 @@ public class Arms extends SubsystemBase {
                   })
           : null;
 
-  @Override
-  public void periodic() {}
 }
