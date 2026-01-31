@@ -57,7 +57,7 @@ public final class Config {
             JOYSTICK_OPERATOR_ENABLED
                 ? new XboxOperatorMap(OPERATOR_PORT)
                 : new BoardOperatorMap(OPERATOR_PORT);
-          case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
+        case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
       };
     }
   }
