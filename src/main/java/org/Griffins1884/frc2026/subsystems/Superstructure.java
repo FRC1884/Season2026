@@ -33,6 +33,7 @@ import org.Griffins1884.frc2026.subsystems.leds.LEDIOSim;
 import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
+import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -85,13 +86,14 @@ public class Superstructure extends SubsystemBase {
 
   public record StateRequestResult(boolean accepted, String reason) {}
 
-  private final Supplier<Pose2d> drivePoseSupplier;
+  private final SwerveSubsystem drive;
   @Setter private TurretSubsystem turret;
 
   @Getter
   private final LoggedDashboardChooser<SuperState> stateChooser =
       new LoggedDashboardChooser<>("Superstructure State");
 
+  @Getter
   private SuperState requestedState = SuperState.IDLING;
   @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
@@ -100,6 +102,7 @@ public class Superstructure extends SubsystemBase {
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   private final Timer climbTimer = new Timer();
   private ClimbPhase climbPhase = ClimbPhase.IDLE;
+  @Getter
   private int climbLevel = 0;
   private ClimbMode activeClimbMode = null;
   @Setter private boolean climbShootEnabled = false;
@@ -128,8 +131,8 @@ public class Superstructure extends SubsystemBase {
   private final Arms arms = new Arms();
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
-  public Superstructure(Supplier<Pose2d> drivePoseSupplier) {
-    this.drivePoseSupplier = drivePoseSupplier;
+  public Superstructure(SwerveSubsystem drive) {
+    this.drive = drive;
     configureStateChooser();
     climbTimer.start();
     if (LEDS_ENABLED) {
@@ -165,19 +168,11 @@ public class Superstructure extends SubsystemBase {
     return new StateRequestResult(true, "");
   }
 
-  public SuperState getRequestedState() {
-    return requestedState;
-  }
-
-  public String getClimbPhaseName() {
+    public String getClimbPhaseName() {
     return climbPhase.toString();
   }
 
-  public int getClimbLevel() {
-    return climbLevel;
-  }
-
-  public boolean hasBall() {
+    public boolean hasBall() {
     return isBallPresent();
   }
 
@@ -312,7 +307,13 @@ public class Superstructure extends SubsystemBase {
     switch (state) {
       case IDLING -> applyIdle();
       case INTAKING -> applyIntaking();
-      case SHOOTING -> applyShooting(GlobalConstants.Coordinates.getHopperTarget(), false);
+      case SHOOTING ->
+          applyShooting(
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+                  : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
+              false);
       case FERRYING -> applyFerrying();
       case ENDGAME_CLIMB -> applyClimb(ClimbMode.ENDGAME);
       case AUTO_CLIMB -> applyClimb(ClimbMode.AUTO);
@@ -381,7 +382,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyFerrying() {
-    Translation2d target = GlobalConstants.Coordinates.getFerryTarget(drivePoseSupplier.get());
+    Translation2d target;
+    if (drive != null) target = new Translation2d(0, 0); // TODO: find a way to get the ferry target
+    else target = new Translation2d(0.0, 0.0);
     setIntakeGoal(intakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -393,7 +396,12 @@ public class Superstructure extends SubsystemBase {
 
   private void applyClimb(ClimbMode mode) {
     if (climbShootEnabled) {
-      applyShooting(GlobalConstants.Coordinates.getHopperTarget(), false);
+      applyShooting(
+          (DriverStation.getAlliance().isPresent()
+                  && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+              ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+              : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
+          false);
     } else {
       setIntakeGoal(intakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.IDLING);
@@ -511,26 +519,26 @@ public class Superstructure extends SubsystemBase {
       lastTurretTarget = null;
       return;
     }
-    if (turret == null || drivePoseSupplier == null || target == null) {
+    if (turret == null || drive == null || target == null) {
       holdTurret();
       return;
     }
-    TurretCommands.autoAimToTarget(
-        turret, drivePoseSupplier, (Pose2d) -> java.util.Optional.of(target));
+    TurretCommands.shootingWhileMoving(
+        turret, drive::getPose, () -> target, drive::getRobotRelativeSpeeds);
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;
   }
 
   private void aimShooterPivotAt(Translation2d target) {
-    if (arms.shooterPivot == null || drivePoseSupplier == null || target == null) {
+    if (arms.shooterPivot == null || drive == null || target == null) {
       return;
     }
-    Pose2d pose = drivePoseSupplier.get();
+    Pose2d pose = drive.getPose();
     if (pose == null) {
       return;
     }
 
-    double targetPosition = ShooterCommands.calc(pose);
+    double targetPosition = ShooterCommands.calc(pose, target);
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
     lastShooterPivotPosition = targetPosition;

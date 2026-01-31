@@ -47,6 +47,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.commands.AlignConstants.AlignGains;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
@@ -55,38 +56,8 @@ import org.littletonrobotics.junction.Logger;
 public class DriveCommands {
 
   @Setter @Getter public static AlignGains alignGains = DEFAULT_ALIGN_GAINS;
-  private static final double CLIMB_ALIGN_BLUE_X_METERS = 1.66;
-  private static final double CLIMB_ALIGN_BLUE_Y_METERS = 3.97;
-  private static final double CLIMB_ALIGN_BLUE_DEG = 180.0;
-  private static final double CLIMB_ALIGN_RED_X_METERS = 14.87;
-  private static final double CLIMB_ALIGN_RED_Y_METERS = 4.58;
-  private static final double CLIMB_ALIGN_RED_DEG = 0.0;
 
   private DriveCommands() {}
-
-  // --- Alignment context & telemetry helpers (used by autonomy helpers) ---
-  private static volatile String alignContext = "";
-  private static volatile String alignName = "";
-
-  public static void setAlignContext(String context, String name) {
-    alignContext = context == null ? "" : context;
-    alignName = name == null ? "" : name;
-    try {
-      Logger.recordOutput("Autonomy/AlignContext", alignContext);
-      Logger.recordOutput("Autonomy/AlignName", alignName);
-    } catch (Throwable ignored) {
-    }
-  }
-
-  public static void clearAlignTelemetry() {
-    alignContext = "";
-    alignName = "";
-    try {
-      Logger.recordOutput("Autonomy/AlignContext", "");
-      Logger.recordOutput("Autonomy/AlignName", "");
-    } catch (Throwable ignored) {
-    }
-  }
 
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
@@ -212,25 +183,16 @@ public class DriveCommands {
   public static Command alignToClimbCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
-          Pose2d target = getClimbAlignPose();
+          Translation2d target =
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.Tower.centerPoint
+                  : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
           Logger.recordOutput("Autonomy/AlignTargetClimb", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(
+              drive, new Pose2d(target.getX(), target.getY(), target.getAngle()));
         },
         Set.of(drive));
-  }
-
-  private static Pose2d getClimbAlignPose() {
-    boolean isRed = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red;
-    if (isRed) {
-      return new Pose2d(
-          CLIMB_ALIGN_RED_X_METERS,
-          CLIMB_ALIGN_RED_Y_METERS,
-          Rotation2d.fromDegrees(CLIMB_ALIGN_RED_DEG));
-    }
-    return new Pose2d(
-        CLIMB_ALIGN_BLUE_X_METERS,
-        CLIMB_ALIGN_BLUE_Y_METERS,
-        Rotation2d.fromDegrees(CLIMB_ALIGN_BLUE_DEG));
   }
 
   /**

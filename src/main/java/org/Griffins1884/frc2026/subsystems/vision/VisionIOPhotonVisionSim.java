@@ -1,9 +1,10 @@
 package org.Griffins1884.frc2026.subsystems.vision;
 
+import static org.Griffins1884.frc2026.GlobalConstants.FieldConstants.defaultAprilTagType;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import java.util.function.Supplier;
-import org.Griffins1884.frc2026.GlobalConstants.FieldMap;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
@@ -28,7 +29,7 @@ public class VisionIOPhotonVisionSim extends AprilTagVisionIOPhotonVision {
     // Initialize vision sim
     if (visionSim == null) {
       visionSim = new VisionSystemSim("main");
-      visionSim.addAprilTags(FieldMap.APRIL_TAG_FIELD_LAYOUT);
+      visionSim.addAprilTags(defaultAprilTagType.getLayout());
     }
 
     // Add sim camera

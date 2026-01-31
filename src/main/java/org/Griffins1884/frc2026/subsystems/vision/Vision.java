@@ -1,6 +1,6 @@
 package org.Griffins1884.frc2026.subsystems.vision;
 
-import static org.Griffins1884.frc2026.GlobalConstants.FieldMap.APRIL_TAG_FIELD_LAYOUT;
+import static org.Griffins1884.frc2026.GlobalConstants.FieldConstants.defaultAprilTagType;
 import static org.Griffins1884.frc2026.subsystems.vision.AprilTagVisionHelpers.generateDynamicStdDevs;
 
 import edu.wpi.first.math.Matrix;
@@ -125,7 +125,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         continue;
       }
       for (int tagId : inputs[cameraIndex].tagIds) {
-        var tagPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(tagId);
+        var tagPose = defaultAprilTagType.getLayout().getTagPose(tagId);
         if (tagPose.isEmpty()) {
           continue;
         }
@@ -172,7 +172,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       List<Pose3d> robotPosesAccepted = new LinkedList<>();
 
       for (int tagId : inputs[cameraIndex].tagIds) {
-        var tagPose = APRIL_TAG_FIELD_LAYOUT.getTagPose(tagId);
+        var tagPose = defaultAprilTagType.getLayout().getTagPose(tagId);
         tagPose.ifPresent(tagPoses::add);
       }
 
