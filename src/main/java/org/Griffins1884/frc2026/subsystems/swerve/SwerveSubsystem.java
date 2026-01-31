@@ -52,6 +52,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.subsystems.vision.Vision;
@@ -77,7 +78,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
   private SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(SwerveConstants.MODULE_TRANSLATIONS);
-  private Rotation2d rawGyroRotation = new Rotation2d();
+  @Getter private Rotation2d rawGyroRotation = new Rotation2d();
   private SwerveModulePosition[] lastModulePositions = // For delta tracking
       new SwerveModulePosition[] {
         new SwerveModulePosition(),
