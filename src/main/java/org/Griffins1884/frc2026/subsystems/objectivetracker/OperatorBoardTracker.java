@@ -184,18 +184,26 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     switch (state) {
       case SHOOTING -> {
         targetType = "HOPPER";
-        target = GlobalConstants.Coordinates.getHopperTarget();
+        target =
+            (DriverStation.getAlliance().isPresent()
+                    && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+                ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+                : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
       }
       case FERRYING -> {
         targetType = "FERRY";
         Pose2d pose = drive != null ? drive.getPose() : null;
         if (pose != null) {
-          target = GlobalConstants.Coordinates.getFerryTarget(pose);
+          target = new Translation2d(0.0, 0.0); // TODO: find Ferry Target
         }
       }
       case ENDGAME_CLIMB, AUTO_CLIMB, CLIMB_DETACH -> {
         targetType = "CLIMB";
-        target = GlobalConstants.Coordinates.getClimbTarget();
+        target =
+            (DriverStation.getAlliance().isPresent()
+                    && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+                ? GlobalConstants.FieldConstants.Tower.centerPoint
+                : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
       }
       default -> targetType = "NONE";
     }
