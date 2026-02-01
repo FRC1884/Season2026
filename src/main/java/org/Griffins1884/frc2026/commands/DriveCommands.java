@@ -14,16 +14,6 @@
 package org.Griffins1884.frc2026.commands;
 
 import static java.lang.Math.PI;
-import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MANUAL_DEADBAND;
-import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION;
-import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MAX_ANGULAR_SPEED;
-import static org.Griffins1884.frc2026.commands.AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED;
-import static org.Griffins1884.frc2026.commands.AlignConstants.DEFAULT_ALIGN_GAINS;
-import static org.Griffins1884.frc2026.commands.AlignConstants.FF_RAMP_RATE;
-import static org.Griffins1884.frc2026.commands.AlignConstants.FF_START_DELAY;
-import static org.Griffins1884.frc2026.commands.AlignConstants.WHEEL_RADIUS_MAX_VELOCITY;
-import static org.Griffins1884.frc2026.commands.AlignConstants.WHEEL_RADIUS_RAMP_RATE;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -46,23 +36,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-import lombok.Getter;
-import lombok.Setter;
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.commands.AlignConstants.AlignGains;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
-
-  @Setter @Getter public static AlignGains alignGains = DEFAULT_ALIGN_GAINS;
-
   private DriveCommands() {}
 
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
-    double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), ALIGN_MANUAL_DEADBAND);
+    double linearMagnitude =
+        MathUtil.applyDeadband(Math.hypot(x, y), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
     Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
 
     // Square magnitude for more precise control
@@ -87,7 +72,8 @@ public class DriveCommands {
         getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
 
     // Apply rotation deadband
-    double omega = MathUtil.applyDeadband(omegaSupplier.getAsDouble(), ALIGN_MANUAL_DEADBAND);
+    double omega =
+        MathUtil.applyDeadband(omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
 
     // Square rotation value for more precise control
     omega = Math.copySign(omega * omega, omega);
@@ -105,10 +91,6 @@ public class DriveCommands {
         ChassisSpeeds.fromFieldRelativeSpeeds(
             speeds,
             isFlipped ? drive.getRotation().plus(new Rotation2d(Math.PI)) : drive.getRotation()));
-  }
-
-  public static void robotRelativeChassisSpeedDrive(SwerveSubsystem drive, ChassisSpeeds speeds) {
-    drive.runVelocity(speeds);
   }
 
   /**
@@ -129,7 +111,8 @@ public class DriveCommands {
             0.0,
             SwerveConstants.ROTATION_CONSTANTS.kD,
             new TrapezoidProfile.Constraints(
-                ALIGN_MAX_ANGULAR_SPEED, ALIGN_MAX_ANGULAR_ACCELERATION));
+                AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+                AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.get()));
     angleController.enableContinuousInput(-Math.PI, Math.PI);
 
     // Construct command
@@ -171,13 +154,17 @@ public class DriveCommands {
         Math.max(
             1.0,
             Math.max(
-                Math.abs(speeds.vxMetersPerSecond) / ALIGN_MAX_TRANSLATIONAL_SPEED,
-                Math.abs(speeds.vyMetersPerSecond) / ALIGN_MAX_TRANSLATIONAL_SPEED));
+                Math.abs(speeds.vxMetersPerSecond)
+                    / AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get(),
+                Math.abs(speeds.vyMetersPerSecond)
+                    / AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
     double vx = speeds.vxMetersPerSecond / maxComponent;
     double vy = speeds.vyMetersPerSecond / maxComponent;
     double omega =
         MathUtil.clamp(
-            speeds.omegaRadiansPerSecond, -ALIGN_MAX_ANGULAR_SPEED, ALIGN_MAX_ANGULAR_SPEED);
+            speeds.omegaRadiansPerSecond,
+            -AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+            AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get());
     return new ChassisSpeeds(vx, vy, omega);
   }
 
@@ -220,7 +207,7 @@ public class DriveCommands {
                   drive.runCharacterization(0.0);
                 },
                 drive)
-            .withTimeout(FF_START_DELAY),
+            .withTimeout(AlignConstants.FF_START_DELAY.get()),
 
         // Start timer
         Commands.runOnce(timer::restart),
@@ -228,7 +215,7 @@ public class DriveCommands {
         // Accelerate and gather data
         Commands.run(
                 () -> {
-                  double voltage = timer.get() * FF_RAMP_RATE;
+                  double voltage = timer.get() * AlignConstants.FF_RAMP_RATE.get();
                   drive.runCharacterization(voltage);
                   velocitySamples.add(drive.getFFCharacterizationVelocity());
                   voltageSamples.add(voltage);
@@ -261,7 +248,7 @@ public class DriveCommands {
 
   /** Measures the robot's wheel radius by spinning in a circle. */
   public static Command wheelRadiusCharacterization(SwerveSubsystem drive) {
-    SlewRateLimiter limiter = new SlewRateLimiter(WHEEL_RADIUS_RAMP_RATE);
+    SlewRateLimiter limiter = new SlewRateLimiter(AlignConstants.WHEEL_RADIUS_RAMP_RATE.get());
     WheelRadiusCharacterizationState state = new WheelRadiusCharacterizationState();
 
     return Commands.parallel(
@@ -276,7 +263,7 @@ public class DriveCommands {
             // Turn in place, accelerating up to full speed
             Commands.run(
                 () -> {
-                  double speed = limiter.calculate(WHEEL_RADIUS_MAX_VELOCITY);
+                  double speed = limiter.calculate(AlignConstants.WHEEL_RADIUS_MAX_VELOCITY.get());
                   drive.runVelocity(new ChassisSpeeds(0.0, 0.0, speed));
                 },
                 drive)),

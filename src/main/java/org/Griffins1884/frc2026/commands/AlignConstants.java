@@ -1,52 +1,61 @@
 package org.Griffins1884.frc2026.commands;
 
-import com.pathplanner.lib.config.PIDConstants;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.util.Units;
+import org.Griffins1884.frc2026.GlobalConstants.Gains;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 /** Shared constants and gain containers for drive alignment routines. */
 public final class AlignConstants {
   private AlignConstants() {}
 
-  public static final double ALIGN_MAX_TRANSLATIONAL_SPEED = 1.0; // m/s
-  public static final double ALIGN_MAX_TRANSLATIONAL_ACCELERATION = 2.0; // m/s
-  public static final double ALIGN_MAX_ANGULAR_SPEED = 0.3; // m/s
-  public static final double ALIGN_MAX_ANGULAR_ACCELERATION = 0.3; // m/s^2
-  public static final double ALIGN_CONTROLLER_LOOP_PERIOD_SEC = 0.02; // PathPlanner controller dt
-  public static final double FF_START_DELAY = 0.3; // Secs
-  public static final double FF_RAMP_RATE = 0.4; // Volts/Sec
-  public static final double ALIGN_TRANSLATION_SLEW_RATE = 1.0; // m/s^2
-  public static final double ALIGN_ROTATION_SLEW_RATE = Math.toRadians(720.0); // rad/s^2
-  public static final double ALIGN_MANUAL_MAX_SPEED = 0.3; // m/s
-  public static final double ALIGN_MANUAL_DEADBAND = 0.1;
-  public static final double ALIGN_PID_BLEND_RANGE_METERS = 1.0; // distance where PID fully enabled
-  public static final double ALIGN_PID_BLEND_MIN = 0.15; // keep some PID authority near target
-  public static final double ALIGN_TRANSLATION_TOLERANCE_METERS = 0.2; // m
-  public static final double ALIGN_ROTATION_TOLERANCE_RADIANS = Units.degreesToRadians(4); // rad
-  public static final double WHEEL_RADIUS_MAX_VELOCITY = 0.25; // Rad/Sec
-  public static final double WHEEL_RADIUS_RAMP_RATE = 0.05; // Rad/Sec^2
+  public static final LoggedTunableNumber ALIGN_MAX_TRANSLATIONAL_SPEED =
+      new LoggedTunableNumber("Align/MaxTranslationalSpeed", 1.0);
+  public static final LoggedTunableNumber ALIGN_MAX_TRANSLATIONAL_ACCELERATION =
+      new LoggedTunableNumber("Align/MaxTranslationalAcceleration", 2.0);
+  public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_SPEED =
+      new LoggedTunableNumber("Align/MaxAngularSpeed", 0.3);
+  public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_ACCELERATION =
+      new LoggedTunableNumber("Align/MaxAngularAcceleration", 0.3);
+  public static final LoggedTunableNumber ALIGN_CONTROLLER_LOOP_PERIOD_SEC =
+      new LoggedTunableNumber("Align/ControllerLoopPeriodSec", 0.02);
+  public static final LoggedTunableNumber FF_START_DELAY =
+      new LoggedTunableNumber("Align/FFStartDelaySec", 0.3);
+  public static final LoggedTunableNumber FF_RAMP_RATE =
+      new LoggedTunableNumber("Align/FFRampRateVoltsPerSec", 0.4);
+  public static final LoggedTunableNumber ALIGN_MANUAL_DEADBAND =
+      new LoggedTunableNumber("Align/ManualDeadband", 0.1);
+  public static final LoggedTunableNumber ALIGN_TRANSLATION_TOLERANCE_METERS =
+      new LoggedTunableNumber("Align/TranslationToleranceMeters", 0.2);
+  public static final LoggedTunableNumber WHEEL_RADIUS_MAX_VELOCITY =
+      new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.25);
+  public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
+      new LoggedTunableNumber("Align/WheelRadiusRampRate", 0.05);
 
-  public static final AlignGains DEFAULT_ALIGN_GAINS =
-      new AlignGains(
-          new PIDGains(0.4, 0.001, 0.4),
-          new PIDGains(1, 0.0, 0.0),
-          new PIDGains(2, 0., 0.0),
-          new FeedforwardGains(1.0, 0.02, ALIGN_MAX_TRANSLATIONAL_SPEED));
+  public static final LoggedTunableNumber ALIGN_TRANSLATION_KP =
+      new LoggedTunableNumber("Align/Gains/Translation/kP", 0.4);
+  public static final LoggedTunableNumber ALIGN_TRANSLATION_KI =
+      new LoggedTunableNumber("Align/Gains/Translation/kI", 0.001);
+  public static final LoggedTunableNumber ALIGN_TRANSLATION_KD =
+      new LoggedTunableNumber("Align/Gains/Translation/kD", 0.4);
+  public static final LoggedTunableNumber ALIGN_ROTATION_KP =
+      new LoggedTunableNumber("Align/Gains/Rotation/kP", 2.0);
+  public static final LoggedTunableNumber ALIGN_ROTATION_KI =
+      new LoggedTunableNumber("Align/Gains/Rotation/kI", 0.0);
+  public static final LoggedTunableNumber ALIGN_ROTATION_KD =
+      new LoggedTunableNumber("Align/Gains/Rotation/kD", 0.0);
+  public static final LoggedTunableNumber ALIGN_FEEDFORWARD_KV =
+      new LoggedTunableNumber("Align/Gains/Feedforward/kV", 1.0);
+  public static final LoggedTunableNumber ALIGN_FEEDFORWARD_DEADBAND =
+      new LoggedTunableNumber("Align/Gains/Feedforward/DeadbandMeters", 0.02);
 
-  public static final double ALIGN_TUNER_TIMEOUT_SECS = 3.5;
-  public static final double ALIGN_TUNER_KICKBACK_TIME = 0.6;
-  public static final double ALIGN_TUNER_KICKBACK_SPEED = 1.5;
-  public static final int ALIGN_TUNER_TRIAL_COUNT = 3;
-
-  /** Simple PID container that mirrors the WPILib controller parameters. */
-  public static record PIDGains(double kP, double kI, double kD) {
-    public PIDGains withKp(double value) {
-      return new PIDGains(value, kI, kD);
-    }
-
-    public PIDGains withKd(double value) {
-      return new PIDGains(kP, kI, value);
-    }
+  public static AlignGains getAlignGains() {
+    return new AlignGains(
+        new Gains(ALIGN_TRANSLATION_KP.get(), ALIGN_TRANSLATION_KI.get(), ALIGN_TRANSLATION_KD.get()),
+        new Gains(ALIGN_ROTATION_KP.get(), ALIGN_ROTATION_KI.get(), ALIGN_ROTATION_KD.get()),
+        new FeedforwardGains(
+            ALIGN_FEEDFORWARD_KV.get(),
+            ALIGN_FEEDFORWARD_DEADBAND.get(),
+            ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
   }
 
   /** Feedforward definition for translation alignment. */
@@ -55,13 +64,6 @@ public final class AlignConstants {
     public FeedforwardGains withKv(double value) {
       return new FeedforwardGains(value, deadbandMeters, maxSpeedMetersPerSecond);
     }
-
-    public double calculateSpeed(double distanceMeters) {
-      if (distanceMeters < deadbandMeters) {
-        return 0.0;
-      }
-      return MathUtil.clamp(distanceMeters * kV, 0.0, maxSpeedMetersPerSecond);
-    }
   }
 
   /**
@@ -69,17 +71,17 @@ public final class AlignConstants {
    * forward motion.
    */
   public static record AlignGains(
-      PIDGains xGains, PIDGains yGains, PIDGains thetaGains, FeedforwardGains feedforwardGains) {
+      Gains translationGains, Gains thetaGains, FeedforwardGains feedforwardGains) {
     public double translationKp() {
-      return xGains.kP();
+      return translationGains.kP();
     }
 
     public double translationKi() {
-      return xGains.kI();
+      return translationGains.kI();
     }
 
     public double translationKd() {
-      return xGains.kD();
+      return translationGains.kD();
     }
 
     public double rotationKp() {
@@ -96,26 +98,6 @@ public final class AlignConstants {
 
     public double feedforward() {
       return feedforwardGains.kV();
-    }
-
-    public PIDConstants translationPidConstants() {
-      return new PIDConstants(xGains.kP(), xGains.kI(), xGains.kD());
-    }
-
-    public PIDConstants rotationPidConstants() {
-      return new PIDConstants(thetaGains.kP(), thetaGains.kI(), thetaGains.kD());
-    }
-
-    public AlignGains withTranslationKp(double kp) {
-      return new AlignGains(xGains.withKp(kp), yGains.withKp(kp), thetaGains, feedforwardGains);
-    }
-
-    public AlignGains withRotationKp(double kp) {
-      return new AlignGains(xGains, yGains, thetaGains.withKp(kp), feedforwardGains);
-    }
-
-    public AlignGains withFeedforward(double kv) {
-      return new AlignGains(xGains, yGains, thetaGains, feedforwardGains.withKv(Math.max(0.0, kv)));
     }
   }
 }
