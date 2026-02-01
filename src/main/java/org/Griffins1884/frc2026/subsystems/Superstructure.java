@@ -7,6 +7,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,6 +36,7 @@ import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.Shooter
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
+import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -521,8 +523,8 @@ public class Superstructure extends SubsystemBase {
       holdTurret();
       return;
     }
-    TurretCommands.shootingWhileMoving(
-        turret, drive::getPose, () -> target, drive::getRobotRelativeSpeeds);
+    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) turret.setGoalRad(TurretCommands.shootingWhileMoving(drive::getPose, () -> target, drive::getRobotRelativeSpeeds));
+    else turret.setGoalRad(TurretUtil.turretAngleToTarget(drive.getPose(), target));
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;
   }

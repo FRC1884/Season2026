@@ -16,38 +16,8 @@ import org.littletonrobotics.junction.Logger;
 public final class TurretCommands {
   private TurretCommands() {}
 
-  // public static Command turretToAngle(TurretSubsystem turret, DoubleSupplier angleRadSupplier) {
-  // return Commands.run(() -> turret.setGoalRad(angleRadSupplier.getAsDouble()), turret);
-  // }
-
   public static Command turretToZero(TurretSubsystem turret) {
     return Commands.runOnce(() -> turret.setGoalRad(0.0), turret);
-  }
-
-  /** Command to rotate turret to specific angle with wrapping */
-  public static Command turretToAngle(TurretSubsystem turret, DoubleSupplier angleRadSupplier) {
-    return Commands.run(
-        () -> {
-          double targetAngle = angleRadSupplier.getAsDouble();
-          double currentAngle = turret.getPositionRad();
-          double wrappedAngle = wrapAngleToShortest(currentAngle, targetAngle);
-          turret.setGoalRad(wrappedAngle);
-        },
-        turret);
-  }
-
-  /**
-   * Calculates the shortest angular path between current and target angles Prevents turret from
-   * rotating more than 180 degrees
-   */
-  private static double wrapAngleToShortest(double currentAngle, double targetAngle) {
-    // Calculate the angular difference
-    double diff = targetAngle - currentAngle;
-
-    // Wrap to shortest path using atan2 for proper quadrant handling
-    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-
-    return currentAngle + diff;
   }
 
   public static Command turretOpenLoop(TurretSubsystem turret, DoubleSupplier percentSupplier) {
@@ -76,23 +46,20 @@ public final class TurretCommands {
         },
         turret);
   }
+    public static double shootingWhileMoving(
+            Supplier<Pose2d> robotPoseSupplier,
+            Supplier<Translation2d> targetSupplier,
+            Supplier<ChassisSpeeds> robotVelocitySupplier) {
+        ChassisSpeeds speeds = robotVelocitySupplier.get();
+        Pose2d currentPose = robotPoseSupplier.get();
+        Translation2d currentTranslation = currentPose.getTranslation();
+        double dist = targetSupplier.get().getDistance(currentTranslation);
+        double shotTime = ShooterCommands.find(dist);
 
-  public static Command shootingWhileMoving(
-      TurretSubsystem turret,
-      Supplier<Pose2d> robotPoseSupplier,
-      Supplier<Translation2d> targetSupplier,
-      Supplier<ChassisSpeeds> robotVelocitySupplier) {
-    ChassisSpeeds speeds = robotVelocitySupplier.get();
-    Pose2d currentPose = robotPoseSupplier.get();
-    Translation2d currentTranslation = currentPose.getTranslation();
-    double dist = targetSupplier.get().getDistance(currentTranslation);
-    double shotTime = ShooterCommands.find(dist);
-
-    double futureX = currentTranslation.getX() + (speeds.vxMetersPerSecond) * shotTime;
-    double futureY = currentTranslation.getY() + (speeds.vyMetersPerSecond) * shotTime;
-    Translation2d futureTranslation = new Translation2d(futureX, futureY);
-    Translation2d newTarget = targetSupplier.get().minus(futureTranslation);
-
-    return autoAimToTarget(turret, robotPoseSupplier, pose -> Optional.of(newTarget));
-  }
+        double futureX = currentTranslation.getX() + (speeds.vxMetersPerSecond) * shotTime;
+        double futureY = currentTranslation.getY() + (speeds.vyMetersPerSecond) * shotTime;
+        Translation2d futureTranslation = new Translation2d(futureX, futureY);
+        Translation2d newTarget = targetSupplier.get().minus(futureTranslation);
+        return TurretUtil.turretAngleToTarget(currentPose, newTarget);
+    }
 }
