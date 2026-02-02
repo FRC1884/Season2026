@@ -249,13 +249,13 @@ public class RobotContainer {
                   new Vision(
                       drive,
                       LEFT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS)
+                          ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS,drive)
                           : new VisionIO() {},
                       RIGHT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS)
+                          ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS,drive)
                           : new VisionIO() {},
                       BACK_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS)
+                          ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS,drive)
                           : new VisionIO() {});
               case SIM ->
                   new Vision(
