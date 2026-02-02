@@ -32,6 +32,8 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -87,6 +89,7 @@ public class RobotContainer {
 
   private final Superstructure superstructure;
   private final VisionTargetProvider vision;
+  private boolean autoAllianceZeroed = false;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -388,9 +391,18 @@ public class RobotContainer {
           .resetOdometry()
           .onTrue(
               Commands.runOnce(
-                      () ->
-                          drive.resetOdometry(
-                              new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
+                      () -> {
+                        if (drive == null) {
+                          return;
+                        }
+                        var alliance = DriverStation.getAlliance();
+                        if (alliance.isEmpty()) {
+                          Logger.recordOutput("Odometry/AllianceZero/Failed", true);
+                          Logger.recordOutput("Odometry/AllianceZero/Reason", "ALLIANCE_UNKNOWN");
+                          return;
+                        }
+                        drive.zeroGyroAndOdometryToAllianceWall(alliance.get());
+                      },
                       drive)
                   .ignoringDisable(true));
     }
@@ -404,10 +416,6 @@ public class RobotContainer {
     operator
         .turretZero()
         .onTrue(Commands.runOnce(turret::zeroPosition, turret).ignoringDisable(true));
-
-    operator
-        .turretPreset()
-        .onTrue(TurretCommands.turretToAngle(turret, () -> TurretConstants.PRESET_ANGLE_RAD));
 
     operator
         .turretManualLeft()
@@ -455,6 +463,23 @@ public class RobotContainer {
     driveSimulation.setSimulationWorldPose(new Pose2d(3, 3, new Rotation2d()));
     drive.resetOdometry(driveSimulation.getSimulatedDriveTrainPose());
     SimulatedArena.getInstance().resetFieldForAuto();
+  }
+
+  /** Auto-zero gyro/odometry once when disabled and alliance is known. */
+  public void tryAutoZeroOdometryToAllianceWall() {
+    if (autoAllianceZeroed || drive == null) {
+      return;
+    }
+    if (!DriverStation.isDisabled()) {
+      return;
+    }
+    Optional<Alliance> alliance = DriverStation.getAlliance();
+    if (alliance.isEmpty()) {
+      return;
+    }
+    drive.zeroGyroAndOdometryToAllianceWall(alliance.get());
+    autoAllianceZeroed = true;
+    Logger.recordOutput("Odometry/AutoAllianceZeroed", true);
   }
 
   public void displaySimFieldToAdvantageScope() {

@@ -45,4 +45,9 @@ public class GyroIONavX implements GyroIO {
     yawTimestampQueue.clear();
     yawPositionQueue.clear();
   }
+
+  @Override
+  public void resetYaw(double yawDegrees) {
+    navX.zeroYaw();
+  }
 }

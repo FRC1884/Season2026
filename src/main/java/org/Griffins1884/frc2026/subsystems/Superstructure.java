@@ -7,6 +7,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -35,6 +36,7 @@ import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.Shooter
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
+import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -93,8 +95,7 @@ public class Superstructure extends SubsystemBase {
   private final LoggedDashboardChooser<SuperState> stateChooser =
       new LoggedDashboardChooser<>("Superstructure State");
 
-  @Getter
-  private SuperState requestedState = SuperState.IDLING;
+  @Getter private SuperState requestedState = SuperState.IDLING;
   @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
 
@@ -102,8 +103,7 @@ public class Superstructure extends SubsystemBase {
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   private final Timer climbTimer = new Timer();
   private ClimbPhase climbPhase = ClimbPhase.IDLE;
-  @Getter
-  private int climbLevel = 0;
+  @Getter private int climbLevel = 0;
   private ClimbMode activeClimbMode = null;
   @Setter private boolean climbShootEnabled = false;
   private double climbHoldPosition = Double.NaN;
@@ -168,11 +168,11 @@ public class Superstructure extends SubsystemBase {
     return new StateRequestResult(true, "");
   }
 
-    public String getClimbPhaseName() {
+  public String getClimbPhaseName() {
     return climbPhase.toString();
   }
 
-    public boolean hasBall() {
+  public boolean hasBall() {
     return isBallPresent();
   }
 
@@ -523,8 +523,8 @@ public class Superstructure extends SubsystemBase {
       holdTurret();
       return;
     }
-    TurretCommands.shootingWhileMoving(
-        turret, drive::getPose, () -> target, drive::getRobotRelativeSpeeds);
+    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) turret.setGoalRad(TurretCommands.shootingWhileMoving(drive::getPose, () -> target, drive::getRobotRelativeSpeeds));
+    else turret.setGoalRad(TurretUtil.turretAngleToTarget(drive.getPose(), target));
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;
   }

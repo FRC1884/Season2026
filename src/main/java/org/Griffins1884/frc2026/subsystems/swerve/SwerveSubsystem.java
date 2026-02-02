@@ -511,8 +511,40 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return Math.toDegrees(gyroInputs.yawVelocityRadPerSec);
   }
 
+  /**
+   * Zeros the gyro and odometry heading to the alliance wall.
+   *
+   * <p>Red alliance: facing the red wall = 0 degrees. Blue alliance: facing the blue wall = 180
+   * degrees (WPI blue field coordinates).
+   */
+  public void zeroGyroAndOdometryToAllianceWall(Alliance alliance) {
+    Rotation2d heading = getAllianceWallFacingRotation(alliance);
+    resetOdometry(new Pose2d(getPose().getTranslation(), heading), true);
+    Logger.recordOutput("Odometry/AllianceZero/HeadingDeg", heading.getDegrees());
+    Logger.recordOutput("Odometry/AllianceZero/Alliance", alliance.name());
+  }
+
+  /** Returns the field heading used when the robot is facing its alliance wall. */
+  public static Rotation2d getAllianceWallFacingRotation(Alliance alliance) {
+    return alliance == Alliance.Blue ? Rotation2d.fromDegrees(180.0) : new Rotation2d();
+  }
+
   /** Resets the current odometry pose. */
   public void resetOdometry(Pose2d pose) {
+    resetOdometry(pose, false);
+  }
+
+  /**
+   * Resets the current odometry pose and optionally aligns the gyro to the provided field heading.
+   *
+   * @param pose Field-relative pose to reset to.
+   * @param resetGyro If true, reset the gyro yaw to pose rotation (field heading).
+   */
+  public void resetOdometry(Pose2d pose, boolean resetGyro) {
+    if (resetGyro) {
+      gyroIO.resetYaw(pose.getRotation().getDegrees());
+      rawGyroRotation = pose.getRotation();
+    }
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
   }
 
@@ -532,7 +564,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Pose2d currentPose = poseEstimator.getEstimatedPosition();
     if (!isFinitePose(currentPose)) {
       if (!isValidRotation(rawGyroRotation)) {
-        rawGyroRotation = visionRobotPoseMeters.getRotation();
+        // rawGyroRotation = visionRobotPoseMeters.getRotation();
       }
       poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), visionRobotPoseMeters);
       return;
