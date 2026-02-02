@@ -27,4 +27,7 @@ public interface GyroIO {
   }
 
   public default void updateInputs(GyroIOInputs inputs) {}
+
+  /** Resets the reported yaw to the provided field-relative heading in degrees. */
+  public default void resetYaw(double yawDegrees) {}
 }

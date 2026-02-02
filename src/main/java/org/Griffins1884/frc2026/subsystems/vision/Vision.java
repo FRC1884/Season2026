@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Setter;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.littletonrobotics.junction.Logger;
 
 public class Vision extends SubsystemBase implements VisionTargetProvider {
@@ -187,6 +188,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         if (!isObservationValid(observation)) {
           continue;
         }
+
         robotPosesAccepted.add(observation.pose());
 
         consumer.accept(
@@ -304,20 +306,36 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return Optional.empty();
     }
 
+    Pose2d fieldToRobot = cam.megatagPoseEstimate.fieldToRobot();
+    if (!isFinitePose(fieldToRobot) || !isWithinFieldBounds(fieldToRobot)) {
+      return Optional.empty();
+    }
+
     int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
+    if (tagCount <= 0) {
+      return Optional.empty();
+    }
     int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
     double qualityUsed = sanitizeQuality(cam.megatagPoseEstimate.quality());
+    if (tagCount == 1
+        && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
+      return Optional.empty();
+    }
     LimelightStdDevs stdDevs = computeLimelightStdDevs(cam, indexBase, qualityUsed);
     if (stdDevs == null || !stdDevs.finite()) {
       return Optional.empty();
     }
 
-    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), stdDevs.theta());
+    double thetaStd = stdDevs.theta();
+    if (AprilTagVisionConstants.ignoreMegatag2Rotation()) {
+      thetaStd = AprilTagVisionConstants.getLimelightLargeVariance();
+    }
+    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), thetaStd);
 
     return Optional.of(
         new VisionFieldPoseEstimate(
-            cam.megatagPoseEstimate.fieldToRobot(),
+            fieldToRobot,
             cam.megatagPoseEstimate.timestampSeconds(),
             visionStdDevs,
             tagCount));
@@ -409,7 +427,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private double getStdDev(VisionIO.VisionIOInputs cam, int index) {
     double[] stdDevs =
         cam.standardDeviations == null || cam.standardDeviations.length <= index
-            ? AprilTagVisionConstants.LIMELIGHT_STANDARD_DEVIATIONS
+            ? AprilTagVisionConstants.getLimelightStandardDeviations()
             : cam.standardDeviations;
     if (stdDevs == null || stdDevs.length <= index) {
       return 0.0;
@@ -452,6 +470,12 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     double qualityUsed = sanitizeQuality(qualityRaw);
     boolean qualityFinite = Double.isFinite(qualityRaw);
     boolean poseFinite = hasMegatag && isFinitePose(cam.megatagPoseEstimate.fieldToRobot());
+    boolean tagCountValid = tagCount > 0;
+    boolean singleTagQualityPass =
+        !(tagCount == 1
+            && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff());
+    boolean inFieldBounds =
+        hasMegatag && isWithinFieldBounds(cam.megatagPoseEstimate.fieldToRobot());
 
     LimelightStdDevs stdDevs =
         hasMegatag
@@ -460,7 +484,15 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             : null;
     boolean stdDevsFinite = stdDevs != null && stdDevs.finite();
 
-    boolean wouldAccept = useVision && connected && hasMegatag && poseFinite && stdDevsFinite;
+    boolean wouldAccept =
+        useVision
+            && connected
+            && hasMegatag
+            && poseFinite
+            && stdDevsFinite
+            && tagCountValid
+            && singleTagQualityPass
+            && inFieldBounds;
 
     String rejectReason;
     if (!useVision) {
@@ -471,6 +503,12 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       rejectReason = "NO_MEGATAG";
     } else if (!poseFinite) {
       rejectReason = "POSE_NONFINITE";
+    } else if (!tagCountValid) {
+      rejectReason = "NO_TAGS";
+    } else if (!singleTagQualityPass) {
+      rejectReason = "LOW_SINGLE_TAG_QUALITY";
+    } else if (!inFieldBounds) {
+      rejectReason = "OUT_OF_FIELD";
     } else if (!stdDevsFinite) {
       rejectReason = "STDDEV_NONFINITE";
     } else {
@@ -483,6 +521,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/TagCount", tagCount);
     Logger.recordOutput(prefix + "/FiducialCount", fiducialCount);
     Logger.recordOutput(prefix + "/PoseFinite", poseFinite);
+    Logger.recordOutput(prefix + "/TagCountValid", tagCountValid);
+    Logger.recordOutput(prefix + "/SingleTagQualityPass", singleTagQualityPass);
+    Logger.recordOutput(prefix + "/InFieldBounds", inFieldBounds);
     Logger.recordOutput(prefix + "/QualityRaw", qualityRaw);
     Logger.recordOutput(prefix + "/QualityUsed", qualityUsed);
     Logger.recordOutput(prefix + "/QualityFinite", qualityFinite);
@@ -511,6 +552,16 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return false;
     }
     return !(Math.abs(cos) < 1e-9 && Math.abs(sin) < 1e-9);
+  }
+
+  private boolean isWithinFieldBounds(Pose2d pose) {
+    double margin = AprilTagVisionConstants.getFieldBorderMarginMeters();
+    double x = pose.getX();
+    double y = pose.getY();
+    return x >= -margin
+        && x <= GlobalConstants.FieldConstants.fieldLength + margin
+        && y >= -margin
+        && y <= GlobalConstants.FieldConstants.fieldWidth + margin;
   }
 
   private record LimelightStdDevs(double x, double y, double theta, boolean finite) {}

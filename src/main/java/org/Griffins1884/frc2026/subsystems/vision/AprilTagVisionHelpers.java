@@ -38,7 +38,6 @@ public class AprilTagVisionHelpers {
                     + ((observation.tagCount() - 1)
                         * AprilTagVisionConstants.TAG_PRESENCE_WEIGHT)));
 
-    return AprilTagVisionConstants.VISION_MEASUREMENT_STANDARD_DEVIATIONS.times(
-        confidenceMultiplier);
+    return AprilTagVisionConstants.getVisionMeasurementStdDevs().times(confidenceMultiplier);
   }
 }

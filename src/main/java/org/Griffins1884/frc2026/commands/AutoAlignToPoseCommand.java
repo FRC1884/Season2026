@@ -13,24 +13,18 @@ import org.littletonrobotics.junction.Logger;
 
 public class AutoAlignToPoseCommand extends Command {
   private final ProfiledPIDController driveController;
-  private final ProfiledPIDController thetaController =
-      new ProfiledPIDController(
-          AlignConstants.DEFAULT_ALIGN_GAINS.rotationKp(),
-          AlignConstants.DEFAULT_ALIGN_GAINS.rotationKi(),
-          AlignConstants.DEFAULT_ALIGN_GAINS.rotationKd(),
-          new TrapezoidProfile.Constraints(
-              AlignConstants.ALIGN_MAX_ANGULAR_SPEED,
-              AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION),
-          AlignConstants.ALIGN_CONTROLLER_LOOP_PERIOD_SEC);
+  private final ProfiledPIDController thetaController;
   private final SwerveSubsystem drive;
   private double driveErrorAbs;
   private double thetaErrorAbs;
   private final double ffMinRadius = 0.0, ffMaxRadius = 0.1;
   private final Pose2d target;
-  private double endVelocity;
+  private final double constraintFactor;
+  private final double endVelocity;
+  private final double toleranceOverride;
 
   public AutoAlignToPoseCommand(SwerveSubsystem drive, Pose2d target) {
-    this(drive, target, 1.0, 0.0, AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS);
+    this(drive, target, 1.0, 0.0, Double.NaN);
   }
 
   public AutoAlignToPoseCommand(
@@ -41,18 +35,29 @@ public class AutoAlignToPoseCommand extends Command {
       double tolerance) {
     this.drive = drive;
     this.target = target;
-    double clampedFactor = Math.max(0.0, constraintFactor);
+    this.constraintFactor = Math.max(0.0, constraintFactor);
     this.endVelocity = endVelocity;
+    this.toleranceOverride = tolerance;
+    AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
     this.driveController =
         new ProfiledPIDController(
-            AlignConstants.DEFAULT_ALIGN_GAINS.translationKp(),
-            AlignConstants.DEFAULT_ALIGN_GAINS.translationKi(),
-            AlignConstants.DEFAULT_ALIGN_GAINS.translationKd(),
+            gains.translationKp(),
+            gains.translationKi(),
+            gains.translationKd(),
             new TrapezoidProfile.Constraints(
-                AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED * clampedFactor,
-                AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION * clampedFactor),
-            AlignConstants.ALIGN_CONTROLLER_LOOP_PERIOD_SEC);
-    this.driveController.setTolerance(tolerance);
+                AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get() * this.constraintFactor,
+                AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION.get() * this.constraintFactor),
+            AlignConstants.ALIGN_CONTROLLER_LOOP_PERIOD_SEC.get());
+    this.thetaController =
+        new ProfiledPIDController(
+            gains.rotationKp(),
+            gains.rotationKi(),
+            gains.rotationKd(),
+            new TrapezoidProfile.Constraints(
+                AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+                AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.get()),
+            AlignConstants.ALIGN_CONTROLLER_LOOP_PERIOD_SEC.get());
+    applyTuning();
     addRequirements(drive);
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
   }
@@ -60,6 +65,7 @@ public class AutoAlignToPoseCommand extends Command {
   @Override
   public void initialize() {
     if (target == null) return;
+    applyTuning();
 
     Pose2d currentPose = drive.getPose();
 
@@ -97,6 +103,7 @@ public class AutoAlignToPoseCommand extends Command {
     if (target == null) {
       return;
     }
+    applyTuning();
 
     Pose2d currentPose = drive.getPose();
 
@@ -141,5 +148,24 @@ public class AutoAlignToPoseCommand extends Command {
   @Override
   public boolean isFinished() {
     return target == null || (driveController.atGoal() && thetaController.atGoal());
+  }
+
+  private void applyTuning() {
+    AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
+    driveController.setPID(gains.translationKp(), gains.translationKi(), gains.translationKd());
+    thetaController.setPID(gains.rotationKp(), gains.rotationKi(), gains.rotationKd());
+    driveController.setConstraints(
+        new TrapezoidProfile.Constraints(
+            AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get() * constraintFactor,
+            AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION.get() * constraintFactor));
+    thetaController.setConstraints(
+        new TrapezoidProfile.Constraints(
+            AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+            AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.get()));
+    double toleranceMeters =
+        Double.isNaN(toleranceOverride)
+            ? AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS.get()
+            : toleranceOverride;
+    driveController.setTolerance(toleranceMeters);
   }
 }
