@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-
 import lombok.Setter;
 import org.littletonrobotics.junction.Logger;
 
@@ -36,8 +35,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final Alert[] disconnectedAlerts;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
-  @Setter
-  private boolean useVision = true;
+  @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
 
   /**
@@ -517,7 +515,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
   private record LimelightStdDevs(double x, double y, double theta, boolean finite) {}
 
-    /** Functional interface defining a consumer that processes vision-based pose estimates. */
+  /** Functional interface defining a consumer that processes vision-based pose estimates. */
   @FunctionalInterface
   public interface VisionConsumer {
     /**

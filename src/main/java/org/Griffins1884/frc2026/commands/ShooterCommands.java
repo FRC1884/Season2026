@@ -2,7 +2,6 @@ package org.Griffins1884.frc2026.commands;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,7 +25,9 @@ public class ShooterCommands {
     // Angle
     double theta;
 
-    distance2d = new Translation2d(Math.abs(robot.getX() - target.getX()), Math.abs(robot.getY() - target.getY()));
+    distance2d =
+        new Translation2d(
+            Math.abs(robot.getX() - target.getX()), Math.abs(robot.getY() - target.getY()));
 
     // Calculate the Straight line distance in (m) to the hub
     distanceX = distance2d.getX();

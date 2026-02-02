@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 import lombok.Getter;
-import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.photonvision.PhotonCamera;
 import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
@@ -38,17 +38,18 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 public class AprilTagVisionIOPhotonVision implements VisionIO {
   protected final PhotonCamera camera; // We want the camera to be available in the sim wrapper too
   @Getter private final CameraConstants cameraConstants;
-  private final SwerveSubsystem drive;
+  private final DoubleSupplier yawRateRadPerSecSupplier;
 
   /**
    * Creates a new AprilTagVisionIOPhotonVision.
    *
    * @param cameraConstants The constants associated with this camera.
    */
-  public AprilTagVisionIOPhotonVision(CameraConstants cameraConstants, SwerveSubsystem drive) {
+  public AprilTagVisionIOPhotonVision(
+      CameraConstants cameraConstants, DoubleSupplier yawRateRadPerSecSupplier) {
     this.cameraConstants = cameraConstants;
     camera = new PhotonCamera(cameraConstants.cameraName());
-      this.drive = drive;
+    this.yawRateRadPerSecSupplier = yawRateRadPerSecSupplier;
   }
 
   /**
@@ -92,13 +93,13 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
 
         // Calculate average tag distance
         double totalTagDistance = 0.0;
-          int totalTags = 0; // Num tags for multitag
+        int totalTags = 0; // Num tags for multitag
         double totalSpeed = 0.0;
         double individual;
         for (PhotonTrackedTarget target : result.targets) {
           double distanceToTarget;
           double speedOfRobot;
-          individual  = Math.abs(drive.getYawRateDegreesPerSec());
+          individual = Math.abs(yawRateRadPerSecSupplier.getAsDouble());
           if ((distanceToTarget = target.bestCameraToTarget.getTranslation().getNorm())
               < cameraConstants.cameraType().noisyDistance) {
             totalTagDistance += distanceToTarget;
@@ -106,8 +107,7 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
             // Add detected tag IDs
             tagIds.add((short) target.fiducialId);
           }
-          if ((speedOfRobot = individual)
-                  < cameraConstants.cameraType().noisySpeed) {
+          if ((speedOfRobot = individual) < cameraConstants.cameraType().noisySpeed) {
             totalSpeed += speedOfRobot;
             totalTags++;
             // Add detected tag IDs
