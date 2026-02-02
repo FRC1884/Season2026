@@ -7,6 +7,8 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -24,7 +26,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
   private final String limelightName;
   private final SwerveSubsystem drive;
   @Getter private final CameraConstants cameraConstants;
-  int imuMode = 1;
+  private int imuMode = -1;
 
   /** Creates a new Limelight vision IO instance. */
   public AprilTagVisionIOLimelight(CameraConstants cameraConstants, SwerveSubsystem drive) {
@@ -37,7 +39,6 @@ public class AprilTagVisionIOLimelight implements VisionIO {
 
   /** Configures Limelight camera poses in robot coordinate system. */
   private void setLLSettings() {
-    LimelightHelpers.SetIMUMode(limelightName, 1);
     LimelightHelpers.setCameraPose_RobotSpace(
         limelightName,
         cameraConstants.robotToCamera().getX(),
@@ -46,7 +47,14 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         radiansToDegrees(cameraConstants.robotToCamera().getRotation().getX()),
         radiansToDegrees(cameraConstants.robotToCamera().getRotation().getY()),
         radiansToDegrees(cameraConstants.robotToCamera().getRotation().getZ()));
-    LimelightHelpers.SetIMUMode(limelightName, 2);
+  }
+
+  private void applyImuMode(int desiredMode) {
+    if (imuMode == desiredMode) {
+      return;
+    }
+    LimelightHelpers.SetIMUMode(limelightName, desiredMode);
+    imuMode = desiredMode;
   }
 
   @Override
@@ -56,20 +64,19 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     //                new TargetObservation(new Rotation2d(), new Rotation2d());
     //        public PoseObservation[] poseObservations = new PoseObservation[0];
     //        public int[] tagIds = new int[0];
-    LimelightHelpers.SetIMUMode(limelightName, 0);
-    LimelightHelpers.SetRobotOrientation(
-        limelightName,
-        drive.getPose().getRotation().getRadians(),
-        drive.getYawRateDegreesPerSec(),
-        0,
-        0,
-        0,
-        0);
-    LimelightHelpers.SetIMUMode(limelightName, 2);
 
-    inputs.connected = table.getEntry("tv").getDouble(0) == 1.0;
+    int desiredImuMode = DriverStation.isEnabled() ? 4 : 1;
+    applyImuMode(desiredImuMode);
+
+    double yawDeg = drive.getRawGyroRotation().getDegrees();
+    LimelightHelpers.SetRobotOrientation(
+        limelightName, yawDeg, drive.getYawRateDegreesPerSec(), 0, 0, 0, 0);
+
+    long lastChange = table.getEntry("tl").getLastChange();
+    long now = RobotController.getFPGATime();
+    inputs.connected = lastChange > 0 && (now - lastChange) < DISCONNECT_TIMEOUT_MICROS;
     inputs.seesTarget = LimelightHelpers.getTV(limelightName);
-    inputs.standardDeviations = AprilTagVisionConstants.LIMELIGHT_STANDARD_DEVIATIONS;
+    inputs.standardDeviations = AprilTagVisionConstants.getLimelightStandardDeviations();
     inputs.megatagPoseEstimate = null;
     inputs.pose3d = null;
     inputs.fiducialObservations = new FiducialObservation[0];
@@ -77,8 +84,10 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     if (inputs.connected) {
       try {
         LimelightHelpers.PoseEstimate megatag;
+        LimelightHelpers.PoseEstimate megatag1;
         Pose3d robotPose3d;
         megatag = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
+        megatag1 = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
         robotPose3d = LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiBlue(limelightName));
         inputs.pose3d = robotPose3d;
         // Capture latest target offsets when the camera sees targets; otherwise provide zeros.
@@ -108,6 +117,24 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         }
         inputs.megatagCount = megatag != null ? megatag.tagCount : 0;
         Logger.recordOutput("AprilTagVision/TagPose", robotPose3d);
+        String debugPrefix = "AprilTagVision/" + limelightName + "/MTCompare";
+        if (megatag1 != null) {
+          Logger.recordOutput(debugPrefix + "/MT1Pose", megatag1.pose);
+          Logger.recordOutput(debugPrefix + "/MT1YawDeg", megatag1.pose.getRotation().getDegrees());
+          Logger.recordOutput(debugPrefix + "/MT1TagCount", megatag1.tagCount);
+        }
+        if (megatag != null) {
+          Logger.recordOutput(debugPrefix + "/MT2Pose", megatag.pose);
+          Logger.recordOutput(debugPrefix + "/MT2YawDeg", megatag.pose.getRotation().getDegrees());
+          Logger.recordOutput(debugPrefix + "/MT2TagCount", megatag.tagCount);
+        }
+        if (megatag1 != null && megatag != null) {
+          Logger.recordOutput(debugPrefix + "/DeltaX", megatag.pose.getX() - megatag1.pose.getX());
+          Logger.recordOutput(debugPrefix + "/DeltaY", megatag.pose.getY() - megatag1.pose.getY());
+          Logger.recordOutput(
+              debugPrefix + "/DeltaYawDeg",
+              megatag.pose.getRotation().minus(megatag1.pose.getRotation()).getDegrees());
+        }
         // Track tag IDs and pose observations for the rest of the robot code to consume.
         Set<Short> tagIds = new HashSet<>();
         List<PoseObservation> poseObservations = new ArrayList<>();

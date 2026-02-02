@@ -13,4 +13,18 @@ public final class TurretUtil {
     double fieldAngle = Math.atan2(delta.getY(), delta.getX());
     return MathUtil.angleModulus(fieldAngle - robotPose.getRotation().getRadians());
   }
+
+    /**
+     * Calculates the shortest angular path between current and target angles Prevents turret from
+     * rotating more than 180 degrees
+     */
+    public static double wrapAngleToShortest(double currentAngle, double targetAngle) {
+        // Calculate the angular difference
+        double diff = targetAngle - currentAngle;
+
+        // Wrap to shortest path using atan2 for proper quadrant handling
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+
+        return currentAngle + diff;
+    }
 }

@@ -44,5 +44,4 @@ public class Arms extends SubsystemBase {
                     case KRAKEN_X60, KRAKEN_X40 -> new ShooterPivotIOKraken();
                   })
           : null;
-
 }

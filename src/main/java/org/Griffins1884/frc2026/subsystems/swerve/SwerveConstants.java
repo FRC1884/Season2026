@@ -31,10 +31,10 @@ public final class SwerveConstants {
   public static final GyroType GYRO_TYPE = GyroType.PIGEON;
 
   /** Meters */
-  public static final double TRACK_WIDTH = Units.inchesToMeters(24.5);
+  public static final double TRACK_WIDTH = Units.inchesToMeters(27.5);
 
   /** Meters */
-  public static final double WHEEL_BASE = Units.inchesToMeters(24.5);
+  public static final double WHEEL_BASE = Units.inchesToMeters(27.5);
 
   /** Meters */
   public static final double BUMPER_LENGTH = Units.inchesToMeters(34);

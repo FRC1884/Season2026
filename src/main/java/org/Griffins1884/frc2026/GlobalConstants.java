@@ -36,8 +36,8 @@ import lombok.RequiredArgsConstructor;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.SIM;
-  public static final RobotType ROBOT = RobotType.SIMBOT;
+  public static final RobotMode MODE = RobotMode.REAL;
+  public static final RobotType ROBOT = RobotType.DEVBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
   public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
@@ -77,7 +77,7 @@ public final class GlobalConstants {
   }
 
   public static class FieldConstants {
-    public static final FieldType fieldType = FieldType.WELDED;
+    public static final FieldType fieldType = FieldType.ANDYMARK;
 
     // AprilTag related constants
     public static final int aprilTagCount =
@@ -289,7 +289,7 @@ public final class GlobalConstants {
       public static final double depth = Units.inchesToMeters(45.0);
       public static final double height = Units.inchesToMeters(78.25);
       public static final double innerOpeningWidth = Units.inchesToMeters(32.250);
-      public static final double frontFaceX = Units.inchesToMeters(43.51);
+      public static final double frontFaceX = Units.inchesToMeters(53.51);
 
       public static final double uprightHeight = Units.inchesToMeters(72.1);
 

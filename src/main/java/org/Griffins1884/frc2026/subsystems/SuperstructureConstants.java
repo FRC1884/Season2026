@@ -26,5 +26,7 @@ public final class SuperstructureConstants {
   public static final int ENDGAME_CLIMB_LEVELS = 3;
   public static final int AUTO_CLIMB_LEVELS = 1;
 
+  public static final boolean SHOOTING_WHILE_MOVING = false;
+
   private SuperstructureConstants() {}
 }
