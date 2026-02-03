@@ -335,10 +335,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     return Optional.of(
         new VisionFieldPoseEstimate(
-            fieldToRobot,
-            cam.megatagPoseEstimate.timestampSeconds(),
-            visionStdDevs,
-            tagCount));
+            fieldToRobot, cam.megatagPoseEstimate.timestampSeconds(), visionStdDevs, tagCount));
   }
 
   private VisionFieldPoseEstimate fuseEstimates(

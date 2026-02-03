@@ -1,6 +1,5 @@
 package org.Griffins1884.frc2026.commands;
 
-import edu.wpi.first.math.MathUtil;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
@@ -50,7 +49,8 @@ public final class AlignConstants {
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
-        new Gains(ALIGN_TRANSLATION_KP.get(), ALIGN_TRANSLATION_KI.get(), ALIGN_TRANSLATION_KD.get()),
+        new Gains(
+            ALIGN_TRANSLATION_KP.get(), ALIGN_TRANSLATION_KI.get(), ALIGN_TRANSLATION_KD.get()),
         new Gains(ALIGN_ROTATION_KP.get(), ALIGN_ROTATION_KI.get(), ALIGN_ROTATION_KD.get()),
         new FeedforwardGains(
             ALIGN_FEEDFORWARD_KV.get(),

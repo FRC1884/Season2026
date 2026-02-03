@@ -46,20 +46,21 @@ public final class TurretCommands {
         },
         turret);
   }
-    public static double shootingWhileMoving(
-            Supplier<Pose2d> robotPoseSupplier,
-            Supplier<Translation2d> targetSupplier,
-            Supplier<ChassisSpeeds> robotVelocitySupplier) {
-        ChassisSpeeds speeds = robotVelocitySupplier.get();
-        Pose2d currentPose = robotPoseSupplier.get();
-        Translation2d currentTranslation = currentPose.getTranslation();
-        double dist = targetSupplier.get().getDistance(currentTranslation);
-        double shotTime = ShooterCommands.find(dist);
 
-        double futureX = currentTranslation.getX() + (speeds.vxMetersPerSecond) * shotTime;
-        double futureY = currentTranslation.getY() + (speeds.vyMetersPerSecond) * shotTime;
-        Translation2d futureTranslation = new Translation2d(futureX, futureY);
-        Translation2d newTarget = targetSupplier.get().minus(futureTranslation);
-        return TurretUtil.turretAngleToTarget(currentPose, newTarget);
-    }
+  public static double shootingWhileMoving(
+      Supplier<Pose2d> robotPoseSupplier,
+      Supplier<Translation2d> targetSupplier,
+      Supplier<ChassisSpeeds> robotVelocitySupplier) {
+    ChassisSpeeds speeds = robotVelocitySupplier.get();
+    Pose2d currentPose = robotPoseSupplier.get();
+    Translation2d currentTranslation = currentPose.getTranslation();
+    double dist = targetSupplier.get().getDistance(currentTranslation);
+    double shotTime = ShooterCommands.find(dist);
+
+    double futureX = currentTranslation.getX() + (speeds.vxMetersPerSecond) * shotTime;
+    double futureY = currentTranslation.getY() + (speeds.vyMetersPerSecond) * shotTime;
+    Translation2d futureTranslation = new Translation2d(futureX, futureY);
+    Translation2d newTarget = targetSupplier.get().minus(futureTranslation);
+    return TurretUtil.turretAngleToTarget(currentPose, newTarget);
+  }
 }

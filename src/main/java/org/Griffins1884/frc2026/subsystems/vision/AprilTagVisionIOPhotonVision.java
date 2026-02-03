@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.DoubleSupplier;
 import lombok.Getter;
+import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.photonvision.PhotonCamera;
 import org.photonvision.targeting.MultiTargetPNPResult;
 import org.photonvision.targeting.PhotonPipelineResult;
@@ -38,18 +38,17 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 public class AprilTagVisionIOPhotonVision implements VisionIO {
   protected final PhotonCamera camera; // We want the camera to be available in the sim wrapper too
   @Getter private final CameraConstants cameraConstants;
-  private final DoubleSupplier yawRateRadPerSecSupplier;
+  private final SwerveSubsystem drive;
 
   /**
    * Creates a new AprilTagVisionIOPhotonVision.
    *
    * @param cameraConstants The constants associated with this camera.
    */
-  public AprilTagVisionIOPhotonVision(
-      CameraConstants cameraConstants, DoubleSupplier yawRateRadPerSecSupplier) {
+  public AprilTagVisionIOPhotonVision(CameraConstants cameraConstants, SwerveSubsystem drive) {
     this.cameraConstants = cameraConstants;
     camera = new PhotonCamera(cameraConstants.cameraName());
-    this.yawRateRadPerSecSupplier = yawRateRadPerSecSupplier;
+    this.drive = drive;
   }
 
   /**
@@ -99,7 +98,7 @@ public class AprilTagVisionIOPhotonVision implements VisionIO {
         for (PhotonTrackedTarget target : result.targets) {
           double distanceToTarget;
           double speedOfRobot;
-          individual = Math.abs(yawRateRadPerSecSupplier.getAsDouble());
+          individual = Math.abs(drive.getYawRateDegreesPerSec());
           if ((distanceToTarget = target.bestCameraToTarget.getTranslation().getNorm())
               < cameraConstants.cameraType().noisyDistance) {
             totalTagDistance += distanceToTarget;

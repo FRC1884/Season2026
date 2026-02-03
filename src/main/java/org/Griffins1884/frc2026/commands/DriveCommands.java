@@ -14,6 +14,7 @@
 package org.Griffins1884.frc2026.commands;
 
 import static java.lang.Math.PI;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -73,7 +74,8 @@ public class DriveCommands {
 
     // Apply rotation deadband
     double omega =
-        MathUtil.applyDeadband(omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
+        MathUtil.applyDeadband(
+            omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
 
     // Square rotation value for more precise control
     omega = Math.copySign(omega * omega, omega);
