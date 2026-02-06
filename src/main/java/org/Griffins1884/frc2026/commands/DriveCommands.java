@@ -13,8 +13,6 @@
 
 package org.Griffins1884.frc2026.commands;
 
-import static java.lang.Math.PI;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -178,9 +176,24 @@ public class DriveCommands {
                       && DriverStation.getAlliance().get() == Alliance.Blue)
                   ? GlobalConstants.FieldConstants.Tower.centerPoint
                   : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
+          Rotation2d rotation =
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.defaultAprilTagType
+                      .getLayout()
+                      .getTagPose(16)
+                      .get()
+                      .getRotation()
+                      .toRotation2d()
+                  : GlobalConstants.FieldConstants.defaultAprilTagType
+                      .getLayout()
+                      .getTagPose(31)
+                      .get()
+                      .getRotation()
+                      .toRotation2d();
           Logger.recordOutput("Autonomy/AlignTargetClimb", target);
           return new AutoAlignToPoseCommand(
-              drive, new Pose2d(target.getX(), target.getY(), new Rotation2d(PI)));
+              drive, new Pose2d(target.getX(), target.getY(), rotation));
         },
         Set.of(drive));
   }

@@ -107,6 +107,12 @@ public class Superstructure extends SubsystemBase {
   @Setter private boolean climbShootEnabled = false;
   private double climbHoldPosition = Double.NaN;
   @Setter private boolean turretExternalControl = false;
+  private final LEDSubsystem leds =
+      Config.Subsystems.LEDS_ENABLED
+          ? (MODE == GlobalConstants.RobotMode.REAL
+              ? new LEDSubsystem(new LEDIOPWM())
+              : new LEDSubsystem(new LEDIOSim()))
+          : null;
 
   private intakeGoal lastIntakeGoal = intakeGoal.IDLING;
   private IndexerGoal lastIndexerGoal = IndexerGoal.IDLING;
@@ -118,13 +124,6 @@ public class Superstructure extends SubsystemBase {
   private String lastTurretAction = "HOLD";
   private Translation2d lastTurretTarget = null;
   private double lastClimberGoalPosition = Double.NaN;
-
-  private final LEDSubsystem leds =
-      Config.Subsystems.LEDS_ENABLED
-          ? (MODE == GlobalConstants.RobotMode.REAL
-              ? new LEDSubsystem(new LEDIOPWM())
-              : new LEDSubsystem(new LEDIOSim()))
-          : null;
   private final Rollers rollers = new Rollers();
   private final Elevators elevators = new Elevators();
   private final Arms arms = new Arms();

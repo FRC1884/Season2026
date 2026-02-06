@@ -11,16 +11,16 @@ public interface VisionIO {
    * to tags at which we think they will provide meaningful data on a target.
    */
   enum CameraType {
-    OV2311(7.5, 2.5),
-    OV9281(4.5, 3),
-    LIMELIGHT(10.0, 3),
-    LIMELIGHT_3G(12.0, 3),
-    A1920(8.0, 3),
-    TELEPHOTO_OV2311(9.0, 3),
-    TELEPHOTO_OV9281(9.0, 3),
-    TELEPHOTO_A1920(10.0, 3),
-    TELEPHOTO_LIMELIGHT(7.5, 3),
-    TELEPHOTO_LIMELIGHT_3G(15.0, 3),
+    OV2311(7.5, 100),
+    OV9281(4.5, 100),
+    LIMELIGHT(4.5, 100),
+    LIMELIGHT_3G(12.0, 100),
+    A1920(8.0, 100),
+    TELEPHOTO_OV2311(9.0, 100),
+    TELEPHOTO_OV9281(9.0, 100),
+    TELEPHOTO_A1920(10.0, 100),
+    TELEPHOTO_LIMELIGHT(7.5, 100),
+    TELEPHOTO_LIMELIGHT_3G(15.0, 100),
     UNKNOWN(0.0, 3);
 
     public final double noisyDistance;

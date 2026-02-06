@@ -45,14 +45,14 @@ public class Module {
       new LoggedTunableNumber("Drive/Module/TurnkD");
 
   static {
-    krakenDrivekS.initDefault(5.0);
-    krakenDrivekV.initDefault(0.2);
+    krakenDrivekS.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kS());
+    krakenDrivekV.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kV());
     krakenDrivekT.initDefault(
         SwerveConstants.KRAKEN_DRIVE_GEAR_RATIO / DCMotor.getKrakenX60Foc(1).KtNMPerAmp);
-    krakenDrivekP.initDefault(40.0);
-    krakenDrivekD.initDefault(0.0);
-    krakenTurnkP.initDefault(4000.0);
-    krakenTurnkD.initDefault(50.0);
+    krakenDrivekP.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kP());
+    krakenDrivekD.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kD());
+    krakenTurnkP.initDefault(KRAKEN_TURN_TORQUE_GAINS.kP());
+    krakenTurnkD.initDefault(KRAKEN_TURN_TORQUE_GAINS.kD());
   }
 
   private final ModuleIO io;

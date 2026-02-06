@@ -7,7 +7,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -65,13 +64,14 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     //        public PoseObservation[] poseObservations = new PoseObservation[0];
     //        public int[] tagIds = new int[0];
 
-    int desiredImuMode = DriverStation.isEnabled() ? 4 : 1;
-    applyImuMode(desiredImuMode);
+    if (Math.abs(drive.getYawRateDegreesPerSec()) <= cameraConstants.cameraType().noisySpeed) {
+      applyImuMode(1);
 
-    double yawDeg = drive.getRawGyroRotation().getDegrees();
-    LimelightHelpers.SetRobotOrientation(
-        limelightName, yawDeg, drive.getYawRateDegreesPerSec(), 0, 0, 0, 0);
+      double yawDeg = drive.getRawGyroRotation().getDegrees();
+      LimelightHelpers.SetRobotOrientation(limelightName, yawDeg, 0.0, 0, 0, 0, 0);
+    }
 
+    applyImuMode(4);
     long lastChange = table.getEntry("tl").getLastChange();
     long now = RobotController.getFPGATime();
     inputs.connected = lastChange > 0 && (now - lastChange) < DISCONNECT_TIMEOUT_MICROS;
@@ -138,6 +138,10 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         // Track tag IDs and pose observations for the rest of the robot code to consume.
         Set<Short> tagIds = new HashSet<>();
         List<PoseObservation> poseObservations = new ArrayList<>();
+
+        Logger.recordOutput(
+            debugPrefix + "/spinLimit",
+            Math.abs(drive.getYawRateDegreesPerSec()) <= cameraConstants.cameraType().noisySpeed);
 
         // Only add a pose observation when we have a valid estimate and pose data.
         if (megatagPoseEstimate != null
