@@ -39,7 +39,6 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import java.util.Objects;
 import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
@@ -255,17 +254,17 @@ public class RobotContainer {
                       LEFT_CAM_ENABLED
                           ? new AprilTagVisionIOPhotonVision(
                               LEFT_CAM_CONSTANTS,
-                              Objects.requireNonNull(drive)::getYawRateDegreesPerSec)
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {},
                       RIGHT_CAM_ENABLED
                           ? new AprilTagVisionIOPhotonVision(
                               RIGHT_CAM_CONSTANTS,
-                              Objects.requireNonNull(drive)::getYawRateDegreesPerSec)
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new AprilTagVisionIOPhotonVision(
                               BACK_CAM_CONSTANTS,
-                              Objects.requireNonNull(drive)::getYawRateDegreesPerSec)
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {});
               case SIM ->
                   new Vision(
