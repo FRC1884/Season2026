@@ -29,7 +29,6 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.25);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
       new LoggedTunableNumber("Align/WheelRadiusRampRate", 0.05);
-
   public static final LoggedTunableNumber ALIGN_TRANSLATION_KP =
       new LoggedTunableNumber("Align/Gains/Translation/kP", 0.4);
   public static final LoggedTunableNumber ALIGN_TRANSLATION_KI =

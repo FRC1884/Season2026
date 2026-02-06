@@ -22,7 +22,7 @@ public final class TurretConstants {
   public static final int CANCODER_ID = -1; // TODO: set to enable absolute encoder
   public static final boolean CANCODER_INVERTED = false; // TODO: set CANCoder inversion
 
-  public static final double GEAR_RATIO = 40.0; // TODO: motor rotations per turret rotation
+  public static final double GEAR_RATIO = 12.5; // TODO: motor rotations per turret rotation
   // this code is accurate for the 2026 season!
   public static final double ABSOLUTE_ENCODER_GEAR_RATIO =
       1.0; // TODO: absolute encoder rotations per turret rotation
@@ -51,8 +51,6 @@ public final class TurretConstants {
   public static final double kA = 1.0; // TODO: tune if using feedforward
   public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains(kP, kI, kD, kS, kV, kA, 0.0);
-
-  public static final double PRESET_ANGLE_RAD = 0.0; // TODO: set preset angle
 
   // Offset from robot center to turret mount (X forward, Y left).
   public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0.233, 0.233); // TODO
