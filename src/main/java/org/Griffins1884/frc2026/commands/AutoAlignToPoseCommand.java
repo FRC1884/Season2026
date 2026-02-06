@@ -136,6 +136,17 @@ public class AutoAlignToPoseCommand extends Command {
     var driveVelocity =
         new Translation2d(driveVelocityScalar, 0.0)
             .rotateBy(currentPose.getTranslation().minus(target.getTranslation()).getAngle());
+    double maxLinearSpeed = AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get() * constraintFactor;
+    if (driveVelocity.getNorm() > maxLinearSpeed) {
+      driveVelocity = driveVelocity.times(maxLinearSpeed / driveVelocity.getNorm());
+    }
+    thetaVelocity =
+        MathUtil.clamp(
+            thetaVelocity,
+            -AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+            AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get());
+    Logger.recordOutput("DriveToPose/DriveVelocitySetpoint", driveVelocity);
+    Logger.recordOutput("DriveToPose/ThetaVelocitySetpointRadPerSec", thetaVelocity);
     drive.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             driveVelocity.getX(), driveVelocity.getY(), thetaVelocity, currentPose.getRotation()));
