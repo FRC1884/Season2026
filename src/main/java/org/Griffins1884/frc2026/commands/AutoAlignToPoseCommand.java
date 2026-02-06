@@ -104,6 +104,7 @@ public class AutoAlignToPoseCommand extends Command {
       return;
     }
     applyTuning();
+    AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
 
     Pose2d currentPose = drive.getPose();
 
@@ -116,8 +117,15 @@ public class AutoAlignToPoseCommand extends Command {
         MathUtil.clamp((currentDistance - ffMinRadius) / (ffMaxRadius - ffMinRadius), 0.0, 1.0);
     driveErrorAbs = currentDistance;
     Logger.recordOutput("DriveToPose/ffScaler", ffScaler);
+
+    double driveFFVelocity =
+        currentDistance > gains.feedforwardGains().deadbandMeters()
+            ? gains.feedforwardGains().kV() * driveController.getSetpoint().velocity
+            : 0.0;
+    Logger.recordOutput("DriveToPose/DriveFFVelocity", driveFFVelocity);
+
     double driveVelocityScalar =
-        driveController.getSetpoint().velocity * ffScaler
+        driveFFVelocity * ffScaler
             + driveController.calculate(
                 driveErrorAbs, new TrapezoidProfile.State(0.0, endVelocity));
     if (currentDistance < driveController.getPositionTolerance()) driveVelocityScalar = 0.0;
