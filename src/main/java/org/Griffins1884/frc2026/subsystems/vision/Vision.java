@@ -258,6 +258,17 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       poseHistory.update(startTime);
     }
 
+    double yawRateDegPerSec =
+        yawRateRadPerSecSupplier != null
+            ? Math.toDegrees(yawRateRadPerSecSupplier.getAsDouble())
+            : 0.0;
+    boolean yawRateOk =
+        DriverStation.isDisabled()
+            || Math.abs(yawRateDegPerSec)
+                <= AprilTagVisionConstants.getLimelightMaxYawRateDegPerSec();
+    Logger.recordOutput("Vision/yawRateDegPerSec", yawRateDegPerSec);
+    Logger.recordOutput("Vision/yawRateAccept", yawRateOk);
+
     List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
 
     for (int i = 0; i < io.length; i++) {
@@ -273,11 +284,20 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     if (!useVision) {
       Logger.recordOutput("Vision/usingVision", false);
+      Logger.recordOutput("Vision/rejectReason", "VISION_DISABLED");
+      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+      return;
+    }
+
+    if (!yawRateOk) {
+      Logger.recordOutput("Vision/usingVision", true);
+      Logger.recordOutput("Vision/rejectReason", "HIGH_YAW_RATE");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
       return;
     }
 
     Logger.recordOutput("Vision/usingVision", true);
+    Logger.recordOutput("Vision/rejectReason", "ACCEPTED");
 
     Optional<VisionFieldPoseEstimate> accepted = Optional.empty();
     for (Optional<VisionFieldPoseEstimate> estimate : estimates) {

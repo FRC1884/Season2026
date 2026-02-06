@@ -111,6 +111,8 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/IgnoreMegaTag2Rotation", 1.0);
   private static final LoggedTunableNumber MEGATAG2_SINGLE_TAG_QUALITY_CUTOFF =
       new LoggedTunableNumber("AprilTagVision/Limelight/SingleTagQualityCutoff", 0.3);
+  private static final LoggedTunableNumber LIMELIGHT_MAX_YAW_RATE_DEG_PER_SEC =
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxYawRateDegPerSec", 180.0);
   private static final LoggedTunableNumber FIELD_BORDER_MARGIN_METERS =
       new LoggedTunableNumber("AprilTagVision/FieldBorderMarginMeters", 0.5);
   public static final int LIMELIGHT_MEGATAG1_X_STDDEV_INDEX = 0;
@@ -163,6 +165,10 @@ public final class AprilTagVisionConstants {
 
   public static double getMegatag2SingleTagQualityCutoff() {
     return MEGATAG2_SINGLE_TAG_QUALITY_CUTOFF.get();
+  }
+
+  public static double getLimelightMaxYawRateDegPerSec() {
+    return LIMELIGHT_MAX_YAW_RATE_DEG_PER_SEC.get();
   }
 
   public static double getFieldBorderMarginMeters() {
