@@ -140,7 +140,10 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         List<PoseObservation> poseObservations = new ArrayList<>();
 
         // Only add a pose observation when we have a valid estimate and pose data.
-        if (megatagPoseEstimate != null && megatag.tagCount > 0) {
+        if (megatagPoseEstimate != null
+            && megatag.tagCount > 0
+            && Math.abs(drive.getYawRateDegreesPerSec())
+                <= cameraConstants.cameraType().noisySpeed) {
           // Average ambiguity across all fiducials helps weight the observation.
           double ambiguity = calculateAverageAmbiguity(fiducialObservation);
 

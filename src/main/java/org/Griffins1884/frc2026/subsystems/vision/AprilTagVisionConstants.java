@@ -136,9 +136,14 @@ public final class AprilTagVisionConstants {
   public static final double DISTANCE_WEIGHT = 7;
   public static final double POSE_AMBIGUITY_SHIFTER = 0.2;
   public static final double POSE_AMBIGUITY_MULTIPLIER = 4;
+
   public static Matrix<N3, N1> getVisionMeasurementStdDevs() {
     return MatBuilder.fill(
-        Nat.N3(), Nat.N1(), VISION_STDDEV_X.get(), VISION_STDDEV_Y.get(), VISION_STDDEV_THETA.get());
+        Nat.N3(),
+        Nat.N1(),
+        VISION_STDDEV_X.get(),
+        VISION_STDDEV_Y.get(),
+        VISION_STDDEV_THETA.get());
   }
 
   public static double[] getLimelightStandardDeviations() {
