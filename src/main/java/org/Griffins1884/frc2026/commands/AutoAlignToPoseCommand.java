@@ -95,7 +95,8 @@ public class AutoAlignToPoseCommand extends Command {
     thetaController.reset(
         currentPose.getRotation().getRadians(), fieldSpeeds.omegaRadiansPerSecond);
 
-    thetaController.setTolerance(Units.degreesToRadians(2.0));
+    thetaController.setTolerance(
+        Units.degreesToRadians(AlignConstants.ALIGN_ROTATION_TOLERANCE_DEG.get()));
   }
 
   @Override
