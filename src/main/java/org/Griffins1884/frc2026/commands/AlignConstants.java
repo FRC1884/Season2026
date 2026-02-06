@@ -16,7 +16,8 @@ public final class AlignConstants {
   public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_ACCELERATION =
       new LoggedTunableNumber("Align/MaxAngularAcceleration", 6.0);
   public static final LoggedTunableNumber ALIGN_CONTROLLER_LOOP_PERIOD_SEC =
-      new LoggedTunableNumber("Align/ControllerLoopPeriodSec", 0.01);
+      // The command scheduler runs at 20ms; treat this as the effective control loop period.
+      new LoggedTunableNumber("Align/ControllerLoopPeriodSec", 0.02);
   public static final LoggedTunableNumber FF_START_DELAY =
       new LoggedTunableNumber("Align/FFStartDelaySec", 0.3);
   public static final LoggedTunableNumber FF_RAMP_RATE =
@@ -25,6 +26,8 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/ManualDeadband", 0.1);
   public static final LoggedTunableNumber ALIGN_TRANSLATION_TOLERANCE_METERS =
       new LoggedTunableNumber("Align/TranslationToleranceMeters", 0.03);
+  public static final LoggedTunableNumber ALIGN_ROTATION_TOLERANCE_DEG =
+      new LoggedTunableNumber("Align/RotationToleranceDeg", 2.0);
   public static final LoggedTunableNumber WHEEL_RADIUS_MAX_VELOCITY =
       new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.5);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
