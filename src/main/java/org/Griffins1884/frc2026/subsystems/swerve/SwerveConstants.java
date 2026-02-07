@@ -217,7 +217,7 @@ public final class SwerveConstants {
           BRR_ENCODER_INVERTED);
 
   /** Meters */
-  public static final double WHEEL_RADIUS = Units.inchesToMeters(1.5);
+  public static final double WHEEL_RADIUS = Units.inchesToMeters(2);
 
   /** Meters per second */
   public static final double MAX_LINEAR_SPEED = 5.4804;

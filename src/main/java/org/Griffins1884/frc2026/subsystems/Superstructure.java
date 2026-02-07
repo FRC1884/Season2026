@@ -186,6 +186,7 @@ public class Superstructure extends SubsystemBase {
     Logger.recordOutput("Superstructure/State", currentState.toString());
     Logger.recordOutput("Superstructure/RequestedState", requestedState.toString());
     Logger.recordOutput("Superstructure/ClimbPhase", climbPhase.toString());
+    Logger.recordOutput("Superstructure/turretTarget", lastTurretTarget);
   }
 
   public void registerSuperstructureCharacterization(

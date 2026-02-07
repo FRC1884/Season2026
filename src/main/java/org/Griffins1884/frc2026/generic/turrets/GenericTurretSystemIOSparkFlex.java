@@ -34,7 +34,6 @@ public class GenericTurretSystemIOSparkFlex implements GenericTurretSystemIO {
     this.gearRatio = gearRatio;
     this.absoluteGearRatio = absoluteGearRatio;
     motor = new SparkFlex(id, MotorType.kBrushless);
-
     config =
         new SparkFlexConfig()
             .smartCurrentLimit(currentLimitAmps)
@@ -43,6 +42,7 @@ public class GenericTurretSystemIOSparkFlex implements GenericTurretSystemIO {
     motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
     relativeEncoder = motor.getEncoder();
+    relativeEncoder.setPosition(0.0);
     absoluteEncoder = motor.getAbsoluteEncoder();
   }
 
@@ -54,7 +54,7 @@ public class GenericTurretSystemIOSparkFlex implements GenericTurretSystemIO {
       inputs.connected[0] = true;
     }
 
-    inputs.positionRad = Units.rotationsToRadians(relativeEncoder.getPosition()) / gearRatio;
+    inputs.positionRad = -Units.rotationsToRadians(relativeEncoder.getPosition()) / gearRatio;
     inputs.velocityRadPerSec =
         Units.rotationsPerMinuteToRadiansPerSecond(relativeEncoder.getVelocity()) / gearRatio;
     inputs.appliedVoltage = motor.getAppliedOutput() * motor.getBusVoltage();
