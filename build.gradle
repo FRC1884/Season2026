@@ -198,6 +198,17 @@ createVersionFile.dependsOn(eventDeploy)
 // Spotless formatting
 project.compileJava.dependsOn(spotlessApply)
 spotless {
+    // Spotless targets file trees, not git-tracked files. Exclude common local-only directories
+    // so `./gradlew build` doesn't break when developers have extra tooling checked out.
+    def localOnlyExcludes = [
+        "**/build/**",
+        "**/build-*/**",
+        "**/.gradle/**",
+        "**/node_modules/**",
+        "**/skills/**",
+        "**/KnowledgeLibrary/**"
+    ]
+
     java {
         target fileTree(".") {
             include "**/*.java"
@@ -222,14 +233,14 @@ spotless {
     json {
         target fileTree(".") {
             include "**/*.json"
-            exclude "**/build/**", "**/build-*/**"
+            exclude localOnlyExcludes
         }
         gson().indentWithSpaces(2)
     }
     format "misc", {
         target fileTree(".") {
             include "**/*.md", "**/.gitignore"
-            exclude "**/build/**", "**/build-*/**"
+            exclude localOnlyExcludes
         }
         trimTrailingWhitespace()
         indentWithSpaces(2)
