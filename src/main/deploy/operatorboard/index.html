@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Operator Board</title>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__title">Operator Board</div>
+        <div class="brand__subtitle">FRC 1884 • 2026 REBUILT</div>
+      </div>
+      <div class="chips">
+        <div id="chip-nt" class="chip chip--bad">NT</div>
+        <div id="chip-data" class="chip chip--bad">DATA</div>
+        <div id="chip-mode" class="chip">MODE</div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel panel--states">
+        <div class="panel__title">State</div>
+        <div id="state-buttons" class="state-buttons"></div>
+        <div class="kv">
+          <div class="kv__row">
+            <div class="kv__k">Requested</div>
+            <div id="requested-state" class="kv__v">--</div>
+          </div>
+          <div class="kv__row">
+            <div class="kv__k">Current</div>
+            <div id="current-state" class="kv__v">--</div>
+          </div>
+          <div class="kv__row">
+            <div class="kv__k">Request</div>
+            <div id="request-status" class="kv__v">--</div>
+          </div>
+          <div class="kv__row">
+            <div class="kv__k">Reason</div>
+            <div id="request-reason" class="kv__v kv__v--muted">--</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel--field">
+        <div class="panel__title">Field</div>
+        <div class="field">
+          <img
+            id="field-image"
+            class="field__image"
+            src="./field-2026.png"
+            alt="FRC field"
+          />
+          <canvas id="field-canvas" class="field__canvas"></canvas>
+        </div>
+      </section>
+
+      <section class="panel panel--telemetry">
+        <div class="panel__title">Telemetry</div>
+        <div class="grid">
+          <div class="tile">
+            <div class="tile__k">Alliance</div>
+            <div id="alliance" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Match Time</div>
+            <div id="match-time" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Battery</div>
+            <div id="battery" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Brownout</div>
+            <div id="brownout" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Has Fuel</div>
+            <div id="has-ball" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Vision</div>
+            <div id="vision-status" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Turret</div>
+            <div id="turret-status" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Climb</div>
+            <div id="climb" class="tile__v">--</div>
+          </div>
+          <div class="tile tile--wide">
+            <div class="tile__k">Robot Pose</div>
+            <div id="robot-pose" class="tile__v tile__v--mono">--</div>
+          </div>
+          <div class="tile tile--wide">
+            <div class="tile__k">Target</div>
+            <div id="target" class="tile__v tile__v--mono">--</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>
+
