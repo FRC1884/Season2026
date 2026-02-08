@@ -15,7 +15,6 @@ package org.Griffins1884.frc2026.subsystems.swerve;
 
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.*;
 
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -33,6 +32,8 @@ public class Module {
       new LoggedTunableNumber("Drive/Module/DrivekS");
   private static final LoggedTunableNumber krakenDrivekV =
       new LoggedTunableNumber("Drive/Module/DrivekV");
+  private static final LoggedTunableNumber krakenDrivekA =
+      new LoggedTunableNumber("Drive/Module/DrivekA");
   private static final LoggedTunableNumber krakenDrivekT =
       new LoggedTunableNumber("Drive/Module/DrivekT");
   private static final LoggedTunableNumber krakenDrivekP =
@@ -47,6 +48,7 @@ public class Module {
   static {
     krakenDrivekS.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kS());
     krakenDrivekV.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kV());
+    krakenDrivekA.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kA());
     krakenDrivekT.initDefault(
         SwerveConstants.KRAKEN_DRIVE_GEAR_RATIO / DCMotor.getKrakenX60Foc(1).KtNMPerAmp);
     krakenDrivekP.initDefault(KRAKEN_DRIVE_TORQUE_GAINS.kP());
@@ -58,8 +60,9 @@ public class Module {
   private final ModuleIO io;
   private final ModuleIOInputsAutoLogged inputs = new ModuleIOInputsAutoLogged();
   private final int index;
-  private SimpleMotorFeedforward krakenFfModel =
-      new SimpleMotorFeedforward(krakenDrivekS.get(), krakenDrivekV.get());
+  private static final double KRAKEN_FF_DT_SEC = 0.02;
+  private double lastKrakenDriveSetpointRadPerSec = 0.0;
+  private boolean lastKrakenDriveSetpointValid = false;
 
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
@@ -78,9 +81,6 @@ public class Module {
 
   public void periodic() {
     if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      if (krakenDrivekS.hasChanged(hashCode()) || krakenDrivekV.hasChanged(hashCode())) {
-        krakenFfModel = new SimpleMotorFeedforward(krakenDrivekS.get(), krakenDrivekV.get());
-      }
       if (krakenDrivekP.hasChanged(hashCode()) || krakenDrivekD.hasChanged(hashCode())) {
         io.setDrivePID(krakenDrivekP.get(), 0.0, krakenDrivekD.get());
       }
@@ -111,7 +111,8 @@ public class Module {
     if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
       // Mechanical Advantage-style control for full Kraken modules
       double speedRadPerSec = state.speedMetersPerSecond / WHEEL_RADIUS;
-      io.setDriveVelocity(speedRadPerSec, krakenFfModel.calculate(speedRadPerSec));
+      io.setDriveVelocity(
+          speedRadPerSec, calculateKrakenDriveTorqueCurrentFeedforward(speedRadPerSec));
       if (Math.abs(state.angle.minus(getAngle()).getDegrees()) < TURN_DEADBAND_DEGREES) {
         io.setTurnOpenLoop(0.0);
       } else {
@@ -189,5 +190,31 @@ public class Module {
 
   public double getVoltage() {
     return inputs.driveAppliedVolts;
+  }
+
+  /**
+   * Feedforward for Kraken velocity control in torque-current mode.
+   *
+   * <p>{@link com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC} expects feedforward in torque
+   * current (amps). These tunables are therefore:
+   *
+   * <ul>
+   *   <li>{@code Drive/Module/DrivekS}: amps
+   *   <li>{@code Drive/Module/DrivekV}: amps per (rad/sec)
+   *   <li>{@code Drive/Module/DrivekA}: amps per (rad/sec^2)
+   * </ul>
+   */
+  private double calculateKrakenDriveTorqueCurrentFeedforward(double setpointRadPerSec) {
+    double accelRadPerSecSq = 0.0;
+    if (lastKrakenDriveSetpointValid) {
+      accelRadPerSecSq =
+          (setpointRadPerSec - lastKrakenDriveSetpointRadPerSec) / KRAKEN_FF_DT_SEC;
+    }
+    lastKrakenDriveSetpointRadPerSec = setpointRadPerSec;
+    lastKrakenDriveSetpointValid = true;
+
+    return krakenDrivekS.get() * Math.signum(setpointRadPerSec)
+        + krakenDrivekV.get() * setpointRadPerSec
+        + krakenDrivekA.get() * accelRadPerSecSq;
   }
 }
