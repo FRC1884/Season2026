@@ -246,6 +246,18 @@ body {
   font-weight: 800;
 }
 
+.tile__v--ok {
+  color: var(--ok);
+}
+
+.tile__v--bad {
+  color: var(--bad);
+}
+
+.tile__v--warn {
+  color: var(--warn);
+}
+
 .tile__v--mono {
   font-family: var(--mono);
   font-size: 12px;
@@ -261,4 +273,3 @@ body {
     min-height: 360px;
   }
 }
-
