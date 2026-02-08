@@ -49,6 +49,24 @@ public interface OperatorBoardIO {
 
   default void setMatchTime(double value) {}
 
+  default void setHubTimeframe(String value) {}
+
+  default void setHubStatusValid(boolean value) {}
+
+  default void setRedHubStatus(String value) {}
+
+  default void setBlueHubStatus(String value) {}
+
+  default void setOurHubStatus(String value) {}
+
+  default void setOurHubActive(boolean value) {}
+
+  default void setAutoWinnerAlliance(String value) {}
+
+  default void setGameDataRaw(String value) {}
+
+  default void setHubRecommendation(String value) {}
+
   default void setTurretAtSetpoint(boolean value) {}
 
   default void setTurretMode(String value) {}
