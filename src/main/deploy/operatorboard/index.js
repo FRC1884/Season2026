@@ -29,6 +29,15 @@ const contract = {
     brownout: "Brownout",
     alliance: "Alliance",
     matchTime: "MatchTime",
+    hubTimeframe: "HubTimeframe",
+    hubStatusValid: "HubStatusValid",
+    redHubStatus: "RedHubStatus",
+    blueHubStatus: "BlueHubStatus",
+    ourHubStatus: "OurHubStatus",
+    ourHubActive: "OurHubActive",
+    autoWinnerAlliance: "AutoWinnerAlliance",
+    gameDataRaw: "GameDataRaw",
+    hubRecommendation: "HubRecommendation",
     turretAtSetpoint: "TurretAtSetpoint",
     turretMode: "TurretMode",
     visionStatus: "VisionStatus",
@@ -63,6 +72,15 @@ const state = {
   brownout: null,
   alliance: null,
   matchTime: null,
+  hubTimeframe: null,
+  hubStatusValid: null,
+  redHubStatus: null,
+  blueHubStatus: null,
+  ourHubStatus: null,
+  ourHubActive: null,
+  autoWinnerAlliance: null,
+  gameDataRaw: null,
+  hubRecommendation: null,
   turretAtSetpoint: null,
   turretMode: null,
   visionStatus: null,
@@ -78,6 +96,10 @@ const ui = {
   requestReason: null,
   alliance: null,
   matchTime: null,
+  hubTimeframe: null,
+  ourHub: null,
+  hubRecommendation: null,
+  hubFms: null,
   battery: null,
   brownout: null,
   hasBall: null,
@@ -137,6 +159,10 @@ function cacheUi() {
   ui.requestReason = document.getElementById("request-reason");
   ui.alliance = document.getElementById("alliance");
   ui.matchTime = document.getElementById("match-time");
+  ui.hubTimeframe = document.getElementById("hub-timeframe");
+  ui.ourHub = document.getElementById("our-hub");
+  ui.hubRecommendation = document.getElementById("hub-recommendation");
+  ui.hubFms = document.getElementById("hub-fms");
   ui.battery = document.getElementById("battery");
   ui.brownout = document.getElementById("brownout");
   ui.hasBall = document.getElementById("has-ball");
@@ -230,6 +256,33 @@ function handleTopicUpdate(topic, value) {
     case contract.toDashboard + contract.keys.matchTime:
       state.matchTime = Number.isFinite(value) ? value : null;
       break;
+    case contract.toDashboard + contract.keys.hubTimeframe:
+      state.hubTimeframe = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.hubStatusValid:
+      state.hubStatusValid = !!value;
+      break;
+    case contract.toDashboard + contract.keys.redHubStatus:
+      state.redHubStatus = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.blueHubStatus:
+      state.blueHubStatus = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.ourHubStatus:
+      state.ourHubStatus = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.ourHubActive:
+      state.ourHubActive = !!value;
+      break;
+    case contract.toDashboard + contract.keys.autoWinnerAlliance:
+      state.autoWinnerAlliance = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.gameDataRaw:
+      state.gameDataRaw = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.hubRecommendation:
+      state.hubRecommendation = parseString(value);
+      break;
     case contract.toDashboard + contract.keys.turretAtSetpoint:
       state.turretAtSetpoint = !!value;
       break;
@@ -257,6 +310,20 @@ function render() {
 
   setText(ui.alliance, state.alliance || "--");
   setText(ui.matchTime, formatMatchTime(state.matchTime));
+  setText(ui.hubTimeframe, state.hubTimeframe || "--");
+
+  const ourHubText = formatOurHubStatus(
+    state.ourHubStatus,
+    state.ourHubActive,
+    state.hubStatusValid
+  );
+  setText(ui.ourHub, ourHubText);
+  applyStatusClass(ui.ourHub, state.ourHubActive, state.hubStatusValid);
+
+  setText(ui.hubRecommendation, state.hubRecommendation || "--");
+  applyRecommendationClass(ui.hubRecommendation, state.hubRecommendation);
+
+  setText(ui.hubFms, formatHubFms(state));
   setText(ui.battery, formatVoltage(state.batteryVoltage));
   setText(ui.brownout, state.brownout ? "YES" : "NO");
   setText(ui.hasBall, state.hasBall ? "YES" : "NO");
@@ -285,6 +352,55 @@ function render() {
   });
 
   renderField();
+}
+
+function formatOurHubStatus(ourHubStatus, ourHubActive, hubStatusValid) {
+  if (!hubStatusValid) {
+    return ourHubStatus || "UNKNOWN";
+  }
+  if (ourHubStatus) {
+    return ourHubStatus;
+  }
+  return ourHubActive ? "ACTIVE" : "INACTIVE";
+}
+
+function formatHubFms(s) {
+  const raw = (s.gameDataRaw || "").trim();
+  const winner = s.autoWinnerAlliance || "UNKNOWN";
+  const red = s.redHubStatus || "UNKNOWN";
+  const blue = s.blueHubStatus || "UNKNOWN";
+
+  const parts = [];
+  parts.push(`AutoWinner=${winner}`);
+  parts.push(`Red=${red}`);
+  parts.push(`Blue=${blue}`);
+  parts.push(`Raw=${raw || "(empty)"}`);
+  return parts.join("  ");
+}
+
+function applyStatusClass(el, isActive, hubStatusValid) {
+  if (!el) return;
+  el.classList.remove("tile__v--ok", "tile__v--bad", "tile__v--warn");
+  if (!hubStatusValid) {
+    el.classList.add("tile__v--warn");
+  } else if (isActive) {
+    el.classList.add("tile__v--ok");
+  } else {
+    el.classList.add("tile__v--bad");
+  }
+}
+
+function applyRecommendationClass(el, recommendation) {
+  if (!el) return;
+  el.classList.remove("tile__v--ok", "tile__v--bad", "tile__v--warn");
+  const token = (recommendation || "").toUpperCase();
+  if (token.includes("SCORE")) {
+    el.classList.add("tile__v--ok");
+  } else if (token.includes("CHECK") || token.includes("UNKNOWN")) {
+    el.classList.add("tile__v--warn");
+  } else if (token.includes("COLLECT") || token.includes("DEFEND")) {
+    el.classList.add("tile__v--bad");
+  }
 }
 
 function renderField() {
@@ -471,4 +587,3 @@ function resolveNtConnectionParams(params) {
   const port = Number.isFinite(portParsed) ? portParsed : defaultNt4Port;
   return { host, port };
 }
-
