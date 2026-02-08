@@ -21,6 +21,15 @@ final class OperatorBoardContract {
   static final String BROWNOUT = "Brownout";
   static final String ALLIANCE = "Alliance";
   static final String MATCH_TIME = "MatchTime";
+  static final String HUB_TIMEFRAME = "HubTimeframe";
+  static final String HUB_STATUS_VALID = "HubStatusValid";
+  static final String RED_HUB_STATUS = "RedHubStatus";
+  static final String BLUE_HUB_STATUS = "BlueHubStatus";
+  static final String OUR_HUB_STATUS = "OurHubStatus";
+  static final String OUR_HUB_ACTIVE = "OurHubActive";
+  static final String AUTO_WINNER_ALLIANCE = "AutoWinnerAlliance";
+  static final String GAME_DATA_RAW = "GameDataRaw";
+  static final String HUB_RECOMMENDATION = "HubRecommendation";
   static final String TURRET_AT_SETPOINT = "TurretAtSetpoint";
   static final String TURRET_MODE = "TurretMode";
   static final String VISION_STATUS = "VisionStatus";

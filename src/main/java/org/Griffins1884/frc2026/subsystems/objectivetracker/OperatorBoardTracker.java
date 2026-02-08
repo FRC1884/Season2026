@@ -28,6 +28,7 @@ import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.Superstructure.SuperState;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
+import org.Griffins1884.frc2026.util.HubShiftTracker;
 import org.littletonrobotics.junction.Logger;
 
 public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable {
@@ -167,6 +168,18 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setBrownout(RobotController.isBrownedOut());
     io.setAlliance(getAlliance());
     io.setMatchTime(DriverStation.getMatchTime());
+
+    HubShiftTracker.Snapshot hubSnapshot = HubShiftTracker.fromDriverStation();
+    io.setHubTimeframe(hubSnapshot.timeframe().name());
+    io.setHubStatusValid(hubSnapshot.hubStatusValid());
+    io.setRedHubStatus(hubSnapshot.redHubStatus().name());
+    io.setBlueHubStatus(hubSnapshot.blueHubStatus().name());
+    io.setOurHubStatus(hubSnapshot.ourHubStatus().name());
+    io.setOurHubActive(hubSnapshot.ourHubActive());
+    io.setAutoWinnerAlliance(
+        hubSnapshot.autoWinner().isPresent() ? hubSnapshot.autoWinner().get().name() : "UNKNOWN");
+    io.setGameDataRaw(hubSnapshot.gameDataRaw());
+    io.setHubRecommendation(hubSnapshot.recommendation());
 
     io.setTurretAtSetpoint(turret != null && turret.isAtGoal());
     io.setTurretMode(turret != null ? turret.getControlMode().name() : "UNAVAILABLE");

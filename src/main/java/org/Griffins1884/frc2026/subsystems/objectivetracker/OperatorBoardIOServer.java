@@ -35,6 +35,15 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final BooleanPublisher brownoutOut;
   private final StringPublisher allianceOut;
   private final DoublePublisher matchTimeOut;
+  private final StringPublisher hubTimeframeOut;
+  private final BooleanPublisher hubStatusValidOut;
+  private final StringPublisher redHubStatusOut;
+  private final StringPublisher blueHubStatusOut;
+  private final StringPublisher ourHubStatusOut;
+  private final BooleanPublisher ourHubActiveOut;
+  private final StringPublisher autoWinnerAllianceOut;
+  private final StringPublisher gameDataRawOut;
+  private final StringPublisher hubRecommendationOut;
   private final BooleanPublisher turretAtSetpointOut;
   private final StringPublisher turretModeOut;
   private final StringPublisher visionStatusOut;
@@ -66,6 +75,18 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     brownoutOut = outputTable.getBooleanTopic(OperatorBoardContract.BROWNOUT).publish();
     allianceOut = outputTable.getStringTopic(OperatorBoardContract.ALLIANCE).publish();
     matchTimeOut = outputTable.getDoubleTopic(OperatorBoardContract.MATCH_TIME).publish();
+    hubTimeframeOut = outputTable.getStringTopic(OperatorBoardContract.HUB_TIMEFRAME).publish();
+    hubStatusValidOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.HUB_STATUS_VALID).publish();
+    redHubStatusOut = outputTable.getStringTopic(OperatorBoardContract.RED_HUB_STATUS).publish();
+    blueHubStatusOut = outputTable.getStringTopic(OperatorBoardContract.BLUE_HUB_STATUS).publish();
+    ourHubStatusOut = outputTable.getStringTopic(OperatorBoardContract.OUR_HUB_STATUS).publish();
+    ourHubActiveOut = outputTable.getBooleanTopic(OperatorBoardContract.OUR_HUB_ACTIVE).publish();
+    autoWinnerAllianceOut =
+        outputTable.getStringTopic(OperatorBoardContract.AUTO_WINNER_ALLIANCE).publish();
+    gameDataRawOut = outputTable.getStringTopic(OperatorBoardContract.GAME_DATA_RAW).publish();
+    hubRecommendationOut =
+        outputTable.getStringTopic(OperatorBoardContract.HUB_RECOMMENDATION).publish();
     turretAtSetpointOut =
         outputTable.getBooleanTopic(OperatorBoardContract.TURRET_AT_SETPOINT).publish();
     turretModeOut = outputTable.getStringTopic(OperatorBoardContract.TURRET_MODE).publish();
@@ -158,6 +179,51 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setMatchTime(double value) {
     matchTimeOut.set(value);
+  }
+
+  @Override
+  public void setHubTimeframe(String value) {
+    hubTimeframeOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setHubStatusValid(boolean value) {
+    hubStatusValidOut.set(value);
+  }
+
+  @Override
+  public void setRedHubStatus(String value) {
+    redHubStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setBlueHubStatus(String value) {
+    blueHubStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setOurHubStatus(String value) {
+    ourHubStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setOurHubActive(boolean value) {
+    ourHubActiveOut.set(value);
+  }
+
+  @Override
+  public void setAutoWinnerAlliance(String value) {
+    autoWinnerAllianceOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setGameDataRaw(String value) {
+    gameDataRawOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setHubRecommendation(String value) {
+    hubRecommendationOut.set(value == null ? "" : value);
   }
 
   @Override
