@@ -63,7 +63,7 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsumer {
-  private static final double DRIVE_SYS_ID_MAX_VOLTAGE = 40.0;
+  private static final double DRIVE_SYS_ID_MAX_VOLTAGE = 12.0;
   private static final double TURN_SYS_ID_MAX_VOLTAGE = 12.0;
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
@@ -149,7 +149,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
           for (int i = 0; i < 4; i++) {
             Module module = modules[i];
             log.motor("DriveM" + i)
-                .voltage(Volts.of(module.getVoltage()))
+                .voltage(Volts.of(module.getDriveVoltage()))
                 .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
                 .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
           }
@@ -161,9 +161,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
           for (int i = 0; i < 4; i++) {
             Module module = modules[i];
             log.motor("TurnM" + i)
-                .voltage(Volts.of(module.getVoltage()))
-                .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
-                .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+                .voltage(Volts.of(module.getTurnVoltage()))
+                .angularVelocity(RadiansPerSecond.of(module.getTurnVelocityRadPerSec()))
+                .angularPosition(Radian.of(module.getTurnPositionRad()));
           }
         };
 
