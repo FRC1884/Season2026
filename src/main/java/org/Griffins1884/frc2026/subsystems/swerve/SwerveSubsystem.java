@@ -276,7 +276,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
           kinematics.toSwerveModuleStates(discreteSpeeds);
       krakenCurrentSetpoint =
           krakenSetpointGenerator.generateSetpoint(
-              SwerveConstants.KRAKEN_MODULE_LIMITS_FREE,
+              SwerveConstants.getKrakenModuleLimitsFree(),
               krakenCurrentSetpoint,
               discreteSpeeds,
               0.02);

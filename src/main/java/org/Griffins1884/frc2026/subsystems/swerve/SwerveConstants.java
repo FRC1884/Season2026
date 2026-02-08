@@ -16,6 +16,7 @@ import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
 import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.GlobalConstants.RobotType;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.Griffins1884.frc2026.util.swerve.ModuleLimits;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
@@ -331,8 +332,21 @@ public final class SwerveConstants {
   public static final PIDConstants ROTATION_CONSTANTS = new PIDConstants(100, 0, 0);
 
   // Mechanical Advantage-style module limits (used for FULLKRACKENS)
-  public static final ModuleLimits KRAKEN_MODULE_LIMITS_FREE =
-      new ModuleLimits(MAX_LINEAR_SPEED, MAX_LINEAR_ACCELERATION, MAX_STEERING_VELOCITY);
+  private static final LoggedTunableNumber KRAKEN_MAX_LINEAR_SPEED_MPS =
+      new LoggedTunableNumber("Swerve/KrakenLimits/MaxLinearSpeedMps", MAX_LINEAR_SPEED);
+  private static final LoggedTunableNumber KRAKEN_MAX_LINEAR_ACCEL_MPS2 =
+      new LoggedTunableNumber("Swerve/KrakenLimits/MaxLinearAccelMps2", MAX_LINEAR_ACCELERATION);
+  private static final LoggedTunableNumber KRAKEN_MAX_STEERING_VEL_RAD_PER_SEC =
+      new LoggedTunableNumber(
+          "Swerve/KrakenLimits/MaxSteeringVelRadPerSec", MAX_STEERING_VELOCITY);
+
+  public static ModuleLimits getKrakenModuleLimitsFree() {
+    // NOTE: This is used by the setpoint generator only (FULLKRACKENS). Values are in SI.
+    return new ModuleLimits(
+        KRAKEN_MAX_LINEAR_SPEED_MPS.get(),
+        KRAKEN_MAX_LINEAR_ACCEL_MPS2.get(),
+        KRAKEN_MAX_STEERING_VEL_RAD_PER_SEC.get());
+  }
 
   // PathPlanner configuration
   public static final RobotConfig PATHPLANNER_CONFIG =
