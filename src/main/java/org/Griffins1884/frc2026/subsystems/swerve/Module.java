@@ -187,7 +187,21 @@ public class Module {
     return inputs.driveVelocityRadPerSec;
   }
 
-  public double getVoltage() {
+  public double getDriveVoltage() {
     return inputs.driveAppliedVolts;
+  }
+
+  public double getTurnVoltage() {
+    return inputs.turnAppliedVolts;
+  }
+
+  /** Returns the current module turn position in radians. */
+  public double getTurnPositionRad() {
+    return inputs.turnPosition.getRadians();
+  }
+
+  /** Returns the current module turn velocity in rad/sec. */
+  public double getTurnVelocityRadPerSec() {
+    return inputs.turnVelocityRadPerSec;
   }
 }

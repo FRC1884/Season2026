@@ -60,7 +60,7 @@ public class ModuleIOFullKraken implements ModuleIO {
   private static final Executor brakeModeExecutor = Executors.newFixedThreadPool(8);
 
   // Control requests
-  private final TorqueCurrentFOC torqueCurrentRequest = new TorqueCurrentFOC(0).withUpdateFreqHz(0);
+  private final VoltageOut voltageOutRequest = new VoltageOut(0.0).withUpdateFreqHz(0);
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
@@ -295,12 +295,13 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   @Override
   public void setDriveOpenLoop(double output) {
-    driveMotor.setControl(torqueCurrentRequest.withOutput(output));
+    // Characterization (SysId + FF characterization) expects voltage control.
+    driveMotor.setControl(voltageOutRequest.withOutput(output));
   }
 
   @Override
   public void setTurnOpenLoop(double output) {
-    turnMotor.setControl(torqueCurrentRequest.withOutput(output));
+    turnMotor.setControl(voltageOutRequest.withOutput(output));
   }
 
   @Override
