@@ -334,6 +334,11 @@ public final class SwerveConstants {
   public static final ModuleLimits KRAKEN_MODULE_LIMITS_FREE =
       new ModuleLimits(MAX_LINEAR_SPEED, MAX_LINEAR_ACCELERATION, MAX_STEERING_VELOCITY);
 
+  private static final double PATHPLANNER_DRIVE_GEAR_RATIO =
+      (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
+          ? KRAKEN_DRIVE_GEAR_RATIO
+          : DRIVE_GEAR_RATIO;
+
   // PathPlanner configuration
   public static final RobotConfig PATHPLANNER_CONFIG =
       new RobotConfig(
@@ -343,7 +348,7 @@ public final class SwerveConstants {
               WHEEL_RADIUS,
               MAX_LINEAR_SPEED,
               WHEEL_FRICTION_COEFF,
-              DRIVE_GEARBOX.withReduction(DRIVE_GEAR_RATIO),
+              DRIVE_GEARBOX.withReduction(PATHPLANNER_DRIVE_GEAR_RATIO),
               DRIVE_MOTOR_CURRENT_LIMIT,
               1),
           MODULE_TRANSLATIONS);
