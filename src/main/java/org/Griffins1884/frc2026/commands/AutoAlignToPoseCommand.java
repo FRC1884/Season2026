@@ -15,6 +15,7 @@ public class AutoAlignToPoseCommand extends Command {
   private final ProfiledPIDController driveController;
   private final ProfiledPIDController thetaController;
   private final SwerveSubsystem drive;
+  private final int tuningId = System.identityHashCode(this);
   private double driveErrorAbs;
   private double thetaErrorAbs;
   private final double ffMinRadius = 0.0, ffMaxRadius = 0.1;
@@ -65,7 +66,7 @@ public class AutoAlignToPoseCommand extends Command {
   @Override
   public void initialize() {
     if (target == null) return;
-    applyTuning();
+    updateTuningIfChanged(true);
 
     Pose2d currentPose = drive.getPose();
 
@@ -104,7 +105,7 @@ public class AutoAlignToPoseCommand extends Command {
     if (target == null) {
       return;
     }
-    applyTuning();
+    updateTuningIfChanged(false);
     AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
 
     Pose2d currentPose = drive.getPose();
@@ -168,6 +169,28 @@ public class AutoAlignToPoseCommand extends Command {
   @Override
   public boolean isFinished() {
     return target == null || (driveController.atGoal() && thetaController.atGoal());
+  }
+
+  private void updateTuningIfChanged(boolean force) {
+    // Apply new constants only when tunables change to avoid unnecessary allocations and
+    // controller churn on the roboRIO.
+    boolean changed =
+        AlignConstants.ALIGN_TRANSLATION_KP.hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_KI.hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_KD.hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_KP.hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_KI.hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_KD.hasChanged(tuningId)
+            || AlignConstants.ALIGN_FEEDFORWARD_KV.hasChanged(tuningId)
+            || AlignConstants.ALIGN_FEEDFORWARD_DEADBAND.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_ANGULAR_SPEED.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS.hasChanged(tuningId);
+    if (force || changed) {
+      applyTuning();
+    }
   }
 
   private void applyTuning() {
