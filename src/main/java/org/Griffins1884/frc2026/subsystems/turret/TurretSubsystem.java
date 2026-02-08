@@ -19,7 +19,7 @@ public class TurretSubsystem extends GenericPositionTurretSystem {
             TurretConstants.ABSOLUTE_ENCODER_OFFSET_RAD,
             TurretConstants.MAX_VOLTAGE));
     if (TurretConstants.CONTINUOUS_INPUT) {
-      enableContinuousInput(-Math.PI, Math.PI);
+      enableContinuousInput(0.0, 2.0 * Math.PI);
     }
   }
 }

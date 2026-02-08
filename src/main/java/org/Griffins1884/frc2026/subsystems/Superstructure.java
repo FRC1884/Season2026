@@ -7,7 +7,6 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -108,6 +107,12 @@ public class Superstructure extends SubsystemBase {
   @Setter private boolean climbShootEnabled = false;
   private double climbHoldPosition = Double.NaN;
   @Setter private boolean turretExternalControl = false;
+  private final LEDSubsystem leds =
+      Config.Subsystems.LEDS_ENABLED
+          ? (MODE == GlobalConstants.RobotMode.REAL
+              ? new LEDSubsystem(new LEDIOPWM())
+              : new LEDSubsystem(new LEDIOSim()))
+          : null;
 
   private intakeGoal lastIntakeGoal = intakeGoal.IDLING;
   private IndexerGoal lastIndexerGoal = IndexerGoal.IDLING;
@@ -119,13 +124,6 @@ public class Superstructure extends SubsystemBase {
   private String lastTurretAction = "HOLD";
   private Translation2d lastTurretTarget = null;
   private double lastClimberGoalPosition = Double.NaN;
-
-  private final LEDSubsystem leds =
-      Config.Subsystems.LEDS_ENABLED
-          ? (MODE == GlobalConstants.RobotMode.REAL
-              ? new LEDSubsystem(new LEDIOPWM())
-              : new LEDSubsystem(new LEDIOSim()))
-          : null;
   private final Rollers rollers = new Rollers();
   private final Elevators elevators = new Elevators();
   private final Arms arms = new Arms();
@@ -188,6 +186,7 @@ public class Superstructure extends SubsystemBase {
     Logger.recordOutput("Superstructure/State", currentState.toString());
     Logger.recordOutput("Superstructure/RequestedState", requestedState.toString());
     Logger.recordOutput("Superstructure/ClimbPhase", climbPhase.toString());
+    Logger.recordOutput("Superstructure/turretTarget", lastTurretTarget);
   }
 
   public void registerSuperstructureCharacterization(
@@ -523,7 +522,10 @@ public class Superstructure extends SubsystemBase {
       holdTurret();
       return;
     }
-    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) turret.setGoalRad(TurretCommands.shootingWhileMoving(drive::getPose, () -> target, drive::getRobotRelativeSpeeds));
+    if (SuperstructureConstants.SHOOTING_WHILE_MOVING)
+      turret.setGoalRad(
+          TurretCommands.shootingWhileMoving(
+              drive::getPose, () -> target, drive::getRobotRelativeSpeeds));
     else turret.setGoalRad(TurretUtil.turretAngleToTarget(drive.getPose(), target));
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;

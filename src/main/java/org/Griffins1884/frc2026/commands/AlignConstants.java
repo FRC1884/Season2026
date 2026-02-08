@@ -1,6 +1,5 @@
 package org.Griffins1884.frc2026.commands;
 
-import edu.wpi.first.math.MathUtil;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
@@ -11,12 +10,13 @@ public final class AlignConstants {
   public static final LoggedTunableNumber ALIGN_MAX_TRANSLATIONAL_SPEED =
       new LoggedTunableNumber("Align/MaxTranslationalSpeed", 1.0);
   public static final LoggedTunableNumber ALIGN_MAX_TRANSLATIONAL_ACCELERATION =
-      new LoggedTunableNumber("Align/MaxTranslationalAcceleration", 2.0);
+      new LoggedTunableNumber("Align/MaxTranslationalAcceleration", 2.5);
   public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_SPEED =
-      new LoggedTunableNumber("Align/MaxAngularSpeed", 0.3);
+      new LoggedTunableNumber("Align/MaxAngularSpeed", 3.0);
   public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_ACCELERATION =
-      new LoggedTunableNumber("Align/MaxAngularAcceleration", 0.3);
+      new LoggedTunableNumber("Align/MaxAngularAcceleration", 6.0);
   public static final LoggedTunableNumber ALIGN_CONTROLLER_LOOP_PERIOD_SEC =
+      // The command scheduler runs at 20ms; treat this as the effective control loop period.
       new LoggedTunableNumber("Align/ControllerLoopPeriodSec", 0.02);
   public static final LoggedTunableNumber FF_START_DELAY =
       new LoggedTunableNumber("Align/FFStartDelaySec", 0.3);
@@ -25,24 +25,25 @@ public final class AlignConstants {
   public static final LoggedTunableNumber ALIGN_MANUAL_DEADBAND =
       new LoggedTunableNumber("Align/ManualDeadband", 0.1);
   public static final LoggedTunableNumber ALIGN_TRANSLATION_TOLERANCE_METERS =
-      new LoggedTunableNumber("Align/TranslationToleranceMeters", 0.2);
+      new LoggedTunableNumber("Align/TranslationToleranceMeters", 0.03);
+  public static final LoggedTunableNumber ALIGN_ROTATION_TOLERANCE_DEG =
+      new LoggedTunableNumber("Align/RotationToleranceDeg", 2.0);
   public static final LoggedTunableNumber WHEEL_RADIUS_MAX_VELOCITY =
-      new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.25);
+      new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.5);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
-      new LoggedTunableNumber("Align/WheelRadiusRampRate", 0.05);
-
+      new LoggedTunableNumber("Align/WheelRadiusRampRate", 0.1);
   public static final LoggedTunableNumber ALIGN_TRANSLATION_KP =
-      new LoggedTunableNumber("Align/Gains/Translation/kP", 0.4);
+      new LoggedTunableNumber("Align/Gains/Translation/kP", 1.2);
   public static final LoggedTunableNumber ALIGN_TRANSLATION_KI =
       new LoggedTunableNumber("Align/Gains/Translation/kI", 0.001);
   public static final LoggedTunableNumber ALIGN_TRANSLATION_KD =
-      new LoggedTunableNumber("Align/Gains/Translation/kD", 0.4);
+      new LoggedTunableNumber("Align/Gains/Translation/kD", 0.2);
   public static final LoggedTunableNumber ALIGN_ROTATION_KP =
-      new LoggedTunableNumber("Align/Gains/Rotation/kP", 2.0);
+      new LoggedTunableNumber("Align/Gains/Rotation/kP", 4.0);
   public static final LoggedTunableNumber ALIGN_ROTATION_KI =
-      new LoggedTunableNumber("Align/Gains/Rotation/kI", 0.0);
+      new LoggedTunableNumber("Align/Gains/Rotation/kI", 0.01);
   public static final LoggedTunableNumber ALIGN_ROTATION_KD =
-      new LoggedTunableNumber("Align/Gains/Rotation/kD", 0.0);
+      new LoggedTunableNumber("Align/Gains/Rotation/kD", 0.5);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_KV =
       new LoggedTunableNumber("Align/Gains/Feedforward/kV", 1.0);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_DEADBAND =
@@ -50,7 +51,8 @@ public final class AlignConstants {
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
-        new Gains(ALIGN_TRANSLATION_KP.get(), ALIGN_TRANSLATION_KI.get(), ALIGN_TRANSLATION_KD.get()),
+        new Gains(
+            ALIGN_TRANSLATION_KP.get(), ALIGN_TRANSLATION_KI.get(), ALIGN_TRANSLATION_KD.get()),
         new Gains(ALIGN_ROTATION_KP.get(), ALIGN_ROTATION_KI.get(), ALIGN_ROTATION_KD.get()),
         new FeedforwardGains(
             ALIGN_FEEDFORWARD_KV.get(),

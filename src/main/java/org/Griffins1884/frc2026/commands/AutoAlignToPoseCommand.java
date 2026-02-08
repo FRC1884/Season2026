@@ -96,7 +96,8 @@ public class AutoAlignToPoseCommand extends Command {
     thetaController.reset(
         currentPose.getRotation().getRadians(), fieldSpeeds.omegaRadiansPerSecond);
 
-    thetaController.setTolerance(Units.degreesToRadians(2.0));
+    thetaController.setTolerance(
+        Units.degreesToRadians(AlignConstants.ALIGN_ROTATION_TOLERANCE_DEG.get()));
   }
 
   @Override
@@ -105,6 +106,7 @@ public class AutoAlignToPoseCommand extends Command {
       return;
     }
     updateTuningIfChanged(false);
+    AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
 
     Pose2d currentPose = drive.getPose();
 
@@ -117,8 +119,15 @@ public class AutoAlignToPoseCommand extends Command {
         MathUtil.clamp((currentDistance - ffMinRadius) / (ffMaxRadius - ffMinRadius), 0.0, 1.0);
     driveErrorAbs = currentDistance;
     Logger.recordOutput("DriveToPose/ffScaler", ffScaler);
+
+    double driveFFVelocity =
+        currentDistance > gains.feedforwardGains().deadbandMeters()
+            ? gains.feedforwardGains().kV() * driveController.getSetpoint().velocity
+            : 0.0;
+    Logger.recordOutput("DriveToPose/DriveFFVelocity", driveFFVelocity);
+
     double driveVelocityScalar =
-        driveController.getSetpoint().velocity * ffScaler
+        driveFFVelocity * ffScaler
             + driveController.calculate(
                 driveErrorAbs, new TrapezoidProfile.State(0.0, endVelocity));
     if (currentDistance < driveController.getPositionTolerance()) driveVelocityScalar = 0.0;
@@ -136,6 +145,17 @@ public class AutoAlignToPoseCommand extends Command {
     var driveVelocity =
         new Translation2d(driveVelocityScalar, 0.0)
             .rotateBy(currentPose.getTranslation().minus(target.getTranslation()).getAngle());
+    double maxLinearSpeed = AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get() * constraintFactor;
+    if (driveVelocity.getNorm() > maxLinearSpeed) {
+      driveVelocity = driveVelocity.times(maxLinearSpeed / driveVelocity.getNorm());
+    }
+    thetaVelocity =
+        MathUtil.clamp(
+            thetaVelocity,
+            -AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+            AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get());
+    Logger.recordOutput("DriveToPose/DriveVelocitySetpoint", driveVelocity);
+    Logger.recordOutput("DriveToPose/ThetaVelocitySetpointRadPerSec", thetaVelocity);
     drive.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             driveVelocity.getX(), driveVelocity.getY(), thetaVelocity, currentPose.getRotation()));

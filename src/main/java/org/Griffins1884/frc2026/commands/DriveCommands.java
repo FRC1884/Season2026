@@ -13,7 +13,6 @@
 
 package org.Griffins1884.frc2026.commands;
 
-import static java.lang.Math.PI;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -73,7 +72,8 @@ public class DriveCommands {
 
     // Apply rotation deadband
     double omega =
-        MathUtil.applyDeadband(omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
+        MathUtil.applyDeadband(
+            omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
 
     // Square rotation value for more precise control
     omega = Math.copySign(omega * omega, omega);
@@ -171,14 +171,31 @@ public class DriveCommands {
   public static Command alignToClimbCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
+          // Prefer alliance (when known). If the DS has not provided alliance yet (sim/offline),
+          // fall back to picking the nearer tower in the blue-origin field coordinate system.
+          boolean isBlue =
+              DriverStation.getAlliance().isPresent()
+                  ? DriverStation.getAlliance().get() == Alliance.Blue
+                  : drive.getPose().getX() < GlobalConstants.FieldConstants.fieldLength / 2.0;
+
           Translation2d target =
-              (DriverStation.getAlliance().isPresent()
-                      && DriverStation.getAlliance().get() == Alliance.Blue)
+              isBlue
                   ? GlobalConstants.FieldConstants.Tower.centerPoint
                   : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
-          Logger.recordOutput("Autonomy/AlignTargetClimb", target);
-          return new AutoAlignToPoseCommand(
-              drive, new Pose2d(target.getX(), target.getY(), new Rotation2d(PI)));
+
+          // Tower wall tags: use the same end-of-field tags that define the tower centerpoint Y.
+          int tagId = isBlue ? 31 : 15;
+
+          Rotation2d rotation =
+              GlobalConstants.FieldConstants.defaultAprilTagType
+                  .getLayout()
+                  .getTagPose(tagId)
+                  .map(tagPose -> tagPose.getRotation().toRotation2d())
+                  // Sensible fallback: point toward the tower along +/-X.
+                  .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
+
+          Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
+          return new AutoAlignToPoseCommand(drive, new Pose2d(target, rotation));
         },
         Set.of(drive));
   }

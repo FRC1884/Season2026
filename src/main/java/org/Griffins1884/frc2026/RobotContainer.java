@@ -252,13 +252,19 @@ public class RobotContainer {
                   new Vision(
                       drive,
                       LEFT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(LEFT_CAM_CONSTANTS)
+                          ? new AprilTagVisionIOPhotonVision(
+                              LEFT_CAM_CONSTANTS,
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {},
                       RIGHT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(RIGHT_CAM_CONSTANTS)
+                          ? new AprilTagVisionIOPhotonVision(
+                              RIGHT_CAM_CONSTANTS,
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {},
                       BACK_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(BACK_CAM_CONSTANTS)
+                          ? new AprilTagVisionIOPhotonVision(
+                              BACK_CAM_CONSTANTS,
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {});
               case SIM ->
                   new Vision(

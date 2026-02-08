@@ -73,7 +73,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     try {
       OperatorBoardWebServer server =
           new OperatorBoardWebServer(
-              Filesystem.getDeployDirectory().toPath().resolve("reefcontrols"),
+              Filesystem.getDeployDirectory().toPath().resolve("operatorboard"),
               Config.WebUIConfig.BIND_ADDRESS,
               Config.WebUIConfig.PORT);
       server.start();

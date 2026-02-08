@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import lombok.Setter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.littletonrobotics.junction.Logger;
 
@@ -35,7 +36,8 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final Alert[] disconnectedAlerts;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
-  private boolean useVision = true;
+  @Setter private boolean useVision = true;
+  private final DoubleSupplier yawRateRadPerSecSupplier;
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -69,6 +71,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         useLimelightFusion
             ? new PoseHistory(HISTORY_WINDOW_SEC, poseSupplier, yawRateRadPerSecSupplier)
             : null;
+    this.yawRateRadPerSecSupplier = yawRateRadPerSecSupplier;
 
     this.inputs = new VisionIOInputsAutoLogged[io.length];
     for (int i = 0; i < inputs.length; i++) {
@@ -255,6 +258,17 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       poseHistory.update(startTime);
     }
 
+    double yawRateDegPerSec =
+        yawRateRadPerSecSupplier != null
+            ? Math.toDegrees(yawRateRadPerSecSupplier.getAsDouble())
+            : 0.0;
+    boolean yawRateOk =
+        DriverStation.isDisabled()
+            || Math.abs(yawRateDegPerSec)
+                <= AprilTagVisionConstants.getLimelightMaxYawRateDegPerSec();
+    Logger.recordOutput("Vision/yawRateDegPerSec", yawRateDegPerSec);
+    Logger.recordOutput("Vision/yawRateAccept", yawRateOk);
+
     List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
 
     for (int i = 0; i < io.length; i++) {
@@ -270,11 +284,20 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     if (!useVision) {
       Logger.recordOutput("Vision/usingVision", false);
+      Logger.recordOutput("Vision/rejectReason", "VISION_DISABLED");
+      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+      return;
+    }
+
+    if (!yawRateOk) {
+      Logger.recordOutput("Vision/usingVision", true);
+      Logger.recordOutput("Vision/rejectReason", "HIGH_YAW_RATE");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
       return;
     }
 
     Logger.recordOutput("Vision/usingVision", true);
+    Logger.recordOutput("Vision/rejectReason", "ACCEPTED");
 
     Optional<VisionFieldPoseEstimate> accepted = Optional.empty();
     for (Optional<VisionFieldPoseEstimate> estimate : estimates) {
@@ -332,10 +355,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     return Optional.of(
         new VisionFieldPoseEstimate(
-            fieldToRobot,
-            cam.megatagPoseEstimate.timestampSeconds(),
-            visionStdDevs,
-            tagCount));
+            fieldToRobot, cam.megatagPoseEstimate.timestampSeconds(), visionStdDevs, tagCount));
   }
 
   private VisionFieldPoseEstimate fuseEstimates(
@@ -562,10 +582,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   }
 
   private record LimelightStdDevs(double x, double y, double theta, boolean finite) {}
-
-  public void setUseVision(boolean useVision) {
-    this.useVision = useVision;
-  }
 
   /** Functional interface defining a consumer that processes vision-based pose estimates. */
   @FunctionalInterface

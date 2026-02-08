@@ -11,22 +11,24 @@ public interface VisionIO {
    * to tags at which we think they will provide meaningful data on a target.
    */
   enum CameraType {
-    OV2311(7.5),
-    OV9281(4.5),
-    LIMELIGHT(10.0),
-    LIMELIGHT_3G(12.0),
-    A1920(8.0),
-    TELEPHOTO_OV2311(9.0),
-    TELEPHOTO_OV9281(9.0),
-    TELEPHOTO_A1920(10.0),
-    TELEPHOTO_LIMELIGHT(7.5),
-    TELEPHOTO_LIMELIGHT_3G(15.0),
-    UNKNOWN(0.0);
+    OV2311(7.5, 100),
+    OV9281(4.5, 100),
+    LIMELIGHT(4.5, 100),
+    LIMELIGHT_3G(12.0, 100),
+    A1920(8.0, 100),
+    TELEPHOTO_OV2311(9.0, 100),
+    TELEPHOTO_OV9281(9.0, 100),
+    TELEPHOTO_A1920(10.0, 100),
+    TELEPHOTO_LIMELIGHT(7.5, 100),
+    TELEPHOTO_LIMELIGHT_3G(15.0, 100),
+    UNKNOWN(0.0, 3);
 
     public final double noisyDistance;
+    public final double noisySpeed;
 
-    CameraType(double noisyDistance) {
+    CameraType(double noisyDistance, double noisySpeed) {
       this.noisyDistance = noisyDistance;
+      this.noisySpeed = noisySpeed;
     }
   }
 
