@@ -197,4 +197,3 @@ public final class HubShiftTracker {
     return ourHub == HubStatus.ACTIVE ? "SCORE" : "COLLECT/FERRY/DEFEND";
   }
 }
-

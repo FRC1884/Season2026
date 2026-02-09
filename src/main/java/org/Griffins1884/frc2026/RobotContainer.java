@@ -43,6 +43,7 @@ import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
 import org.Griffins1884.frc2026.OI.OperatorMap;
+import org.Griffins1884.frc2026.commands.AutoAlignToFuelCommand;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
@@ -378,7 +379,7 @@ public class RobotContainer {
 
       // align to the climb target
       driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));
-      driver.leftAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));
+      driver.leftAlign().whileTrue(DriveCommands.alignToClimbHolonomicCommand(drive));
 
       driver
           .slowMode()
@@ -411,6 +412,7 @@ public class RobotContainer {
                       },
                       drive)
                   .ignoringDisable(true));
+      driver.coralStation().whileTrue(new AutoAlignToFuelCommand(drive));
     }
   }
 

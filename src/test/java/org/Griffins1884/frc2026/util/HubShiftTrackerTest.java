@@ -44,8 +44,7 @@ public class HubShiftTrackerTest {
     Optional<DriverStation.Alliance> ourAlliance = Optional.of(DriverStation.Alliance.Red);
     Optional<DriverStation.Alliance> winner = Optional.of(DriverStation.Alliance.Red);
 
-    var s1 =
-        HubShiftTracker.compute(false, true, 129.0, ourAlliance, winner, "R"); // SHIFT_1
+    var s1 = HubShiftTracker.compute(false, true, 129.0, ourAlliance, winner, "R"); // SHIFT_1
     assertTrue(s1.hubStatusValid());
     assertEquals(HubStatus.INACTIVE, s1.redHubStatus());
     assertEquals(HubStatus.ACTIVE, s1.blueHubStatus());
@@ -80,4 +79,3 @@ public class HubShiftTrackerTest {
     assertFalse(snapshot.ourHubActive());
   }
 }
-
