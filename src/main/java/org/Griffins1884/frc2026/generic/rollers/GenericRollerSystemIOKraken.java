@@ -6,15 +6,17 @@ import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.util.Units;
 
 public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
-  private final TalonFX motor;
-  private final TalonFXConfiguration config = new TalonFXConfiguration();
+  private final TalonFX[] motors;
+  private final TalonFX leader;
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
   private final double reduction;
 
@@ -27,7 +29,12 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
   public GenericRollerSystemIOKraken(
       int id, int currentLimitAmps, boolean invert, boolean brake, double reduction) {
-    this(id, currentLimitAmps, invert, brake, reduction, new CANBus("rio"));
+    this(new int[] {id}, currentLimitAmps, new boolean[] {invert}, brake, reduction, new CANBus("rio"));
+  }
+
+  public GenericRollerSystemIOKraken(
+      int[] ids, int currentLimitAmps, boolean[] inverted, boolean brake, double reduction) {
+    this(ids, currentLimitAmps, inverted, brake, reduction, new CANBus("rio"));
   }
 
   public GenericRollerSystemIOKraken(
@@ -37,24 +44,36 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
       boolean brake,
       double reduction,
       CANBus canBus) {
+    this(new int[] {id}, currentLimitAmps, new boolean[] {invert}, brake, reduction, canBus);
+  }
+
+  public GenericRollerSystemIOKraken(
+      int[] ids,
+      int currentLimitAmps,
+      boolean[] inverted,
+      boolean brake,
+      double reduction,
+      CANBus canBus) {
     this.reduction = reduction;
-    motor = new TalonFX(id, canBus);
 
-    config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-    config.MotorOutput.Inverted =
-        invert ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
-    config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
-    config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
-    config.CurrentLimits.StatorCurrentLimitEnable = true;
-    tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
+    motors = new TalonFX[ids.length];
+    leader = motors[0] = new TalonFX(ids[0], canBus);
+    applyConfig(leader, currentLimitAmps, brake, resolveInverted(inverted, 0));
 
-    positionSignal = motor.getPosition();
-    velocitySignal = motor.getVelocity();
-    appliedVoltageSignal = motor.getMotorVoltage();
-    supplyCurrentSignal = motor.getSupplyCurrent();
-    torqueCurrentSignal = motor.getTorqueCurrent();
-    tempSignal = motor.getDeviceTemp();
+    if (ids.length > 1) {
+      for (int i = 1; i < ids.length; i++) {
+        TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
+        applyConfig(follower, currentLimitAmps, brake, resolveInverted(inverted, i));
+        follower.setControl(new Follower(leader.getDeviceID(), MotorAlignmentValue.Aligned));
+      }
+    }
+
+    positionSignal = leader.getPosition();
+    velocitySignal = leader.getVelocity();
+    appliedVoltageSignal = leader.getMotorVoltage();
+    supplyCurrentSignal = leader.getSupplyCurrent();
+    torqueCurrentSignal = leader.getTorqueCurrent();
+    tempSignal = leader.getDeviceTemp();
   }
 
   @Override
@@ -67,10 +86,12 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
         torqueCurrentSignal,
         tempSignal);
 
-    if (inputs.connected.length != 1) {
-      inputs.connected = new boolean[] {true};
-    } else {
-      inputs.connected[0] = positionSignal.getStatus().isOK();
+    if (inputs.connected.length != motors.length) {
+      inputs.connected = new boolean[motors.length];
+    }
+    boolean ok = positionSignal.getStatus().isOK();
+    for (int i = 0; i < motors.length; i++) {
+      inputs.connected[i] = ok;
     }
 
     double positionRotations = positionSignal.getValueAsDouble();
@@ -86,19 +107,47 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
   @Override
   public void runVolts(double volts) {
-    motor.setControl(voltageRequest.withOutput(volts));
+    leader.setControl(voltageRequest.withOutput(volts));
   }
 
   @Override
   public void stop() {
-    motor.stopMotor();
+    leader.stopMotor();
   }
 
   @Override
   public void setBrakeMode(boolean enabled) {
-    TalonFXConfiguration updated = new TalonFXConfiguration();
-    motor.getConfigurator().refresh(updated);
-    updated.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-    tryUntilOk(5, () -> motor.getConfigurator().apply(updated, 0.25));
+    for (TalonFX motor : motors) {
+      TalonFXConfiguration updated = new TalonFXConfiguration();
+      motor.getConfigurator().refresh(updated);
+      updated.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+      tryUntilOk(5, () -> motor.getConfigurator().apply(updated, 0.25));
+    }
+  }
+
+  private static boolean resolveInverted(boolean[] inverted, int index) {
+    if (inverted == null || inverted.length == 0) {
+      return false;
+    }
+    if (inverted.length == 1) {
+      return inverted[0];
+    }
+    if (index < inverted.length) {
+      return inverted[index];
+    }
+    return inverted[inverted.length - 1];
+  }
+
+  private static void applyConfig(
+      TalonFX motor, int currentLimitAmps, boolean brake, boolean inverted) {
+    TalonFXConfiguration config = new TalonFXConfiguration();
+    config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+    config.MotorOutput.Inverted =
+        inverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+    config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
+    config.CurrentLimits.SupplyCurrentLimitEnable = true;
+    config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
+    config.CurrentLimits.StatorCurrentLimitEnable = true;
+    tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
   }
 }

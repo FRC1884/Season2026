@@ -1,12 +1,27 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
+import com.ctre.phoenix6.CANBus;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterConstants {
-  public static final int SHOOTER_ID = 62; // TODO: Find ID for actual intake
-  public static final boolean isFlex = true;
+  public enum MotorController {
+    SPARK_MAX,
+    SPARK_FLEX,
+    KRAKEN_X60,
+    KRAKEN_X40,
+  }
+
+  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X60;
+  public static final CANBus CAN_BUS = new CANBus("rio");
+
+  public static final int[] SHOOTER_IDS = {20, 42};
+  public static final boolean[] SHOOTER_INVERTED = {false, true};
+  public static final int CURRENT_LIMIT_AMPS = 40;
+  public static final boolean BRAKE_MODE = false;
+  public static final double REDUCTION = 0.0;
+
   public static final DoubleSupplier currentLimit =
       new LoggedTunableNumber("CoralIntake/CurrentLimit", 15);
   public static final GlobalConstants.Gains gains = new GlobalConstants.Gains(1, 0, 0);

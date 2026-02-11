@@ -4,6 +4,11 @@ import org.Griffins1884.frc2026.generic.rollers.GenericRollerSystemIOSparkFlex;
 
 public class ShooterIOFlex extends GenericRollerSystemIOSparkFlex implements ShooterIO {
   public ShooterIOFlex() {
-    super(ShooterConstants.SHOOTER_ID, 40, false, true, 0.0);
+    super(
+        ShooterConstants.SHOOTER_IDS[0],
+        ShooterConstants.CURRENT_LIMIT_AMPS,
+        ShooterConstants.SHOOTER_INVERTED[0],
+        ShooterConstants.BRAKE_MODE,
+        ShooterConstants.REDUCTION);
   }
 }

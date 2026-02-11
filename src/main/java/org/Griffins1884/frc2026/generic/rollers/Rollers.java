@@ -34,7 +34,11 @@ public class Rollers extends SubsystemBase {
               "Shooter",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new ShooterIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : (ShooterConstants.isFlex) ? new ShooterIOFlex() : new ShooterIOMax())
+                  : switch (ShooterConstants.MOTOR_CONTROLLER) {
+                    case SPARK_FLEX -> new ShooterIOFlex();
+                    case SPARK_MAX -> new ShooterIOMax();
+                    case KRAKEN_X60, KRAKEN_X40 -> new ShooterIOKraken();
+                  })
           : null;
   public IndexerSubsystem indexer =
       (INDEXER_ENABLED)
