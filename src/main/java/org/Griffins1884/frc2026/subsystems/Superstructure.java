@@ -340,7 +340,6 @@ public class Superstructure extends SubsystemBase {
       rollers.indexer.clearGoalOverride();
     }
     if (rollers.shooter != null) {
-      rollers.shooter.stopOpenLoop();
       rollers.shooter.clearGoalOverride();
     }
     if (arms.intakePivot != null) {

@@ -29,7 +29,13 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
   public GenericRollerSystemIOKraken(
       int id, int currentLimitAmps, boolean invert, boolean brake, double reduction) {
-    this(new int[] {id}, currentLimitAmps, new boolean[] {invert}, brake, reduction, new CANBus("rio"));
+    this(
+        new int[] {id},
+        currentLimitAmps,
+        new boolean[] {invert},
+        brake,
+        reduction,
+        new CANBus("rio"));
   }
 
   public GenericRollerSystemIOKraken(
