@@ -32,18 +32,10 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.5);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
       new LoggedTunableNumber("Align/WheelRadiusRampRate", 0.1);
-  public static final LoggedTunableNumber ALIGN_TRANSLATION_KP =
-      new LoggedTunableNumber("Align/Gains/Translation/kP", 1.2);
-  public static final LoggedTunableNumber ALIGN_TRANSLATION_KI =
-      new LoggedTunableNumber("Align/Gains/Translation/kI", 0.001);
-  public static final LoggedTunableNumber ALIGN_TRANSLATION_KD =
-      new LoggedTunableNumber("Align/Gains/Translation/kD", 0.2);
-  public static final LoggedTunableNumber ALIGN_ROTATION_KP =
-      new LoggedTunableNumber("Align/Gains/Rotation/kP", 4.0);
-  public static final LoggedTunableNumber ALIGN_ROTATION_KI =
-      new LoggedTunableNumber("Align/Gains/Rotation/kI", 0.01);
-  public static final LoggedTunableNumber ALIGN_ROTATION_KD =
-      new LoggedTunableNumber("Align/Gains/Rotation/kD", 0.5);
+  public static final Gains ALIGN_TRANSLATION_GAINS =
+      new Gains("Align/Gains/Translation", 1.2, 0.001, 0.2);
+  public static final Gains ALIGN_ROTATION_GAINS =
+      new Gains("Align/Gains/Rotation", 4.0, 0.01, 0.5);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_KV =
       new LoggedTunableNumber("Align/Gains/Feedforward/kV", 1.0);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_DEADBAND =
@@ -51,9 +43,8 @@ public final class AlignConstants {
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
-        new Gains(
-            ALIGN_TRANSLATION_KP.get(), ALIGN_TRANSLATION_KI.get(), ALIGN_TRANSLATION_KD.get()),
-        new Gains(ALIGN_ROTATION_KP.get(), ALIGN_ROTATION_KI.get(), ALIGN_ROTATION_KD.get()),
+        ALIGN_TRANSLATION_GAINS,
+        ALIGN_ROTATION_GAINS,
         new FeedforwardGains(
             ALIGN_FEEDFORWARD_KV.get(),
             ALIGN_FEEDFORWARD_DEADBAND.get(),
@@ -75,27 +66,27 @@ public final class AlignConstants {
   public static record AlignGains(
       Gains translationGains, Gains thetaGains, FeedforwardGains feedforwardGains) {
     public double translationKp() {
-      return translationGains.kP();
+      return translationGains.kP().get();
     }
 
     public double translationKi() {
-      return translationGains.kI();
+      return translationGains.kI().get();
     }
 
     public double translationKd() {
-      return translationGains.kD();
+      return translationGains.kD().get();
     }
 
     public double rotationKp() {
-      return thetaGains.kP();
+      return thetaGains.kP().get();
     }
 
     public double rotationKi() {
-      return thetaGains.kI();
+      return thetaGains.kI().get();
     }
 
     public double rotationKd() {
-      return thetaGains.kD();
+      return thetaGains.kD().get();
     }
 
     public double feedforward() {

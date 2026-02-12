@@ -13,6 +13,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.Optional;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,13 +29,15 @@ import org.Griffins1884.frc2026.generic.turrets.GenericPositionTurretSystem.Cont
 import org.Griffins1884.frc2026.subsystems.climber.ClimberSubsystem.ClimberGoal;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem.IndexerGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakePivotSubsystem.IntakePivotGoal;
-import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.intakeGoal;
+import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.IntakeGoal;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOPWM;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOSim;
 import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
@@ -72,7 +76,7 @@ public class Superstructure extends SubsystemBase {
   public record SuperstructureOutcome(
       SuperState state,
       SuperState requestedState,
-      intakeGoal intakeGoal,
+      IntakeGoal intakeGoal,
       IndexerGoal indexerGoal,
       ShooterGoal shooterGoal,
       IntakePivotGoal intakePivotGoal,
@@ -97,6 +101,12 @@ public class Superstructure extends SubsystemBase {
   @Getter private SuperState requestedState = SuperState.IDLING;
   @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
+  private boolean autoStateEnabled = true;
+  private SuperState lastChooserSelection = null;
+  private boolean manualControlActive = false;
+  @Setter private boolean shooterPivotExternalControl = false;
+  private DoubleSupplier manualTurretAxis = () -> 0.0;
+  private DoubleSupplier manualPivotAxis = () -> 0.0;
 
   private final Debouncer ballPresentDebouncer =
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
@@ -114,7 +124,7 @@ public class Superstructure extends SubsystemBase {
               : new LEDSubsystem(new LEDIOSim()))
           : null;
 
-  private intakeGoal lastIntakeGoal = intakeGoal.IDLING;
+  private IntakeGoal lastIntakeGoal = IntakeGoal.IDLING;
   private IndexerGoal lastIndexerGoal = IndexerGoal.IDLING;
   private ShooterGoal lastShooterGoal = ShooterGoal.IDLING;
   private IntakePivotGoal lastIntakePivotGoal = IntakePivotGoal.IDLING;
@@ -150,6 +160,26 @@ public class Superstructure extends SubsystemBase {
     return Commands.runOnce(() -> requestState(stateRequest, true));
   }
 
+  public void setAutoStateEnabled(boolean enabled) {
+    autoStateEnabled = enabled;
+    if (enabled) {
+      clearStateOverride();
+    }
+  }
+
+  public boolean isAutoStateEnabled() {
+    return autoStateEnabled;
+  }
+
+  public void toggleAutoStateEnabled() {
+    setAutoStateEnabled(!autoStateEnabled);
+  }
+
+  public void bindManualControlSuppliers(DoubleSupplier turretAxis, DoubleSupplier pivotAxis) {
+    manualTurretAxis = turretAxis != null ? turretAxis : () -> 0.0;
+    manualPivotAxis = pivotAxis != null ? pivotAxis : () -> 0.0;
+  }
+
   public void clearStateOverride() {
     stateOverrideActive = false;
   }
@@ -177,16 +207,31 @@ public class Superstructure extends SubsystemBase {
   @Override
   public void periodic() {
     updateRequestedStateFromChooser();
+    if (autoStateEnabled && !stateOverrideActive) {
+      SuperState autoState = computeAutoState();
+      if (autoState != null) {
+        requestState(autoState, false);
+      }
+      Logger.recordOutput(
+          "Superstructure/AutoState", autoState != null ? autoState.toString() : "UNKNOWN");
+    }
+    manualControlActive = !autoStateEnabled;
     if (requestedState != currentState) {
       enterState(requestedState);
       currentState = requestedState;
     }
 
     applyState(currentState);
+    if (manualControlActive) {
+      applyManualJog();
+    } else {
+      stopManualJog();
+    }
     Logger.recordOutput("Superstructure/State", currentState.toString());
     Logger.recordOutput("Superstructure/RequestedState", requestedState.toString());
     Logger.recordOutput("Superstructure/ClimbPhase", climbPhase.toString());
     Logger.recordOutput("Superstructure/turretTarget", lastTurretTarget);
+    Logger.recordOutput("Superstructure/AutoStateEnabled", autoStateEnabled);
   }
 
   public void registerSuperstructureCharacterization(
@@ -263,12 +308,83 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void updateRequestedStateFromChooser() {
-    if (stateOverrideActive) {
+    SuperState selected = stateChooser.get();
+    if (selected == null) {
       return;
     }
-    SuperState selected = stateChooser.get();
-    if (selected != null) {
-      requestedState = selected;
+    if (lastChooserSelection == null) {
+      lastChooserSelection = selected;
+      return;
+    }
+    if (selected != lastChooserSelection) {
+      lastChooserSelection = selected;
+      requestState(selected, true);
+    }
+  }
+
+  private SuperState computeAutoState() {
+    if (drive == null) {
+      return null;
+    }
+    Pose2d pose = drive.getPose();
+    if (pose == null || !Double.isFinite(pose.getX())) {
+      return null;
+    }
+    Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
+    if (alliance.isEmpty()) {
+      return null;
+    }
+    double xBlue =
+        alliance.get() == DriverStation.Alliance.Red
+            ? GlobalConstants.FieldConstants.fieldLength - pose.getX()
+            : pose.getX();
+    Logger.recordOutput("Superstructure/AutoXBlue", xBlue);
+
+    if (xBlue < SuperstructureConstants.AUTO_STATE_SHOOTING_X_MAX_METERS) {
+      return SuperState.SHOOTING;
+    }
+    if (xBlue < SuperstructureConstants.AUTO_STATE_IDLE_X_MAX_METERS) {
+      return SuperState.IDLING;
+    }
+    if (xBlue < SuperstructureConstants.AUTO_STATE_INTAKE_X_MAX_METERS) {
+      return SuperState.INTAKING;
+    }
+    return SuperState.IDLING;
+  }
+
+  private boolean isTurretExternallyControlled() {
+    return turretExternalControl || manualControlActive;
+  }
+
+  private boolean isShooterPivotExternallyControlled() {
+    return shooterPivotExternalControl || manualControlActive;
+  }
+
+  private void applyManualJog() {
+    double turretAxis = manualTurretAxis.getAsDouble();
+    double pivotAxis = manualPivotAxis.getAsDouble();
+    if (turret != null) {
+      double percent =
+          (SuperstructureConstants.MANUAL_JOG_VOLTAGE / TurretConstants.MAX_VOLTAGE) * turretAxis;
+      turret.setOpenLoop(percent);
+      lastTurretAction = "MANUAL_OPEN_LOOP";
+    }
+    if (arms.shooterPivot != null) {
+      double percent =
+          (SuperstructureConstants.MANUAL_JOG_VOLTAGE / ShooterPivotConstants.MAX_VOLTAGE)
+              * pivotAxis;
+      arms.shooterPivot.setOpenLoop(percent);
+    }
+    Logger.recordOutput("Superstructure/ManualTurretAxis", turretAxis);
+    Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
+  }
+
+  private void stopManualJog() {
+    if (turret != null) {
+      turret.stopOpenLoop();
+    }
+    if (arms.shooterPivot != null) {
+      arms.shooterPivot.stopOpenLoop();
     }
   }
 
@@ -323,7 +439,7 @@ public class Superstructure extends SubsystemBase {
 
   private void applyIdle() {
     clearIdleOverrides();
-    setIntakeGoal(intakeGoal.IDLING);
+    setIntakeGoal(IntakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
@@ -347,24 +463,26 @@ public class Superstructure extends SubsystemBase {
       arms.intakePivot.clearGoalOverride();
     }
     if (arms.shooterPivot != null) {
-      arms.shooterPivot.stopOpenLoop();
-      arms.shooterPivot.clearGoalOverride();
+      if (!isShooterPivotExternallyControlled()) {
+        arms.shooterPivot.stopOpenLoop();
+        arms.shooterPivot.clearGoalOverride();
+      }
     }
   }
 
   private void applyIntaking() {
     boolean intakeReady = arms.intakePivot == null || arms.intakePivot.isAtGoal();
-    setIntakeGoal(intakeReady ? intakeGoal.FORWARD : intakeGoal.IDLING);
+    setIntakeGoal(intakeReady ? IntakeGoal.FORWARD : IntakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
-    setIntakePivotGoal(IntakePivotGoal.INTAKE_PIVOT_GOAL);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
     stopClimber();
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
-    setIntakeGoal(intakeGoal.IDLING);
+    setIntakeGoal(IntakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
@@ -383,10 +501,10 @@ public class Superstructure extends SubsystemBase {
     Translation2d target;
     if (drive != null) target = new Translation2d(0, 0); // TODO: find a way to get the ferry target
     else target = new Translation2d(0.0, 0.0);
-    setIntakeGoal(intakeGoal.FORWARD);
+    setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
-    setIntakePivotGoal(IntakePivotGoal.INTAKE_PIVOT_GOAL);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
     aimTurretAt(target);
     aimShooterPivotAt(target);
     stopClimber();
@@ -401,7 +519,7 @@ public class Superstructure extends SubsystemBase {
               : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
           false);
     } else {
-      setIntakeGoal(intakeGoal.IDLING);
+      setIntakeGoal(IntakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.IDLING);
       setShooterGoal(ShooterGoal.IDLING);
       setIntakePivotGoal(IntakePivotGoal.IDLING);
@@ -412,7 +530,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyTesting() {
-    setIntakeGoal(intakeGoal.IDLING);
+    setIntakeGoal(IntakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
@@ -421,7 +539,7 @@ public class Superstructure extends SubsystemBase {
     stopClimber();
   }
 
-  private void setIntakeGoal(intakeGoal goal) {
+  private void setIntakeGoal(IntakeGoal goal) {
     lastIntakeGoal = goal;
     if (rollers.intake != null) {
       rollers.intake.setGoal(goal);
@@ -450,6 +568,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void setShooterPivotGoal(ShooterPivotGoal goal, boolean manual, double manualPosition) {
+    if (isShooterPivotExternallyControlled()) {
+      return;
+    }
     lastShooterPivotGoal = goal;
     lastShooterPivotManual = manual;
     lastShooterPivotPosition = manualPosition;
@@ -466,7 +587,7 @@ public class Superstructure extends SubsystemBase {
 
   private void holdTurret() {
     lastTurretTarget = null;
-    if (turretExternalControl) {
+    if (isTurretExternallyControlled()) {
       lastTurretAction = "EXTERNAL";
       return;
     }
@@ -512,7 +633,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void aimTurretAt(Translation2d target) {
-    if (turretExternalControl) {
+    if (isTurretExternallyControlled()) {
       lastTurretAction = "EXTERNAL";
       lastTurretTarget = null;
       return;
@@ -531,6 +652,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void aimShooterPivotAt(Translation2d target) {
+    if (isShooterPivotExternallyControlled()) {
+      return;
+    }
     if (arms.shooterPivot == null || drive == null || target == null) {
       return;
     }

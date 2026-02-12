@@ -5,15 +5,17 @@ import org.Griffins1884.frc2026.generic.elevators.GenericElevatorSystemIOKraken;
 public class ClimberIOKraken extends GenericElevatorSystemIOKraken implements ClimberIO {
   public ClimberIOKraken() {
     super(
-        new int[] {ClimberConstants.LEFT_CLIMBER, ClimberConstants.RIGHT_CLIMBER},
+        ClimberConstants.CLIMBER_IDS,
         ClimberConstants.CURRENT_LIMIT_AMPS,
         ClimberConstants.BRAKE_MODE,
-        ClimberConstants.POSITION_COEFFICIENT);
-    if (ClimberConstants.LEFT_INVERTED) {
-      invert(0);
-    }
-    if (ClimberConstants.RIGHT_INVERTED) {
-      invert(1);
+        ClimberConstants.POSITION_COEFFICIENT,
+        false,
+        ClimberConstants.CAN_BUS);
+    boolean[] inverted = ClimberConstants.CLIMBER_INVERTED;
+    for (int i = 0; i < inverted.length; i++) {
+      if (inverted[i]) {
+        invert(i);
+      }
     }
   }
 }

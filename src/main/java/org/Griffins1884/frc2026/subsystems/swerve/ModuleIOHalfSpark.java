@@ -60,6 +60,7 @@ import java.util.Queue;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.ModuleConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 /** Module IO implementation for Kraken X60 drive motors with Neo 550 turn motors. */
 public class ModuleIOHalfSpark implements ModuleIO {
@@ -72,6 +73,8 @@ public class ModuleIOHalfSpark implements ModuleIO {
   private final Rotation2d zeroRotation;
 
   private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
+  private final SparkMaxConfig turnConfig = new SparkMaxConfig();
+  private final int tuningId = System.identityHashCode(this);
 
   private final StatusSignal<Angle> drivePosition;
   private final StatusSignal<AngularVelocity> driveVelocity;
@@ -103,12 +106,12 @@ public class ModuleIOHalfSpark implements ModuleIO {
     driveConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
     driveConfig.CurrentLimits.StatorCurrentLimit = DRIVE_MOTOR_CURRENT_LIMIT;
     driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
-    driveConfig.Slot0.kP = DRIVE_MOTOR_GAINS.kP();
-    driveConfig.Slot0.kI = DRIVE_MOTOR_GAINS.kI();
-    driveConfig.Slot0.kD = DRIVE_MOTOR_GAINS.kD();
-    driveConfig.Slot0.kS = DRIVE_MOTOR_GAINS.kS();
-    driveConfig.Slot0.kV = DRIVE_MOTOR_GAINS.kV();
-    driveConfig.Slot0.kA = DRIVE_MOTOR_GAINS.kA();
+    driveConfig.Slot0.kP = DRIVE_MOTOR_GAINS.kP().get();
+    driveConfig.Slot0.kI = DRIVE_MOTOR_GAINS.kI().get();
+    driveConfig.Slot0.kD = DRIVE_MOTOR_GAINS.kD().get();
+    driveConfig.Slot0.kS = DRIVE_MOTOR_GAINS.kS().get();
+    driveConfig.Slot0.kV = DRIVE_MOTOR_GAINS.kV().get();
+    driveConfig.Slot0.kA = DRIVE_MOTOR_GAINS.kA().get();
     driveConfig.Feedback.SensorToMechanismRatio = DRIVE_GEAR_RATIO;
     driveMotor.getConfigurator().apply(driveConfig);
     driveMotor.setPosition(0.0);
@@ -123,7 +126,6 @@ public class ModuleIOHalfSpark implements ModuleIO {
     BaseStatusSignal.setUpdateFrequencyForAll(50.0, driveVelocity, driveVoltage, driveCurrent);
 
     // Configure turn motor (Neo 550 on Spark Max)
-    var turnConfig = new SparkMaxConfig();
     turnConfig
         .inverted(ROTATOR_INVERTED)
         .idleMode(IdleMode.kBrake)
@@ -140,7 +142,7 @@ public class ModuleIOHalfSpark implements ModuleIO {
         .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
         .positionWrappingEnabled(true)
         .positionWrappingInputRange(ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT)
-        .pid(ROTATOR_GAINS.kP(), 0.0, ROTATOR_GAINS.kD());
+        .pid(ROTATOR_GAINS.kP().get(), ROTATOR_GAINS.kI().get(), ROTATOR_GAINS.kD().get());
     turnConfig
         .signals
         .absoluteEncoderPositionAlwaysOn(true)
@@ -172,6 +174,7 @@ public class ModuleIOHalfSpark implements ModuleIO {
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
+    updateTunableGains();
     StatusCode driveStatus =
         BaseStatusSignal.refreshAll(drivePosition, driveVelocity, driveVoltage, driveCurrent);
 
@@ -230,8 +233,8 @@ public class ModuleIOHalfSpark implements ModuleIO {
   @Override
   public void setDriveVelocity(double velocityRadPerSec) {
     double ffVolts =
-        DRIVE_MOTOR_GAINS.kS() * Math.signum(velocityRadPerSec)
-            + DRIVE_MOTOR_GAINS.kV() * velocityRadPerSec;
+        DRIVE_MOTOR_GAINS.kS().get() * Math.signum(velocityRadPerSec)
+            + DRIVE_MOTOR_GAINS.kV().get() * velocityRadPerSec;
     double wheelRotationsPerSecond = velocityRadPerSec / TWO_PI;
     driveMotor.setControl(
         driveVelocityRequest.withVelocity(wheelRotationsPerSecond).withFeedForward(ffVolts));
@@ -243,5 +246,39 @@ public class ModuleIOHalfSpark implements ModuleIO {
         MathUtil.inputModulus(
             rotation.plus(zeroRotation).getRadians(), ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT);
     turnController.setSetpoint(setpointRadians, ControlType.kPosition);
+  }
+
+  private void updateTunableGains() {
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> {
+          driveConfig.Slot0.kP = values[0];
+          driveConfig.Slot0.kI = values[1];
+          driveConfig.Slot0.kD = values[2];
+          driveConfig.Slot0.kS = values[3];
+          driveConfig.Slot0.kV = values[4];
+          driveConfig.Slot0.kA = values[5];
+          driveMotor.getConfigurator().apply(driveConfig);
+        },
+        DRIVE_MOTOR_GAINS.kP(),
+        DRIVE_MOTOR_GAINS.kI(),
+        DRIVE_MOTOR_GAINS.kD(),
+        DRIVE_MOTOR_GAINS.kS(),
+        DRIVE_MOTOR_GAINS.kV(),
+        DRIVE_MOTOR_GAINS.kA());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> {
+          turnConfig.closedLoop.pid(values[0], values[1], values[2]);
+          tryUntilOk(
+              turnSpark,
+              5,
+              () ->
+                  turnSpark.configure(
+                      turnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
+        },
+        ROTATOR_GAINS.kP(),
+        ROTATOR_GAINS.kI(),
+        ROTATOR_GAINS.kD());
   }
 }

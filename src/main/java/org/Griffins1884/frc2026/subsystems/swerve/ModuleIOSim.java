@@ -19,6 +19,7 @@ import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.*;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import java.util.Arrays;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.Griffins1884.frc2026.util.SparkUtil;
 import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
 import org.ironmaple.simulation.motorsims.SimulatedMotorController;
@@ -32,9 +33,10 @@ public class ModuleIOSim implements ModuleIO {
   private boolean driveClosedLoop = false;
   private boolean turnClosedLoop = false;
   private final PIDController driveController =
-      new PIDController(DRIVE_MOTOR_GAINS.kP(), 0, DRIVE_MOTOR_GAINS.kD());
+      new PIDController(DRIVE_MOTOR_GAINS.kP().get(), 0, DRIVE_MOTOR_GAINS.kD().get());
   private final PIDController turnController =
-      new PIDController(ROTATOR_GAINS.kP(), 0, ROTATOR_GAINS.kD());
+      new PIDController(ROTATOR_GAINS.kP().get(), 0, ROTATOR_GAINS.kD().get());
+  private final int tuningId = System.identityHashCode(this);
   private double driveFFVolts = 0.0;
   private double driveAppliedVolts = 0.0;
   private double turnAppliedVolts = 0.0;
@@ -56,6 +58,18 @@ public class ModuleIOSim implements ModuleIO {
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> driveController.setPID(values[0], values[1], values[2]),
+        DRIVE_MOTOR_GAINS.kP(),
+        DRIVE_MOTOR_GAINS.kI(),
+        DRIVE_MOTOR_GAINS.kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> turnController.setPID(values[0], values[1], values[2]),
+        ROTATOR_GAINS.kP(),
+        ROTATOR_GAINS.kI(),
+        ROTATOR_GAINS.kD());
     // Run closed-loop control
     if (driveClosedLoop) {
       driveAppliedVolts =
@@ -116,8 +130,8 @@ public class ModuleIOSim implements ModuleIO {
   public void setDriveVelocity(double velocityRadPerSec) {
     driveClosedLoop = true;
     driveFFVolts =
-        DRIVE_MOTOR_GAINS.kS() * Math.signum(velocityRadPerSec)
-            + DRIVE_MOTOR_GAINS.kV() * velocityRadPerSec;
+        DRIVE_MOTOR_GAINS.kS().get() * Math.signum(velocityRadPerSec)
+            + DRIVE_MOTOR_GAINS.kV().get() * velocityRadPerSec;
     driveController.setSetpoint(velocityRadPerSec);
   }
 

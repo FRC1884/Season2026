@@ -27,6 +27,7 @@ public class AutoAlignToPoseHolonomicCommand extends Command {
   private final ProfiledPIDController xController;
   private final ProfiledPIDController yController;
   private final ProfiledPIDController thetaController;
+  private final int tuningId = System.identityHashCode(this);
 
   public AutoAlignToPoseHolonomicCommand(SwerveSubsystem drive, Pose2d target) {
     this(drive, target, 1.0, 0.0, Double.NaN);
@@ -83,6 +84,7 @@ public class AutoAlignToPoseHolonomicCommand extends Command {
   @Override
   public void initialize() {
     if (target == null) return;
+    updateTuningIfChanged(true);
 
     Pose2d currentPose = drive.getPose();
     ChassisSpeeds robotSpeeds = drive.getRobotRelativeSpeeds();
@@ -109,6 +111,7 @@ public class AutoAlignToPoseHolonomicCommand extends Command {
     if (target == null) {
       return;
     }
+    updateTuningIfChanged(false);
 
     Pose2d currentPose = drive.getPose();
     AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
@@ -185,5 +188,49 @@ public class AutoAlignToPoseHolonomicCommand extends Command {
   public boolean isFinished() {
     return target == null
         || (xController.atGoal() && yController.atGoal() && thetaController.atGoal());
+  }
+
+  private void updateTuningIfChanged(boolean force) {
+    boolean changed =
+        AlignConstants.ALIGN_TRANSLATION_GAINS.kP().hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_GAINS.kI().hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_GAINS.kD().hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_GAINS.kP().hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_GAINS.kI().hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_GAINS.kD().hasChanged(tuningId)
+            || AlignConstants.ALIGN_FEEDFORWARD_KV.hasChanged(tuningId)
+            || AlignConstants.ALIGN_FEEDFORWARD_DEADBAND.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_ANGULAR_SPEED.hasChanged(tuningId)
+            || AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS.hasChanged(tuningId);
+    if (force || changed) {
+      applyTuning();
+    }
+  }
+
+  private void applyTuning() {
+    AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
+    xController.setPID(gains.translationKp(), gains.translationKi(), gains.translationKd());
+    yController.setPID(gains.translationKp(), gains.translationKi(), gains.translationKd());
+    thetaController.setPID(gains.rotationKp(), gains.rotationKi(), gains.rotationKd());
+    TrapezoidProfile.Constraints translationConstraints =
+        new TrapezoidProfile.Constraints(
+            AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get() * constraintFactor,
+            AlignConstants.ALIGN_MAX_TRANSLATIONAL_ACCELERATION.get() * constraintFactor);
+    TrapezoidProfile.Constraints rotationConstraints =
+        new TrapezoidProfile.Constraints(
+            AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
+            AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.get());
+    xController.setConstraints(translationConstraints);
+    yController.setConstraints(translationConstraints);
+    thetaController.setConstraints(rotationConstraints);
+    double toleranceMeters =
+        Double.isNaN(toleranceOverride)
+            ? AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS.get()
+            : toleranceOverride;
+    xController.setTolerance(toleranceMeters);
+    yController.setTolerance(toleranceMeters);
   }
 }

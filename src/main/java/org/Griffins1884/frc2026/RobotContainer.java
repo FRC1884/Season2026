@@ -417,6 +417,10 @@ public class RobotContainer {
   }
 
   private void configureOperatorButtonBindings() {
+    operator.autoManualToggle().onTrue(Commands.runOnce(superstructure::toggleAutoStateEnabled));
+    superstructure.bindManualControlSuppliers(
+        operator.manualTurretAxis(), operator.manualPivotAxis());
+
     if (turret == null) {
       return;
     }

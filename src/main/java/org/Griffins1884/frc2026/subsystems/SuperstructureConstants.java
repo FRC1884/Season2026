@@ -23,10 +23,14 @@ public final class SuperstructureConstants {
   public static final LoggedTunableNumber CLIMB_DETACH_DRIVE_SECONDS =
       new LoggedTunableNumber("Superstructure/ClimbDetachDriveSeconds", 1.0);
 
-  public static final int ENDGAME_CLIMB_LEVELS = 3;
+  public static final int ENDGAME_CLIMB_LEVELS = 1;
   public static final int AUTO_CLIMB_LEVELS = 1;
 
   public static final boolean SHOOTING_WHILE_MOVING = false;
+  public static final double MANUAL_JOG_VOLTAGE = 0.5;
+  public static final double AUTO_STATE_SHOOTING_X_MAX_METERS = 4.0;
+  public static final double AUTO_STATE_IDLE_X_MAX_METERS = 5.4;
+  public static final double AUTO_STATE_INTAKE_X_MAX_METERS = 11.0;
 
   private SuperstructureConstants() {}
 }

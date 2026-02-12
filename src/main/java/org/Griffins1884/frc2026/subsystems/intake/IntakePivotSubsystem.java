@@ -14,8 +14,7 @@ public class IntakePivotSubsystem
   @RequiredArgsConstructor
   @Getter
   public enum IntakePivotGoal implements PivotGoal {
-    IDLING(() -> IntakePivotConstants.STOW_ANGLE_RAD),
-    INTAKE_PIVOT_GOAL(new LoggedTunableNumber("IntakePivot/INTAKE_PIVOT_GOAL", 0.0)),
+    IDLING(() -> IntakePivotConstants.IDLE_ANGLE_RAD),
     TESTING(new LoggedTunableNumber("IntakePivot/Test", 0.0));
 
     private final DoubleSupplier angleSupplier;
@@ -33,9 +32,9 @@ public class IntakePivotSubsystem
         name,
         io,
         new ArmConfig(
-            null,
-            null,
-            null,
+            IntakePivotConstants.GAINS.kP(),
+            IntakePivotConstants.GAINS.kI(),
+            IntakePivotConstants.GAINS.kD(),
             IntakePivotConstants.POSITION_TOLERANCE,
             IntakePivotConstants.SOFT_LIMITS_ENABLED,
             IntakePivotConstants.SOFT_LIMIT_MIN,

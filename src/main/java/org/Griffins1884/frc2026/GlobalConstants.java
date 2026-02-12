@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -417,10 +418,36 @@ public final class GlobalConstants {
 
   public static final class AlignOffsets {}
 
-  /** PID + FF gains, with overloaded constructors for disabling each term. */
-  public record Gains(double kP, double kI, double kD, double kS, double kV, double kA, double kG) {
-    public Gains(double kP, double kI, double kD) {
-      this(kP, kI, kD, 0, 0, 0, 0);
+  /** PID + FF gains, using LoggedTunableNumber for live tuning. */
+  public record Gains(
+      LoggedTunableNumber kP,
+      LoggedTunableNumber kI,
+      LoggedTunableNumber kD,
+      LoggedTunableNumber kS,
+      LoggedTunableNumber kV,
+      LoggedTunableNumber kA,
+      LoggedTunableNumber kG) {
+    public Gains(String prefix, double kP, double kI, double kD) {
+      this(prefix, kP, kI, kD, 0, 0, 0, 0);
+    }
+
+    public Gains(
+        String prefix,
+        double kP,
+        double kI,
+        double kD,
+        double kS,
+        double kV,
+        double kA,
+        double kG) {
+      this(
+          new LoggedTunableNumber(prefix + "/kP", kP),
+          new LoggedTunableNumber(prefix + "/kI", kI),
+          new LoggedTunableNumber(prefix + "/kD", kD),
+          new LoggedTunableNumber(prefix + "/kS", kS),
+          new LoggedTunableNumber(prefix + "/kV", kV),
+          new LoggedTunableNumber(prefix + "/kA", kA),
+          new LoggedTunableNumber(prefix + "/kG", kG));
     }
   }
 }

@@ -175,12 +175,12 @@ public class AutoAlignToPoseCommand extends Command {
     // Apply new constants only when tunables change to avoid unnecessary allocations and
     // controller churn on the roboRIO.
     boolean changed =
-        AlignConstants.ALIGN_TRANSLATION_KP.hasChanged(tuningId)
-            || AlignConstants.ALIGN_TRANSLATION_KI.hasChanged(tuningId)
-            || AlignConstants.ALIGN_TRANSLATION_KD.hasChanged(tuningId)
-            || AlignConstants.ALIGN_ROTATION_KP.hasChanged(tuningId)
-            || AlignConstants.ALIGN_ROTATION_KI.hasChanged(tuningId)
-            || AlignConstants.ALIGN_ROTATION_KD.hasChanged(tuningId)
+        AlignConstants.ALIGN_TRANSLATION_GAINS.kP().hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_GAINS.kI().hasChanged(tuningId)
+            || AlignConstants.ALIGN_TRANSLATION_GAINS.kD().hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_GAINS.kP().hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_GAINS.kI().hasChanged(tuningId)
+            || AlignConstants.ALIGN_ROTATION_GAINS.kD().hasChanged(tuningId)
             || AlignConstants.ALIGN_FEEDFORWARD_KV.hasChanged(tuningId)
             || AlignConstants.ALIGN_FEEDFORWARD_DEADBAND.hasChanged(tuningId)
             || AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.hasChanged(tuningId)

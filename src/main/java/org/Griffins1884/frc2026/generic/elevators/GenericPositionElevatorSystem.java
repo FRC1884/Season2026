@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 public abstract class GenericPositionElevatorSystem<
@@ -49,9 +50,10 @@ public abstract class GenericPositionElevatorSystem<
   private G lastGoal;
 
   private final PIDController pidController;
-  private final ElevatorFeedforward feedforward;
+  private ElevatorFeedforward feedforward;
   private final SysIdRoutine sysIdRoutine;
   private final ElevatorConfig config;
+  private final int tuningId = System.identityHashCode(this);
 
   @Getter private double goalPosition = 0.0;
 
@@ -74,11 +76,15 @@ public abstract class GenericPositionElevatorSystem<
     this.config = config;
 
     pidController =
-        new PIDController(config.gains().kP(), config.gains().kI(), config.gains().kD());
+        new PIDController(
+            config.gains().kP().get(), config.gains().kI().get(), config.gains().kD().get());
     pidController.setTolerance(config.positionTolerance());
     feedforward =
         new ElevatorFeedforward(
-            config.gains().kS(), config.gains().kG(), config.gains().kV(), config.gains().kA());
+            config.gains().kS().get(),
+            config.gains().kG().get(),
+            config.gains().kV().get(),
+            config.gains().kA().get());
 
     sysIdRoutine =
         new SysIdRoutine(
@@ -146,6 +152,19 @@ public abstract class GenericPositionElevatorSystem<
       io.setVoltage(clampedPercent * config.maxVoltage());
       return;
     }
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> pidController.setPID(values[0], values[1], values[2]),
+        config.gains().kP(),
+        config.gains().kI(),
+        config.gains().kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new ElevatorFeedforward(values[0], values[1], values[2], values[3]),
+        config.gains().kS(),
+        config.gains().kG(),
+        config.gains().kV(),
+        config.gains().kA());
 
     double pidOutput = pidController.calculate(position, goalPosition);
     double feedforwardOutput = feedforward.calculate(inputs.velocity);

@@ -45,14 +45,8 @@ public final class TurretConstants {
   public static final double MANUAL_PERCENT = 0.2; // TODO: tune manual speed
   public static final double MAX_VOLTAGE = 12.0;
 
-  public static final double kP = 0.0; // TODO: tune
-  public static final double kI = 0.0;
-  public static final double kD = 0.0; // TODO: tune
-  public static final double kS = 0.0; // TODO: tune if using feedforward
-  public static final double kV = 0.0; // TODO: tune if using feedforward
-  public static final double kA = 0.0; // TODO: tune if using feedforward
   public static final GlobalConstants.Gains GAINS =
-      new GlobalConstants.Gains(kP, kI, kD, kS, kV, kA, 0.0);
+      new GlobalConstants.Gains("Turret/Gains", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
   // Offset from robot center to turret mount (X forward, Y left).
   public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0.233, 0.233); // TODO

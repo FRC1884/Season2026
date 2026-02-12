@@ -5,7 +5,7 @@ import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOSparkFlex;
 public class IntakePivotIOFlex extends GenericArmSystemIOSparkFlex implements IntakePivotIO {
   public IntakePivotIOFlex() {
     super(
-        new int[] {IntakePivotConstants.PIVOT_ID},
+        new int[] {IntakePivotConstants.MOTOR_ID},
         IntakePivotConstants.CURRENT_LIMIT_AMPS,
         IntakePivotConstants.BRAKE_MODE,
         IntakePivotConstants.FORWARD_LIMIT,

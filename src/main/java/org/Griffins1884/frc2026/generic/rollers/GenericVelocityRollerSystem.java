@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -51,8 +52,9 @@ public abstract class GenericVelocityRollerSystem<
 
   private final SysIdRoutine sysIdRoutine;
   private final PIDController pidController;
-  private final SimpleMotorFeedforward feedforward;
+  private SimpleMotorFeedforward feedforward;
   private final VelocityRollerConfig config;
+  private final int tuningId = System.identityHashCode(this);
 
   private ControlMode controlMode = ControlMode.CLOSED_LOOP;
   private double goalVelocity = 0.0;
@@ -72,10 +74,12 @@ public abstract class GenericVelocityRollerSystem<
     this.config = config;
 
     pidController =
-        new PIDController(config.gains().kP(), config.gains().kI(), config.gains().kD());
+        new PIDController(
+            config.gains().kP().get(), config.gains().kI().get(), config.gains().kD().get());
     pidController.setTolerance(config.velocityTolerance());
     feedforward =
-        new SimpleMotorFeedforward(config.gains().kS(), config.gains().kV(), config.gains().kA());
+        new SimpleMotorFeedforward(
+            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
 
     sysIdRoutine =
         new SysIdRoutine(
@@ -134,6 +138,18 @@ public abstract class GenericVelocityRollerSystem<
       io.runVolts(clampedPercent * config.maxVoltage());
       return;
     }
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> pidController.setPID(values[0], values[1], values[2]),
+        config.gains().kP(),
+        config.gains().kI(),
+        config.gains().kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
+        config.gains().kS(),
+        config.gains().kV(),
+        config.gains().kA());
 
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
     double feedforwardOutput = feedforward.calculate(goalVelocity);

@@ -9,11 +9,13 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerConstants;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOFlex;
+import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOKraken;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOMax;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOSim;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeConstants;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOFlex;
+import org.Griffins1884.frc2026.subsystems.intake.IntakeIOKraken;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOMax;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOSim;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem;
@@ -26,7 +28,11 @@ public class Rollers extends SubsystemBase {
               "Intake",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new IntakeIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : (IntakeConstants.isFlex) ? new IntakeIOFlex() : new IntakeIOMax())
+                  : switch (IntakeConstants.MOTOR_CONTROLLER) {
+                    case SPARK_FLEX -> new IntakeIOFlex();
+                    case SPARK_MAX -> new IntakeIOMax();
+                    case KRAKEN_X60, KRAKEN_X40 -> new IntakeIOKraken();
+                  })
           : null;
   public ShooterSubsystem shooter =
       (SHOOTER_ENABLED)
@@ -46,7 +52,11 @@ public class Rollers extends SubsystemBase {
               "Indexer",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new IndexerIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : (IndexerConstants.IS_FLEX) ? new IndexerIOFlex() : new IndexerIOMax())
+                  : switch (IndexerConstants.MOTOR_CONTROLLER) {
+                    case SPARK_FLEX -> new IndexerIOFlex();
+                    case SPARK_MAX -> new IndexerIOMax();
+                    case KRAKEN_X60, KRAKEN_X40 -> new IndexerIOKraken();
+                  })
           : null;
 
   @Override

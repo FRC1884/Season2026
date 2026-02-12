@@ -2,8 +2,8 @@ package org.Griffins1884.frc2026.subsystems.indexer;
 
 import org.Griffins1884.frc2026.generic.rollers.GenericRollerSystemIOKraken;
 
-public class IndexerIOFlex extends GenericRollerSystemIOKraken implements IndexerIO {
-  public IndexerIOFlex() {
+public class IndexerIOKraken extends GenericRollerSystemIOKraken implements IndexerIO {
+  public IndexerIOKraken() {
     super(
         IndexerConstants.INDEXER_IDS,
         IndexerConstants.CURRENT_LIMIT_AMPS,

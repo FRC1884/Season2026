@@ -262,16 +262,33 @@ public final class SwerveConstants {
   // Drive motor PID configuration
   static final Gains DRIVE_MOTOR_GAINS =
       switch (ROBOT) {
-        case COMPBOT -> new Gains(0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
-        case SIMBOT -> new Gains(0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
-        case DEVBOT -> new Gains(1.0629, 0.0, 0.0, 0.23397, 0.72165, 0.039375, 0.0);
-        case CRESCENDO -> new Gains(0.0023439, 0.0, 0.0, 0.10953, 0.54241, 0.084571, 0.0);
+        case COMPBOT -> new Gains("Swerve/DriveMotor/Compbot", 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
+        case SIMBOT -> new Gains("Swerve/DriveMotor/Simbot", 0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
+        case DEVBOT ->
+            new Gains(
+                "Swerve/DriveMotor/Devbot", 1.0629, 0.0, 0.0, 0.23397, 0.72165, 0.039375, 0.0);
+        case CRESCENDO ->
+            new Gains(
+                "Swerve/DriveMotor/Crescendo",
+                0.0023439,
+                0.0,
+                0.0,
+                0.10953,
+                0.54241,
+                0.084571,
+                0.0);
       };
   // Torque-current gains for Kraken FOC (amps-based, per-radian units)
   static final Gains KRAKEN_DRIVE_TORQUE_GAINS =
       switch (ROBOT) {
-        case COMPBOT, DEVBOT, CRESCENDO -> new Gains(45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
-        case SIMBOT -> new Gains(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        case COMPBOT ->
+            new Gains("Swerve/KrakenDriveTorque/Compbot", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
+        case DEVBOT ->
+            new Gains("Swerve/KrakenDriveTorque/Devbot", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
+        case CRESCENDO ->
+            new Gains("Swerve/KrakenDriveTorque/Crescendo", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
+        case SIMBOT ->
+            new Gains("Swerve/KrakenDriveTorque/Simbot", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       };
 
   // Drive encoder configuration
@@ -297,15 +314,18 @@ public final class SwerveConstants {
   // Rotator PID configuration
   static final Gains ROTATOR_GAINS =
       switch (ROBOT) {
-        case DEVBOT, COMPBOT -> new Gains(2.0, 0.0, 0.0);
-        case SIMBOT -> new Gains(8.0, 0.0, 0.0);
-        case CRESCENDO -> new Gains(2.0, 0.0, 0.0);
+        case DEVBOT -> new Gains("Swerve/Rotator/Devbot", 2.0, 0.0, 0.0);
+        case COMPBOT -> new Gains("Swerve/Rotator/Compbot", 2.0, 0.0, 0.0);
+        case SIMBOT -> new Gains("Swerve/Rotator/Simbot", 8.0, 0.0, 0.0);
+        case CRESCENDO -> new Gains("Swerve/Rotator/Crescendo", 2.0, 0.0, 0.0);
       };
   // Torque-current gains for Kraken turn control (amps-based, per-radian units)
   static final Gains KRAKEN_TURN_TORQUE_GAINS =
       switch (ROBOT) {
-        case DEVBOT, COMPBOT, CRESCENDO -> new Gains(8000, 0.0, 50.0);
-        case SIMBOT -> new Gains(0.0, 0.0, 0.0);
+        case DEVBOT -> new Gains("Swerve/KrakenTurnTorque/Devbot", 8000.0, 0.0, 50.0);
+        case COMPBOT -> new Gains("Swerve/KrakenTurnTorque/Compbot", 8000.0, 0.0, 50.0);
+        case CRESCENDO -> new Gains("Swerve/KrakenTurnTorque/Crescendo", 8000.0, 0.0, 50.0);
+        case SIMBOT -> new Gains("Swerve/KrakenTurnTorque/Simbot", 0.0, 0.0, 0.0);
       };
 
   /** Radians */

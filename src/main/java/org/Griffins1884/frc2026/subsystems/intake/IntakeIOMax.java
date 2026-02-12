@@ -4,6 +4,11 @@ import org.Griffins1884.frc2026.generic.rollers.GenericRollerSystemIOSparkMax;
 
 public class IntakeIOMax extends GenericRollerSystemIOSparkMax implements IntakeIO {
   public IntakeIOMax() {
-    super(IntakeConstants.INTAKE_ID, 40, false, true, 0.0);
+    super(
+        IntakeConstants.INTAKE_IDS[0],
+        IntakeConstants.CURRENT_LIMIT_AMPS,
+        IntakeConstants.INTAKE_INVERTED[0],
+        IntakeConstants.BRAKE_MODE,
+        IntakeConstants.REDUCTION);
   }
 }

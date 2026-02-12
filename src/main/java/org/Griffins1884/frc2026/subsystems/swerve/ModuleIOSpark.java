@@ -53,6 +53,7 @@ import java.util.Queue;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.ModuleConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 /**
  * Module IO implementation for Spark Flex drive motor controller, Spark Max turn motor controller,
@@ -70,6 +71,9 @@ public class ModuleIOSpark implements ModuleIO {
   // Closed loop controllers
   private final SparkClosedLoopController driveController;
   private final SparkClosedLoopController turnController;
+  private final SparkFlexConfig driveConfig = new SparkFlexConfig();
+  private final SparkMaxConfig turnConfig = new SparkMaxConfig();
+  private final int tuningId = System.identityHashCode(this);
 
   // Queue inputs from odometry thread
   private final Queue<Double> timestampQueue;
@@ -90,7 +94,6 @@ public class ModuleIOSpark implements ModuleIO {
     turnController = turnSpark.getClosedLoopController();
 
     // Configure drive motor
-    var driveConfig = new SparkFlexConfig();
     driveConfig
         .inverted(DRIVE_INVERTED)
         .idleMode(IdleMode.kBrake)
@@ -105,7 +108,10 @@ public class ModuleIOSpark implements ModuleIO {
     driveConfig
         .closedLoop
         .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-        .pid(DRIVE_MOTOR_GAINS.kP(), 0.0, DRIVE_MOTOR_GAINS.kD());
+        .pid(
+            DRIVE_MOTOR_GAINS.kP().get(),
+            DRIVE_MOTOR_GAINS.kI().get(),
+            DRIVE_MOTOR_GAINS.kD().get());
     driveConfig
         .signals
         .primaryEncoderPositionAlwaysOn(true)
@@ -124,7 +130,6 @@ public class ModuleIOSpark implements ModuleIO {
     tryUntilOk(driveSpark, 5, () -> driveEncoder.setPosition(0.0));
 
     // Configure turn motor
-    var turnConfig = new SparkMaxConfig();
     turnConfig
         .inverted(ROTATOR_INVERTED)
         .idleMode(IdleMode.kBrake)
@@ -141,7 +146,7 @@ public class ModuleIOSpark implements ModuleIO {
         .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
         .positionWrappingEnabled(true)
         .positionWrappingInputRange(ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT)
-        .pid(ROTATOR_GAINS.kP(), 0.0, ROTATOR_GAINS.kD());
+        .pid(ROTATOR_GAINS.kP().get(), ROTATOR_GAINS.kI().get(), ROTATOR_GAINS.kD().get());
     turnConfig
         .signals
         .absoluteEncoderPositionAlwaysOn(true)
@@ -168,6 +173,7 @@ public class ModuleIOSpark implements ModuleIO {
 
   @Override
   public void updateInputs(ModuleIOInputs inputs) {
+    updateTunableGains();
     // Update drive inputs
     sparkStickyFault = false;
     ifOk(driveSpark, driveEncoder::getPosition, (value) -> inputs.drivePositionRad = value);
@@ -220,8 +226,8 @@ public class ModuleIOSpark implements ModuleIO {
   @Override
   public void setDriveVelocity(double velocityRadPerSec) {
     double ffVolts =
-        DRIVE_MOTOR_GAINS.kS() * Math.signum(velocityRadPerSec)
-            + DRIVE_MOTOR_GAINS.kV() * velocityRadPerSec;
+        DRIVE_MOTOR_GAINS.kS().get() * Math.signum(velocityRadPerSec)
+            + DRIVE_MOTOR_GAINS.kV().get() * velocityRadPerSec;
     driveController.setSetpoint(
         velocityRadPerSec,
         ControlType.kVelocity,
@@ -236,5 +242,36 @@ public class ModuleIOSpark implements ModuleIO {
         MathUtil.inputModulus(
             rotation.plus(zeroRotation).getRadians(), ROTATOR_PID_MIN_INPUT, ROTATOR_PID_MAX_INPUT);
     turnController.setSetpoint(setpoint, ControlType.kPosition);
+  }
+
+  private void updateTunableGains() {
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> {
+          driveConfig.closedLoop.pid(values[0], values[1], values[2]);
+          tryUntilOk(
+              driveSpark,
+              5,
+              () ->
+                  driveSpark.configure(
+                      driveConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
+        },
+        DRIVE_MOTOR_GAINS.kP(),
+        DRIVE_MOTOR_GAINS.kI(),
+        DRIVE_MOTOR_GAINS.kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> {
+          turnConfig.closedLoop.pid(values[0], values[1], values[2]);
+          tryUntilOk(
+              turnSpark,
+              5,
+              () ->
+                  turnSpark.configure(
+                      turnConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters));
+        },
+        ROTATOR_GAINS.kP(),
+        ROTATOR_GAINS.kI(),
+        ROTATOR_GAINS.kD());
   }
 }

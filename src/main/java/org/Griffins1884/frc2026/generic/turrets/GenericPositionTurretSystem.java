@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 public class GenericPositionTurretSystem extends SubsystemBase {
@@ -39,9 +40,10 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       new GenericTurretSystemIOInputsAutoLogged();
   private final Alert disconnected;
   private final ProfiledPIDController controller;
-  private final SimpleMotorFeedforward feedforward;
+  private SimpleMotorFeedforward feedforward;
   private final TurretConfig config;
   private final SysIdRoutine sysIdRoutine;
+  private final int tuningId = System.identityHashCode(this);
 
   private ControlMode controlMode = ControlMode.CLOSED_LOOP;
   private double goalRad = 0.0;
@@ -55,14 +57,15 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     this.config = config;
     controller =
         new ProfiledPIDController(
-            config.gains().kP(),
-            config.gains().kI(),
-            config.gains().kD(),
+            config.gains().kP().get(),
+            config.gains().kI().get(),
+            config.gains().kD().get(),
             new TrapezoidProfile.Constraints(
                 config.maxVelocityRadPerSec(), config.maxAccelRadPerSec2()));
     controller.setTolerance(config.positionToleranceRad());
     feedforward =
-        new SimpleMotorFeedforward(config.gains().kS(), config.gains().kV(), config.gains().kA());
+        new SimpleMotorFeedforward(
+            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
     disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
     sysIdRoutine =
         new SysIdRoutine(
@@ -116,6 +119,18 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       io.setVoltage(clampedPercent * config.maxVoltage());
       return;
     }
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> controller.setPID(values[0], values[1], values[2]),
+        config.gains().kP(),
+        config.gains().kI(),
+        config.gains().kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
+        config.gains().kS(),
+        config.gains().kV(),
+        config.gains().kA());
 
     double pidOutput = controller.calculate(positionRad, goalRad);
     double ffOutput = feedforward.calculate(controller.getSetpoint().velocity);

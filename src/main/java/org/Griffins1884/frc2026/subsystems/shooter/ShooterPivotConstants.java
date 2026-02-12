@@ -1,7 +1,6 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterPivotConstants {
   public enum MotorController {
@@ -22,10 +21,8 @@ public final class ShooterPivotConstants {
   public static final double REVERSE_LIMIT = 0.1;
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversiond
 
-  public static final GlobalConstants.Gains GAINS = new GlobalConstants.Gains(0.0, 0.0, 0.0);
-  public static final LoggedTunableNumber kP = new LoggedTunableNumber("ShooterPivot/kP", 1500.0);
-  public static final LoggedTunableNumber kI = new LoggedTunableNumber("ShooterPivot/kI", 0.0);
-  public static final LoggedTunableNumber kD = new LoggedTunableNumber("ShooterPivot/kD", 0.0);
+  public static final GlobalConstants.Gains GAINS =
+      new GlobalConstants.Gains("ShooterPivot/Gains", 1500.0, 0.0, 0.0);
   public static final double POSITION_TOLERANCE = 0.0; // TODO: tune
   public static final boolean SOFT_LIMITS_ENABLED = true;
   public static final double SOFT_LIMIT_MIN = REVERSE_LIMIT;

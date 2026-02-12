@@ -53,6 +53,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   private final ArmFeedforward feedforward;
   private final SysIdRoutine sysIdRoutine;
   private final ArmConfig config;
+  private final int tuningId = System.identityHashCode(this);
 
   @Getter private double goalPosition = 0.0;
 
@@ -151,7 +152,12 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
       return;
     }
 
-    pidController.setPID(kP, kI, kD);
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> pidController.setPID(values[0], values[1], values[2]),
+        config.kP(),
+        config.kI(),
+        config.kD());
 
     double pidOutput = pidController.calculate(position, goalPosition);
     double feedforwardOutput = feedforward.calculate(position, inputs.velocity);
