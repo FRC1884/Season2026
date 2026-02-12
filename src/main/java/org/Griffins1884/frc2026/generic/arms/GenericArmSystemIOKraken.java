@@ -22,6 +22,9 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   private final PositionTorqueCurrentFOC positionTorqueRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final double positionCoefficient;
+  private double lastKP = Double.NaN;
+  private double lastKI = Double.NaN;
+  private double lastKD = Double.NaN;
 
   private final StatusSignal<?> positionSignal;
   private final StatusSignal<?> velocitySignal;
@@ -140,10 +143,15 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
 
   @Override
   public void setPositionSetpoint(double position, double kP, double kI, double kD) {
-    config.Slot0.kP = kP;
-    config.Slot0.kI = kI;
-    config.Slot0.kD = kD;
-    tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
+    if (pidChanged(kP, kI, kD)) {
+      config.Slot0.kP = kP;
+      config.Slot0.kI = kI;
+      config.Slot0.kD = kD;
+      tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
+      lastKP = kP;
+      lastKI = kI;
+      lastKD = kD;
+    }
     leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
   }
 
@@ -168,5 +176,14 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     motor.getConfigurator().refresh(invertedConfig);
     invertedConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     tryUntilOk(5, () -> motor.getConfigurator().apply(invertedConfig, 0.25));
+  }
+
+  private boolean pidChanged(double kP, double kI, double kD) {
+    if (Double.isNaN(lastKP) || Double.isNaN(lastKI) || Double.isNaN(lastKD)) {
+      return true;
+    }
+    return Double.compare(kP, lastKP) != 0
+        || Double.compare(kI, lastKI) != 0
+        || Double.compare(kD, lastKD) != 0;
   }
 }
