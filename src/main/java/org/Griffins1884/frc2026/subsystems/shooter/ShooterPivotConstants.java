@@ -23,7 +23,7 @@ public final class ShooterPivotConstants {
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversiond
 
   public static final GlobalConstants.Gains GAINS = new GlobalConstants.Gains(0.0, 0.0, 0.0);
-  public static final LoggedTunableNumber kP = new LoggedTunableNumber("ShooterPivot/kP", 0.0);
+  public static final LoggedTunableNumber kP = new LoggedTunableNumber("ShooterPivot/kP", 1500.0);
   public static final LoggedTunableNumber kI = new LoggedTunableNumber("ShooterPivot/kI", 0.0);
   public static final LoggedTunableNumber kD = new LoggedTunableNumber("ShooterPivot/kD", 0.0);
   public static final double POSITION_TOLERANCE = 0.0; // TODO: tune
