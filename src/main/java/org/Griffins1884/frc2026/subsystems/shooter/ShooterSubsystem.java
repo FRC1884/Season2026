@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.Griffins1884.frc2026.generic.rollers.GenericVoltageRollerSystem;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter
 @Getter
@@ -15,7 +16,8 @@ public class ShooterSubsystem extends GenericVoltageRollerSystem<ShooterSubsyste
   public enum ShooterGoal implements VoltageGoal {
     IDLING(() -> 0.0), // Intake is off
     FORWARD(() -> 12), // Maximum forward velocity
-    REVERSE(() -> -12); // Maximum reverse velocity
+    REVERSE(() -> -12), // Maximum reverse velocity
+    TESTING(new LoggedTunableNumber("Shooter/Testing", 0.0));
 
     private final DoubleSupplier velocitySupplier;
 

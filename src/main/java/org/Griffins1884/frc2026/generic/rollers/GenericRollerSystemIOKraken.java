@@ -64,13 +64,16 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
     motors = new TalonFX[ids.length];
     leader = motors[0] = new TalonFX(ids[0], canBus);
-    applyConfig(leader, currentLimitAmps, brake, resolveInverted(inverted, 0));
+    applyConfig(leader, currentLimitAmps, brake, inverted[0]);
 
     if (ids.length > 1) {
       for (int i = 1; i < ids.length; i++) {
         TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
-        applyConfig(follower, currentLimitAmps, brake, resolveInverted(inverted, i));
-        follower.setControl(new Follower(leader.getDeviceID(), MotorAlignmentValue.Aligned));
+        applyConfig(follower, currentLimitAmps, brake, inverted[i]);
+        follower.setControl(
+            new Follower(
+                leader.getDeviceID(),
+                inverted[i] ? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
       }
     }
 
@@ -129,19 +132,6 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
       updated.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
       tryUntilOk(5, () -> motor.getConfigurator().apply(updated, 0.25));
     }
-  }
-
-  private static boolean resolveInverted(boolean[] inverted, int index) {
-    if (inverted == null || inverted.length == 0) {
-      return false;
-    }
-    if (inverted.length == 1) {
-      return inverted[0];
-    }
-    if (index < inverted.length) {
-      return inverted[index];
-    }
-    return inverted[inverted.length - 1];
   }
 
   private static void applyConfig(

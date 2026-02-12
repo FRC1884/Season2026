@@ -414,7 +414,7 @@ public class Superstructure extends SubsystemBase {
   private void applyTesting() {
     setIntakeGoal(intakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
-    setShooterGoal(ShooterGoal.IDLING);
+    setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
     holdTurret();

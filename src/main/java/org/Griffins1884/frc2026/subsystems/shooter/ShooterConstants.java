@@ -16,7 +16,7 @@ public final class ShooterConstants {
   public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X60;
   public static final CANBus CAN_BUS = new CANBus("rio");
 
-  public static final int[] SHOOTER_IDS = {20, 42};
+  public static final int[] SHOOTER_IDS = {20, 41};
   public static final boolean[] SHOOTER_INVERTED = {false, true};
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = false;

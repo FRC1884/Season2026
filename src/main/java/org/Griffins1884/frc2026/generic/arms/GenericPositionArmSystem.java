@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 public abstract class GenericPositionArmSystem<G extends GenericPositionArmSystem.PivotGoal>
@@ -25,7 +26,9 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   }
 
   public record ArmConfig(
-      GlobalConstants.Gains gains,
+      LoggedTunableNumber kP,
+      LoggedTunableNumber kI,
+      LoggedTunableNumber kD,
       double positionTolerance,
       boolean softLimitsEnabled,
       double softLimitMin,
@@ -61,7 +64,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   private double manualGoalPosition = 0.0;
 
   public GenericPositionArmSystem(String name, GenericArmSystemIO io, GlobalConstants.Gains gains) {
-    this(name, io, new ArmConfig(gains, 0.0, false, 0.0, 0.0, 12.0));
+    this(name, io, new ArmConfig(null, null, null, 0.0, false, 0.0, 0.0, 12.0));
   }
 
   public GenericPositionArmSystem(String name, GenericArmSystemIO io, ArmConfig config) {
@@ -69,12 +72,9 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
     this.io = io;
     this.config = config;
 
-    pidController =
-        new PIDController(config.gains().kP(), config.gains().kI(), config.gains().kD());
+    pidController = new PIDController(config.kP().get(), config.kI().get(), config.kD().get());
     pidController.setTolerance(config.positionTolerance());
-    feedforward =
-        new ArmFeedforward(
-            config.gains().kS(), config.gains().kG(), config.gains().kV(), config.gains().kA());
+    feedforward = new ArmFeedforward(0.0, 0.0, 0.0, 0.0);
 
     sysIdRoutine =
         new SysIdRoutine(
@@ -140,6 +140,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
       io.setVoltage(clampedPercent * config.maxVoltage());
       return;
     }
+    pidController.setPID(config.kP().get(), config.kI().get(), config.kD().get());
 
     double pidOutput = pidController.calculate(position, goalPosition);
     double feedforwardOutput = feedforward.calculate(position, inputs.velocity);

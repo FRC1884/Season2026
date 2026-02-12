@@ -81,6 +81,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       }
     }
 
+    leader.setPosition(0.0);
     positionSignal = leader.getPosition();
     velocitySignal = leader.getVelocity();
     appliedVoltageSignal = leader.getMotorVoltage();

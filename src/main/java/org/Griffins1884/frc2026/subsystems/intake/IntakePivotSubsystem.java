@@ -33,7 +33,9 @@ public class IntakePivotSubsystem
         name,
         io,
         new ArmConfig(
-            IntakePivotConstants.GAINS,
+            null,
+            null,
+            null,
             IntakePivotConstants.POSITION_TOLERANCE,
             IntakePivotConstants.SOFT_LIMITS_ENABLED,
             IntakePivotConstants.SOFT_LIMIT_MIN,

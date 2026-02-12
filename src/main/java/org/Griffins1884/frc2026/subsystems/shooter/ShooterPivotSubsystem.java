@@ -32,7 +32,9 @@ public class ShooterPivotSubsystem
         name,
         io,
         new ArmConfig(
-            ShooterPivotConstants.GAINS,
+            ShooterPivotConstants.kP,
+            ShooterPivotConstants.kI,
+            ShooterPivotConstants.kD,
             ShooterPivotConstants.POSITION_TOLERANCE,
             ShooterPivotConstants.SOFT_LIMITS_ENABLED,
             ShooterPivotConstants.SOFT_LIMIT_MIN,
