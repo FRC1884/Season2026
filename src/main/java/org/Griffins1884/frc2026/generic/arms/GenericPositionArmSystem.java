@@ -140,7 +140,18 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
       io.setVoltage(clampedPercent * config.maxVoltage());
       return;
     }
-    pidController.setPID(config.kP().get(), config.kI().get(), config.kD().get());
+    double kP = config.kP().get();
+    double kI = config.kI().get();
+    double kD = config.kD().get();
+
+    if (io.usesInternalPositionControl()) {
+      io.setPositionSetpoint(goalPosition, kP, kI, kD);
+      Logger.recordOutput("Arms/" + name + "/Feedforward", 0.0);
+      Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
+      return;
+    }
+
+    pidController.setPID(kP, kI, kD);
 
     double pidOutput = pidController.calculate(position, goalPosition);
     double feedforwardOutput = feedforward.calculate(position, inputs.velocity);

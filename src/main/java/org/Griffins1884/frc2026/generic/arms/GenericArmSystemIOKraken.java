@@ -7,6 +7,7 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -18,6 +19,8 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   private final TalonFX leader;
   private final TalonFXConfiguration config = new TalonFXConfiguration();
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
+  private final PositionTorqueCurrentFOC positionTorqueRequest =
+      new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final double positionCoefficient;
 
   private final StatusSignal<?> positionSignal;
@@ -66,6 +69,15 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
     config.CurrentLimits.StatorCurrentLimitEnable = true;
+    config.TorqueCurrent.PeakForwardTorqueCurrent = currentLimitAmps;
+    config.TorqueCurrent.PeakReverseTorqueCurrent = -currentLimitAmps;
+    config.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.02;
+    config.Slot0.kP = 0.0;
+    config.Slot0.kI = 0.0;
+    config.Slot0.kD = 0.0;
+    config.Slot0.kS = 0.0;
+    config.Slot0.kV = 0.0;
+    config.Slot0.kA = 0.0;
     config.SoftwareLimitSwitch.ForwardSoftLimitEnable = true;
     config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = forwardSoftLimit / positionCoefficient;
     config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
@@ -122,11 +134,24 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   }
 
   @Override
+  public boolean usesInternalPositionControl() {
+    return true;
+  }
+
+  @Override
+  public void setPositionSetpoint(double position, double kP, double kI, double kD) {
+    config.Slot0.kP = kP;
+    config.Slot0.kI = kI;
+    config.Slot0.kD = kD;
+    tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
+    leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
+  }
+
+  @Override
   public void setBrakeMode(boolean enabled) {
-    TalonFXConfiguration updated = new TalonFXConfiguration();
-    leader.getConfigurator().refresh(updated);
-    updated.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-    tryUntilOk(5, () -> leader.getConfigurator().apply(updated, 0.25));
+    leader.getConfigurator().refresh(config);
+    config.MotorOutput.NeutralMode = enabled ? NeutralModeValue.Brake : NeutralModeValue.Coast;
+    tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
   }
 
   @Override

@@ -18,9 +18,9 @@ public final class ShooterPivotConstants {
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
 
-  public static final double FORWARD_LIMIT = 1.6; // TODO: set limits
-  public static final double REVERSE_LIMIT = 0.1; // TODO: set limits
-  public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversion
+  public static final double FORWARD_LIMIT = 1.6;
+  public static final double REVERSE_LIMIT = 0.1;
+  public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversiond
 
   public static final GlobalConstants.Gains GAINS = new GlobalConstants.Gains(0.0, 0.0, 0.0);
   public static final LoggedTunableNumber kP = new LoggedTunableNumber("ShooterPivot/kP", 0.0);
