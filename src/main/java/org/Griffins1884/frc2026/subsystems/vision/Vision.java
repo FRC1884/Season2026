@@ -34,6 +34,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final VisionIO[] io;
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
+  private final Alert[] outlierAlerts;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
@@ -83,6 +84,13 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       disconnectedAlerts[i] =
           new Alert(
               "Vision camera \"" + io[i].getCameraConstants().cameraName() + "\" is disconnected.",
+              Alert.AlertType.kWarning);
+    }
+    this.outlierAlerts = new Alert[io.length];
+    for (int i = 0; i < io.length; i++) {
+      outlierAlerts[i] =
+          new Alert(
+              "Vision Outlier detected on camera \"" + io[i].getCameraConstants().cameraName() + "\".",
               Alert.AlertType.kWarning);
     }
   }
@@ -280,6 +288,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
       logLimelightDiagnostics(cameraLabel, inputs[i]);
       estimates.add(buildLimelightEstimate(inputs[i]));
+
+      boolean isOutlier = inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL 
+                 || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
+      outlierAlerts[i].set(isOutlier);
     }
 
     if (!useVision) {
@@ -352,6 +364,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       thetaStd = AprilTagVisionConstants.getLimelightLargeVariance();
     }
     Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), thetaStd);
+
+    if (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5 && (cam.residualTranslationMeters > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get() || Math.abs(cam.residualRotationDeg) > AprilTagVisionConstants.LIMELIGHT_MAX_ROTATION_RESIDUAL_DEG.get())) {
+      return Optional.empty();
+    }
 
     return Optional.of(
         new VisionFieldPoseEstimate(
@@ -511,27 +527,50 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             && singleTagQualityPass
             && inFieldBounds;
 
-    String rejectReason;
+    VisionIO.RejectReason rejectReason;
+    
     if (!useVision) {
-      rejectReason = "VISION_DISABLED";
+      rejectReason = VisionIO.RejectReason.VISION_DISABLED;
     } else if (!connected) {
-      rejectReason = "DISCONNECTED";
+      rejectReason = VisionIO.RejectReason.DISCONNECTED;
     } else if (!hasMegatag) {
-      rejectReason = "NO_MEGATAG";
+      rejectReason = VisionIO.RejectReason.NO_MEGATAG;
     } else if (!poseFinite) {
-      rejectReason = "POSE_NONFINITE";
+      rejectReason = VisionIO.RejectReason.POSE_NONFINITE;
     } else if (!tagCountValid) {
-      rejectReason = "NO_TAGS";
+      rejectReason = VisionIO.RejectReason.NO_TAGS;
     } else if (!singleTagQualityPass) {
-      rejectReason = "LOW_SINGLE_TAG_QUALITY";
+      rejectReason = VisionIO.RejectReason.LOW_SINGLE_TAG_QUALITY;
     } else if (!inFieldBounds) {
-      rejectReason = "OUT_OF_FIELD";
+      rejectReason = VisionIO.RejectReason.OUT_OF_FIELD;
     } else if (!stdDevsFinite) {
-      rejectReason = "STDDEV_NONFINITE";
+      rejectReason = VisionIO.RejectReason.STDDEV_NONFINITE;
     } else {
-      rejectReason = "ACCEPTED";
+      rejectReason = VisionIO.RejectReason.ACCEPTED;
     }
 
+    if (hasMegatag) {
+      Pose2d visionPose = cam.megatagPoseEstimate.fieldToRobot();
+      Pose2d referencePose = getReferencePose(cam.megatagPoseEstimate.timestampSeconds()).orElse(null);
+      if (referencePose != null) {
+        cam.residualTranslationMeters = referencePose.getTranslation().getDistance(visionPose.getTranslation());
+        cam.residualRotationDeg = referencePose.getRotation().minus(visionPose.getRotation()).getDegrees();
+      }
+    }
+
+    boolean residualsOk = ! (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5 
+    && (cam.residualTranslationMeters > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get() 
+    || Math.abs(cam.residualRotationDeg) > AprilTagVisionConstants.LIMELIGHT_MAX_ROTATION_RESIDUAL_DEG.get()));
+
+    if (!residualsOk) {
+      if (cam.residualTranslationMeters > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get()) {
+          rejectReason = VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL;
+      } else {
+          rejectReason = VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
+      }
+    }
+    wouldAccept = wouldAccept && residualsOk;
+    
     Logger.recordOutput(prefix + "/Connected", connected);
     Logger.recordOutput(prefix + "/SeesTarget", seesTarget);
     Logger.recordOutput(prefix + "/HasMegaTagPose", hasMegatag);
@@ -549,7 +588,17 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/StdDevTheta", stdDevs != null ? stdDevs.theta() : Double.NaN);
     Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
     Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
-    Logger.recordOutput(prefix + "/RejectReason", rejectReason);
+    Logger.recordOutput(prefix + "/ResidualTranslationMeters", cam.residualTranslationMeters);
+    Logger.recordOutput(prefix + "/ResidualRotationDeg", cam.residualRotationDeg);
+
+    cam.rejectReason = rejectReason;
+  }
+  private Optional<Pose2d> getReferencePose(double timestamp){
+    if (poseHistory==null){
+      return Optional.empty();
+    }
+
+    return poseHistory.getFieldToRobot(timestamp);
   }
 
   private boolean isFinitePose(Pose2d pose) {

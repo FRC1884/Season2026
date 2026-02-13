@@ -32,6 +32,21 @@ public interface VisionIO {
     }
   }
 
+  public static enum RejectReason {
+      VISION_DISABLED,
+      DISCONNECTED,
+      NO_MEGATAG,
+      POSE_NONFINITE,
+      NO_TAGS,
+      LOW_SINGLE_TAG_QUALITY,
+      OUT_OF_FIELD,
+      STDDEV_NONFINITE,
+      RESIDUAL_OUTLIER,
+      LARGE_ROTATION_RESIDUAL,
+      LARGE_TRANSLATION_RESIDUAL,
+      ACCEPTED
+  }
+
   @AutoLog
   public static class VisionIOInputs {
     public boolean connected = false;
@@ -45,6 +60,9 @@ public interface VisionIO {
     public double[] standardDeviations = new double[0];
     public PoseObservation[] poseObservations = new PoseObservation[0];
     public int[] tagIds = new int[0];
+    public double residualTranslationMeters = 0.0;
+    public double residualRotationDeg = 0.0;
+    public RejectReason rejectReason = RejectReason.ACCEPTED;
   }
 
   public default void updateInputs(VisionIOInputs inputs) {}
