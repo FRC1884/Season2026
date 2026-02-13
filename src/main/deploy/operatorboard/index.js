@@ -3,8 +3,8 @@ import { NT4_Client } from "./NT4.js";
 const defaultNt4Port = 5810;
 
 // REBUILT field nominal dimensions from the manual (Section 5.2).
-const FIELD_LENGTH_METERS = 16.54;
-const FIELD_WIDTH_METERS = 8.07;
+const FIELD_LENGTH_METERS = 16.541;
+const FIELD_WIDTH_METERS = 8.069;
 
 const STALE_MS = 1500;
 
