@@ -18,9 +18,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Setter;
@@ -39,6 +42,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
+  private final Set<String> lastArbitrationPairKeys = new HashSet<>();
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -279,7 +283,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput("Vision/yawRateDegPerSec", yawRateDegPerSec);
     Logger.recordOutput("Vision/yawRateAccept", yawRateOk);
 
-    List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
+    List<LimelightEstimateCandidate> candidates = new ArrayList<>();
 
     for (int i = 0; i < io.length; i++) {
       io[i].updateInputs(inputs[i]);
@@ -289,7 +293,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       String cameraLabel = io[i].getCameraConstants().cameraName();
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
       logLimelightDiagnostics(cameraLabel, inputs[i]);
-      estimates.add(buildLimelightEstimate(inputs[i]));
+      buildLimelightCandidate(cameraLabel, inputs[i]).ifPresent(candidates::add);
 
       boolean isOutlier =
           inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
@@ -298,6 +302,14 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (!useVision) {
+      logArbitration(
+          new ArbitrationResult(
+              ArbitrationMode.NONE,
+              candidates.size(),
+              0,
+              "VISION_DISABLED",
+              Optional.empty(),
+              List.of()));
       Logger.recordOutput("Vision/usingVision", false);
       Logger.recordOutput("Vision/rejectReason", "VISION_DISABLED");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -305,6 +317,14 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (!yawRateOk) {
+      logArbitration(
+          new ArbitrationResult(
+              ArbitrationMode.NONE,
+              candidates.size(),
+              0,
+              "HIGH_YAW_RATE",
+              Optional.empty(),
+              List.of()));
       Logger.recordOutput("Vision/usingVision", true);
       Logger.recordOutput("Vision/rejectReason", "HIGH_YAW_RATE");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -314,29 +334,24 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput("Vision/usingVision", true);
     Logger.recordOutput("Vision/rejectReason", "ACCEPTED");
 
-    Optional<VisionFieldPoseEstimate> accepted = Optional.empty();
-    for (Optional<VisionFieldPoseEstimate> estimate : estimates) {
-      if (estimate.isEmpty()) {
-        continue;
-      }
-      if (accepted.isEmpty()) {
-        accepted = estimate;
-      } else {
-        accepted = Optional.of(fuseEstimates(accepted.get(), estimate.get()));
-      }
-    }
-
-    accepted.ifPresent(
-        est -> {
-          Logger.recordOutput("Vision/fusedAccepted", est.visionRobotPoseMeters());
-          consumer.accept(
-              est.visionRobotPoseMeters(), est.timestampSeconds(), est.visionMeasurementStdDevs());
-        });
+    ArbitrationResult arbitration = arbitrateCandidates(candidates);
+    logArbitration(arbitration);
+    arbitration
+        .estimate()
+        .ifPresent(
+            est -> {
+              Logger.recordOutput("Vision/fusedAccepted", est.visionRobotPoseMeters());
+              consumer.accept(
+                  est.visionRobotPoseMeters(),
+                  est.timestampSeconds(),
+                  est.visionMeasurementStdDevs());
+            });
 
     Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
   }
 
-  private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(VisionIO.VisionIOInputs cam) {
+  private Optional<LimelightEstimateCandidate> buildLimelightCandidate(
+      String cameraLabel, VisionIO.VisionIOInputs cam) {
     if (!cam.connected || cam.megatagPoseEstimate == null) {
       return Optional.empty();
     }
@@ -374,32 +389,199 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         return Optional.empty();
       }
     }
+    int numTags = tagCount;
+    double score =
+        computeCandidateScore(
+            numTags,
+            qualityUsed,
+            cam.megatagPoseEstimate.avgTagArea(),
+            stdDevs.x(),
+            stdDevs.y(),
+            thetaStd);
 
     return Optional.of(
-        new VisionFieldPoseEstimate(
-            fieldToRobot, cam.megatagPoseEstimate.timestampSeconds(), visionStdDevs, tagCount));
+        new LimelightEstimateCandidate(
+            cameraLabel,
+            new VisionFieldPoseEstimate(
+                fieldToRobot, cam.megatagPoseEstimate.timestampSeconds(), visionStdDevs, numTags),
+            score));
+  }
+
+  private ArbitrationResult arbitrateCandidates(List<LimelightEstimateCandidate> candidates) {
+    if (candidates.isEmpty()) {
+      return new ArbitrationResult(ArbitrationMode.NONE, 0, 0, "", Optional.empty(), List.of());
+    }
+    if (candidates.size() == 1) {
+      LimelightEstimateCandidate only = candidates.get(0);
+      return new ArbitrationResult(
+          ArbitrationMode.SINGLE,
+          1,
+          1,
+          only.cameraLabel(),
+          Optional.of(only.estimate()),
+          List.of());
+    }
+
+    List<CameraPairDelta> pairDeltas = new ArrayList<>();
+    boolean allConsistent = true;
+    for (int i = 0; i < candidates.size(); i++) {
+      for (int j = i + 1; j < candidates.size(); j++) {
+        CameraPairDelta delta = compareCandidates(candidates.get(i), candidates.get(j), i, j);
+        pairDeltas.add(delta);
+        allConsistent &= delta.consistent();
+      }
+    }
+
+    int consistentGroupSize = computeLargestConsistentGroupSize(candidates, pairDeltas);
+    if (allConsistent) {
+      List<LimelightEstimateCandidate> ordered = new ArrayList<>(candidates);
+      ordered.sort(
+          Comparator.comparingDouble(candidate -> candidate.estimate().timestampSeconds()));
+      VisionFieldPoseEstimate fused = ordered.get(0).estimate();
+      for (int i = 1; i < ordered.size(); i++) {
+        fused = fuseEstimates(fused, ordered.get(i).estimate());
+      }
+      return new ArbitrationResult(
+          ArbitrationMode.FUSED,
+          candidates.size(),
+          consistentGroupSize,
+          "FUSED",
+          Optional.of(fused),
+          pairDeltas);
+    }
+
+    LimelightEstimateCandidate best = chooseBestCandidate(candidates);
+    return new ArbitrationResult(
+        ArbitrationMode.FALLBACK_SINGLE,
+        candidates.size(),
+        consistentGroupSize,
+        best.cameraLabel(),
+        Optional.of(best.estimate()),
+        pairDeltas);
+  }
+
+  private LimelightEstimateCandidate chooseBestCandidate(
+      List<LimelightEstimateCandidate> candidates) {
+    return candidates.stream()
+        .min(
+            Comparator.comparingDouble(LimelightEstimateCandidate::score)
+                .thenComparing(
+                    candidate -> candidate.estimate().numTags(), Comparator.reverseOrder())
+                .thenComparing(LimelightEstimateCandidate::cameraLabel))
+        .orElseThrow();
+  }
+
+  private int computeLargestConsistentGroupSize(
+      List<LimelightEstimateCandidate> candidates, List<CameraPairDelta> pairDeltas) {
+    int n = candidates.size();
+    if (n == 0) {
+      return 0;
+    }
+    if (n == 1) {
+      return 1;
+    }
+    boolean[][] consistent = new boolean[n][n];
+    for (int i = 0; i < n; i++) {
+      consistent[i][i] = true;
+    }
+    for (CameraPairDelta pairDelta : pairDeltas) {
+      int a = pairDelta.cameraAIndex();
+      int b = pairDelta.cameraBIndex();
+      consistent[a][b] = pairDelta.consistent();
+      consistent[b][a] = pairDelta.consistent();
+    }
+
+    int best = 1;
+    int maxMask = 1 << n;
+    for (int mask = 1; mask < maxMask; mask++) {
+      int size = Integer.bitCount(mask);
+      if (size <= best) {
+        continue;
+      }
+      boolean isClique = true;
+      for (int i = 0; i < n && isClique; i++) {
+        if ((mask & (1 << i)) == 0) {
+          continue;
+        }
+        for (int j = i + 1; j < n; j++) {
+          if ((mask & (1 << j)) == 0) {
+            continue;
+          }
+          if (!consistent[i][j]) {
+            isClique = false;
+            break;
+          }
+        }
+      }
+      if (isClique) {
+        best = size;
+      }
+    }
+    return best;
+  }
+
+  private CameraPairDelta compareCandidates(
+      LimelightEstimateCandidate a,
+      LimelightEstimateCandidate b,
+      int cameraAIndex,
+      int cameraBIndex) {
+    PoseComparison comparison = comparePosesWithAlignment(a.estimate(), b.estimate());
+    boolean consistent =
+        comparison.translationDeltaMeters()
+                <= AprilTagVisionConstants.getLimelightMultiCamMaxDeltaMeters()
+            && comparison.headingDeltaDeg()
+                <= AprilTagVisionConstants.getLimelightMultiCamMaxDeltaDeg();
+    return new CameraPairDelta(
+        a.cameraLabel(),
+        b.cameraLabel(),
+        comparison.translationDeltaMeters(),
+        comparison.headingDeltaDeg(),
+        consistent,
+        cameraAIndex,
+        cameraBIndex);
+  }
+
+  private PoseComparison comparePosesWithAlignment(
+      VisionFieldPoseEstimate a, VisionFieldPoseEstimate b) {
+    if (a.timestampSeconds() <= b.timestampSeconds()) {
+      Pose2d poseAAtB =
+          alignEstimateToTimestamp(a, b.timestampSeconds()).orElse(a.visionRobotPoseMeters());
+      Pose2d poseB = b.visionRobotPoseMeters();
+      return new PoseComparison(
+          poseAAtB.getTranslation().getDistance(poseB.getTranslation()),
+          Math.abs(poseAAtB.getRotation().minus(poseB.getRotation()).getDegrees()));
+    }
+
+    Pose2d poseBAtA =
+        alignEstimateToTimestamp(b, a.timestampSeconds()).orElse(b.visionRobotPoseMeters());
+    Pose2d poseA = a.visionRobotPoseMeters();
+    return new PoseComparison(
+        poseA.getTranslation().getDistance(poseBAtA.getTranslation()),
+        Math.abs(poseA.getRotation().minus(poseBAtA.getRotation()).getDegrees()));
+  }
+
+  private Optional<Pose2d> alignEstimateToTimestamp(
+      VisionFieldPoseEstimate estimate, double timestampSeconds) {
+    if (Math.abs(estimate.timestampSeconds() - timestampSeconds) < 1e-6) {
+      return Optional.of(estimate.visionRobotPoseMeters());
+    }
+    if (poseHistory == null) {
+      return Optional.empty();
+    }
+    Optional<Pose2d> fromPose = poseHistory.getFieldToRobot(estimate.timestampSeconds());
+    Optional<Pose2d> toPose = poseHistory.getFieldToRobot(timestampSeconds);
+    if (fromPose.isEmpty() || toPose.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        estimate.visionRobotPoseMeters().transformBy(toPose.get().minus(fromPose.get())));
   }
 
   private VisionFieldPoseEstimate fuseEstimates(
       VisionFieldPoseEstimate a, VisionFieldPoseEstimate b) {
-    if (poseHistory == null) {
-      return b;
-    }
-    if (b.timestampSeconds() < a.timestampSeconds()) {
-      VisionFieldPoseEstimate tmp = a;
-      a = b;
-      b = tmp;
-    }
-
-    Optional<Pose2d> poseAAtTime = poseHistory.getFieldToRobot(a.timestampSeconds());
-    Optional<Pose2d> poseBAtTime = poseHistory.getFieldToRobot(b.timestampSeconds());
-    if (poseAAtTime.isEmpty() || poseBAtTime.isEmpty()) {
-      return b;
-    }
-
-    var a_T_b = poseBAtTime.get().minus(poseAAtTime.get());
-    Pose2d poseA = a.visionRobotPoseMeters().transformBy(a_T_b);
     Pose2d poseB = b.visionRobotPoseMeters();
+    Pose2d poseA =
+        alignEstimateToTimestamp(a, b.timestampSeconds()).orElse(a.visionRobotPoseMeters());
 
     var varianceA = a.visionMeasurementStdDevs().elementTimes(a.visionMeasurementStdDevs());
     var varianceB = b.visionMeasurementStdDevs().elementTimes(b.visionMeasurementStdDevs());
@@ -437,6 +619,60 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     double time = b.timestampSeconds();
 
     return new VisionFieldPoseEstimate(fusedPose, time, fusedStdDev, numTags);
+  }
+
+  private void logArbitration(ArbitrationResult arbitration) {
+    Set<String> currentPairKeys = new HashSet<>();
+    Logger.recordOutput("Vision/Arbitration/CandidateCount", arbitration.candidateCount());
+    Logger.recordOutput(
+        "Vision/Arbitration/ConsistentGroupSize", arbitration.consistentGroupSize());
+    Logger.recordOutput("Vision/Arbitration/SelectedCameraName", arbitration.selectedCameraName());
+    Logger.recordOutput("Vision/Arbitration/Mode", arbitration.mode().name());
+    Logger.recordOutput("Vision/Arbitration/PairCount", arbitration.pairDeltas().size());
+    for (CameraPairDelta pair : arbitration.pairDeltas()) {
+      String key = sanitizeLogKey(pair.cameraA()) + "__" + sanitizeLogKey(pair.cameraB());
+      currentPairKeys.add(key);
+      String prefix = "Vision/Arbitration/Pairs/" + key;
+      Logger.recordOutput(prefix + "/DeltaMeters", pair.translationDeltaMeters());
+      Logger.recordOutput(prefix + "/DeltaDeg", pair.headingDeltaDeg());
+      Logger.recordOutput(prefix + "/Consistent", pair.consistent());
+    }
+    for (String staleKey : lastArbitrationPairKeys) {
+      if (currentPairKeys.contains(staleKey)) {
+        continue;
+      }
+      String prefix = "Vision/Arbitration/Pairs/" + staleKey;
+      Logger.recordOutput(prefix + "/DeltaMeters", Double.NaN);
+      Logger.recordOutput(prefix + "/DeltaDeg", Double.NaN);
+      Logger.recordOutput(prefix + "/Consistent", false);
+    }
+    lastArbitrationPairKeys.clear();
+    lastArbitrationPairKeys.addAll(currentPairKeys);
+  }
+
+  private static String sanitizeLogKey(String key) {
+    if (key == null || key.isBlank()) {
+      return "UNKNOWN";
+    }
+    return key.replace('/', '_').replace(' ', '_');
+  }
+
+  private double computeCandidateScore(
+      int tagCount,
+      double qualityUsed,
+      double avgTagArea,
+      double xStd,
+      double yStd,
+      double thetaStd) {
+    double stdComponent = xStd + yStd + (0.25 * thetaStd);
+    double qualityPenalty = 1.0 - qualityUsed;
+    double areaPenalty = 1.0 / (1.0 + Math.max(avgTagArea, 0.0));
+    double tagPenalty = 1.0 / Math.max(1, tagCount);
+    double score = stdComponent + qualityPenalty + (0.35 * areaPenalty) + tagPenalty;
+    if (!Double.isFinite(score)) {
+      return Double.MAX_VALUE;
+    }
+    return Math.max(score, 0.0);
   }
 
   private void logCameraInputs(String prefix, VisionIO.VisionIOInputs cam) {
@@ -634,6 +870,35 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   }
 
   private record LimelightStdDevs(double x, double y, double theta, boolean finite) {}
+
+  private enum ArbitrationMode {
+    NONE,
+    SINGLE,
+    FUSED,
+    FALLBACK_SINGLE
+  }
+
+  private record LimelightEstimateCandidate(
+      String cameraLabel, VisionFieldPoseEstimate estimate, double score) {}
+
+  private record PoseComparison(double translationDeltaMeters, double headingDeltaDeg) {}
+
+  private record CameraPairDelta(
+      String cameraA,
+      String cameraB,
+      double translationDeltaMeters,
+      double headingDeltaDeg,
+      boolean consistent,
+      int cameraAIndex,
+      int cameraBIndex) {}
+
+  private record ArbitrationResult(
+      ArbitrationMode mode,
+      int candidateCount,
+      int consistentGroupSize,
+      String selectedCameraName,
+      Optional<VisionFieldPoseEstimate> estimate,
+      List<CameraPairDelta> pairDeltas) {}
 
   /** Functional interface defining a consumer that processes vision-based pose estimates. */
   @FunctionalInterface
