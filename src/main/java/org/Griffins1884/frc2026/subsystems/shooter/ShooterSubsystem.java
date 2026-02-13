@@ -5,24 +5,24 @@ import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.Griffins1884.frc2026.generic.rollers.GenericVoltageRollerSystem;
+import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter
 @Getter
-public class ShooterSubsystem extends GenericVoltageRollerSystem<ShooterSubsystem.ShooterGoal> {
+public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsystem.ShooterGoal> {
   @RequiredArgsConstructor
   @Getter
-  public enum ShooterGoal implements VoltageGoal {
+  public enum ShooterGoal implements VelocityGoal {
     IDLING(() -> 0.0), // Intake is off
-    FORWARD(() -> 12), // Maximum forward velocity
-    REVERSE(() -> -12), // Maximum reverse velocity
+    FORWARD(() -> 4500), // Maximum forward velocity
+    REVERSE(() -> -4500), // Maximum reverse velocity
     TESTING(new LoggedTunableNumber("Shooter/Testing", 0.0));
 
     private final DoubleSupplier velocitySupplier;
 
     @Override
-    public DoubleSupplier getVoltageSupplier() {
+    public DoubleSupplier getVelocitySupplier() {
       return velocitySupplier;
     }
   }
@@ -31,6 +31,12 @@ public class ShooterSubsystem extends GenericVoltageRollerSystem<ShooterSubsyste
   private Debouncer currentDebouncer = new Debouncer(0.1);
 
   public ShooterSubsystem(String name, ShooterIO io) {
-    super(name, io, new VoltageRollerConfig(ShooterConstants.MAX_VOLTAGE));
+    super(
+        name,
+        io,
+        new VelocityRollerConfig(
+            ShooterConstants.gains,
+            ShooterConstants.VELOCITY_TOLERANCE,
+            ShooterConstants.MAX_VOLTAGE));
   }
 }

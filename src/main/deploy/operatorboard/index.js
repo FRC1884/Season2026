@@ -14,6 +14,7 @@ const contract = {
   toDashboard: "/OperatorBoard/v1/ToDashboard/",
   keys: {
     requestedState: "RequestedState",
+    autoStateEnable: "AutoStateEnable",
     currentState: "CurrentState",
     requestAccepted: "RequestAccepted",
     requestReason: "RequestReason",
@@ -109,6 +110,7 @@ const ui = {
   robotPose: null,
   target: null,
   stateButtons: [],
+  autoStateButton: null,
   fieldImage: null,
   fieldCanvas: null,
 };
@@ -173,6 +175,10 @@ function cacheUi() {
   ui.target = document.getElementById("target");
   ui.fieldImage = document.getElementById("field-image");
   ui.fieldCanvas = document.getElementById("field-canvas");
+  ui.autoStateButton = document.getElementById("auto-state-button");
+  if (ui.autoStateButton) {
+    ui.autoStateButton.addEventListener("click", sendAutoStateEnable);
+  }
 }
 
 function buildStateButtons() {
@@ -196,10 +202,15 @@ function sendStateRequest(stateName) {
   ntClient.addSample(contract.toRobot + contract.keys.requestedState, stateName);
 }
 
+function sendAutoStateEnable() {
+  ntClient.addSample(contract.toRobot + contract.keys.autoStateEnable, true);
+}
+
 function startNetworkTables() {
   const topics = Object.values(contract.keys).map((k) => contract.toDashboard + k);
   ntClient.subscribe(topics, false, false, 0.02);
   ntClient.publishTopic(contract.toRobot + contract.keys.requestedState, "string");
+  ntClient.publishTopic(contract.toRobot + contract.keys.autoStateEnable, "boolean");
   ntClient.connect();
 }
 

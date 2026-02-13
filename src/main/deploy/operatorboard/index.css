@@ -132,6 +132,10 @@ body {
   padding: 12px;
 }
 
+.state-actions {
+  padding: 0 12px 12px;
+}
+
 .state-button {
   appearance: none;
   border: 1px solid var(--line);
@@ -142,6 +146,12 @@ body {
   font-weight: 800;
   letter-spacing: 0.2px;
   cursor: pointer;
+}
+
+.state-button--auto {
+  width: 100%;
+  border-color: rgba(57, 217, 138, 0.4);
+  background: rgba(57, 217, 138, 0.12);
 }
 
 .state-button.is-requested {

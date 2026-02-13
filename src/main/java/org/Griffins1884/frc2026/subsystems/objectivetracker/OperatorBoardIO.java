@@ -13,6 +13,7 @@ public interface OperatorBoardIO {
   @AutoLog
   class OperatorBoardIOInputs {
     public String[] requestedState = new String[] {}; // Superstructure.SuperState name
+    public boolean autoStateEnableRequested = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}

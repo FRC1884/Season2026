@@ -95,6 +95,19 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   }
 
   private void handleStateRequests() {
+    if (inputs.autoStateEnableRequested) {
+      if (superstructure == null) {
+        lastRequestedState = "AUTO";
+        lastRequestAccepted = false;
+        lastRequestReason = "Superstructure unavailable";
+      } else {
+        superstructure.setAutoStateEnabled(true);
+        lastRequestedState = "AUTO";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      }
+      return;
+    }
     if (inputs.requestedState.length == 0) {
       return;
     }

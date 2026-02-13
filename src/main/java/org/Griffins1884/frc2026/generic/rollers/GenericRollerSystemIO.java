@@ -20,6 +20,17 @@ public interface GenericRollerSystemIO {
   /** Run roller system at volts */
   default void runVolts(double volts) {}
 
+  /** Run roller system at velocity (RPM) with optional feedforward (volts). */
+  default void runVelocity(double velocityRpm, double feedforwardVolts) {}
+
+  /** Update the onboard velocity PID gains if supported. */
+  default void setVelocityPID(double kP, double kI, double kD) {}
+
+  /** Whether this IO supports onboard velocity control. */
+  default boolean supportsVelocityControl() {
+    return false;
+  }
+
   /** Stop roller system */
   default void stop() {}
 
