@@ -8,6 +8,7 @@
 package org.Griffins1884.frc2026.subsystems.objectivetracker;
 
 import edu.wpi.first.networktables.BooleanPublisher;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.IntegerPublisher;
@@ -15,9 +16,11 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StringSubscriber;
+import edu.wpi.first.networktables.TimestampedBoolean;
 
 public class OperatorBoardIOServer implements OperatorBoardIO {
   private final StringSubscriber requestedStateIn;
+  private final BooleanSubscriber autoStateEnableIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -54,6 +57,10 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         inputTable
             .getStringTopic(OperatorBoardContract.REQUESTED_STATE)
             .subscribe("", PubSubOption.keepDuplicates(true));
+    autoStateEnableIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.AUTO_STATE_ENABLE)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
         NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_DASHBOARD);
@@ -99,6 +106,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         requestedStateIn.readQueue().length > 0
             ? new String[] {requestedStateIn.get()}
             : new String[] {};
+    TimestampedBoolean[] autoQueue = autoStateEnableIn.readQueue();
+    if (autoQueue.length > 0) {
+      inputs.autoStateEnableRequested = autoQueue[autoQueue.length - 1].value;
+    } else {
+      inputs.autoStateEnableRequested = false;
+    }
   }
 
   @Override

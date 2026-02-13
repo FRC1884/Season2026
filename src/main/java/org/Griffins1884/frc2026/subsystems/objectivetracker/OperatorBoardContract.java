@@ -6,6 +6,7 @@ final class OperatorBoardContract {
   static final String TO_DASHBOARD = BASE + "/ToDashboard";
 
   static final String REQUESTED_STATE = "RequestedState";
+  static final String AUTO_STATE_ENABLE = "AutoStateEnable";
   static final String CURRENT_STATE = "CurrentState";
   static final String REQUEST_ACCEPTED = "RequestAccepted";
   static final String REQUEST_REASON = "RequestReason";
