@@ -39,6 +39,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
+  private Integer exclusiveTagId = null;
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -289,7 +290,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       logLimelightDiagnostics(cameraLabel, inputs[i]);
       estimates.add(buildLimelightEstimate(inputs[i]));
 
-      boolean isOutlier = inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL 
+      boolean isOutlier = inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
                  || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
       outlierAlerts[i].set(isOutlier);
     }
@@ -335,6 +336,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
   private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(VisionIO.VisionIOInputs cam) {
     if (!cam.connected || cam.megatagPoseEstimate == null) {
+      return Optional.empty();
+    }
+
+    if (exclusiveTagId != null && !containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
       return Optional.empty();
     }
 
@@ -537,9 +542,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
     }
 
-    boolean residualsOk = ! (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5 
+    boolean residualsOk = ! (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
     && (cam.residualTranslationMeters > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get()));
-    
+
     if (!useVision) {
       rejectReason = VisionIO.RejectReason.VISION_DISABLED;
     } else if (!connected) {
@@ -564,7 +569,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     wouldAccept = wouldAccept && residualsOk;
 
-    
+
 
     Logger.recordOutput(prefix + "/Connected", connected);
     Logger.recordOutput(prefix + "/SeesTarget", seesTarget);
@@ -583,21 +588,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/StdDevTheta", stdDevs != null ? stdDevs.theta() : Double.NaN);
     Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
     Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
-    Logger.recordOutput(prefix + "/ResidualTranslationMeters", cam.residualTranslationMeters);
-
-    if (DriverStation.isDisabled()){
-      wouldAccept = true; 
-      rejectReason = VisionIO.RejectReason.ACCEPTED;
-    }
-
-    cam.rejectReason = rejectReason;
-  }
-  private Optional<Pose2d> getReferencePose(double timestamp){
-    if (poseHistory==null){
-      return Optional.empty();
-    }
-
-    return poseHistory.getFieldToRobot(timestamp);
+    Logger.recordOutput(prefix + "/RejectReason", rejectReason);
   }
 
   private boolean isFinitePose(Pose2d pose) {
@@ -696,6 +687,26 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
       return Optional.empty();
     }
+  }
+
+  public void setExclusiveTagId(int id) {
+    exclusiveTagId = id;
+  }
+
+  public void clearExclusiveTagId() {
+    exclusiveTagId = null;
+  }
+
+  private boolean containsFiducialId(int[] ids, int target) {
+    if (ids == null) {
+      return false;
+    }
+    for (int id : ids) {
+        if (id == target) {
+          return true;
+        }
+    }
+    return false;
   }
 
   private record Sample(double timestampSeconds, Pose2d pose, double yawRateRadPerSec) {}

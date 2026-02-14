@@ -38,6 +38,7 @@ import java.util.function.Supplier;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.subsystems.vision.Vision;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
@@ -168,7 +169,7 @@ public class DriveCommands {
     return new ChassisSpeeds(vx, vy, omega);
   }
 
-  public static Command alignToClimbCommand(SwerveSubsystem drive) {
+  public static Command alignToClimbCommand(SwerveSubsystem drive, Vision vision) {
     return Commands.defer(
         () -> {
           // Prefer alliance (when known). If the DS has not provided alliance yet (sim/offline),
@@ -179,23 +180,22 @@ public class DriveCommands {
                   : drive.getPose().getX() < GlobalConstants.FieldConstants.fieldLength / 2.0;
 
           Translation2d target =
-              isBlue
-                  ? GlobalConstants.FieldConstants.Tower.centerPoint
+                  isBlue ? GlobalConstants.FieldConstants.Tower.centerPoint
                   : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
-
-          // Tower wall tags: use the same end-of-field tags that define the tower centerpoint Y.
-          int tagId = isBlue ? 31 : 15;
+          int tagId = isBlue ? 16 : 31;
 
           Rotation2d rotation =
-              GlobalConstants.FieldConstants.defaultAprilTagType
-                  .getLayout()
-                  .getTagPose(tagId)
-                  .map(tagPose -> tagPose.getRotation().toRotation2d())
-                  // Sensible fallback: point toward the tower along +/-X.
-                  .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
-
-          Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
-          return new AutoAlignToPoseCommand(drive, new Pose2d(target, rotation));
+                  GlobalConstants.FieldConstants.defaultAprilTagType
+                      .getLayout()
+                      .getTagPose(tagId)
+                      .get()
+                      .getRotation()
+                      .toRotation2d();
+          Logger.recordOutput("Autonomy/AlignTargetClimb", target);
+          return new AutoAlignToPoseCommand(
+              drive, new Pose2d(target.getX(), target.getY(), rotation))
+                  .beforeStarting(() -> vision.setExclusiveTagId(tagId))
+                  .finallyDo(vision::clearExclusiveTagId);
         },
         Set.of(drive));
   }
