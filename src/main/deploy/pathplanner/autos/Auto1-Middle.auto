@@ -1,0 +1,73 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "MiddlePos_PreShoot.0"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "MiddlePos_OverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Collect"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Collect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BackOverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ShootAndClimb"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "ShootAndClimb"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": true
+}
