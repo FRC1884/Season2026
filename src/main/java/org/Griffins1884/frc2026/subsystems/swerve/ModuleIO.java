@@ -13,7 +13,9 @@
 
 package org.Griffins1884.frc2026.subsystems.swerve;
 
+import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.geometry.Rotation2d;
+import java.util.List;
 import org.littletonrobotics.junction.AutoLog;
 
 public interface ModuleIO {
@@ -64,4 +66,7 @@ public interface ModuleIO {
 
   /** Set brake mode on drive motor. */
   public default void setBrakeMode(boolean enabled) {}
+
+  /** Add Kraken instruments to an Orchestra list if supported. */
+  public default void addOrchestraInstruments(List<TalonFX> instruments) {}
 }

@@ -15,6 +15,7 @@ const contract = {
   keys: {
     requestedState: "RequestedState",
     autoStateEnable: "AutoStateEnable",
+    playSwerveMusic: "PlaySwerveMusic",
     currentState: "CurrentState",
     requestAccepted: "RequestAccepted",
     requestReason: "RequestReason",
@@ -111,6 +112,7 @@ const ui = {
   target: null,
   stateButtons: [],
   autoStateButton: null,
+  musicButton: null,
   fieldImage: null,
   fieldCanvas: null,
 };
@@ -179,6 +181,10 @@ function cacheUi() {
   if (ui.autoStateButton) {
     ui.autoStateButton.addEventListener("click", sendAutoStateEnable);
   }
+  ui.musicButton = document.getElementById("music-button");
+  if (ui.musicButton) {
+    ui.musicButton.addEventListener("click", sendPlaySwerveMusic);
+  }
 }
 
 function buildStateButtons() {
@@ -206,11 +212,16 @@ function sendAutoStateEnable() {
   ntClient.addSample(contract.toRobot + contract.keys.autoStateEnable, true);
 }
 
+function sendPlaySwerveMusic() {
+  ntClient.addSample(contract.toRobot + contract.keys.playSwerveMusic, true);
+}
+
 function startNetworkTables() {
   const topics = Object.values(contract.keys).map((k) => contract.toDashboard + k);
   ntClient.subscribe(topics, false, false, 0.02);
   ntClient.publishTopic(contract.toRobot + contract.keys.requestedState, "string");
   ntClient.publishTopic(contract.toRobot + contract.keys.autoStateEnable, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.playSwerveMusic, "boolean");
   ntClient.connect();
 }
 

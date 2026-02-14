@@ -95,6 +95,19 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   }
 
   private void handleStateRequests() {
+    if (inputs.playSwerveMusicRequested) {
+      if (drive != null) {
+        drive.playSwerveMusic();
+        lastRequestedState = "SWERVE_MUSIC";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      } else {
+        lastRequestedState = "SWERVE_MUSIC";
+        lastRequestAccepted = false;
+        lastRequestReason = "Drive unavailable";
+      }
+      return;
+    }
     if (inputs.autoStateEnableRequested) {
       if (superstructure == null) {
         lastRequestedState = "AUTO";

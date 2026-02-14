@@ -21,6 +21,7 @@ import edu.wpi.first.networktables.TimestampedBoolean;
 public class OperatorBoardIOServer implements OperatorBoardIO {
   private final StringSubscriber requestedStateIn;
   private final BooleanSubscriber autoStateEnableIn;
+  private final BooleanSubscriber playSwerveMusicIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -60,6 +61,10 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     autoStateEnableIn =
         inputTable
             .getBooleanTopic(OperatorBoardContract.AUTO_STATE_ENABLE)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    playSwerveMusicIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.PLAY_SWERVE_MUSIC)
             .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
@@ -111,6 +116,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
       inputs.autoStateEnableRequested = autoQueue[autoQueue.length - 1].value;
     } else {
       inputs.autoStateEnableRequested = false;
+    }
+    TimestampedBoolean[] musicQueue = playSwerveMusicIn.readQueue();
+    if (musicQueue.length > 0) {
+      inputs.playSwerveMusicRequested = musicQueue[musicQueue.length - 1].value;
+    } else {
+      inputs.playSwerveMusicRequested = false;
     }
   }
 
