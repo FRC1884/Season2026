@@ -44,6 +44,10 @@ public class AutoAlignToFuelCommand extends Command {
     addRequirements(drive);
   }
 
+  public static Command alignToFuelCommand(SwerveSubsystem drive) {
+    return new AutoAlignToFuelCommand(drive);
+  }
+
   // ---------------- Command lifecycle ----------------
 
   @Override
