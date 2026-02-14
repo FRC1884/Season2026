@@ -37,8 +37,8 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.SIM;
-  public static final RobotType ROBOT = RobotType.SIMBOT;
+  public static final RobotMode MODE = RobotMode.REAL;
+  public static final RobotType ROBOT = RobotType.DEVBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
   public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 

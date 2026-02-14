@@ -13,7 +13,7 @@ public interface VisionIO {
   enum CameraType {
     OV2311(7.5, 100),
     OV9281(4.5, 100),
-    LIMELIGHT(4.5, 100),
+    LIMELIGHT(12.5, 100),
     LIMELIGHT_3G(12.0, 100),
     A1920(8.0, 100),
     TELEPHOTO_OV2311(9.0, 100),
@@ -33,19 +33,19 @@ public interface VisionIO {
   }
 
   public static enum RejectReason {
-      VISION_DISABLED,
-      DISCONNECTED,
-      NO_MEGATAG,
-      POSE_NONFINITE,
-      NO_TAGS,
-      LOW_SINGLE_TAG_QUALITY,
-      OUT_OF_FIELD,
-      STDDEV_NONFINITE,
-      RESIDUAL_OUTLIER,
-      LARGE_ROTATION_RESIDUAL,
-      LARGE_TRANSLATION_RESIDUAL,
-      UNKNOWN,
-      ACCEPTED
+    VISION_DISABLED,
+    DISCONNECTED,
+    NO_MEGATAG,
+    POSE_NONFINITE,
+    NO_TAGS,
+    LOW_SINGLE_TAG_QUALITY,
+    OUT_OF_FIELD,
+    STDDEV_NONFINITE,
+    RESIDUAL_OUTLIER,
+    LARGE_ROTATION_RESIDUAL,
+    LARGE_TRANSLATION_RESIDUAL,
+    UNKNOWN,
+    ACCEPTED
   }
 
   @AutoLog

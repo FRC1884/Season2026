@@ -156,19 +156,8 @@ public class RobotContainer {
           };
       superstructure = new Superstructure(drive);
 
-      autoIdleCommand = Commands.none();
-      if (AUTONOMOUS_ENABLED) {
-        autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-        autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-      } else {
-        autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-        autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-      }
-
     } else {
       drive = null;
-      autoChooser = null;
-      autoIdleCommand = null;
       superstructure = new Superstructure(null);
     }
 
@@ -356,6 +345,14 @@ public class RobotContainer {
     configureOperatorButtonBindings();
 
     // Register the auto commands
+    autoIdleCommand = Commands.none();
+    if (AUTONOMOUS_ENABLED) {
+      autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+    } else {
+      autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+    }
   }
 
   /**
