@@ -304,11 +304,11 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       if (estimate.isEmpty()) {
         continue;
       }
-      if (accepted.isEmpty()) {
-        accepted = estimate;
-      } else {
-        accepted = Optional.of(fuseEstimates(accepted.get(), estimate.get()));
-      }
+      accepted =
+          accepted
+              .map(
+                  visionFieldPoseEstimate -> fuseEstimates(visionFieldPoseEstimate, estimate.get()))
+              .or(() -> estimate);
     }
 
     accepted.ifPresent(
