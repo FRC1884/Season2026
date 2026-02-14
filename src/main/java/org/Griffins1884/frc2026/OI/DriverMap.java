@@ -21,8 +21,6 @@ public interface DriverMap {
 
   Trigger stopWithX();
 
-  Trigger coralStation();
-
   Trigger slowMode();
 
   default Command rumble() {

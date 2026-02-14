@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 
-public class SimXboxUniversalMap extends CommandXboxController implements DriverMap, OperatorMap {
+public class SimXboxUniversalMap extends CommandXboxController implements DriverMap {
   /**
    * Construct an instance of a controller.
    *
@@ -20,41 +20,12 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
 
   @Override
   public Trigger leftAlign() {
-    return button(7);
-  }
-
-  public Trigger testing() {
-    return null;
-  }
-
-  @Override
-  public Trigger turretZero() {
-    return a();
-  }
-
-  @Override
-  public Trigger turretPreset() {
-    return y();
-  }
-
-  @Override
-  public Trigger turretManualLeft() {
     return leftBumper();
   }
 
   @Override
-  public Trigger turretManualRight() {
-    return rightBumper();
-  }
-
-  @Override
-  public Trigger turretAutoAim() {
-    return x();
-  }
-
-  @Override
   public Trigger rightAlign() {
-    return button(8);
+    return rightBumper();
   }
 
   @Override
@@ -69,33 +40,27 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
 
   @Override
   public DoubleSupplier getRotAxis() {
-    return () -> -getRawAxis(2);
+    return () -> -getRightX();
   }
 
   @Override
   public Trigger resetOdometry() {
-    return button(11);
+    return back();
   }
 
   @Override
   public Trigger stopWithX() {
-    return button(4);
-  }
-
-  // would we need to mutex this through a subsys req if we switch to the maple swerve skeleton?
-  @Override
-  public Command rumble() {
-    return startEnd(
-        () -> getHID().setRumble(kBothRumble, 1), () -> getHID().setRumble(kBothRumble, 0));
-  }
-
-  @Override
-  public Trigger coralStation() {
-    return button(2);
+    return x();
   }
 
   @Override
   public Trigger slowMode() {
-    return button(3);
+    return new Trigger(() -> this.getLeftTriggerAxis() > 0.5);
+  }
+
+  @Override
+  public Command rumble() {
+    return startEnd(
+        () -> getHID().setRumble(kBothRumble, 1), () -> getHID().setRumble(kBothRumble, 0));
   }
 }

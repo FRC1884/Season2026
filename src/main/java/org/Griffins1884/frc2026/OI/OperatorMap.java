@@ -11,27 +11,21 @@ public interface OperatorMap {
     return none();
   }
 
-  Trigger testing();
+  Trigger intake();
 
-  Trigger turretZero();
+  Trigger shooter();
 
-  Trigger turretPreset();
+  Trigger endgameClimb();
 
-  Trigger turretManualLeft();
+  Trigger detachClimb();
 
-  Trigger turretManualRight();
+  Trigger autoManualToggle();
 
-  Trigger turretAutoAim();
+  Trigger idling();
 
-  default Trigger autoManualToggle() {
-    return new Trigger(() -> false);
-  }
+  Trigger ferrying();
 
-  default DoubleSupplier manualTurretAxis() {
-    return () -> 0.0;
-  }
+  DoubleSupplier manualTurretAxis();
 
-  default DoubleSupplier manualPivotAxis() {
-    return () -> 0.0;
-  }
+  DoubleSupplier manualPivotAxis();
 }
