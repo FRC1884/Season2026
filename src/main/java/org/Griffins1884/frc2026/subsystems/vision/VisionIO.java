@@ -44,6 +44,7 @@ public interface VisionIO {
       RESIDUAL_OUTLIER,
       LARGE_ROTATION_RESIDUAL,
       LARGE_TRANSLATION_RESIDUAL,
+      UNKNOWN,
       ACCEPTED
   }
 
@@ -61,8 +62,7 @@ public interface VisionIO {
     public PoseObservation[] poseObservations = new PoseObservation[0];
     public int[] tagIds = new int[0];
     public double residualTranslationMeters = 0.0;
-    public double residualRotationDeg = 0.0;
-    public RejectReason rejectReason = RejectReason.ACCEPTED;
+    public RejectReason rejectReason = RejectReason.UNKNOWN;
   }
 
   public default void updateInputs(VisionIOInputs inputs) {}

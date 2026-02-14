@@ -141,8 +141,6 @@ public final class AprilTagVisionConstants {
 
   public static final LoggedTunableNumber LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 0.5);
-  public static final LoggedTunableNumber LIMELIGHT_MAX_ROTATION_RESIDUAL_DEG =
-      new LoggedTunableNumber("AprilTagVision/Limelight/MaxRotationResidualDeg", 10);
   public static final LoggedTunableNumber LIMELIGHT_REJECT_OUTLIERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/RejectOutliers", 1.0);
 
