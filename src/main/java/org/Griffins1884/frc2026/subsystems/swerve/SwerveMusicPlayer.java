@@ -3,6 +3,7 @@ package org.Griffins1884.frc2026.subsystems.swerve;
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.Filesystem;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -49,5 +50,16 @@ public class SwerveMusicPlayer {
 
   public void stop() {
     orchestra.stop();
+  }
+
+  public void setVolume(double volume) {
+    double clamped = MathUtil.clamp(volume, 0.0, 1.0);
+    try {
+      var method = orchestra.getClass().getMethod("setVolume", double.class);
+      method.invoke(orchestra, clamped);
+      Logger.recordOutput("Swerve/Music/Volume", clamped);
+    } catch (ReflectiveOperationException ex) {
+      Logger.recordOutput("Swerve/Music/VolumeUnsupported", true);
+    }
   }
 }

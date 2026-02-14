@@ -356,6 +356,18 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     }
   }
 
+  public void stopSwerveMusic() {
+    if (musicPlayer != null) {
+      musicPlayer.stop();
+    }
+  }
+
+  public void setSwerveMusicVolume(double volume) {
+    if (musicPlayer != null) {
+      musicPlayer.setVolume(volume);
+    }
+  }
+
   /** Stops the drive. */
   public void stop() {
     runVelocity(new ChassisSpeeds());

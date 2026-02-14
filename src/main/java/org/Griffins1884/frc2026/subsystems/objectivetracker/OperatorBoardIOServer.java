@@ -11,6 +11,7 @@ import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
@@ -22,6 +23,8 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final StringSubscriber requestedStateIn;
   private final BooleanSubscriber autoStateEnableIn;
   private final BooleanSubscriber playSwerveMusicIn;
+  private final BooleanSubscriber stopSwerveMusicIn;
+  private final DoubleSubscriber swerveMusicVolumeIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -66,6 +69,14 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         inputTable
             .getBooleanTopic(OperatorBoardContract.PLAY_SWERVE_MUSIC)
             .subscribe(false, PubSubOption.keepDuplicates(true));
+    stopSwerveMusicIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.STOP_SWERVE_MUSIC)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    swerveMusicVolumeIn =
+        inputTable
+            .getDoubleTopic(OperatorBoardContract.SWERVE_MUSIC_VOLUME)
+            .subscribe(Double.NaN, PubSubOption.keepDuplicates(true));
 
     var outputTable =
         NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_DASHBOARD);
@@ -122,6 +133,18 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
       inputs.playSwerveMusicRequested = musicQueue[musicQueue.length - 1].value;
     } else {
       inputs.playSwerveMusicRequested = false;
+    }
+    TimestampedBoolean[] stopQueue = stopSwerveMusicIn.readQueue();
+    if (stopQueue.length > 0) {
+      inputs.stopSwerveMusicRequested = stopQueue[stopQueue.length - 1].value;
+    } else {
+      inputs.stopSwerveMusicRequested = false;
+    }
+    var volumeQueue = swerveMusicVolumeIn.readQueue();
+    if (volumeQueue.length > 0) {
+      inputs.swerveMusicVolume = volumeQueue[volumeQueue.length - 1].value;
+    } else {
+      inputs.swerveMusicVolume = Double.NaN;
     }
   }
 
