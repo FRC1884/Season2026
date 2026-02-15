@@ -182,7 +182,7 @@ public class DriveCommands {
           Translation2d target =
                   isBlue ? GlobalConstants.FieldConstants.Tower.centerPoint
                   : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
-          int tagId = isBlue ? 16 : 31;
+          int tagId = isBlue ? 31 : 15;
 
           Rotation2d rotation =
                   GlobalConstants.FieldConstants.defaultAprilTagType
