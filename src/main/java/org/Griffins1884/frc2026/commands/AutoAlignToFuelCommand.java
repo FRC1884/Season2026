@@ -18,7 +18,7 @@ public class AutoAlignToFuelCommand extends Command {
 
   // ---------------- Tuning constants ----------------
 
-  private static final double MAX_TX_JUMP_DEG = 12.0;
+  private static final double MAX_TX_JUMP_DEG = 6.0;
   private static final int LOST_FRAMES_TO_UNLOCK = 1;
 
   private static final double ROTATION_KP = 1.8;

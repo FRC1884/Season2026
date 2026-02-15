@@ -43,6 +43,7 @@ import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
 import org.Griffins1884.frc2026.OI.OperatorMap;
+import org.Griffins1884.frc2026.commands.AutoAlignToFuelCommand;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
@@ -371,7 +372,7 @@ public class RobotContainer {
               drive));
 
       // Switch to X pattern when X button is pressed
-      driver.stopWithX().onTrue(Commands.runOnce(drive::stopWithX, drive));
+      driver.alignWithBall().whileTrue(new AutoAlignToFuelCommand(drive));
 
       // align to the climb target
       driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));

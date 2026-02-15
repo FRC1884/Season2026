@@ -49,8 +49,8 @@ public class XboxDriverMap extends CommandXboxController implements DriverMap {
   }
 
   @Override
-  public Trigger stopWithX() {
-    return x();
+  public Trigger alignWithBall() {
+    return new Trigger(() -> this.getRightTriggerAxis() > 0.5);
   }
 
   @Override
