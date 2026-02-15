@@ -79,7 +79,7 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap, Ope
   }
 
   @Override
-  public Trigger stopWithX() {
+  public Trigger alignWithBall() {
     return circle();
   }
 

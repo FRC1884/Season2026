@@ -49,7 +49,7 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
   }
 
   @Override
-  public Trigger stopWithX() {
+  public Trigger alignWithBall() {
     return x();
   }
 

@@ -13,10 +13,10 @@
 
 package org.Griffins1884.frc2026.subsystems.swerve;
 
-import static edu.wpi.first.units.Units.Radian;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 import static org.Griffins1884.frc2026.GlobalConstants.RobotMode.SIM;
@@ -515,8 +515,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return Commands.sequence(
             Commands.runOnce(
                 () -> {
-                  System.out.println(
-                      "[SysId] Turn Subsystem - Quasistatic (Forward) starting.");
+                  System.out.println("[SysId] Turn Subsystem - Quasistatic (Forward) starting.");
                   setTurnSysIdPhase("QS_FWD", true);
                 },
                 this),
@@ -524,8 +523,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println(
-                      "[SysId] Turn Subsystem - Quasistatic (Reverse) starting.");
+                  System.out.println("[SysId] Turn Subsystem - Quasistatic (Reverse) starting.");
                   setTurnSysIdPhase("QS_REV", true);
                 },
                 this),

@@ -236,12 +236,10 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setTurretMode(turret != null ? turret.getControlMode().name() : "UNAVAILABLE");
     io.setSysIdDrivePhase(drive != null ? drive.getDriveSysIdPhase() : "UNAVAILABLE");
     io.setSysIdDriveActive(drive != null && drive.isDriveSysIdActive());
-    io.setSysIdDriveLastCompleted(
-        drive != null ? drive.getDriveSysIdLastCompleted() : Double.NaN);
+    io.setSysIdDriveLastCompleted(drive != null ? drive.getDriveSysIdLastCompleted() : Double.NaN);
     io.setSysIdTurnPhase(drive != null ? drive.getTurnSysIdPhase() : "UNAVAILABLE");
     io.setSysIdTurnActive(drive != null && drive.isTurnSysIdActive());
-    io.setSysIdTurnLastCompleted(
-        drive != null ? drive.getTurnSysIdLastCompleted() : Double.NaN);
+    io.setSysIdTurnLastCompleted(drive != null ? drive.getTurnSysIdLastCompleted() : Double.NaN);
     io.setVisionStatus(Config.Subsystems.VISION_ENABLED ? "ENABLED" : "DISABLED");
   }
 
