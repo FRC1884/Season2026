@@ -151,6 +151,20 @@ public abstract class GenericVelocityRollerSystem<
         config.gains().kV(),
         config.gains().kA());
 
+    if (io.supportsVelocityControl()) {
+      LoggedTunableNumber.ifChanged(
+          tuningId,
+          values -> io.setVelocityPID(values[0], values[1], values[2]),
+          config.gains().kP(),
+          config.gains().kI(),
+          config.gains().kD());
+      double feedforwardOutput = feedforward.calculate(goalVelocity);
+      io.runVelocity(goalVelocity, feedforwardOutput);
+      Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
+      Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
+      return;
+    }
+
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
     double feedforwardOutput = feedforward.calculate(goalVelocity);
     double outputVoltage =

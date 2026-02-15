@@ -139,6 +139,11 @@ public final class AprilTagVisionConstants {
   public static final double POSE_AMBIGUITY_SHIFTER = 0.2;
   public static final double POSE_AMBIGUITY_MULTIPLIER = 4;
 
+  public static final LoggedTunableNumber LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS =
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 0.5);
+  public static final LoggedTunableNumber LIMELIGHT_REJECT_OUTLIERS =
+      new LoggedTunableNumber("AprilTagVision/Limelight/RejectOutliers", 1.0);
+
   public static Matrix<N3, N1> getVisionMeasurementStdDevs() {
     return MatBuilder.fill(
         Nat.N3(),

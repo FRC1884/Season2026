@@ -8,16 +8,24 @@
 package org.Griffins1884.frc2026.subsystems.objectivetracker;
 
 import edu.wpi.first.networktables.BooleanPublisher;
+import edu.wpi.first.networktables.BooleanSubscriber;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.IntegerPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.networktables.StringPublisher;
 import edu.wpi.first.networktables.StringSubscriber;
+import edu.wpi.first.networktables.TimestampedBoolean;
 
 public class OperatorBoardIOServer implements OperatorBoardIO {
   private final StringSubscriber requestedStateIn;
+  private final BooleanSubscriber autoStateEnableIn;
+  private final BooleanSubscriber playSwerveMusicIn;
+  private final BooleanSubscriber stopSwerveMusicIn;
+  private final DoubleSubscriber swerveMusicVolumeIn;
+  private final BooleanSubscriber rollLogsIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -46,6 +54,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final StringPublisher hubRecommendationOut;
   private final BooleanPublisher turretAtSetpointOut;
   private final StringPublisher turretModeOut;
+  private final StringPublisher sysIdDrivePhaseOut;
+  private final BooleanPublisher sysIdDriveActiveOut;
+  private final DoublePublisher sysIdDriveLastCompletedOut;
+  private final StringPublisher sysIdTurnPhaseOut;
+  private final BooleanPublisher sysIdTurnActiveOut;
+  private final DoublePublisher sysIdTurnLastCompletedOut;
   private final StringPublisher visionStatusOut;
 
   public OperatorBoardIOServer() {
@@ -54,6 +68,26 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         inputTable
             .getStringTopic(OperatorBoardContract.REQUESTED_STATE)
             .subscribe("", PubSubOption.keepDuplicates(true));
+    autoStateEnableIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.AUTO_STATE_ENABLE)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    playSwerveMusicIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.PLAY_SWERVE_MUSIC)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    stopSwerveMusicIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.STOP_SWERVE_MUSIC)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    swerveMusicVolumeIn =
+        inputTable
+            .getDoubleTopic(OperatorBoardContract.SWERVE_MUSIC_VOLUME)
+            .subscribe(Double.NaN, PubSubOption.keepDuplicates(true));
+    rollLogsIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.ROLL_LOGS)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
         NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_DASHBOARD);
@@ -90,6 +124,18 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     turretAtSetpointOut =
         outputTable.getBooleanTopic(OperatorBoardContract.TURRET_AT_SETPOINT).publish();
     turretModeOut = outputTable.getStringTopic(OperatorBoardContract.TURRET_MODE).publish();
+    sysIdDrivePhaseOut =
+        outputTable.getStringTopic(OperatorBoardContract.SYSID_DRIVE_PHASE).publish();
+    sysIdDriveActiveOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.SYSID_DRIVE_ACTIVE).publish();
+    sysIdDriveLastCompletedOut =
+        outputTable.getDoubleTopic(OperatorBoardContract.SYSID_DRIVE_LAST_COMPLETED).publish();
+    sysIdTurnPhaseOut =
+        outputTable.getStringTopic(OperatorBoardContract.SYSID_TURN_PHASE).publish();
+    sysIdTurnActiveOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.SYSID_TURN_ACTIVE).publish();
+    sysIdTurnLastCompletedOut =
+        outputTable.getDoubleTopic(OperatorBoardContract.SYSID_TURN_LAST_COMPLETED).publish();
     visionStatusOut = outputTable.getStringTopic(OperatorBoardContract.VISION_STATUS).publish();
   }
 
@@ -99,6 +145,36 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         requestedStateIn.readQueue().length > 0
             ? new String[] {requestedStateIn.get()}
             : new String[] {};
+    TimestampedBoolean[] autoQueue = autoStateEnableIn.readQueue();
+    if (autoQueue.length > 0) {
+      inputs.autoStateEnableRequested = autoQueue[autoQueue.length - 1].value;
+    } else {
+      inputs.autoStateEnableRequested = false;
+    }
+    TimestampedBoolean[] musicQueue = playSwerveMusicIn.readQueue();
+    if (musicQueue.length > 0) {
+      inputs.playSwerveMusicRequested = musicQueue[musicQueue.length - 1].value;
+    } else {
+      inputs.playSwerveMusicRequested = false;
+    }
+    TimestampedBoolean[] stopQueue = stopSwerveMusicIn.readQueue();
+    if (stopQueue.length > 0) {
+      inputs.stopSwerveMusicRequested = stopQueue[stopQueue.length - 1].value;
+    } else {
+      inputs.stopSwerveMusicRequested = false;
+    }
+    var volumeQueue = swerveMusicVolumeIn.readQueue();
+    if (volumeQueue.length > 0) {
+      inputs.swerveMusicVolume = volumeQueue[volumeQueue.length - 1].value;
+    } else {
+      inputs.swerveMusicVolume = Double.NaN;
+    }
+    TimestampedBoolean[] rollQueue = rollLogsIn.readQueue();
+    if (rollQueue.length > 0) {
+      inputs.rollLogsRequested = rollQueue[rollQueue.length - 1].value;
+    } else {
+      inputs.rollLogsRequested = false;
+    }
   }
 
   @Override
@@ -234,6 +310,36 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setTurretMode(String value) {
     turretModeOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setSysIdDrivePhase(String value) {
+    sysIdDrivePhaseOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setSysIdDriveActive(boolean value) {
+    sysIdDriveActiveOut.set(value);
+  }
+
+  @Override
+  public void setSysIdDriveLastCompleted(double value) {
+    sysIdDriveLastCompletedOut.set(value);
+  }
+
+  @Override
+  public void setSysIdTurnPhase(String value) {
+    sysIdTurnPhaseOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setSysIdTurnActive(boolean value) {
+    sysIdTurnActiveOut.set(value);
+  }
+
+  @Override
+  public void setSysIdTurnLastCompleted(double value) {
+    sysIdTurnLastCompletedOut.set(value);
   }
 
   @Override

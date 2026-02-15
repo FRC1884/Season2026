@@ -36,6 +36,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -61,6 +62,7 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   // Control requests
   private final TorqueCurrentFOC torqueCurrentRequest = new TorqueCurrentFOC(0).withUpdateFreqHz(0);
+  private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0);
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
@@ -295,12 +297,12 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   @Override
   public void setDriveOpenLoop(double output) {
-    driveMotor.setControl(torqueCurrentRequest.withOutput(output));
+    driveMotor.setControl(voltageRequest.withOutput(output));
   }
 
   @Override
   public void setTurnOpenLoop(double output) {
-    turnMotor.setControl(torqueCurrentRequest.withOutput(output));
+    turnMotor.setControl(voltageRequest.withOutput(output));
   }
 
   @Override
@@ -357,5 +359,14 @@ public class ModuleIOFullKraken implements ModuleIO {
             tryUntilOk(5, () -> turnMotor.getConfigurator().apply(turnConfig, 0.25));
           }
         });
+  }
+
+  @Override
+  public void addOrchestraInstruments(List<TalonFX> instruments) {
+    if (instruments == null) {
+      return;
+    }
+    instruments.add(driveMotor);
+    instruments.add(turnMotor);
   }
 }

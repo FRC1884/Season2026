@@ -43,7 +43,6 @@ import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
 import org.Griffins1884.frc2026.OI.OperatorMap;
-import org.Griffins1884.frc2026.commands.AutoAlignToFuelCommand;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
@@ -156,19 +155,8 @@ public class RobotContainer {
           };
       superstructure = new Superstructure(drive);
 
-      autoIdleCommand = Commands.none();
-      if (AUTONOMOUS_ENABLED) {
-        autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-        autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-      } else {
-        autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-        autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-      }
-
     } else {
       drive = null;
-      autoChooser = null;
-      autoIdleCommand = null;
       superstructure = new Superstructure(null);
     }
 
@@ -356,6 +344,14 @@ public class RobotContainer {
     configureOperatorButtonBindings();
 
     // Register the auto commands
+    autoIdleCommand = Commands.none();
+    if (AUTONOMOUS_ENABLED) {
+      autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
+      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+    } else {
+      autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+    }
   }
 
   /**
@@ -412,7 +408,6 @@ public class RobotContainer {
                       },
                       drive)
                   .ignoringDisable(true));
-      driver.coralStation().whileTrue(new AutoAlignToFuelCommand(drive));
     }
   }
 
@@ -420,29 +415,34 @@ public class RobotContainer {
     operator.autoManualToggle().onTrue(Commands.runOnce(superstructure::toggleAutoStateEnabled));
     superstructure.bindManualControlSuppliers(
         operator.manualTurretAxis(), operator.manualPivotAxis());
+    operator
+        .intake()
+        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+    operator
+        .shooter()
+        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
+    operator
+        .endgameClimb()
+        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.ENDGAME_CLIMB));
+    operator
+        .detachClimb()
+        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.CLIMB_DETACH));
+    operator.idling().whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING));
+    operator
+        .ferrying()
+        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.FERRYING));
 
     if (turret == null) {
       return;
     }
 
-    operator
-        .turretZero()
-        .onTrue(Commands.runOnce(turret::zeroPosition, turret).ignoringDisable(true));
-
-    operator
-        .turretManualLeft()
-        .whileTrue(TurretCommands.turretOpenLoop(turret, () -> -TurretConstants.MANUAL_PERCENT));
-
-    operator
-        .turretManualRight()
-        .whileTrue(TurretCommands.turretOpenLoop(turret, () -> TurretConstants.MANUAL_PERCENT));
-
-    if (drive != null && vision != null) {
-      operator
-          .turretAutoAim()
-          .whileTrue(
-              TurretCommands.autoAimToTarget(
-                  turret, drive::getPose, vision::getBestTargetTranslation));
+    if (operator.manualTurretAxis() != null) {
+      while (operator.manualTurretAxis().getAsDouble() == -1) {
+        TurretCommands.turretOpenLoop(turret, () -> -TurretConstants.MANUAL_PERCENT);
+      }
+      while (operator.manualTurretAxis().getAsDouble() == 1) {
+        TurretCommands.turretOpenLoop(turret, () -> TurretConstants.MANUAL_PERCENT);
+      }
     }
   }
 

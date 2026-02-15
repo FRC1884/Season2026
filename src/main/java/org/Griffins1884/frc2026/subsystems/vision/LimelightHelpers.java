@@ -694,6 +694,8 @@ public class LimelightHelpers {
     public double tagSpan;
     public double avgTagDist;
     public double avgTagArea;
+    public double residualTranslation;
+    public double residualRotation;
 
     public RawFiducial[] rawFiducials;
     public boolean isMegaTag2;
@@ -709,6 +711,8 @@ public class LimelightHelpers {
       this.avgTagArea = 0;
       this.rawFiducials = new RawFiducial[] {};
       this.isMegaTag2 = false;
+      this.residualTranslation = 0;
+      this.residualRotation = 0;
     }
 
     public PoseEstimate(
@@ -720,7 +724,9 @@ public class LimelightHelpers {
         double avgTagDist,
         double avgTagArea,
         RawFiducial[] rawFiducials,
-        boolean isMegaTag2) {
+        boolean isMegaTag2,
+        double residualTranslation,
+        double residualRotation) {
 
       this.pose = pose;
       this.timestampSeconds = timestampSeconds;
@@ -731,6 +737,8 @@ public class LimelightHelpers {
       this.avgTagArea = avgTagArea;
       this.rawFiducials = rawFiducials;
       this.isMegaTag2 = isMegaTag2;
+      this.residualTranslation = residualTranslation;
+      this.residualRotation = residualRotation;
     }
 
     @Override
@@ -895,6 +903,8 @@ public class LimelightHelpers {
     double tagSpan = extractArrayEntry(poseArray, 8);
     double tagDist = extractArrayEntry(poseArray, 9);
     double tagArea = extractArrayEntry(poseArray, 10);
+    double residualTranslation = extractArrayEntry(poseArray, 11);
+    double residualRotation = extractArrayEntry(poseArray, 12);
 
     // Convert server timestamp from microseconds to seconds and adjust for latency
     double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
@@ -930,7 +940,9 @@ public class LimelightHelpers {
         tagDist,
         tagArea,
         rawFiducials,
-        isMegaTag2);
+        isMegaTag2,
+        residualTranslation,
+        residualRotation);
   }
 
   /**

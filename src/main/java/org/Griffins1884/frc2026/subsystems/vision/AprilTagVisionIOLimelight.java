@@ -81,6 +81,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     inputs.pose3d = null;
     inputs.fiducialObservations = new FiducialObservation[0];
     inputs.megatagCount = 0;
+    inputs.residualTranslationMeters = 0.0;
     if (inputs.connected) {
       try {
         LimelightHelpers.PoseEstimate megatag;
@@ -90,6 +91,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         megatag1 = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
         robotPose3d = LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiBlue(limelightName));
         inputs.pose3d = robotPose3d;
+        inputs.residualTranslationMeters = megatag.residualTranslation;
         // Capture latest target offsets when the camera sees targets; otherwise provide zeros.
         if (LimelightHelpers.getTV(limelightName)) {
           inputs.latestTargetObservation =

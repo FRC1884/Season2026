@@ -6,6 +6,17 @@ final class OperatorBoardContract {
   static final String TO_DASHBOARD = BASE + "/ToDashboard";
 
   static final String REQUESTED_STATE = "RequestedState";
+  static final String AUTO_STATE_ENABLE = "AutoStateEnable";
+  static final String PLAY_SWERVE_MUSIC = "PlaySwerveMusic";
+  static final String STOP_SWERVE_MUSIC = "StopSwerveMusic";
+  static final String SWERVE_MUSIC_VOLUME = "SwerveMusicVolume";
+  static final String ROLL_LOGS = "RollLogs";
+  static final String SYSID_DRIVE_PHASE = "SysIdDrivePhase";
+  static final String SYSID_DRIVE_ACTIVE = "SysIdDriveActive";
+  static final String SYSID_DRIVE_LAST_COMPLETED = "SysIdDriveLastCompleted";
+  static final String SYSID_TURN_PHASE = "SysIdTurnPhase";
+  static final String SYSID_TURN_ACTIVE = "SysIdTurnActive";
+  static final String SYSID_TURN_LAST_COMPLETED = "SysIdTurnLastCompleted";
   static final String CURRENT_STATE = "CurrentState";
   static final String REQUEST_ACCEPTED = "RequestAccepted";
   static final String REQUEST_REASON = "RequestReason";

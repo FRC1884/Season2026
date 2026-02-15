@@ -34,6 +34,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final VisionIO[] io;
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
+  private final Alert[] outlierAlerts;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
@@ -83,6 +84,15 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       disconnectedAlerts[i] =
           new Alert(
               "Vision camera \"" + io[i].getCameraConstants().cameraName() + "\" is disconnected.",
+              Alert.AlertType.kWarning);
+    }
+    this.outlierAlerts = new Alert[io.length];
+    for (int i = 0; i < io.length; i++) {
+      outlierAlerts[i] =
+          new Alert(
+              "Vision Outlier detected on camera \""
+                  + io[i].getCameraConstants().cameraName()
+                  + "\".",
               Alert.AlertType.kWarning);
     }
   }
@@ -280,6 +290,11 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
       logLimelightDiagnostics(cameraLabel, inputs[i]);
       estimates.add(buildLimelightEstimate(inputs[i]));
+
+      boolean isOutlier =
+          inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
+              || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
+      outlierAlerts[i].set(isOutlier);
     }
 
     if (!useVision) {
@@ -332,16 +347,16 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
-    if (tagCount <= 0) {
-      return Optional.empty();
-    }
+    // if (tagCount <= 0) {
+    //   return Optional.empty();
+    // }
     int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
     double qualityUsed = sanitizeQuality(cam.megatagPoseEstimate.quality());
-    if (tagCount == 1
-        && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
-      return Optional.empty();
-    }
+    // if (tagCount == 1
+    //     && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
+    //   return Optional.empty();
+    // }
     LimelightStdDevs stdDevs = computeLimelightStdDevs(cam, indexBase, qualityUsed);
     if (stdDevs == null || !stdDevs.finite()) {
       return Optional.empty();
@@ -352,6 +367,13 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       thetaStd = AprilTagVisionConstants.getLimelightLargeVariance();
     }
     Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), thetaStd);
+    if (!DriverStation.isDisabled()) {
+      if (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
+          && (cam.residualTranslationMeters
+              > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get())) {
+        return Optional.empty();
+      }
+    }
 
     return Optional.of(
         new VisionFieldPoseEstimate(
@@ -511,26 +533,46 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             && singleTagQualityPass
             && inFieldBounds;
 
-    String rejectReason;
-    if (!useVision) {
-      rejectReason = "VISION_DISABLED";
-    } else if (!connected) {
-      rejectReason = "DISCONNECTED";
-    } else if (!hasMegatag) {
-      rejectReason = "NO_MEGATAG";
-    } else if (!poseFinite) {
-      rejectReason = "POSE_NONFINITE";
-    } else if (!tagCountValid) {
-      rejectReason = "NO_TAGS";
-    } else if (!singleTagQualityPass) {
-      rejectReason = "LOW_SINGLE_TAG_QUALITY";
-    } else if (!inFieldBounds) {
-      rejectReason = "OUT_OF_FIELD";
-    } else if (!stdDevsFinite) {
-      rejectReason = "STDDEV_NONFINITE";
-    } else {
-      rejectReason = "ACCEPTED";
+    VisionIO.RejectReason rejectReason;
+
+    if (hasMegatag) {
+      Pose2d visionPose = cam.megatagPoseEstimate.fieldToRobot();
+      Pose2d referencePose =
+          getReferencePose(cam.megatagPoseEstimate.timestampSeconds()).orElse(null);
+      if (referencePose != null) {
+        cam.residualTranslationMeters =
+            referencePose.getTranslation().getDistance(visionPose.getTranslation());
+      }
     }
+
+    boolean residualsOk =
+        !(AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
+            && (cam.residualTranslationMeters
+                > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get()));
+
+    if (!useVision) {
+      rejectReason = VisionIO.RejectReason.VISION_DISABLED;
+    } else if (!connected) {
+      rejectReason = VisionIO.RejectReason.DISCONNECTED;
+    } else if (!hasMegatag) {
+      rejectReason = VisionIO.RejectReason.NO_MEGATAG;
+    } else if (!poseFinite) {
+      rejectReason = VisionIO.RejectReason.POSE_NONFINITE;
+    } else if (!tagCountValid) {
+      rejectReason = VisionIO.RejectReason.NO_TAGS;
+    } else if (!singleTagQualityPass) {
+      rejectReason = VisionIO.RejectReason.LOW_SINGLE_TAG_QUALITY;
+    } else if (!inFieldBounds) {
+      rejectReason = VisionIO.RejectReason.OUT_OF_FIELD;
+    } else if (!stdDevsFinite) {
+      rejectReason = VisionIO.RejectReason.STDDEV_NONFINITE;
+    } else if (!residualsOk) {
+      rejectReason = VisionIO.RejectReason.RESIDUAL_OUTLIER;
+    } else {
+      rejectReason = VisionIO.RejectReason.UNKNOWN;
+    }
+
+    wouldAccept = wouldAccept && residualsOk;
 
     Logger.recordOutput(prefix + "/Connected", connected);
     Logger.recordOutput(prefix + "/SeesTarget", seesTarget);
@@ -549,7 +591,17 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/StdDevTheta", stdDevs != null ? stdDevs.theta() : Double.NaN);
     Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
     Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
-    Logger.recordOutput(prefix + "/RejectReason", rejectReason);
+    Logger.recordOutput(prefix + "/ResidualTranslationMeters", cam.residualTranslationMeters);
+
+    cam.rejectReason = rejectReason;
+  }
+
+  private Optional<Pose2d> getReferencePose(double timestamp) {
+    if (poseHistory == null) {
+      return Optional.empty();
+    }
+
+    return poseHistory.getFieldToRobot(timestamp);
   }
 
   private boolean isFinitePose(Pose2d pose) {

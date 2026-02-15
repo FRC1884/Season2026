@@ -15,6 +15,7 @@ package org.Griffins1884.frc2026.subsystems.swerve;
 
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.*;
 
+import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -22,6 +23,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import java.util.List;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
@@ -74,6 +76,13 @@ public class Module {
         new Alert("Disconnected drive motor on module " + index + ".", AlertType.kError);
     turnDisconnectedAlert =
         new Alert("Disconnected turn motor on module " + index + ".", AlertType.kError);
+  }
+
+  public void addOrchestraInstruments(List<TalonFX> instruments) {
+    if (instruments == null) {
+      return;
+    }
+    io.addOrchestraInstruments(instruments);
   }
 
   public void periodic() {
@@ -189,5 +198,21 @@ public class Module {
 
   public double getVoltage() {
     return inputs.driveAppliedVolts;
+  }
+
+  public double getDriveVoltage() {
+    return inputs.driveAppliedVolts;
+  }
+
+  public double getTurnVoltage() {
+    return inputs.turnAppliedVolts;
+  }
+
+  public double getTurnPositionRad() {
+    return inputs.turnPosition.getRadians();
+  }
+
+  public double getTurnVelocityRadPerSec() {
+    return inputs.turnVelocityRadPerSec;
   }
 }

@@ -132,6 +132,10 @@ body {
   padding: 12px;
 }
 
+.state-actions {
+  padding: 0 12px 12px;
+}
+
 .state-button {
   appearance: none;
   border: 1px solid var(--line);
@@ -142,6 +146,56 @@ body {
   font-weight: 800;
   letter-spacing: 0.2px;
   cursor: pointer;
+}
+
+.state-button--auto {
+  width: 100%;
+  border-color: rgba(57, 217, 138, 0.4);
+  background: rgba(57, 217, 138, 0.12);
+}
+
+.state-button--music {
+  width: 100%;
+  border-color: rgba(255, 209, 102, 0.6);
+  background: rgba(255, 209, 102, 0.16);
+}
+
+.music-upload,
+.music-volume {
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.music-upload__label,
+.music-volume__label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+
+.music-upload__input {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.music-upload__status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.music-volume__slider {
+  width: 100%;
+}
+
+.music-volume__value {
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .state-button.is-requested {
@@ -263,6 +317,30 @@ body {
   font-size: 12px;
   font-weight: 700;
   color: var(--text);
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(20, 26, 36, 0.92);
+  box-shadow: var(--shadow);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  max-width: min(320px, calc(100vw - 36px));
+  z-index: 40;
+}
+
+.toast--show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 @media (max-width: 1100px) {

@@ -23,6 +23,48 @@
       <section class="panel panel--states">
         <div class="panel__title">State</div>
         <div id="state-buttons" class="state-buttons"></div>
+        <div class="state-actions">
+          <button id="auto-state-button" class="state-button state-button--auto" type="button">
+            Return To Auto
+          </button>
+        </div>
+        <div class="state-actions">
+          <button id="music-button" class="state-button state-button--music" type="button">
+            Play Swerve Song
+          </button>
+        </div>
+        <div class="state-actions">
+          <button id="music-stop-button" class="state-button state-button--music" type="button">
+            Stop Swerve Song
+          </button>
+        </div>
+        <div class="music-upload">
+          <label class="music-upload__label" for="music-file">
+            Upload .chrp
+          </label>
+          <input id="music-file" class="music-upload__input" type="file" accept=".chrp" />
+          <button id="music-upload-button" class="state-button state-button--auto" type="button">
+            Upload File
+          </button>
+          <div id="music-upload-status" class="music-upload__status">--</div>
+        </div>
+        <div class="music-volume">
+          <label class="music-volume__label" for="music-volume">Volume</label>
+          <input
+            id="music-volume"
+            class="music-volume__slider"
+            type="range"
+            min="0"
+            max="100"
+            value="70"
+          />
+          <div id="music-volume-value" class="music-volume__value">70%</div>
+        </div>
+        <div class="state-actions">
+          <button id="roll-logs-button" class="state-button state-button--auto" type="button">
+            Roll Logs
+          </button>
+        </div>
         <div class="kv">
           <div class="kv__row">
             <div class="kv__k">Requested</div>
@@ -103,6 +145,14 @@
             <div class="tile__k">Climb</div>
             <div id="climb" class="tile__v">--</div>
           </div>
+          <div class="tile">
+            <div class="tile__k">Drive SysId</div>
+            <div id="sysid-drive" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Turn SysId</div>
+            <div id="sysid-turn" class="tile__v">--</div>
+          </div>
           <div class="tile tile--wide">
             <div class="tile__k">Robot Pose</div>
             <div id="robot-pose" class="tile__v tile__v--mono">--</div>
@@ -119,6 +169,7 @@
       </section>
     </main>
 
+    <div id="toast" class="toast" aria-live="polite"></div>
     <script type="module" src="./index.js"></script>
   </body>
 </html>
