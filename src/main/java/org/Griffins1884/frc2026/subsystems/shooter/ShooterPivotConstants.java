@@ -33,7 +33,7 @@ public final class ShooterPivotConstants {
   public static final int SIM_MOTOR_COUNT = 1;
   public static final double SIM_START_ANGLE_RAD = 0.0;
 
-  public static final double MANUAL_PERCENT = 0.1; //TODO: tune
+  public static final double MANUAL_PERCENT = 0.2; // TODO: tune
 
   private ShooterPivotConstants() {}
 }
