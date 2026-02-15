@@ -27,6 +27,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import org.Griffins1884.frc2026.util.LogRollover;
+import org.Griffins1884.frc2026.util.RollingWPILOGWriter;
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -49,6 +51,7 @@ public class Robot extends LoggedRobot {
   private Command autonomousCommand;
   private Command characterizationCommand;
   private RobotContainer robotContainer;
+  private RollingWPILOGWriter rollingLogWriter;
 
   public Robot() {
     // Record metadata
@@ -73,12 +76,17 @@ public class Robot extends LoggedRobot {
     switch (MODE) {
       case REAL:
         // Running on a real robot, log to a USB stick ("/U/logs")
-        Logger.addDataReceiver(new WPILOGWriter());
+        rollingLogWriter = new RollingWPILOGWriter();
+        Logger.addDataReceiver(rollingLogWriter);
+        LogRollover.init(rollingLogWriter);
         Logger.addDataReceiver(new NT4Publisher());
         break;
 
       case SIM:
         // Running a physics simulator, log to NT
+        rollingLogWriter = new RollingWPILOGWriter();
+        Logger.addDataReceiver(rollingLogWriter);
+        LogRollover.init(rollingLogWriter);
         Logger.addDataReceiver(new NT4Publisher());
         break;
 
@@ -88,6 +96,7 @@ public class Robot extends LoggedRobot {
         String logPath = LogFileUtil.findReplayLog();
         Logger.setReplaySource(new WPILOGReader(logPath));
         Logger.addDataReceiver(new WPILOGWriter(LogFileUtil.addPathSuffix(logPath, "_sim")));
+        LogRollover.init(null);
         break;
     }
 

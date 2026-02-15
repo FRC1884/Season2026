@@ -17,6 +17,7 @@ public interface OperatorBoardIO {
     public boolean playSwerveMusicRequested = false;
     public boolean stopSwerveMusicRequested = false;
     public double swerveMusicVolume = Double.NaN;
+    public boolean rollLogsRequested = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}
@@ -74,6 +75,18 @@ public interface OperatorBoardIO {
   default void setTurretAtSetpoint(boolean value) {}
 
   default void setTurretMode(String value) {}
+
+  default void setSysIdDrivePhase(String value) {}
+
+  default void setSysIdDriveActive(boolean value) {}
+
+  default void setSysIdDriveLastCompleted(double value) {}
+
+  default void setSysIdTurnPhase(String value) {}
+
+  default void setSysIdTurnActive(boolean value) {}
+
+  default void setSysIdTurnLastCompleted(double value) {}
 
   default void setVisionStatus(String value) {}
 }
