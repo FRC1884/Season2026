@@ -14,7 +14,22 @@ public class AutoCommands {
         "OverBump", superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING));
 
     NamedCommands.registerCommand(
-        "Collect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+        "OverBumpAndShoot",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
+            superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
+
+    NamedCommands.registerCommand(
+        "Collect",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
+            AutoAlignToFuelCommand.alignToFuelCommand(drive)));
+
+    NamedCommands.registerCommand(
+        "Climb",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
+            superstructure.setSuperStateCmd(Superstructure.SuperState.AUTO_CLIMB)));
 
     NamedCommands.registerCommand(
         "ShootAndClimb",

@@ -906,12 +906,11 @@ public class LimelightHelpers {
     double residualTranslation = extractArrayEntry(poseArray, 11);
     double residualRotation = extractArrayEntry(poseArray, 12);
 
-
     // Convert server timestamp from microseconds to seconds and adjust for latency
     double adjustedTimestamp = (timestamp / 1000000.0) - (latency / 1000.0);
 
     int valsPerFiducial = 7;
-    int expectedTotalVals = 13 + valsPerFiducial * tagCount;
+    int expectedTotalVals = 11 + valsPerFiducial * tagCount;
     RawFiducial[] rawFiducials;
 
     if (poseArray.length != expectedTotalVals) {
@@ -920,7 +919,7 @@ public class LimelightHelpers {
     } else {
       rawFiducials = new RawFiducial[tagCount];
       for (int i = 0; i < tagCount; i++) {
-        int baseIndex = 13 + (i * valsPerFiducial);
+        int baseIndex = 11 + (i * valsPerFiducial);
         int id = (int) poseArray[baseIndex];
         double txnc = poseArray[baseIndex + 1];
         double tync = poseArray[baseIndex + 2];

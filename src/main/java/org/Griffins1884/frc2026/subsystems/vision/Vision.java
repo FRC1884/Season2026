@@ -39,7 +39,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
-  private Integer exclusiveTagId = null;
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -91,7 +90,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     for (int i = 0; i < io.length; i++) {
       outlierAlerts[i] =
           new Alert(
-              "Vision Outlier detected on camera \"" + io[i].getCameraConstants().cameraName() + "\".",
+              "Vision Outlier detected on camera \""
+                  + io[i].getCameraConstants().cameraName()
+                  + "\".",
               Alert.AlertType.kWarning);
     }
   }
@@ -290,8 +291,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       logLimelightDiagnostics(cameraLabel, inputs[i]);
       estimates.add(buildLimelightEstimate(inputs[i]));
 
-      boolean isOutlier = inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
-                 || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
+      boolean isOutlier =
+          inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
+              || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
       outlierAlerts[i].set(isOutlier);
     }
 
@@ -339,26 +341,22 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return Optional.empty();
     }
 
-    if (exclusiveTagId != null && !containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
-      return Optional.empty();
-    }
-
     Pose2d fieldToRobot = cam.megatagPoseEstimate.fieldToRobot();
     if (!isFinitePose(fieldToRobot) || !isWithinFieldBounds(fieldToRobot)) {
       return Optional.empty();
     }
 
     int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
-    if (tagCount <= 0) {
-      return Optional.empty();
-    }
+    // if (tagCount <= 0) {
+    //   return Optional.empty();
+    // }
     int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
     double qualityUsed = sanitizeQuality(cam.megatagPoseEstimate.quality());
-    if (tagCount == 1
-        && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
-      return Optional.empty();
-    }
+    // if (tagCount == 1
+    //     && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
+    //   return Optional.empty();
+    // }
     LimelightStdDevs stdDevs = computeLimelightStdDevs(cam, indexBase, qualityUsed);
     if (stdDevs == null || !stdDevs.finite()) {
       return Optional.empty();
@@ -369,9 +367,12 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       thetaStd = AprilTagVisionConstants.getLimelightLargeVariance();
     }
     Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), thetaStd);
-
-    if (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5 && (cam.residualTranslationMeters > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get())) {
-      return Optional.empty();
+    if (!DriverStation.isDisabled()) {
+      if (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
+          && (cam.residualTranslationMeters
+              > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get())) {
+        return Optional.empty();
+      }
     }
 
     return Optional.of(
@@ -536,14 +537,18 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     if (hasMegatag) {
       Pose2d visionPose = cam.megatagPoseEstimate.fieldToRobot();
-      Pose2d referencePose = getReferencePose(cam.megatagPoseEstimate.timestampSeconds()).orElse(null);
+      Pose2d referencePose =
+          getReferencePose(cam.megatagPoseEstimate.timestampSeconds()).orElse(null);
       if (referencePose != null) {
-        cam.residualTranslationMeters = referencePose.getTranslation().getDistance(visionPose.getTranslation());
+        cam.residualTranslationMeters =
+            referencePose.getTranslation().getDistance(visionPose.getTranslation());
       }
     }
 
-    boolean residualsOk = ! (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
-    && (cam.residualTranslationMeters > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get()));
+    boolean residualsOk =
+        !(AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
+            && (cam.residualTranslationMeters
+                > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get()));
 
     if (!useVision) {
       rejectReason = VisionIO.RejectReason.VISION_DISABLED;
@@ -569,8 +574,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     wouldAccept = wouldAccept && residualsOk;
 
-
-
     Logger.recordOutput(prefix + "/Connected", connected);
     Logger.recordOutput(prefix + "/SeesTarget", seesTarget);
     Logger.recordOutput(prefix + "/HasMegaTagPose", hasMegatag);
@@ -588,7 +591,17 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/StdDevTheta", stdDevs != null ? stdDevs.theta() : Double.NaN);
     Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
     Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
-    Logger.recordOutput(prefix + "/RejectReason", rejectReason);
+    Logger.recordOutput(prefix + "/ResidualTranslationMeters", cam.residualTranslationMeters);
+
+    cam.rejectReason = rejectReason;
+  }
+
+  private Optional<Pose2d> getReferencePose(double timestamp) {
+    if (poseHistory == null) {
+      return Optional.empty();
+    }
+
+    return poseHistory.getFieldToRobot(timestamp);
   }
 
   private boolean isFinitePose(Pose2d pose) {
@@ -687,26 +700,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
       return Optional.empty();
     }
-  }
-
-  public void setExclusiveTagId(int id) {
-    exclusiveTagId = id;
-  }
-
-  public void clearExclusiveTagId() {
-    exclusiveTagId = null;
-  }
-
-  private boolean containsFiducialId(int[] ids, int target) {
-    if (ids == null) {
-      return false;
-    }
-    for (int id : ids) {
-        if (id == target) {
-          return true;
-        }
-    }
-    return false;
   }
 
   private record Sample(double timestampSeconds, Pose2d pose, double yawRateRadPerSec) {}

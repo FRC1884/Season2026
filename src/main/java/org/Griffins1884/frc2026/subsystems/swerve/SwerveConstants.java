@@ -30,6 +30,10 @@ public final class SwerveConstants {
 
   public static final GyroType GYRO_TYPE = GyroType.PIGEON;
 
+  // Swerve music (Kraken-only).
+  // CTRE Orchestra expects a .chrp file (place it under src/main/deploy/music).
+  public static final String SWERVE_MUSIC_FILE = "music/swerve.chrp";
+
   /** Meters */
   public static final double TRACK_WIDTH = Units.inchesToMeters(27.5);
 

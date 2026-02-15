@@ -72,9 +72,11 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       return null;
     }
     try {
+      Path deployDir = Filesystem.getDeployDirectory().toPath();
       OperatorBoardWebServer server =
           new OperatorBoardWebServer(
-              Filesystem.getDeployDirectory().toPath().resolve("operatorboard"),
+              deployDir.resolve("operatorboard"),
+              deployDir.resolve("music"),
               Config.WebUIConfig.BIND_ADDRESS,
               Config.WebUIConfig.PORT);
       server.start();
@@ -95,6 +97,35 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   }
 
   private void handleStateRequests() {
+    if (inputs.playSwerveMusicRequested) {
+      if (drive != null) {
+        drive.playSwerveMusic();
+        lastRequestedState = "SWERVE_MUSIC_PLAY";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      } else {
+        lastRequestedState = "SWERVE_MUSIC_PLAY";
+        lastRequestAccepted = false;
+        lastRequestReason = "Drive unavailable";
+      }
+    }
+    if (inputs.stopSwerveMusicRequested) {
+      if (drive != null) {
+        drive.stopSwerveMusic();
+        lastRequestedState = "SWERVE_MUSIC_STOP";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      } else {
+        lastRequestedState = "SWERVE_MUSIC_STOP";
+        lastRequestAccepted = false;
+        lastRequestReason = "Drive unavailable";
+      }
+    }
+    if (Double.isFinite(inputs.swerveMusicVolume)) {
+      if (drive != null) {
+        drive.setSwerveMusicVolume(inputs.swerveMusicVolume);
+      }
+    }
     if (inputs.autoStateEnableRequested) {
       if (superstructure == null) {
         lastRequestedState = "AUTO";
@@ -306,11 +337,14 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
 
   private static final class OperatorBoardWebServer implements AutoCloseable {
     private final Path webRoot;
+    private final Path musicDir;
     private final HttpServer server;
     private final ExecutorService executor;
 
-    OperatorBoardWebServer(Path webRoot, String bindAddress, int port) throws IOException {
+    OperatorBoardWebServer(Path webRoot, Path musicDir, String bindAddress, int port)
+        throws IOException {
       this.webRoot = Objects.requireNonNull(webRoot, "webRoot").toAbsolutePath().normalize();
+      this.musicDir = Objects.requireNonNull(musicDir, "musicDir").toAbsolutePath().normalize();
       String bind = (bindAddress == null || bindAddress.isBlank()) ? "0.0.0.0" : bindAddress;
       this.server = HttpServer.create(new InetSocketAddress(bind, port), 0);
       this.executor =
@@ -324,6 +358,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
               });
       server.setExecutor(executor);
       server.createContext("/", new StaticHandler());
+      server.createContext("/music-upload", new MusicUploadHandler());
     }
 
     void start() {
@@ -368,6 +403,29 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         exchange.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
           os.write(bytes);
+        }
+      }
+    }
+
+    private final class MusicUploadHandler implements HttpHandler {
+      @Override
+      public void handle(HttpExchange exchange) throws IOException {
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+          exchange.sendResponseHeaders(405, -1);
+          return;
+        }
+        byte[] bytes = exchange.getRequestBody().readAllBytes();
+        if (bytes.length == 0) {
+          exchange.sendResponseHeaders(400, -1);
+          return;
+        }
+        Files.createDirectories(musicDir);
+        Path target = musicDir.resolve("swerve.chrp");
+        Files.write(target, bytes);
+        byte[] response = "OK".getBytes();
+        exchange.sendResponseHeaders(200, response.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+          os.write(response);
         }
       }
     }

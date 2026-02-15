@@ -7,7 +7,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -83,7 +82,6 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     inputs.fiducialObservations = new FiducialObservation[0];
     inputs.megatagCount = 0;
     inputs.residualTranslationMeters = 0.0;
-    inputs.residualRotationDeg = 0.0;
     if (inputs.connected) {
       try {
         LimelightHelpers.PoseEstimate megatag;
@@ -94,7 +92,6 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         robotPose3d = LimelightHelpers.toPose3D(LimelightHelpers.getBotPose_wpiBlue(limelightName));
         inputs.pose3d = robotPose3d;
         inputs.residualTranslationMeters = megatag.residualTranslation;
-        inputs.residualRotationDeg = megatag.residualRotation;
         // Capture latest target offsets when the camera sees targets; otherwise provide zeros.
         if (LimelightHelpers.getTV(limelightName)) {
           inputs.latestTargetObservation =

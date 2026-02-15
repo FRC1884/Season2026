@@ -15,6 +15,9 @@ const contract = {
   keys: {
     requestedState: "RequestedState",
     autoStateEnable: "AutoStateEnable",
+    playSwerveMusic: "PlaySwerveMusic",
+    stopSwerveMusic: "StopSwerveMusic",
+    swerveMusicVolume: "SwerveMusicVolume",
     currentState: "CurrentState",
     requestAccepted: "RequestAccepted",
     requestReason: "RequestReason",
@@ -111,6 +114,13 @@ const ui = {
   target: null,
   stateButtons: [],
   autoStateButton: null,
+  musicButton: null,
+  musicStopButton: null,
+  musicFile: null,
+  musicUploadButton: null,
+  musicUploadStatus: null,
+  musicVolume: null,
+  musicVolumeValue: null,
   fieldImage: null,
   fieldCanvas: null,
 };
@@ -179,6 +189,29 @@ function cacheUi() {
   if (ui.autoStateButton) {
     ui.autoStateButton.addEventListener("click", sendAutoStateEnable);
   }
+  ui.musicButton = document.getElementById("music-button");
+  if (ui.musicButton) {
+    ui.musicButton.addEventListener("click", sendPlaySwerveMusic);
+  }
+  ui.musicStopButton = document.getElementById("music-stop-button");
+  if (ui.musicStopButton) {
+    ui.musicStopButton.addEventListener("click", sendStopSwerveMusic);
+  }
+  ui.musicFile = document.getElementById("music-file");
+  ui.musicUploadButton = document.getElementById("music-upload-button");
+  ui.musicUploadStatus = document.getElementById("music-upload-status");
+  if (ui.musicUploadButton) {
+    ui.musicUploadButton.addEventListener("click", uploadMusicFile);
+  }
+  ui.musicVolume = document.getElementById("music-volume");
+  ui.musicVolumeValue = document.getElementById("music-volume-value");
+  if (ui.musicVolume) {
+    ui.musicVolume.addEventListener("input", () => {
+      const value = Number(ui.musicVolume.value || 0);
+      setText(ui.musicVolumeValue, `${value}%`);
+      sendSwerveMusicVolume(value / 100.0);
+    });
+  }
 }
 
 function buildStateButtons() {
@@ -206,11 +239,50 @@ function sendAutoStateEnable() {
   ntClient.addSample(contract.toRobot + contract.keys.autoStateEnable, true);
 }
 
+function sendPlaySwerveMusic() {
+  ntClient.addSample(contract.toRobot + contract.keys.playSwerveMusic, true);
+}
+
+function sendStopSwerveMusic() {
+  ntClient.addSample(contract.toRobot + contract.keys.stopSwerveMusic, true);
+}
+
+function sendSwerveMusicVolume(value) {
+  if (!Number.isFinite(value)) return;
+  ntClient.addSample(contract.toRobot + contract.keys.swerveMusicVolume, value);
+}
+
+async function uploadMusicFile() {
+  if (!ui.musicFile || !ui.musicFile.files || ui.musicFile.files.length === 0) {
+    setText(ui.musicUploadStatus, "Select a .chrp file first");
+    return;
+  }
+  const file = ui.musicFile.files[0];
+  setText(ui.musicUploadStatus, "Uploading...");
+  try {
+    const response = await fetch("./music-upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: file,
+    });
+    if (!response.ok) {
+      setText(ui.musicUploadStatus, `Upload failed (${response.status})`);
+      return;
+    }
+    setText(ui.musicUploadStatus, "Upload complete");
+  } catch (err) {
+    setText(ui.musicUploadStatus, "Upload error");
+  }
+}
+
 function startNetworkTables() {
   const topics = Object.values(contract.keys).map((k) => contract.toDashboard + k);
   ntClient.subscribe(topics, false, false, 0.02);
   ntClient.publishTopic(contract.toRobot + contract.keys.requestedState, "string");
   ntClient.publishTopic(contract.toRobot + contract.keys.autoStateEnable, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.playSwerveMusic, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.stopSwerveMusic, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.swerveMusicVolume, "double");
   ntClient.connect();
 }
 

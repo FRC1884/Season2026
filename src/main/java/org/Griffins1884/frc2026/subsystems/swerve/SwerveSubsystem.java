@@ -75,6 +75,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private final SysIdRoutine turnSysId;
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
+  private final SwerveMusicPlayer musicPlayer;
 
   private SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(SwerveConstants.MODULE_TRANSLATIONS);
@@ -112,6 +113,13 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     modules[1] = new Module(frModuleIO, 1);
     modules[2] = new Module(blModuleIO, 2);
     modules[3] = new Module(brModuleIO, 3);
+    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
+        && GlobalConstants.MODE != SIM) {
+      musicPlayer = new SwerveMusicPlayer(modules, SwerveConstants.SWERVE_MUSIC_FILE);
+      musicPlayer.start();
+    } else {
+      musicPlayer = null;
+    }
 
     // Usage reporting for swerve template
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
@@ -340,6 +348,24 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private void runTurnSysIdVoltage(double voltage) {
     runTurnCharacterization(
         MathUtil.clamp(voltage, -TURN_SYS_ID_MAX_VOLTAGE, TURN_SYS_ID_MAX_VOLTAGE));
+  }
+
+  public void playSwerveMusic() {
+    if (musicPlayer != null) {
+      musicPlayer.start();
+    }
+  }
+
+  public void stopSwerveMusic() {
+    if (musicPlayer != null) {
+      musicPlayer.stop();
+    }
+  }
+
+  public void setSwerveMusicVolume(double volume) {
+    if (musicPlayer != null) {
+      musicPlayer.setVolume(volume);
+    }
   }
 
   /** Stops the drive. */

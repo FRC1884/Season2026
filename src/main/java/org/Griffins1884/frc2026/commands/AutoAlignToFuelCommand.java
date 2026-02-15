@@ -18,13 +18,13 @@ public class AutoAlignToFuelCommand extends Command {
 
   // ---------------- Tuning constants ----------------
 
-  private static final double MAX_TX_JUMP_DEG = 6.0;
-  private static final int LOST_FRAMES_TO_UNLOCK = 8;
+  private static final double MAX_TX_JUMP_DEG = 12.0;
+  private static final int LOST_FRAMES_TO_UNLOCK = 1;
 
   private static final double ROTATION_KP = 1.8;
   private static final double MAX_ROTATION_RAD_PER_SEC = 45.0;
 
-  private static final double FORWARD_SPEED_MPS = 0.2;
+  private static final double FORWARD_SPEED_MPS = 3.5;
 
   // ---------------- Internal state ----------------
 
@@ -42,6 +42,10 @@ public class AutoAlignToFuelCommand extends Command {
     this.drive = drive;
     this.limelight = NetworkTableInstance.getDefault().getTable("limelight-right");
     addRequirements(drive);
+  }
+
+  public static Command alignToFuelCommand(SwerveSubsystem drive) {
+    return new AutoAlignToFuelCommand(drive);
   }
 
   // ---------------- Command lifecycle ----------------

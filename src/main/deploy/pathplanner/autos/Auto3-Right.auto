@@ -1,0 +1,73 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RightPos_PreShoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RightPos_OverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Collect"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Collect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BackOverBumpShoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBumpAndShoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ToNeutral"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBump"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": true
+}

@@ -7,6 +7,9 @@ final class OperatorBoardContract {
 
   static final String REQUESTED_STATE = "RequestedState";
   static final String AUTO_STATE_ENABLE = "AutoStateEnable";
+  static final String PLAY_SWERVE_MUSIC = "PlaySwerveMusic";
+  static final String STOP_SWERVE_MUSIC = "StopSwerveMusic";
+  static final String SWERVE_MUSIC_VOLUME = "SwerveMusicVolume";
   static final String CURRENT_STATE = "CurrentState";
   static final String REQUEST_ACCEPTED = "RequestAccepted";
   static final String REQUEST_REASON = "RequestReason";

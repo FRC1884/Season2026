@@ -154,6 +154,50 @@ body {
   background: rgba(57, 217, 138, 0.12);
 }
 
+.state-button--music {
+  width: 100%;
+  border-color: rgba(255, 209, 102, 0.6);
+  background: rgba(255, 209, 102, 0.16);
+}
+
+.music-upload,
+.music-volume {
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.music-upload__label,
+.music-volume__label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--muted);
+}
+
+.music-upload__input {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+}
+
+.music-upload__status {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.music-volume__slider {
+  width: 100%;
+}
+
+.music-volume__value {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .state-button.is-requested {
   border-color: rgba(57, 217, 138, 0.9);
   box-shadow: 0 0 0 2px rgba(57, 217, 138, 0.25) inset;

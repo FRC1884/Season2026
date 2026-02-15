@@ -14,6 +14,9 @@ public interface OperatorBoardIO {
   class OperatorBoardIOInputs {
     public String[] requestedState = new String[] {}; // Superstructure.SuperState name
     public boolean autoStateEnableRequested = false;
+    public boolean playSwerveMusicRequested = false;
+    public boolean stopSwerveMusicRequested = false;
+    public double swerveMusicVolume = Double.NaN;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}

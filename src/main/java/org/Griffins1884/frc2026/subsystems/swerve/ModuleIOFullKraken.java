@@ -36,6 +36,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -357,5 +358,14 @@ public class ModuleIOFullKraken implements ModuleIO {
             tryUntilOk(5, () -> turnMotor.getConfigurator().apply(turnConfig, 0.25));
           }
         });
+  }
+
+  @Override
+  public void addOrchestraInstruments(List<TalonFX> instruments) {
+    if (instruments == null) {
+      return;
+    }
+    instruments.add(driveMotor);
+    instruments.add(turnMotor);
   }
 }
