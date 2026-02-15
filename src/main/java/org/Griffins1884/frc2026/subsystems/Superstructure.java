@@ -42,7 +42,6 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 
 public class Superstructure extends SubsystemBase {
   public enum SuperState {
@@ -94,7 +93,6 @@ public class Superstructure extends SubsystemBase {
 
   private final SwerveSubsystem drive;
   @Setter private TurretSubsystem turret;
-  @Setter private ShooterPivotSubsystem shooterPivot;
 
   @Getter
   private final LoggedDashboardChooser<SuperState> stateChooser =
@@ -137,8 +135,8 @@ public class Superstructure extends SubsystemBase {
   private Translation2d lastTurretTarget = null;
   private double lastClimberGoalPosition = Double.NaN;
   private final Rollers rollers = new Rollers();
-  private final Elevators elevators = new Elevators();
-  private final Arms arms = new Arms();
+  @Getter private final Elevators elevators = new Elevators();
+  @Getter private final Arms arms = new Arms();
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
 
   public Superstructure(SwerveSubsystem drive) {
