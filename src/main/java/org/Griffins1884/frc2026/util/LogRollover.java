@@ -16,9 +16,14 @@ public final class LogRollover {
       Logger.recordOutput("Log/RollStatus", "UNAVAILABLE");
       return false;
     }
-    rollingWriter.roll();
-    Logger.recordOutput("Log/RollStatus", "ROLLED");
-    Logger.recordOutput("Log/RollTimestamp", Logger.getTimestamp());
-    return true;
+    try {
+      rollingWriter.roll();
+      Logger.recordOutput("Log/RollStatus", "ROLLED");
+      Logger.recordOutput("Log/RollTimestamp", Logger.getTimestamp());
+      return true;
+    } catch (RuntimeException ex) {
+      Logger.recordOutput("Log/RollStatus", "FAILED");
+      return false;
+    }
   }
 }
