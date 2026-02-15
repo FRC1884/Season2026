@@ -184,18 +184,18 @@ public class DriveCommands {
                   : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
           int tagId = isBlue ? 31 : 15;
 
-            Rotation2d rotation =
-                    GlobalConstants.FieldConstants.defaultAprilTagType
-                            .getLayout()
-                            .getTagPose(tagId)
-                            .map(tagPose -> tagPose.getRotation().toRotation2d())
-                            // Sensible fallback: point toward the tower along +/-X.
-                            .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
+          Rotation2d rotation =
+                  GlobalConstants.FieldConstants.defaultAprilTagType
+                          .getLayout()
+                          .getTagPose(tagId)
+                          .map(tagPose -> tagPose.getRotation().toRotation2d())
+                          // Sensible fallback: point toward the tower along +/-X.
+                          .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
 
-            Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
-            return new AutoAlignToPoseCommand(drive, new Pose2d(target, rotation))
-                    .beforeStarting(() -> vision.setExclusiveTagId(tagId))
-                    .finallyDo(vision::clearExclusiveTagId);
+          Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
+          return new AutoAlignToPoseCommand(drive, new Pose2d(target, rotation))
+                  .beforeStarting(() -> vision.setExclusiveTagId(tagId))
+                  .finallyDo(vision::clearExclusiveTagId);
         },
         Set.of(drive));
   }
