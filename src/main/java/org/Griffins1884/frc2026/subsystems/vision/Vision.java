@@ -39,6 +39,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
+  private int exclusiveTagId = -1;
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -341,6 +342,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return Optional.empty();
     }
 
+    if (containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
+      return Optional.empty();
+    }
+
     Pose2d fieldToRobot = cam.megatagPoseEstimate.fieldToRobot();
     if (!isFinitePose(fieldToRobot) || !isWithinFieldBounds(fieldToRobot)) {
       return Optional.empty();
@@ -592,6 +597,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
     Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
     Logger.recordOutput(prefix + "/ResidualTranslationMeters", cam.residualTranslationMeters);
+    Logger.recordOutput("ExclusiveTagActive", exclusiveTagId != -1);
 
     cam.rejectReason = rejectReason;
   }
@@ -700,6 +706,26 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
       return Optional.empty();
     }
+  }
+
+  public void setExclusiveTagId(int id) {
+      exclusiveTagId = id;
+  }
+
+  public void clearExclusiveTagId() {
+    exclusiveTagId = -1;
+  }
+
+  private boolean containsFiducialId(int[] ids, int target) {
+    if (ids == null) {
+      return false;
+    }
+    for (int id : ids) {
+        if (id == target) {
+          return true;
+        }
+    }
+    return false;
   }
 
   private record Sample(double timestampSeconds, Pose2d pose, double yawRateRadPerSec) {}
