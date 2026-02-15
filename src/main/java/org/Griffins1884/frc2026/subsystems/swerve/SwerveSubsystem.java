@@ -15,6 +15,8 @@ package org.Griffins1884.frc2026.subsystems.swerve;
 
 import static edu.wpi.first.units.Units.Radian;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 import static org.Griffins1884.frc2026.GlobalConstants.RobotMode.SIM;
@@ -159,25 +161,25 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
     Consumer<SysIdRoutineLog> sysIdLogCallbackDrive =
         (log) -> {
-          // Log per-module telemetry
+          // Log per-module telemetry in linear units (meters, m/s).
           for (int i = 0; i < 4; i++) {
             Module module = modules[i];
             log.motor("DriveM" + i)
-                .voltage(Volts.of(module.getVoltage()))
-                .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
-                .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+                .voltage(Volts.of(module.getDriveVoltage()))
+                .linearVelocity(MetersPerSecond.of(module.getVelocityMetersPerSec()))
+                .linearPosition(Meters.of(module.getPositionMeters()));
           }
         };
 
     Consumer<SysIdRoutineLog> sysIdLogCallbackTurn =
         (log) -> {
-          // Log per-module telemetry
+          // Log per-module telemetry in angular units (radians, rad/s).
           for (int i = 0; i < 4; i++) {
             Module module = modules[i];
             log.motor("TurnM" + i)
-                .voltage(Volts.of(module.getVoltage()))
-                .angularVelocity(RadiansPerSecond.of(module.getFFCharacterizationVelocity()))
-                .angularPosition(Radian.of(module.getWheelRadiusCharacterizationPosition()));
+                .voltage(Volts.of(module.getTurnVoltage()))
+                .angularVelocity(RadiansPerSecond.of(module.getTurnVelocityRadPerSec()))
+                .angularPosition(Radian.of(module.getTurnPositionRad()));
           }
         };
 
