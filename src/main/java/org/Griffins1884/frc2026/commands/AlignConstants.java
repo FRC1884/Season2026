@@ -8,9 +8,9 @@ public final class AlignConstants {
   private AlignConstants() {}
 
   public static final LoggedTunableNumber ALIGN_MAX_TRANSLATIONAL_SPEED =
-      new LoggedTunableNumber("Align/MaxTranslationalSpeed", 1.0);
+      new LoggedTunableNumber("Align/MaxTranslationalSpeed", 3.0);
   public static final LoggedTunableNumber ALIGN_MAX_TRANSLATIONAL_ACCELERATION =
-      new LoggedTunableNumber("Align/MaxTranslationalAcceleration", 2.5);
+      new LoggedTunableNumber("Align/MaxTranslationalAcceleration", 3.5);
   public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_SPEED =
       new LoggedTunableNumber("Align/MaxAngularSpeed", 3.0);
   public static final LoggedTunableNumber ALIGN_MAX_ANGULAR_ACCELERATION =
@@ -33,9 +33,8 @@ public final class AlignConstants {
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
       new LoggedTunableNumber("Align/WheelRadiusRampRate", 0.1);
   public static final Gains ALIGN_TRANSLATION_GAINS =
-      new Gains("Align/Gains/Translation", 1.2, 0.001, 0.2);
-  public static final Gains ALIGN_ROTATION_GAINS =
-      new Gains("Align/Gains/Rotation", 4.0, 0.01, 0.5);
+      new Gains("Align/Gains/Translation", 3, 0.001, 0.8);
+  public static final Gains ALIGN_ROTATION_GAINS = new Gains("Align/Gains/Rotation", 6.0, 0.01, 2);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_KV =
       new LoggedTunableNumber("Align/Gains/Feedforward/kV", 1.0);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_DEADBAND =
