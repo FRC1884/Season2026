@@ -19,8 +19,7 @@ public record MegatagPoseEstimate(
     double avgTagArea,
     double quality,
     int[] fiducialIds,
-    double residualTranslation,
-    double residualRotation) {
+    double residualTranslation) {
 
   public MegatagPoseEstimate {
     if (fieldToRobot == null) {
@@ -70,7 +69,6 @@ public record MegatagPoseEstimate(
         poseEstimate.avgTagArea,
         quality,
         fiducialIds,
-        poseEstimate.residualTranslation,
-        poseEstimate.residualRotation);
+        poseEstimate.residualTranslation);
   }
 }

@@ -17,7 +17,6 @@ import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.*;
 import static org.Griffins1884.frc2026.util.PhoenixUtil.*;
 
 import com.ctre.phoenix6.BaseStatusSignal;
-import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
@@ -62,6 +61,7 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   // Control requests
   private final TorqueCurrentFOC torqueCurrentRequest = new TorqueCurrentFOC(0).withUpdateFreqHz(0);
+  private final VoltageOut voltageRequest = new VoltageOut(0.0).withUpdateFreqHz(0);
   private final PositionTorqueCurrentFOC positionTorqueCurrentRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
@@ -91,10 +91,8 @@ public class ModuleIOFullKraken implements ModuleIO {
     zeroRotation = moduleConstants.zeroRotation();
     hasCancoder = moduleConstants.cancoderID() >= 0;
     encoderOffset = hasCancoder ? new Rotation2d() : zeroRotation;
-    CANBus canBus = new CANBus("DriveTrain");
-
-    driveMotor = new TalonFX(moduleConstants.driveID(), canBus);
-    turnMotor = new TalonFX(moduleConstants.rotatorID(), canBus);
+    driveMotor = new TalonFX(moduleConstants.driveID(), SwerveConstants.canBus);
+    turnMotor = new TalonFX(moduleConstants.rotatorID(), SwerveConstants.canBus);
     turnEncoder = hasCancoder ? new CANcoder(moduleConstants.cancoderID()) : null;
     if (hasCancoder) {
       var cancoderConfig = new CANcoderConfiguration();
@@ -207,7 +205,7 @@ public class ModuleIOFullKraken implements ModuleIO {
     }
 
     // Register signals for refresh
-    if (turnAbsolutePosition != null) {
+    if (SwerveConstants.canivore) {
       PhoenixUtil.registerSignals(
           true, // Default to the RIO bus; swap to true if you move these onto a CANivore
           drivePosition,
@@ -223,7 +221,7 @@ public class ModuleIOFullKraken implements ModuleIO {
           turnTorqueCurrentAmps);
     } else {
       PhoenixUtil.registerSignals(
-          true,
+          false,
           drivePosition,
           driveVelocity,
           driveAppliedVolts,
@@ -296,12 +294,12 @@ public class ModuleIOFullKraken implements ModuleIO {
 
   @Override
   public void setDriveOpenLoop(double output) {
-    driveMotor.setControl(torqueCurrentRequest.withOutput(output));
+    driveMotor.setControl(voltageRequest.withOutput(output));
   }
 
   @Override
   public void setTurnOpenLoop(double output) {
-    turnMotor.setControl(torqueCurrentRequest.withOutput(output));
+    turnMotor.setControl(voltageRequest.withOutput(output));
   }
 
   @Override

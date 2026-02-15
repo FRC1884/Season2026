@@ -19,6 +19,7 @@ import static org.Griffins1884.frc2026.Config.Subsystems.AUTONOMOUS_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.DRIVETRAIN_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.TURRET_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.VISION_ENABLED;
+import static org.Griffins1884.frc2026.Config.Subsystems.SHOOTER_PIVOT_ENABLED;
 import static org.Griffins1884.frc2026.GlobalConstants.MODE;
 import static org.Griffins1884.frc2026.GlobalConstants.robotSwerveMotors;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.BACK_LEFT;
@@ -26,6 +27,8 @@ import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.BACK_RI
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.FRONT_LEFT;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.FRONT_RIGHT;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.GYRO_TYPE;
+import static org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants.MOTOR_CONTROLLER;
+import static org.Griffins1884.frc2026.subsystems.turret.TurretConstants.MOTOR_CONTROLLER;
 import static org.Griffins1884.frc2026.subsystems.vision.AprilTagVisionConstants.*;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -43,6 +46,7 @@ import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
 import org.Griffins1884.frc2026.OI.OperatorMap;
+import org.Griffins1884.frc2026.commands.AutoAlignToFuelCommand;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
@@ -62,6 +66,10 @@ import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
+import org.Griffins1884.frc2026.commands.ShooterCommands;
+import org.Griffins1884.frc2026.subsystems.shooter.*;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -74,6 +82,7 @@ public class RobotContainer {
   private final SwerveSubsystem drive;
   private SwerveDriveSimulation driveSimulation;
   private final TurretSubsystem turret;
+  private final ShooterPivotSubsystem pivot;
   private final OperatorBoardTracker operatorBoard;
 
   // Controller
@@ -177,6 +186,25 @@ public class RobotContainer {
       superstructure.setTurret(turret);
     } else {
       turret = null;
+    }
+
+    if (SHOOTER_PIVOT_ENABLED) {
+      pivot =
+          switch (MODE) {
+            case REAL ->
+                new ShooterPivotSubsystem("ShooterPivot",
+                    switch (ShooterPivotConstants.MOTOR_CONTROLLER) {
+                      case SPARK_MAX -> new ShooterPivotIOMax();
+                      case SPARK_FLEX -> new ShooterPivotIOFlex();
+                      case KRAKEN_X60, KRAKEN_X40 -> new ShooterPivotIOKraken();
+                    });
+            case SIM -> new ShooterPivotSubsystem("ShooterPivot", new ShooterPivotIOSim());
+            default -> new ShooterPivotSubsystem("ShooterPivot", new ShooterPivotIO() {});
+          };
+
+      superstructure.setShooterPivot(pivot);
+    } else {
+      pivot = null;
     }
 
     if (MODE == RobotMode.SIM && turret != null && drive != null) {
@@ -371,7 +399,7 @@ public class RobotContainer {
               drive));
 
       // Switch to X pattern when X button is pressed
-      driver.stopWithX().onTrue(Commands.runOnce(drive::stopWithX, drive));
+      driver.alignWithBall().whileTrue(new AutoAlignToFuelCommand(drive));
 
       // align to the climb target
       driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));
@@ -437,11 +465,22 @@ public class RobotContainer {
     }
 
     if (operator.manualTurretAxis() != null) {
-      while (operator.manualTurretAxis().getAsDouble() == -1) {
+      while (operator.manualTurretAxis().getAsDouble() == -1 && (operator.manualPivotAxis().getAsDouble() != -1 || operator.manualPivotAxis().getAsDouble() != 1)) {
         TurretCommands.turretOpenLoop(turret, () -> -TurretConstants.MANUAL_PERCENT);
       }
-      while (operator.manualTurretAxis().getAsDouble() == 1) {
+      while (operator.manualTurretAxis().getAsDouble() == 1 && (operator.manualPivotAxis().getAsDouble() != -1 || operator.manualPivotAxis().getAsDouble() != 1)) {
         TurretCommands.turretOpenLoop(turret, () -> TurretConstants.MANUAL_PERCENT);
+      }
+    }
+    if (pivot == null) {
+      return;
+    }
+    if (operator.manualPivotAxis() != null) {
+      while (operator.manualPivotAxis().getAsDouble() == -1 && (operator.manualTurretAxis().getAsDouble() != -1 || operator.manualTurretAxis().getAsDouble() != 1)) {
+        ShooterCommands.pivotOpenLoop(pivot, () -> -ShooterPivotConstants.MANUAL_PERCENT);
+      }
+      while (operator.manualPivotAxis().getAsDouble() == 1 && (operator.manualTurretAxis().getAsDouble() != -1 || operator.manualTurretAxis().getAsDouble() != 1)) {
+        ShooterCommands.pivotOpenLoop(pivot, () -> ShooterPivotConstants.MANUAL_PERCENT);
       }
     }
   }

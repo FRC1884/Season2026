@@ -19,7 +19,7 @@ public interface DriverMap {
 
   Trigger resetOdometry();
 
-  Trigger stopWithX();
+  Trigger alignWithBall();
 
   Trigger slowMode();
 

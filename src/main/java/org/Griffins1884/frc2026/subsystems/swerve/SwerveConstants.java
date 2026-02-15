@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.Meters;
 import static java.lang.Math.PI;
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
+import com.ctre.phoenix6.CANBus;
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
@@ -331,6 +332,11 @@ public final class SwerveConstants {
         case CRESCENDO -> new Gains("Swerve/KrakenTurnTorque/Crescendo", 8000.0, 0.0, 50.0);
         case SIMBOT -> new Gains("Swerve/KrakenTurnTorque/Simbot", 0.0, 0.0, 0.0);
       };
+
+  /** CanBus */
+  static final boolean canivore = true;
+
+  static final CANBus canBus = new CANBus("DriveTrain");
 
   /** Radians */
   static final double ROTATOR_PID_MIN_INPUT = 0;

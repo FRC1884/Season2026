@@ -29,6 +29,7 @@ import org.Griffins1884.frc2026.subsystems.Superstructure.SuperState;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.HubShiftTracker;
+import org.Griffins1884.frc2026.util.LogRollover;
 import org.littletonrobotics.junction.Logger;
 
 public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable {
@@ -125,6 +126,12 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       if (drive != null) {
         drive.setSwerveMusicVolume(inputs.swerveMusicVolume);
       }
+    }
+    if (inputs.rollLogsRequested) {
+      boolean rolled = LogRollover.roll();
+      lastRequestedState = "ROLL_LOGS";
+      lastRequestAccepted = rolled;
+      lastRequestReason = rolled ? "" : "Log rollover unavailable";
     }
     if (inputs.autoStateEnableRequested) {
       if (superstructure == null) {
@@ -227,6 +234,12 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
 
     io.setTurretAtSetpoint(turret != null && turret.isAtGoal());
     io.setTurretMode(turret != null ? turret.getControlMode().name() : "UNAVAILABLE");
+    io.setSysIdDrivePhase(drive != null ? drive.getDriveSysIdPhase() : "UNAVAILABLE");
+    io.setSysIdDriveActive(drive != null && drive.isDriveSysIdActive());
+    io.setSysIdDriveLastCompleted(drive != null ? drive.getDriveSysIdLastCompleted() : Double.NaN);
+    io.setSysIdTurnPhase(drive != null ? drive.getTurnSysIdPhase() : "UNAVAILABLE");
+    io.setSysIdTurnActive(drive != null && drive.isTurnSysIdActive());
+    io.setSysIdTurnLastCompleted(drive != null ? drive.getTurnSysIdLastCompleted() : Double.NaN);
     io.setVisionStatus(Config.Subsystems.VISION_ENABLED ? "ENABLED" : "DISABLED");
   }
 

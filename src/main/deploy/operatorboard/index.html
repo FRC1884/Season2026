@@ -60,6 +60,11 @@
           />
           <div id="music-volume-value" class="music-volume__value">70%</div>
         </div>
+        <div class="state-actions">
+          <button id="roll-logs-button" class="state-button state-button--auto" type="button">
+            Roll Logs
+          </button>
+        </div>
         <div class="kv">
           <div class="kv__row">
             <div class="kv__k">Requested</div>
@@ -140,6 +145,14 @@
             <div class="tile__k">Climb</div>
             <div id="climb" class="tile__v">--</div>
           </div>
+          <div class="tile">
+            <div class="tile__k">Drive SysId</div>
+            <div id="sysid-drive" class="tile__v">--</div>
+          </div>
+          <div class="tile">
+            <div class="tile__k">Turn SysId</div>
+            <div id="sysid-turn" class="tile__v">--</div>
+          </div>
           <div class="tile tile--wide">
             <div class="tile__k">Robot Pose</div>
             <div id="robot-pose" class="tile__v tile__v--mono">--</div>
@@ -156,6 +169,7 @@
       </section>
     </main>
 
+    <div id="toast" class="toast" aria-live="polite"></div>
     <script type="module" src="./index.js"></script>
   </body>
 </html>
