@@ -342,7 +342,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return Optional.empty();
     }
 
-    if (containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
+    if (!containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
       return Optional.empty();
     }
 

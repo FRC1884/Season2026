@@ -200,7 +200,7 @@ public class DriveCommands {
         Set.of(drive));
   }
 
-  public static Command alignToClimbHolonomicCommand(SwerveSubsystem drive) {
+  public static Command alignToClimbHolonomicCommand(SwerveSubsystem drive, Vision vision) {
     return Commands.defer(
         () -> {
           // Prefer alliance (when known). If the DS has not provided alliance yet (sim/offline),
@@ -227,7 +227,9 @@ public class DriveCommands {
                   .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
 
           Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
-          return new AutoAlignToPoseHolonomicCommand(drive, new Pose2d(target, rotation));
+          return new AutoAlignToPoseHolonomicCommand(drive, new Pose2d(target, rotation))
+                  .beforeStarting(() -> vision.setExclusiveTagId(tagId))
+                  .finallyDo(vision::clearExclusiveTagId);
         },
         Set.of(drive));
   }
