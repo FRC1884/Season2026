@@ -199,4 +199,20 @@ public class Module {
   public double getVoltage() {
     return inputs.driveAppliedVolts;
   }
+
+  public double getDriveVoltage() {
+    return inputs.driveAppliedVolts;
+  }
+
+  public double getTurnVoltage() {
+    return inputs.turnAppliedVolts;
+  }
+
+  public double getTurnPositionRad() {
+    return inputs.turnPosition.getRadians();
+  }
+
+  public double getTurnVelocityRadPerSec() {
+    return inputs.turnVelocityRadPerSec;
+  }
 }

@@ -18,6 +18,13 @@ const contract = {
     playSwerveMusic: "PlaySwerveMusic",
     stopSwerveMusic: "StopSwerveMusic",
     swerveMusicVolume: "SwerveMusicVolume",
+    rollLogs: "RollLogs",
+    sysIdDrivePhase: "SysIdDrivePhase",
+    sysIdDriveActive: "SysIdDriveActive",
+    sysIdDriveLastCompleted: "SysIdDriveLastCompleted",
+    sysIdTurnPhase: "SysIdTurnPhase",
+    sysIdTurnActive: "SysIdTurnActive",
+    sysIdTurnLastCompleted: "SysIdTurnLastCompleted",
     currentState: "CurrentState",
     requestAccepted: "RequestAccepted",
     requestReason: "RequestReason",
@@ -87,6 +94,12 @@ const state = {
   hubRecommendation: null,
   turretAtSetpoint: null,
   turretMode: null,
+  sysIdDrivePhase: null,
+  sysIdDriveActive: null,
+  sysIdDriveLastCompleted: null,
+  sysIdTurnPhase: null,
+  sysIdTurnActive: null,
+  sysIdTurnLastCompleted: null,
   visionStatus: null,
 };
 
@@ -110,8 +123,11 @@ const ui = {
   visionStatus: null,
   turretStatus: null,
   climb: null,
+  sysIdDrive: null,
+  sysIdTurn: null,
   robotPose: null,
   target: null,
+  toast: null,
   stateButtons: [],
   autoStateButton: null,
   musicButton: null,
@@ -121,6 +137,7 @@ const ui = {
   musicUploadStatus: null,
   musicVolume: null,
   musicVolumeValue: null,
+  rollLogsButton: null,
   fieldImage: null,
   fieldCanvas: null,
 };
@@ -128,6 +145,8 @@ const ui = {
 let fieldCtx = null;
 let lastAnyData = 0;
 let ntConnected = false;
+let sysIdDriveInitialized = false;
+let sysIdTurnInitialized = false;
 
 const queryParams = new URLSearchParams(window.location.search);
 const { host: ntHost, port: ntPort } = resolveNtConnectionParams(queryParams);
@@ -181,8 +200,11 @@ function cacheUi() {
   ui.visionStatus = document.getElementById("vision-status");
   ui.turretStatus = document.getElementById("turret-status");
   ui.climb = document.getElementById("climb");
+  ui.sysIdDrive = document.getElementById("sysid-drive");
+  ui.sysIdTurn = document.getElementById("sysid-turn");
   ui.robotPose = document.getElementById("robot-pose");
   ui.target = document.getElementById("target");
+  ui.toast = document.getElementById("toast");
   ui.fieldImage = document.getElementById("field-image");
   ui.fieldCanvas = document.getElementById("field-canvas");
   ui.autoStateButton = document.getElementById("auto-state-button");
@@ -211,6 +233,10 @@ function cacheUi() {
       setText(ui.musicVolumeValue, `${value}%`);
       sendSwerveMusicVolume(value / 100.0);
     });
+  }
+  ui.rollLogsButton = document.getElementById("roll-logs-button");
+  if (ui.rollLogsButton) {
+    ui.rollLogsButton.addEventListener("click", sendRollLogs);
   }
 }
 
@@ -252,6 +278,10 @@ function sendSwerveMusicVolume(value) {
   ntClient.addSample(contract.toRobot + contract.keys.swerveMusicVolume, value);
 }
 
+function sendRollLogs() {
+  ntClient.addSample(contract.toRobot + contract.keys.rollLogs, true);
+}
+
 async function uploadMusicFile() {
   if (!ui.musicFile || !ui.musicFile.files || ui.musicFile.files.length === 0) {
     setText(ui.musicUploadStatus, "Select a .chrp file first");
@@ -283,6 +313,7 @@ function startNetworkTables() {
   ntClient.publishTopic(contract.toRobot + contract.keys.playSwerveMusic, "boolean");
   ntClient.publishTopic(contract.toRobot + contract.keys.stopSwerveMusic, "boolean");
   ntClient.publishTopic(contract.toRobot + contract.keys.swerveMusicVolume, "double");
+  ntClient.publishTopic(contract.toRobot + contract.keys.rollLogs, "boolean");
   ntClient.connect();
 }
 
@@ -372,6 +403,40 @@ function handleTopicUpdate(topic, value) {
     case contract.toDashboard + contract.keys.turretMode:
       state.turretMode = parseString(value);
       break;
+    case contract.toDashboard + contract.keys.sysIdDrivePhase:
+      state.sysIdDrivePhase = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.sysIdDriveActive:
+      state.sysIdDriveActive = !!value;
+      break;
+    case contract.toDashboard + contract.keys.sysIdDriveLastCompleted: {
+      const parsed = Number.isFinite(value) ? value : null;
+      if (parsed !== null) {
+        if (sysIdDriveInitialized && state.sysIdDriveLastCompleted !== parsed) {
+          showToast("Drive SysId complete");
+        }
+        sysIdDriveInitialized = true;
+      }
+      state.sysIdDriveLastCompleted = parsed;
+      break;
+    }
+    case contract.toDashboard + contract.keys.sysIdTurnPhase:
+      state.sysIdTurnPhase = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.sysIdTurnActive:
+      state.sysIdTurnActive = !!value;
+      break;
+    case contract.toDashboard + contract.keys.sysIdTurnLastCompleted: {
+      const parsed = Number.isFinite(value) ? value : null;
+      if (parsed !== null) {
+        if (sysIdTurnInitialized && state.sysIdTurnLastCompleted !== parsed) {
+          showToast("Turn SysId complete");
+        }
+        sysIdTurnInitialized = true;
+      }
+      state.sysIdTurnLastCompleted = parsed;
+      break;
+    }
     case contract.toDashboard + contract.keys.visionStatus:
       state.visionStatus = parseString(value);
       break;
@@ -423,6 +488,22 @@ function render() {
 
   const climb = [state.climbPhase || "UNKNOWN", state.climbLevel || 0].join(" • L");
   setText(ui.climb, climb);
+
+  const driveSysIdText = formatSysId(
+    state.sysIdDrivePhase,
+    state.sysIdDriveActive,
+    state.sysIdDriveLastCompleted
+  );
+  setText(ui.sysIdDrive, driveSysIdText);
+  applySysIdClass(ui.sysIdDrive, state.sysIdDrivePhase, state.sysIdDriveActive);
+
+  const turnSysIdText = formatSysId(
+    state.sysIdTurnPhase,
+    state.sysIdTurnActive,
+    state.sysIdTurnLastCompleted
+  );
+  setText(ui.sysIdTurn, turnSysIdText);
+  applySysIdClass(ui.sysIdTurn, state.sysIdTurnPhase, state.sysIdTurnActive);
 
   setText(ui.robotPose, formatPose(state.robotPose, true));
   setText(ui.target, formatTarget(state.targetType, state.targetPose, state.targetPoseValid));
@@ -484,6 +565,30 @@ function applyRecommendationClass(el, recommendation) {
   } else if (token.includes("COLLECT") || token.includes("DEFEND")) {
     el.classList.add("tile__v--bad");
   }
+}
+
+function applySysIdClass(el, phase, active) {
+  if (!el) return;
+  el.classList.remove("tile__v--ok", "tile__v--bad", "tile__v--warn");
+  if (active) {
+    el.classList.add("tile__v--ok");
+    return;
+  }
+  const token = (phase || "").toUpperCase();
+  if (token === "DONE") {
+    el.classList.add("tile__v--ok");
+  } else if (token && token !== "IDLE" && token !== "UNAVAILABLE") {
+    el.classList.add("tile__v--warn");
+  }
+}
+
+function formatSysId(phase, active, lastCompleted) {
+  const phaseText = phase || "UNKNOWN";
+  const statusText = active ? "ACTIVE" : "IDLE";
+  const lastText = Number.isFinite(lastCompleted)
+    ? `Last t=${round(lastCompleted, 1)}s`
+    : "Last --";
+  return `${phaseText} • ${statusText} • ${lastText}`;
 }
 
 function renderField() {
@@ -669,4 +774,14 @@ function resolveNtConnectionParams(params) {
   const portParsed = portRaw ? Number(portRaw) : NaN;
   const port = Number.isFinite(portParsed) ? portParsed : defaultNt4Port;
   return { host, port };
+}
+
+function showToast(message) {
+  if (!ui.toast) return;
+  ui.toast.innerText = message;
+  ui.toast.classList.add("toast--show");
+  window.clearTimeout(ui.toast._hideTimer);
+  ui.toast._hideTimer = window.setTimeout(() => {
+    ui.toast.classList.remove("toast--show");
+  }, 2500);
 }
