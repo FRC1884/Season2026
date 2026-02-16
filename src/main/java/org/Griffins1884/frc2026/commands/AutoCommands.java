@@ -29,6 +29,10 @@ public class AutoCommands {
             DriveCommands.alignToAfterCollectStartCommand(drive)));
 
     NamedCommands.registerCommand(
+            "DepotCollect",
+            superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+
+    NamedCommands.registerCommand(
         "Climb",
         Commands.sequence(
             superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
