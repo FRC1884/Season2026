@@ -102,7 +102,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       initialized = true;
     }
 
-    goalRad = clampGoal(goalRad);
     logOutputs(positionRad);
 
     if (DriverStation.isDisabled()) {
@@ -240,6 +239,8 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   private void logOutputs(double positionRad) {
     Logger.recordOutput(name + "/PositionRad", positionRad);
     Logger.recordOutput(name + "/GoalRad", goalRad);
+    Logger.recordOutput(name + "/PositionRotations", positionRad / (2.0 * Math.PI));
+    Logger.recordOutput(name + "/GoalRotations", goalRad / (2.0 * Math.PI));
     Logger.recordOutput(name + "/ErrorRad", goalRad - positionRad);
     Logger.recordOutput(name + "/AtGoal", isAtGoal());
     Logger.recordOutput(name + "/ControlMode", controlMode.toString());

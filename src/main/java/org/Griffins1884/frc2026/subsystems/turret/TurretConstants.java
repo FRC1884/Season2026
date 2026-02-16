@@ -8,8 +8,6 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class TurretConstants {
   public enum MotorController {
-    SPARK_MAX,
-    SPARK_FLEX,
     KRAKEN_X60,
     KRAKEN_X40
   }
@@ -38,12 +36,11 @@ public final class TurretConstants {
   public static final double MAX_VELOCITY_RAD_PER_SEC = Units.degreesToRadians(1440.0); // TODO
   public static final double MAX_ACCEL_RAD_PER_SEC2 = Units.degreesToRadians(2880.0); // TODO
 
-  public static final double MANUAL_PERCENT = 0.2; // TODO: tune manual speed
   public static final double MAX_VOLTAGE = 12.0;
 
-  public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 0.0);
-  public static final LoggedTunableNumber KI = new LoggedTunableNumber("Turret/PID/kI", 0.0);
-  public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 0.0);
+  public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 10.0);
+  public static final LoggedTunableNumber KI = new LoggedTunableNumber("Turret/PID/kI", 4.0);
+  public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 1.5);
 
   // Offset from robot center to turret mount (X forward, Y left).
   public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0.233, 0.233); // TODO

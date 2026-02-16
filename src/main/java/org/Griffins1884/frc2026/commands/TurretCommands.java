@@ -6,7 +6,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.Optional;
-import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
@@ -18,11 +17,6 @@ public final class TurretCommands {
 
   public static Command turretToZero(TurretSubsystem turret) {
     return Commands.runOnce(() -> turret.setGoalRad(0.0), turret);
-  }
-
-  public static Command turretOpenLoop(TurretSubsystem turret, DoubleSupplier percentSupplier) {
-    return Commands.runEnd(
-        () -> turret.setOpenLoop(percentSupplier.getAsDouble()), turret::stopOpenLoop, turret);
   }
 
   public static Command autoAimToTarget(

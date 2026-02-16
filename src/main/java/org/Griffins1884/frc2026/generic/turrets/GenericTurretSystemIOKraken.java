@@ -11,7 +11,6 @@ import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.util.Units;
 
 public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
@@ -128,8 +127,7 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
       lastKI = kI;
       lastKD = kD;
     }
-    double wrappedRad = MathUtil.inputModulus(positionRad, 0.0, 2.0 * Math.PI);
-    double positionRotations = (wrappedRad / (2.0 * Math.PI)) * gearRatio;
+    double positionRotations = (positionRad / (2.0 * Math.PI)) * gearRatio;
     lastPositionSetpointRotations = positionRotations;
     motor.setControl(positionRequest.withPosition(positionRotations));
   }

@@ -63,8 +63,6 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIO;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOKraken;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOSim;
-import org.Griffins1884.frc2026.subsystems.turret.TurretIOSparkFlex;
-import org.Griffins1884.frc2026.subsystems.turret.TurretIOSparkMax;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.*;
 import org.Griffins1884.frc2026.util.AutoStartPoseProvider;
@@ -176,13 +174,7 @@ public class RobotContainer {
     if (TURRET_ENABLED) {
       turret =
           switch (MODE) {
-            case REAL ->
-                new TurretSubsystem(
-                    switch (TurretConstants.MOTOR_CONTROLLER) {
-                      case SPARK_MAX -> new TurretIOSparkMax();
-                      case SPARK_FLEX -> new TurretIOSparkFlex();
-                      case KRAKEN_X60, KRAKEN_X40 -> new TurretIOKraken();
-                    });
+            case REAL -> new TurretSubsystem(new TurretIOKraken());
             case SIM -> new TurretSubsystem(new TurretIOSim());
             default -> new TurretSubsystem(new TurretIO() {});
           };
@@ -459,18 +451,6 @@ public class RobotContainer {
 
     if (turret == null) {
       return;
-    }
-    if (operator.manualTurretAxis() != null) {
-      while (operator.manualTurretAxis().getAsDouble() == -1
-          && (operator.manualPivotAxis().getAsDouble() != -1
-              || operator.manualPivotAxis().getAsDouble() != 1)) {
-        TurretCommands.turretOpenLoop(turret, () -> -TurretConstants.MANUAL_PERCENT);
-      }
-      while (operator.manualTurretAxis().getAsDouble() == 1
-          && (operator.manualPivotAxis().getAsDouble() != -1
-              || operator.manualPivotAxis().getAsDouble() != 1)) {
-        TurretCommands.turretOpenLoop(turret, () -> TurretConstants.MANUAL_PERCENT);
-      }
     }
     if (pivot == null) {
       return;
