@@ -5,7 +5,6 @@ import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -40,7 +39,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       new GenericTurretSystemIOInputsAutoLogged();
   private final Alert disconnected;
   private final ProfiledPIDController controller;
-  private SimpleMotorFeedforward feedforward;
   private final TurretConfig config;
   private final SysIdRoutine sysIdRoutine;
   private final int tuningId = System.identityHashCode(this);
@@ -63,9 +61,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
             new TrapezoidProfile.Constraints(
                 config.maxVelocityRadPerSec(), config.maxAccelRadPerSec2()));
     controller.setTolerance(config.positionToleranceRad());
-    feedforward =
-        new SimpleMotorFeedforward(
-            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
     disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
     sysIdRoutine =
         new SysIdRoutine(
@@ -132,17 +127,8 @@ public class GenericPositionTurretSystem extends SubsystemBase {
         config.gains().kP(),
         config.gains().kI(),
         config.gains().kD());
-    LoggedTunableNumber.ifChanged(
-        tuningId,
-        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
-        config.gains().kS(),
-        config.gains().kV(),
-        config.gains().kA());
-
     double pidOutput = controller.calculate(positionRad, goalRad);
-    double ffOutput = feedforward.calculate(controller.getSetpoint().velocity);
-    double outputVolts =
-        MathUtil.clamp(pidOutput + ffOutput, -config.maxVoltage(), config.maxVoltage());
+    double outputVolts = MathUtil.clamp(pidOutput, -config.maxVoltage(), config.maxVoltage());
     io.setVoltage(outputVolts);
   }
 

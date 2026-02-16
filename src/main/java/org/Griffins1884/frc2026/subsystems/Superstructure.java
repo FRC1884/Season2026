@@ -544,10 +544,8 @@ public class Superstructure extends SubsystemBase {
     setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
-    if (turret != null && !isTurretExternallyControlled()) {
-      double desired =
-          MathUtil.clamp(
-              TurretConstants.TEST_GOAL_RAD.get(), 0.0, 2.0 * Math.PI);
+    if (turret != null) {
+      double desired = MathUtil.clamp(TurretConstants.TEST_GOAL_RAD.get(), 0.0, 2.0 * Math.PI);
       turret.setGoalRad(desired);
       lastTurretAction = "TEST_GOAL";
     } else {
