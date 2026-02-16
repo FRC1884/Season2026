@@ -12,7 +12,36 @@
     }
    }
   },
-  "poses":{}
+  "poses":{
+   "CollectEnd":{
+    "x":{
+     "exp":"7.7 m",
+     "val":7.7
+    },
+    "y":{
+     "exp":"0.9 m",
+     "val":0.9
+    },
+    "heading":{
+     "exp":"0 rad",
+     "val":0.0
+    }
+   },
+   "CollectStart":{
+    "x":{
+     "exp":"7.7 m",
+     "val":7.7
+    },
+    "y":{
+     "exp":"6 m",
+     "val":6.0
+    },
+    "heading":{
+     "exp":"90 deg",
+     "val":1.5707963267948966
+    }
+   }
+  }
  },
  "config":{
   "frontLeft":{
