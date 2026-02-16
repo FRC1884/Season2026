@@ -102,7 +102,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       initialized = true;
     }
 
-    goalRad = clampGoal(goalRad);
     logOutputs(positionRad);
 
     if (DriverStation.isDisabled()) {

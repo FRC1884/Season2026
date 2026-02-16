@@ -3,7 +3,6 @@ package org.Griffins1884.frc2026.subsystems;
 import static org.Griffins1884.frc2026.Config.Subsystems.*;
 import static org.Griffins1884.frc2026.GlobalConstants.MODE;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -372,31 +371,16 @@ public class Superstructure extends SubsystemBase {
   private void applyManualJog() {
     double turretAxis = manualTurretAxis.getAsDouble();
     double pivotAxis = manualPivotAxis.getAsDouble();
-    if (turret != null) {
-      double deadbanded = MathUtil.applyDeadband(turretAxis, 0.05);
-      if (Math.abs(deadbanded) > 0.0) {
-        double boundedAxis = MathUtil.clamp(deadbanded, -1.0, 1.0);
-        double newGoal = (boundedAxis + 1.0) * Math.PI;
-        turret.setGoalRad(newGoal);
-        lastTurretAction = "MANUAL_GOAL";
-      } else {
-        holdTurret();
-      }
-    }
     if (arms.shooterPivot != null) {
       double percent =
           (SuperstructureConstants.MANUAL_JOG_VOLTAGE / ShooterPivotConstants.MAX_VOLTAGE)
               * pivotAxis;
       arms.shooterPivot.setOpenLoop(percent);
     }
-    Logger.recordOutput("Superstructure/ManualTurretAxis", turretAxis);
     Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
   }
 
   private void stopManualJog() {
-    if (turret != null) {
-      turret.stopOpenLoop();
-    }
     if (arms.shooterPivot != null) {
       arms.shooterPivot.stopOpenLoop();
     }
@@ -550,8 +534,7 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
     if (turret != null) {
-      double desired = MathUtil.clamp(TurretConstants.TEST_GOAL_RAD.get(), 0.0, 2.0 * Math.PI);
-      turret.setGoalRad(desired);
+      turret.setGoalRad(TurretConstants.TEST_GOAL_RAD.get());
       lastTurretAction = "TEST_GOAL";
     } else {
       holdTurret();
