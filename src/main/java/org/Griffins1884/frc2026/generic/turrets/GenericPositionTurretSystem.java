@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import lombok.Getter;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -44,8 +45,8 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   private final SysIdRoutine sysIdRoutine;
   private final int tuningId = System.identityHashCode(this);
 
-  private ControlMode controlMode = ControlMode.CLOSED_LOOP;
-  private double goalRad = 0.0;
+  @Getter private ControlMode controlMode = ControlMode.CLOSED_LOOP;
+  @Getter private double goalRad = 0.0;
   private double openLoopPercent = 0.0;
   private boolean initialized = false;
   private double zeroOffsetRad = 0.0;
@@ -141,10 +142,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     this.goalRad = clampedGoal;
   }
 
-  public double getGoalRad() {
-    return goalRad;
-  }
-
   public void setOpenLoop(double percent) {
     openLoopPercent = MathUtil.clamp(percent, -1.0, 1.0);
     controlMode = ControlMode.OPEN_LOOP;
@@ -152,7 +149,7 @@ public class GenericPositionTurretSystem extends SubsystemBase {
 
   public void stopOpenLoop() {
     openLoopPercent = 0.0;
-    setGoalRad(getPositionRad());
+    controlMode = ControlMode.CLOSED_LOOP;
   }
 
   public boolean isAtGoal() {
@@ -181,10 +178,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
 
   public double getAbsolutePositionRad() {
     return inputs.absolutePositionRad;
-  }
-
-  public ControlMode getControlMode() {
-    return controlMode;
   }
 
   public void setBrakeMode(boolean enabled) {

@@ -167,13 +167,6 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  public boolean isAutoStateEnabled() {
-    return autoStateEnabled;
-  }
-
-  public void toggleAutoStateEnabled() {
-    setAutoStateEnabled(!autoStateEnabled);
-  }
 
   public void bindManualControlSuppliers(DoubleSupplier turretAxis, DoubleSupplier pivotAxis) {
     manualTurretAxis = turretAxis != null ? turretAxis : () -> 0.0;
@@ -182,6 +175,10 @@ public class Superstructure extends SubsystemBase {
 
   public void clearStateOverride() {
     stateOverrideActive = false;
+  }
+
+  public void toggleManualControl() {
+    manualControlActive = !manualControlActive;
   }
 
   public StateRequestResult requestStateFromDashboard(SuperState state) {
@@ -223,7 +220,6 @@ public class Superstructure extends SubsystemBase {
       Logger.recordOutput(
           "Superstructure/AutoState", autoState != null ? autoState.toString() : "UNKNOWN");
     }
-    manualControlActive = !autoStateEnabled && requestedState != SuperState.TESTING;
     if (requestedState != currentState) {
       enterState(requestedState);
       currentState = requestedState;
@@ -371,9 +367,15 @@ public class Superstructure extends SubsystemBase {
   private void applyManualJog() {
     double turretAxis = manualTurretAxis.getAsDouble();
     double pivotAxis = manualPivotAxis.getAsDouble();
+    if (turret != null) {
+      double percent =
+              (SuperstructureConstants.MANUAL_JOG_VOLTAGE)
+                      * turretAxis;
+      turret.setOpenLoop(percent);
+    }
     if (arms.shooterPivot != null) {
       double percent =
-          (SuperstructureConstants.MANUAL_JOG_VOLTAGE / ShooterPivotConstants.MAX_VOLTAGE)
+          (SuperstructureConstants.MANUAL_JOG_VOLTAGE)
               * pivotAxis;
       arms.shooterPivot.setOpenLoop(percent);
     }
@@ -381,6 +383,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void stopManualJog() {
+    if (turret != null) {
+      turret.stopOpenLoop();
+    }
     if (arms.shooterPivot != null) {
       arms.shooterPivot.stopOpenLoop();
     }
