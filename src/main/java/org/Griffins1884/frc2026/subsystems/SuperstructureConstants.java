@@ -7,7 +7,7 @@ public final class SuperstructureConstants {
       new LoggedTunableNumber("Superstructure/BallCurrentAmps", 15.0);
   public static final LoggedTunableNumber BALL_PRESENCE_DEBOUNCE_SEC =
       new LoggedTunableNumber("Superstructure/BallPresenceDebounceSec", 0.15);
-  public static final boolean AUTO_STOP_ON_EMPTY = true;
+  public static final boolean AUTO_STOP_ON_EMPTY = false;
   public static final LoggedTunableNumber CLIMB_EXTEND_HEIGHT_METERS =
       new LoggedTunableNumber("Superstructure/ClimbExtendHeightMeters", 1.0);
   public static final LoggedTunableNumber CLIMB_LATCH_HEIGHT_METERS =

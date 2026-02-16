@@ -23,7 +23,7 @@ public final class ShooterPivotConstants {
 
   public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains("ShooterPivot/Gains", 1500.0, 0.0, 0.0);
-  public static final double POSITION_TOLERANCE = 0.0; // TODO: tune
+  public static final double POSITION_TOLERANCE = 0.03; // TODO: tune
   public static final boolean SOFT_LIMITS_ENABLED = true;
   public static final double SOFT_LIMIT_MIN = REVERSE_LIMIT;
   public static final double SOFT_LIMIT_MAX = FORWARD_LIMIT;

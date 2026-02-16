@@ -20,8 +20,6 @@ public final class TurretConstants {
 
   public static final double GEAR_RATIO = 42;
   // this code is accurate for the 2026 season!
-  public static final double ABSOLUTE_ENCODER_GEAR_RATIO =
-      1.0; // TODO: absolute encoder rotations per turret rotation
   public static final boolean USE_ABSOLUTE_ENCODER =
       false; // TODO: set true if absolute encoder is available
   // this code is accurate for the 2026 season as of 30/1/26!

@@ -462,7 +462,6 @@ public class Superstructure extends SubsystemBase {
       rollers.shooter.clearGoalOverride();
     }
     if (arms.intakePivot != null) {
-      arms.intakePivot.stopOpenLoop();
       arms.intakePivot.clearGoalOverride();
     }
     if (arms.shooterPivot != null) {
@@ -474,8 +473,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyIntaking() {
-    boolean intakeReady = arms.intakePivot == null || arms.intakePivot.isAtGoal();
-    setIntakeGoal(intakeReady ? IntakeGoal.FORWARD : IntakeGoal.IDLING);
+    setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
