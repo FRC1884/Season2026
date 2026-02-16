@@ -24,7 +24,7 @@ public class AutoCommands {
     NamedCommands.registerCommand(
         "Collect",
         Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
-        new AutoAlignToFuelCommand(drive),
+        AutoAlignToFuelCommand.alignToFuelCommand(drive),
         DriveCommands.alignToAfterCollectStartCommand(drive)));
 
     NamedCommands.registerCommand(
