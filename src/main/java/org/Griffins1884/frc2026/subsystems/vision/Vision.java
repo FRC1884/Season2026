@@ -18,6 +18,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +37,8 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
   private final Alert[] outlierAlerts;
+  private final Deque<YawSample>[] yawHistory;
+  private final double[] lastAcceptedTimestampsSec;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
@@ -80,6 +84,16 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     for (int i = 0; i < inputs.length; i++) {
       inputs[i] = new VisionIOInputsAutoLogged();
     }
+
+    @SuppressWarnings("unchecked")
+    Deque<YawSample>[] yawHistoryInit = new ArrayDeque[io.length];
+    for (int i = 0; i < yawHistoryInit.length; i++) {
+      yawHistoryInit[i] = new ArrayDeque<>();
+    }
+    yawHistory = yawHistoryInit;
+
+    lastAcceptedTimestampsSec = new double[io.length];
+    Arrays.fill(lastAcceptedTimestampsSec, Double.NEGATIVE_INFINITY);
 
     this.disconnectedAlerts = new Alert[io.length];
     for (int i = 0; i < inputs.length; i++) {
@@ -264,6 +278,17 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     return Double.isFinite(value);
   }
 
+  private static double wrapDegrees(double degrees) {
+    double wrapped = degrees % 360.0;
+    if (wrapped > 180.0) {
+      wrapped -= 360.0;
+    }
+    if (wrapped < -180.0) {
+      wrapped += 360.0;
+    }
+    return wrapped;
+  }
+
   private void periodicLimelight() {
     double startTime = Timer.getFPGATimestamp();
     if (poseHistory != null) {
@@ -298,7 +323,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       String cameraLabel = io[i].getCameraConstants().cameraName();
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
       logLimelightDiagnostics(cameraLabel, inputs[i]);
-      estimates.add(buildLimelightEstimate(inputs[i]));
+      estimates.add(buildLimelightEstimate(i, cameraLabel, inputs[i]));
 
       boolean isOutlier =
           inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
@@ -345,7 +370,8 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
   }
 
-  private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(VisionIO.VisionIOInputs cam) {
+  private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(
+      int cameraIndex, String cameraLabel, VisionIO.VisionIOInputs cam) {
     if (!cam.connected || cam.megatagPoseEstimate == null) {
       return Optional.empty();
     }
@@ -354,7 +380,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         && !containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
       return Optional.empty();
     }
-    System.out.println("1");
     Pose2d fieldToRobot = cam.megatagPoseEstimate.fieldToRobot();
     if (!isFinitePose(fieldToRobot) || !isWithinFieldBounds(fieldToRobot)) {
       return Optional.empty();
@@ -367,18 +392,75 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
     double qualityUsed = sanitizeQuality(cam.megatagPoseEstimate.quality());
-    if (tagCount == 1
-        && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
-      return Optional.empty();
+    if (!DriverStation.isDisabled()) {
+      if (tagCount == 1
+          && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
+        return Optional.empty();
+      }
     }
     LimelightStdDevs stdDevs = computeLimelightStdDevs(cam, indexBase, qualityUsed);
     if (stdDevs == null || !stdDevs.finite()) {
       return Optional.empty();
     }
 
-    double thetaStd = stdDevs.theta();
-    if (AprilTagVisionConstants.ignoreMegatag2Rotation()) {
-      thetaStd = AprilTagVisionConstants.getLimelightLargeVariance();
+    double timestampSeconds = cam.megatagPoseEstimate.timestampSeconds();
+    if (!isTimestampInOrder(cameraIndex, timestampSeconds)) {
+      if (cameraLabel != null) {
+        String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+        Logger.recordOutput(prefix + "/OutOfOrder", true);
+        Logger.recordOutput(prefix + "/LastAccepted", lastAcceptedTimestampsSec[cameraIndex]);
+        Logger.recordOutput(prefix + "/Current", timestampSeconds);
+      }
+      return Optional.empty();
+    }
+
+    boolean allowYawGate = !AprilTagVisionConstants.ignoreMegatag2Rotation();
+    double thetaStd =
+        allowYawGate ? stdDevs.theta() : AprilTagVisionConstants.getLimelightLargeVariance();
+
+    double frameAgeSec =
+        Math.max(0.0, Timer.getFPGATimestamp() - timestampSeconds);
+    double gyroYawDeg =
+        getReferencePose(timestampSeconds)
+            .map(pose -> Math.toDegrees(pose.getRotation().getRadians()))
+            .orElse(0.0);
+    double visionYawDeg = Math.toDegrees(fieldToRobot.getRotation().getRadians());
+    double yawRateDegPerSec =
+        yawRateRadPerSecSupplier != null
+            ? Math.toDegrees(yawRateRadPerSecSupplier.getAsDouble())
+            : 0.0;
+    boolean yawGate = false;
+    YawGateResult yawGateResult = YawGateResult.disabled();
+    if (allowYawGate) {
+      yawGateResult =
+          evaluateYawGate(
+              cameraIndex,
+              cam,
+              visionYawDeg,
+              gyroYawDeg,
+              yawRateDegPerSec,
+              frameAgeSec,
+              cam.residualTranslationMeters);
+      yawGate = yawGateResult.passed();
+      if (yawGate) {
+        thetaStd = AprilTagVisionConstants.getLimelightYawStdDevStableRad();
+      } else {
+        thetaStd = AprilTagVisionConstants.getLimelightYawStdDevUnstable();
+      }
+    }
+    if (cameraLabel != null) {
+      String prefix = "AprilTagVision/" + cameraLabel + "/YawGate";
+      Logger.recordOutput(prefix + "/Pass", yawGate);
+      Logger.recordOutput(prefix + "/ResidualDeg", yawGateResult.residualDeg());
+      Logger.recordOutput(prefix + "/FrameAgeSec", frameAgeSec);
+      Logger.recordOutput(prefix + "/TagCountOk", yawGateResult.tagCountOk());
+      Logger.recordOutput(prefix + "/DistanceOk", yawGateResult.distanceOk());
+      Logger.recordOutput(prefix + "/YawRateOk", yawGateResult.yawRateOk());
+      Logger.recordOutput(prefix + "/FrameAgeOk", yawGateResult.frameAgeOk());
+      Logger.recordOutput(prefix + "/ResidualOk", yawGateResult.residualOk());
+      Logger.recordOutput(prefix + "/YawResidualOk", yawGateResult.yawResidualOk());
+      Logger.recordOutput(prefix + "/StableWindowOk", yawGateResult.stableOk());
+      Logger.recordOutput(prefix + "/ThetaStdUsed", thetaStd);
     }
     Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), thetaStd);
     if (!DriverStation.isDisabled()) {
@@ -389,9 +471,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
     }
 
+    markTimestampAccepted(cameraIndex, timestampSeconds);
     return Optional.of(
-        new VisionFieldPoseEstimate(
-            fieldToRobot, cam.megatagPoseEstimate.timestampSeconds(), visionStdDevs, tagCount));
+        new VisionFieldPoseEstimate(fieldToRobot, timestampSeconds, visionStdDevs, tagCount));
   }
 
   private VisionFieldPoseEstimate fuseEstimates(
@@ -451,6 +533,101 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     double time = b.timestampSeconds();
 
     return new VisionFieldPoseEstimate(fusedPose, time, fusedStdDev, numTags);
+  }
+
+  private void recordYawResidual(int cameraIndex, double timestampSeconds, double residualDeg) {
+    if (cameraIndex < 0 || cameraIndex >= yawHistory.length) {
+      return;
+    }
+    Deque<YawSample> history = yawHistory[cameraIndex];
+    history.addLast(new YawSample(timestampSeconds, residualDeg));
+    int maxSamples = Math.max(1, AprilTagVisionConstants.getLimelightYawGateStableWindow());
+    while (history.size() > maxSamples) {
+      history.removeFirst();
+    }
+  }
+
+  private boolean isYawStable(int cameraIndex) {
+    if (cameraIndex < 0 || cameraIndex >= yawHistory.length) {
+      return false;
+    }
+    Deque<YawSample> history = yawHistory[cameraIndex];
+    int required = Math.max(1, AprilTagVisionConstants.getLimelightYawGateStableWindow());
+    if (history.size() < required) {
+      return false;
+    }
+    double maxDelta = AprilTagVisionConstants.getLimelightYawGateStableDeltaDeg();
+    Double first = null;
+    for (YawSample sample : history) {
+      if (first == null) {
+        first = sample.residualDeg;
+        continue;
+      }
+      if (Math.abs(sample.residualDeg - first) > maxDelta) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private YawGateResult evaluateYawGate(
+      int cameraIndex,
+      VisionIO.VisionIOInputs cam,
+      double visionYawDeg,
+      double gyroYawDeg,
+      double yawRateDegPerSec,
+      double frameAgeSec,
+      double residualTranslationMeters) {
+    if (!AprilTagVisionConstants.isLimelightYawGateEnabled() || cam.megatagPoseEstimate == null) {
+      return YawGateResult.disabled();
+    }
+    int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
+    boolean tagCountOk = tagCount >= 2;
+    boolean distOk =
+        cam.megatagPoseEstimate.avgTagDist()
+            <= AprilTagVisionConstants.getLimelightYawGateMaxDistMeters();
+    boolean yawRateOk =
+        Math.abs(yawRateDegPerSec)
+            <= AprilTagVisionConstants.getLimelightYawGateMaxYawRateDegPerSec();
+    boolean frameAgeOk = frameAgeSec <= AprilTagVisionConstants.getLimelightYawGateMaxFrameAgeSec();
+    boolean residualOk =
+        residualTranslationMeters
+            <= AprilTagVisionConstants.getLimelightYawGateMaxResidualMeters();
+    double yawResidual = wrapDegrees(visionYawDeg - gyroYawDeg);
+    boolean yawResidualOk =
+        Math.abs(yawResidual) <= AprilTagVisionConstants.getLimelightYawGateMaxYawResidualDeg();
+
+    boolean prereqOk = tagCountOk && distOk && yawRateOk && frameAgeOk && residualOk && yawResidualOk;
+    boolean stableOk = false;
+    if (prereqOk) {
+      recordYawResidual(cameraIndex, cam.megatagPoseEstimate.timestampSeconds(), yawResidual);
+      stableOk = isYawStable(cameraIndex);
+    }
+    boolean passed = prereqOk && stableOk;
+    return new YawGateResult(
+        passed,
+        tagCountOk,
+        distOk,
+        yawRateOk,
+        frameAgeOk,
+        residualOk,
+        yawResidualOk,
+        stableOk,
+        yawResidual);
+  }
+
+  private boolean isTimestampInOrder(int cameraIndex, double timestampSeconds) {
+    if (cameraIndex < 0 || cameraIndex >= lastAcceptedTimestampsSec.length) {
+      return true;
+    }
+    return timestampSeconds > lastAcceptedTimestampsSec[cameraIndex];
+  }
+
+  private void markTimestampAccepted(int cameraIndex, double timestampSeconds) {
+    if (cameraIndex < 0 || cameraIndex >= lastAcceptedTimestampsSec.length) {
+      return;
+    }
+    lastAcceptedTimestampsSec[cameraIndex] = timestampSeconds;
   }
 
   private void logCameraInputs(String prefix, VisionIO.VisionIOInputs cam) {
@@ -718,6 +895,23 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         previous = sample;
       }
       return Optional.empty();
+    }
+  }
+
+  private record YawSample(double timestampSeconds, double residualDeg) {}
+
+  private record YawGateResult(
+      boolean passed,
+      boolean tagCountOk,
+      boolean distanceOk,
+      boolean yawRateOk,
+      boolean frameAgeOk,
+      boolean residualOk,
+      boolean yawResidualOk,
+      boolean stableOk,
+      double residualDeg) {
+    private static YawGateResult disabled() {
+      return new YawGateResult(false, false, false, false, false, false, false, false, 0.0);
     }
   }
 

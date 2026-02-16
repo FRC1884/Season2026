@@ -10,14 +10,12 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
-import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 // TODO tune all of these!! Make sure that the robot-relative coords are correct - this will cause
 // rapid pose oscillation
 public final class AprilTagVisionConstants {
   public static final boolean IS_LIMELIGHT = true;
-  public static final boolean usingMegaTag = true;
   public static final boolean LEFT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {
@@ -90,14 +88,6 @@ public final class AprilTagVisionConstants {
                 VisionIO.CameraType.OV9281);
       };
 
-  public static final DoubleSupplier TRANSLATION_EULER_MULTIPLIER =
-      new LoggedTunableNumber("AprilTagVision/EulerMultipliers/Translation", 0.02);
-  public static final DoubleSupplier ROTATION_EULER_MULTIPLIER =
-      new LoggedTunableNumber("AprilTagVision/EulerMultipliers/Rotation", 0.06);
-
-  public static final double MAX_AMBIGUITY_CUTOFF = 0.3;
-  public static final double MAX_Z_ERROR = 0.75;
-
   private static final LoggedTunableNumber VISION_STDDEV_X =
       new LoggedTunableNumber("AprilTagVision/StdDev/X", 2.0);
   private static final LoggedTunableNumber VISION_STDDEV_Y =
@@ -115,9 +105,6 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/MaxYawRateDegPerSec", 180.0);
   private static final LoggedTunableNumber FIELD_BORDER_MARGIN_METERS =
       new LoggedTunableNumber("AprilTagVision/FieldBorderMarginMeters", 0.5);
-  public static final int LIMELIGHT_MEGATAG1_X_STDDEV_INDEX = 0;
-  public static final int LIMELIGHT_MEGATAG1_Y_STDDEV_INDEX = 1;
-  public static final int LIMELIGHT_MEGATAG1_YAW_STDDEV_INDEX = 2;
   public static final int LIMELIGHT_MEGATAG2_X_STDDEV_INDEX = 3;
   public static final int LIMELIGHT_MEGATAG2_Y_STDDEV_INDEX = 4;
   public static final int LIMELIGHT_MEGATAG2_YAW_STDDEV_INDEX = 5;
@@ -133,6 +120,27 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/StdDev/MT2/Y", 0.7);
   private static final LoggedTunableNumber LIMELIGHT_MT2_STDDEV_YAW =
       new LoggedTunableNumber("AprilTagVision/Limelight/StdDev/MT2/YawDeg", 4.0);
+
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_ENABLED =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/Enabled", 1.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_DIST_METERS =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxDistanceMeters", 2.5);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_YAW_RATE_DEG_PER_SEC =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxYawRateDegPerSec", 30.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_RESIDUAL_METERS =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxResidualMeters", 0.25);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_YAW_RESIDUAL_DEG =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxYawResidualDeg", 5.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxFrameAgeSec", 0.08);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_STABLE_WINDOW =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/StableWindow", 5.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_STABLE_DELTA_DEG =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/StableDeltaDeg", 2.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_STDDEV_STABLE_DEG =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/StableYawStdDevDeg", 8.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_STDDEV_UNSTABLE =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/UnstableYawStdDev", 1e6);
 
   public static final double TAG_PRESENCE_WEIGHT = 10;
   public static final double DISTANCE_WEIGHT = 7;
@@ -182,5 +190,45 @@ public final class AprilTagVisionConstants {
 
   public static double getLimelightLargeVariance() {
     return LIMELIGHT_LARGE_VARIANCE.get();
+  }
+
+  public static boolean isLimelightYawGateEnabled() {
+    return LIMELIGHT_YAW_GATE_ENABLED.get() > 0.5;
+  }
+
+  public static double getLimelightYawGateMaxDistMeters() {
+    return LIMELIGHT_YAW_GATE_MAX_DIST_METERS.get();
+  }
+
+  public static double getLimelightYawGateMaxYawRateDegPerSec() {
+    return LIMELIGHT_YAW_GATE_MAX_YAW_RATE_DEG_PER_SEC.get();
+  }
+
+  public static double getLimelightYawGateMaxResidualMeters() {
+    return LIMELIGHT_YAW_GATE_MAX_RESIDUAL_METERS.get();
+  }
+
+  public static double getLimelightYawGateMaxYawResidualDeg() {
+    return LIMELIGHT_YAW_GATE_MAX_YAW_RESIDUAL_DEG.get();
+  }
+
+  public static double getLimelightYawGateMaxFrameAgeSec() {
+    return LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC.get();
+  }
+
+  public static int getLimelightYawGateStableWindow() {
+    return Math.max(1, (int) Math.round(LIMELIGHT_YAW_GATE_STABLE_WINDOW.get()));
+  }
+
+  public static double getLimelightYawGateStableDeltaDeg() {
+    return LIMELIGHT_YAW_GATE_STABLE_DELTA_DEG.get();
+  }
+
+  public static double getLimelightYawStdDevStableRad() {
+    return Math.toRadians(LIMELIGHT_YAW_STDDEV_STABLE_DEG.get());
+  }
+
+  public static double getLimelightYawStdDevUnstable() {
+    return LIMELIGHT_YAW_STDDEV_UNSTABLE.get();
   }
 }
