@@ -119,6 +119,13 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       io.setVoltage(clampedPercent * config.maxVoltage());
       return;
     }
+    double kP = config.gains().kP().get();
+    double kI = config.gains().kI().get();
+    double kD = config.gains().kD().get();
+    if (io.usesInternalPositionControl()) {
+      io.setPositionSetpoint(goalRad, kP, kI, kD);
+      return;
+    }
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> controller.setPID(values[0], values[1], values[2]),

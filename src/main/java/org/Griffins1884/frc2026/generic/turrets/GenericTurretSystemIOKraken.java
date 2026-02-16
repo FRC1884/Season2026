@@ -7,6 +7,7 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -19,9 +20,14 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
   private final TalonFX motor;
   private final TalonFXConfiguration config = new TalonFXConfiguration();
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
+  private final PositionTorqueCurrentFOC positionRequest =
+      new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final double gearRatio;
   private final double absoluteGearRatio;
   private final CANcoder absoluteEncoder;
+  private double lastKP = Double.NaN;
+  private double lastKI = Double.NaN;
+  private double lastKD = Double.NaN;
 
   private final StatusSignal<?> positionSignal;
   private final StatusSignal<?> velocitySignal;
@@ -78,6 +84,15 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
     config.CurrentLimits.StatorCurrentLimitEnable = true;
+    config.TorqueCurrent.PeakForwardTorqueCurrent = currentLimitAmps;
+    config.TorqueCurrent.PeakReverseTorqueCurrent = -currentLimitAmps;
+    config.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.02;
+    config.Slot0.kP = 0.0;
+    config.Slot0.kI = 0.0;
+    config.Slot0.kD = 0.0;
+    config.Slot0.kS = 0.0;
+    config.Slot0.kV = 0.0;
+    config.Slot0.kA = 0.0;
     tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
 
     if (cancoderId >= 0) {
@@ -154,6 +169,26 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
   }
 
   @Override
+  public boolean usesInternalPositionControl() {
+    return true;
+  }
+
+  @Override
+  public void setPositionSetpoint(double positionRad, double kP, double kI, double kD) {
+    if (pidChanged(kP, kI, kD)) {
+      config.Slot0.kP = kP;
+      config.Slot0.kI = kI;
+      config.Slot0.kD = kD;
+      tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
+      lastKP = kP;
+      lastKI = kI;
+      lastKD = kD;
+    }
+    double positionRotations = Units.radiansToRotations(positionRad) * gearRatio;
+    motor.setControl(positionRequest.withPosition(positionRotations));
+  }
+
+  @Override
   public void setBrakeMode(boolean enabled) {
     TalonFXConfiguration updated = new TalonFXConfiguration();
     motor.getConfigurator().refresh(updated);
@@ -164,5 +199,14 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
   @Override
   public void setPosition(double positionRad) {
     motor.setPosition(Units.radiansToRotations(positionRad) * gearRatio);
+  }
+
+  private boolean pidChanged(double kP, double kI, double kD) {
+    if (Double.isNaN(lastKP) || Double.isNaN(lastKI) || Double.isNaN(lastKD)) {
+      return true;
+    }
+    return Double.compare(kP, lastKP) != 0
+        || Double.compare(kI, lastKI) != 0
+        || Double.compare(kD, lastKD) != 0;
   }
 }
