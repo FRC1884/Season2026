@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.AddressableLEDBufferView;
 import edu.wpi.first.wpilibj.LEDPattern;
 import edu.wpi.first.wpilibj.util.Color;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Contains the methods that dictate simulated behavior for LEDs. <br>
@@ -24,55 +25,118 @@ public class LEDIOPWM implements LEDIO {
   private final AddressableLEDBufferView[] views;
 
   private final LEDPattern[] patterns;
+  private boolean enabled = true;
 
   public LEDIOPWM() {
-    led = new AddressableLED(LED_PORT);
-    buffer = new AddressableLEDBuffer(LED_LENGTH);
+    AddressableLED ledLocal = null;
+    AddressableLEDBuffer bufferLocal = null;
+    AddressableLEDBufferView[] viewsLocal = null;
+    LEDPattern[] patternsLocal = null;
+    try {
+      ledLocal = new AddressableLED(LED_PORT);
+      bufferLocal = new AddressableLEDBuffer(LED_LENGTH);
 
-    views = new AddressableLEDBufferView[LEDConstants.SEGMENTS.length];
-    patterns = new LEDPattern[LEDConstants.SEGMENTS.length];
+      viewsLocal = new AddressableLEDBufferView[LEDConstants.SEGMENTS.length];
+      patternsLocal = new LEDPattern[LEDConstants.SEGMENTS.length];
 
-    for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
-      LEDConstants.Segment segment = LEDConstants.SEGMENTS[i];
-      views[i] = buffer.createView(segment.start(), segment.start() + segment.length() - 1);
+      for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
+        LEDConstants.Segment segment = LEDConstants.SEGMENTS[i];
+        viewsLocal[i] =
+            bufferLocal.createView(segment.start(), segment.start() + segment.length() - 1);
 
-      if (segment.reversed()) {
-        views[i] = views[i].reversed();
+        if (segment.reversed()) {
+          viewsLocal[i] = viewsLocal[i].reversed();
+        }
+
+        patternsLocal[i] = LEDPattern.solid(LEDConstants.IDLE_COLOR).breathe(BREATHE_SPEED);
+        patternsLocal[i].applyTo(viewsLocal[i]);
       }
 
-      patterns[i] = LEDPattern.solid(Color.kBlue).breathe(BREATHE_SPEED);
-      patterns[i].applyTo(views[i]);
+      ledLocal.setLength(bufferLocal.getLength());
+      ledLocal.start();
+    } catch (RuntimeException ex) {
+      enabled = false;
+      Logger.recordOutput("LED/DisabledReason", "InitFailure");
     }
 
-    System.out.println(patterns.length);
-
-    led.setLength(buffer.getLength());
-    led.start();
+    led = ledLocal;
+    buffer = bufferLocal;
+    views = viewsLocal;
+    patterns = patternsLocal;
   }
 
   public void setPattern(int idx, LEDPattern pattern) {
-    pattern.applyTo(views[idx]);
+    if (!enabled || pattern == null || views == null) {
+      return;
+    }
+    try {
+      pattern.applyTo(views[idx]);
+    } catch (RuntimeException ex) {
+      disableOutputs("SetPatternFailure");
+    }
   }
 
   public void setPatterns(LEDPattern[] patterns) {
-    System.arraycopy(patterns, 0, this.patterns, 0, LEDConstants.SEGMENTS.length);
+    if (!enabled || patterns == null || this.patterns == null) {
+      return;
+    }
+    try {
+      System.arraycopy(patterns, 0, this.patterns, 0, LEDConstants.SEGMENTS.length);
+    } catch (RuntimeException ex) {
+      disableOutputs("SetPatternsFailure");
+    }
   }
 
   public void setAllPattern(LEDPattern pattern) {
-    for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
-      this.patterns[i] = pattern;
+    if (!enabled || this.patterns == null) {
+      return;
+    }
+    try {
+      for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
+        this.patterns[i] = pattern;
+      }
+    } catch (RuntimeException ex) {
+      disableOutputs("SetAllPatternFailure");
     }
   }
 
   public void periodic() {
-    for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
-      patterns[i].applyTo(views[i]);
+    if (!enabled || patterns == null || views == null || led == null) {
+      return;
     }
-    led.setData(buffer);
+    try {
+      for (int i = 0; i < LEDConstants.SEGMENTS.length; i++) {
+        patterns[i].applyTo(views[i]);
+      }
+      led.setData(buffer);
+    } catch (RuntimeException ex) {
+      disableOutputs("PeriodicFailure");
+    }
   }
 
   @Override
   public void close() {
-    led.close();
+    if (led != null) {
+      led.close();
+    }
+    enabled = false;
+  }
+
+  private void disableOutputs(String reason) {
+    try {
+      if (views != null && buffer != null && led != null) {
+        LEDPattern off = LEDPattern.solid(Color.kBlack);
+        for (AddressableLEDBufferView view : views) {
+          if (view != null) {
+            off.applyTo(view);
+          }
+        }
+        led.setData(buffer);
+      }
+    } catch (RuntimeException ex) {
+      // Ignore failures while attempting to clear LEDs.
+    }
+    enabled = false;
+    Logger.recordOutput("LED/DisabledReason", reason);
   }
 }

@@ -40,6 +40,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
   private Integer exclusiveTagId = null;
+  private double ignoreVisionUntilTimestamp = 0.0;
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -267,6 +268,13 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     double startTime = Timer.getFPGATimestamp();
     if (poseHistory != null) {
       poseHistory.update(startTime);
+    }
+
+    if (startTime < ignoreVisionUntilTimestamp) {
+      Logger.recordOutput("Vision/usingVision", false);
+      Logger.recordOutput("Vision/rejectReason", "RESET_SUPPRESS");
+      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+      return;
     }
 
     double yawRateDegPerSec =
@@ -683,6 +691,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       }
     }
 
+    private void clear() {
+      samples.clear();
+    }
+
     private Optional<Pose2d> getFieldToRobot(double timestampSeconds) {
       if (samples.isEmpty()) {
         return Optional.empty();
@@ -715,6 +727,16 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
   public void clearExclusiveTagId() {
     exclusiveTagId = -1;
+  }
+
+  public void resetPoseHistory() {
+    if (poseHistory != null) {
+      poseHistory.clear();
+    }
+  }
+
+  public void suppressVisionForSeconds(double seconds) {
+    ignoreVisionUntilTimestamp = Timer.getFPGATimestamp() + Math.max(0.0, seconds);
   }
 
   private boolean containsFiducialId(int[] ids, int target) {

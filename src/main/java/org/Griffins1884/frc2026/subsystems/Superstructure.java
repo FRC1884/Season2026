@@ -107,6 +107,7 @@ public class Superstructure extends SubsystemBase {
   @Setter private boolean shooterPivotExternalControl = false;
   private DoubleSupplier manualTurretAxis = () -> 0.0;
   private DoubleSupplier manualPivotAxis = () -> 0.0;
+  private Supplier<Optional<Pose2d>> autoStartPoseSupplier = Optional::empty;
 
   private final Debouncer ballPresentDebouncer =
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
@@ -147,12 +148,11 @@ public class Superstructure extends SubsystemBase {
       leds.setDefaultCommand(
           leds.ledCommand(
               DriverStation::isEnabled,
-              DriverStation::isFMSAttached,
-              () -> (DriverStation.getMatchTime() <= 30),
-              () -> true,
-              () -> false,
-              () -> false,
-              () -> false));
+              () -> drive != null ? drive.getPose() : null,
+              this::getAutoStartPose,
+              this::getCurrentState,
+              this::hasBall,
+              this::getClimbPhaseName));
     }
   }
 
@@ -202,6 +202,14 @@ public class Superstructure extends SubsystemBase {
 
   public boolean hasBall() {
     return isBallPresent();
+  }
+
+  public void setAutoStartPoseSupplier(Supplier<Optional<Pose2d>> supplier) {
+    autoStartPoseSupplier = supplier != null ? supplier : Optional::empty;
+  }
+
+  private Optional<Pose2d> getAutoStartPose() {
+    return autoStartPoseSupplier.get();
   }
 
   @Override

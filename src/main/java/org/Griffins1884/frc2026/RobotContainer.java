@@ -67,6 +67,7 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretIOSparkFlex;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOSparkMax;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.*;
+import org.Griffins1884.frc2026.util.AutoStartPoseProvider;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -101,6 +102,7 @@ public class RobotContainer {
   private final Superstructure superstructure;
   private final Vision vision;
   private boolean autoAllianceZeroed = false;
+  private final AutoStartPoseProvider autoStartPoseProvider = new AutoStartPoseProvider();
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -363,6 +365,7 @@ public class RobotContainer {
       autoChooser = new LoggedDashboardChooser<>("Auto Choices");
       autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
     }
+    superstructure.setAutoStartPoseSupplier(this::getSelectedAutoStartPose);
     if (SHOOTER_PIVOT_ENABLED) {
       pivot = superstructure.getArms().shooterPivot;
     } else {
@@ -526,6 +529,18 @@ public class RobotContainer {
     return selected == characterizationIdleCommand ? null : selected;
   }
 
+  private Optional<Pose2d> getSelectedAutoStartPose() {
+    if (autoChooser == null) {
+      return Optional.empty();
+    }
+    Command selected = autoChooser.get();
+    if (selected == null || selected == autoIdleCommand) {
+      return Optional.empty();
+    }
+    String autoName = selected.getName();
+    return autoStartPoseProvider.getStartPoseForAuto(autoName);
+  }
+
   public Command getDriveSysIdCommand() {
     if (!DRIVETRAIN_ENABLED || drive == null) {
       return Commands.none();
@@ -554,6 +569,10 @@ public class RobotContainer {
       return;
     }
     drive.zeroGyroAndOdometryToAllianceWall(alliance.get());
+    if (vision != null) {
+      vision.resetPoseHistory();
+      vision.suppressVisionForSeconds(0.35);
+    }
     autoAllianceZeroed = true;
     Logger.recordOutput("Odometry/AutoAllianceZeroed", true);
   }
