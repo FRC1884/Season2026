@@ -8,7 +8,9 @@ public class TurretSubsystem extends GenericPositionTurretSystem {
         "Turret",
         io,
         new TurretConfig(
-            TurretConstants.GAINS,
+            TurretConstants.KP,
+            TurretConstants.KI,
+            TurretConstants.KD,
             TurretConstants.POSITION_TOLERANCE_RAD,
             TurretConstants.MAX_VELOCITY_RAD_PER_SEC,
             TurretConstants.MAX_ACCEL_RAD_PER_SEC2,

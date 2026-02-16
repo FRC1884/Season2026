@@ -8,8 +8,6 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class TurretConstants {
   public enum MotorController {
-    SPARK_MAX,
-    SPARK_FLEX,
     KRAKEN_X60,
     KRAKEN_X40
   }
@@ -38,7 +36,6 @@ public final class TurretConstants {
   public static final double MAX_VELOCITY_RAD_PER_SEC = Units.degreesToRadians(1440.0); // TODO
   public static final double MAX_ACCEL_RAD_PER_SEC2 = Units.degreesToRadians(2880.0); // TODO
 
-  public static final double MANUAL_PERCENT = 0.2; // TODO: tune manual speed
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 0.0);

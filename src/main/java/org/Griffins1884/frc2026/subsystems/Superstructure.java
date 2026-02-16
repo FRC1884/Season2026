@@ -224,7 +224,7 @@ public class Superstructure extends SubsystemBase {
       Logger.recordOutput(
           "Superstructure/AutoState", autoState != null ? autoState.toString() : "UNKNOWN");
     }
-    manualControlActive = !autoStateEnabled;
+    manualControlActive = !autoStateEnabled && requestedState != SuperState.TESTING;
     if (requestedState != currentState) {
       enterState(requestedState);
       currentState = requestedState;
@@ -373,10 +373,15 @@ public class Superstructure extends SubsystemBase {
     double turretAxis = manualTurretAxis.getAsDouble();
     double pivotAxis = manualPivotAxis.getAsDouble();
     if (turret != null) {
-      double percent =
-          (SuperstructureConstants.MANUAL_JOG_VOLTAGE / TurretConstants.MAX_VOLTAGE) * turretAxis;
-      turret.setOpenLoop(percent);
-      lastTurretAction = "MANUAL_OPEN_LOOP";
+      double deadbanded = MathUtil.applyDeadband(turretAxis, 0.05);
+      if (Math.abs(deadbanded) > 0.0) {
+        double boundedAxis = MathUtil.clamp(deadbanded, -1.0, 1.0);
+        double newGoal = (boundedAxis + 1.0) * Math.PI;
+        turret.setGoalRad(newGoal);
+        lastTurretAction = "MANUAL_GOAL";
+      } else {
+        holdTurret();
+      }
     }
     if (arms.shooterPivot != null) {
       double percent =
