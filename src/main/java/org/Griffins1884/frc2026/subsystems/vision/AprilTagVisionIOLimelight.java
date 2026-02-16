@@ -7,6 +7,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -64,14 +65,12 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     //        public PoseObservation[] poseObservations = new PoseObservation[0];
     //        public int[] tagIds = new int[0];
 
-    if (Math.abs(drive.getYawRateDegreesPerSec()) <= cameraConstants.cameraType().noisySpeed) {
-      applyImuMode(1);
-
-      double yawDeg = drive.getRawGyroRotation().getDegrees();
-      LimelightHelpers.SetRobotOrientation(limelightName, yawDeg, 0.0, 0, 0, 0, 0);
-    }
-
-    applyImuMode(4);
+    int desiredImuMode = DriverStation.isDisabled() ? 1 : 4;
+    applyImuMode(desiredImuMode);
+    double yawDeg = drive.getRawGyroRotation().getDegrees();
+    double yawRateDegPerSec = drive.getYawRateDegreesPerSec();
+    LimelightHelpers.SetRobotOrientation(
+        limelightName, yawDeg, 0.0, 0.0, yawRateDegPerSec, 0.0, 0.0);
     long lastChange = table.getEntry("tl").getLastChange();
     long now = RobotController.getFPGATime();
     inputs.connected = lastChange > 0 && (now - lastChange) < DISCONNECT_TIMEOUT_MICROS;
