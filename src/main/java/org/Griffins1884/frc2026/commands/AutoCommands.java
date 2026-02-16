@@ -4,9 +4,11 @@ import com.pathplanner.lib.auto.NamedCommands;
 import edu.wpi.first.wpilibj2.command.Commands;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.subsystems.vision.Vision;
 
 public class AutoCommands {
-  public static void registerAutoCommands(Superstructure superstructure, SwerveSubsystem drive) {
+  public static void registerAutoCommands(
+      Superstructure superstructure, SwerveSubsystem drive, Vision vision) {
     NamedCommands.registerCommand(
         "Shoot", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
 
@@ -33,7 +35,7 @@ public class AutoCommands {
         "ShootAndClimb",
         Commands.sequence(
             superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING),
-            DriveCommands.alignToClimbCommand(drive),
+            DriveCommands.alignToClimbCommand(drive, vision),
             superstructure.setSuperStateCmd(Superstructure.SuperState.AUTO_CLIMB)));
   }
 }

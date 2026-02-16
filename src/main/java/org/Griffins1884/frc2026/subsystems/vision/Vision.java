@@ -39,7 +39,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
-  private int exclusiveTagId = -1;
+  private Integer exclusiveTagId = null;
 
   /**
    * Creates a Vision system for PhotonVision inputs.
@@ -342,26 +342,27 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return Optional.empty();
     }
 
-    if (!containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
+    if (exclusiveTagId != null
+        && !containsFiducialId(cam.megatagPoseEstimate.fiducialIds(), exclusiveTagId)) {
       return Optional.empty();
     }
-
+    System.out.println("1");
     Pose2d fieldToRobot = cam.megatagPoseEstimate.fieldToRobot();
     if (!isFinitePose(fieldToRobot) || !isWithinFieldBounds(fieldToRobot)) {
       return Optional.empty();
     }
 
     int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
-    // if (tagCount <= 0) {
-    //   return Optional.empty();
-    // }
+    if (tagCount <= 0) {
+      return Optional.empty();
+    }
     int indexBase = AprilTagVisionConstants.LIMELIGHT_MEGATAG2_X_STDDEV_INDEX;
 
     double qualityUsed = sanitizeQuality(cam.megatagPoseEstimate.quality());
-    // if (tagCount == 1
-    //     && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
-    //   return Optional.empty();
-    // }
+    if (tagCount == 1
+        && qualityUsed < AprilTagVisionConstants.getMegatag2SingleTagQualityCutoff()) {
+      return Optional.empty();
+    }
     LimelightStdDevs stdDevs = computeLimelightStdDevs(cam, indexBase, qualityUsed);
     if (stdDevs == null || !stdDevs.finite()) {
       return Optional.empty();
@@ -597,7 +598,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     Logger.recordOutput(prefix + "/StdDevsFinite", stdDevsFinite);
     Logger.recordOutput(prefix + "/WouldAccept", wouldAccept);
     Logger.recordOutput(prefix + "/ResidualTranslationMeters", cam.residualTranslationMeters);
-    Logger.recordOutput("ExclusiveTagActive", exclusiveTagId != -1);
+    Logger.recordOutput("ExclusiveTagActive", exclusiveTagId != null);
 
     cam.rejectReason = rejectReason;
   }
@@ -709,7 +710,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   }
 
   public void setExclusiveTagId(int id) {
-      exclusiveTagId = id;
+    exclusiveTagId = id;
   }
 
   public void clearExclusiveTagId() {
@@ -721,9 +722,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return false;
     }
     for (int id : ids) {
-        if (id == target) {
-          return true;
-        }
+      if (id == target) {
+        return true;
+      }
     }
     return false;
   }

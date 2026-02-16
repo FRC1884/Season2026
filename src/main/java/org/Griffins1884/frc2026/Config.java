@@ -46,7 +46,7 @@ public final class Config {
       return switch (ROBOT) {
         case COMPBOT -> new XboxDriverMap(DRIVER_PORT);
         case CRESCENDO -> new PS5DriverMap(DRIVER_PORT);
-        case DEVBOT -> new XboxDriverMap(DRIVER_PORT);
+        case DEVBOT -> new PS5DriverMap(DRIVER_PORT);
         case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
       };
     }

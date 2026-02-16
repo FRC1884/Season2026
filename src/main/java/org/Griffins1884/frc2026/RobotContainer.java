@@ -99,7 +99,7 @@ public class RobotContainer {
   private final Command characterizationIdleCommand;
 
   private final Superstructure superstructure;
-  private final VisionTargetProvider vision;
+  private final Vision vision;
   private boolean autoAllianceZeroed = false;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -202,12 +202,6 @@ public class RobotContainer {
           new OperatorBoardTracker(new OperatorBoardIOServer(), superstructure, drive, turret);
     } else {
       operatorBoard = null;
-    }
-
-    if (AUTONOMOUS_ENABLED) {
-      if (drive != null) {
-        AutoCommands.registerAutoCommands(superstructure, drive);
-      }
     }
 
     if (VISION_ENABLED) {
@@ -323,6 +317,12 @@ public class RobotContainer {
           drive.sysIdTurnDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
     }
 
+    if (AUTONOMOUS_ENABLED) {
+      if (drive != null && vision != null) {
+        AutoCommands.registerAutoCommands(superstructure, drive, vision);
+      }
+    }
+
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
     if (turret != null) {
       Command turretSysIdFull =
@@ -396,8 +396,8 @@ public class RobotContainer {
       driver.alignWithBall().whileTrue(new AutoAlignToFuelCommand(drive));
 
       // align to the climb target
-      driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive));
-      driver.leftAlign().whileTrue(DriveCommands.alignToClimbHolonomicCommand(drive));
+      driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive, vision));
+      driver.leftAlign().whileTrue(DriveCommands.alignToClimbHolonomicCommand(drive, vision));
 
       driver
           .slowMode()
