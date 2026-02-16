@@ -182,9 +182,14 @@ public class LEDSubsystem extends SubsystemBase {
       return LEDOutputValue.all(LEDPattern.solid(FERRY_COLOR));
     }
 
-    if (state == SuperState.ENDGAME_CLIMB
-        || state == SuperState.AUTO_CLIMB
-        || state == SuperState.CLIMB_DETACH) {
+    boolean climbState =
+        state == SuperState.ENDGAME_CLIMB
+            || state == SuperState.AUTO_CLIMB
+            || state == SuperState.CLIMB_DETACH;
+    boolean climbDone = isClimbDonePhase(climbPhase);
+    Logger.recordOutput("LED/ClimbState", climbState);
+    Logger.recordOutput("LED/ClimbDone", climbDone);
+    if (climbState && !climbDone) {
       Logger.recordOutput("LED/SegmentMask", 0b1111);
       Logger.recordOutput("LED/Pattern", "Enabled/Climb");
       return LEDOutputValue.all(getClimbPattern(climbPhase));
@@ -213,6 +218,11 @@ public class LEDSubsystem extends SubsystemBase {
     Logger.recordOutput("LED/SegmentMask", 0b1111);
     Logger.recordOutput("LED/Pattern", "Enabled/NoBall");
     return LEDOutputValue.all(pattern);
+  }
+
+  private boolean isClimbDonePhase(String climbPhase) {
+    String phase = climbPhase == null ? "" : climbPhase.toUpperCase();
+    return "DONE".equals(phase);
   }
 
   private LEDPattern getClimbPattern(String climbPhase) {

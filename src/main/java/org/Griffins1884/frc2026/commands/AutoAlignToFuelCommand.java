@@ -4,6 +4,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.littletonrobotics.junction.Logger;
@@ -25,11 +26,13 @@ public class AutoAlignToFuelCommand extends Command {
   private static final double MAX_ROTATION_RAD_PER_SEC = 45.0;
 
   private static final double FORWARD_SPEED_MPS = 3.5;
+  private static final double MAX_RUNTIME_SEC = 6.0;
 
   // ---------------- Internal state ----------------
 
   private final SwerveSubsystem drive;
   private final NetworkTable limelight;
+  private final Timer timer = new Timer();
 
   private boolean locked = false;
   private double lockedTxDeg = 0.0;
@@ -56,6 +59,8 @@ public class AutoAlignToFuelCommand extends Command {
     lockedTxDeg = 0.0;
     smoothedTxDeg = 0.0;
     lostFrames = 0;
+    timer.reset();
+    timer.start();
   }
 
   @Override
@@ -114,11 +119,12 @@ public class AutoAlignToFuelCommand extends Command {
 
   @Override
   public void end(boolean interrupted) {
+    timer.stop();
     drive.runVelocity(new ChassisSpeeds());
   }
 
   @Override
   public boolean isFinished() {
-    return false; // runs until interrupted
+    return timer.hasElapsed(MAX_RUNTIME_SEC);
   }
 }

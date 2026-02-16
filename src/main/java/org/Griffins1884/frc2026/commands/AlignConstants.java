@@ -1,5 +1,8 @@
 package org.Griffins1884.frc2026.commands;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
@@ -40,14 +43,28 @@ public final class AlignConstants {
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_DEADBAND =
       new LoggedTunableNumber("Align/Gains/Feedforward/DeadbandMeters", 0.02);
 
+  public static final LoggedTunableNumber AFTER_COLLECT_START_X_METERS =
+      new LoggedTunableNumber("Align/AfterCollectStart/XMeters", 7.7);
+  public static final LoggedTunableNumber AFTER_COLLECT_START_Y_METERS =
+      new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.0);
+  public static final LoggedTunableNumber AFTER_COLLECT_START_HEADING_DEG =
+      new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 90.0);
+
   public static AlignGains getAlignGains() {
     return new AlignGains(
         ALIGN_TRANSLATION_GAINS,
         ALIGN_ROTATION_GAINS,
         new FeedforwardGains(
             ALIGN_FEEDFORWARD_KV.get(),
-            ALIGN_FEEDFORWARD_DEADBAND.get(),
-            ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
+        ALIGN_FEEDFORWARD_DEADBAND.get(),
+        ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
+  }
+
+  public static Pose2d getAfterCollectStartPose() {
+    return new Pose2d(
+        new Translation2d(
+            AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
+        Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get()));
   }
 
   /** Feedforward definition for translation alignment. */

@@ -23,7 +23,9 @@ public class AutoCommands {
 
     NamedCommands.registerCommand(
         "Collect",
-        Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING)));
+        Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
+        new AutoAlignToFuelCommand(drive),
+        DriveCommands.alignToAfterCollectStartCommand(drive)));
 
     NamedCommands.registerCommand(
         "Climb",

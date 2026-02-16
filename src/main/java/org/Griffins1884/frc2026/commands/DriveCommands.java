@@ -235,6 +235,16 @@ public class DriveCommands {
         Set.of(drive));
   }
 
+  public static Command alignToAfterCollectStartCommand(SwerveSubsystem drive) {
+    return Commands.defer(
+        () -> {
+          Pose2d target = AlignConstants.getAfterCollectStartPose();
+          Logger.recordOutput("Autonomy/AlignTargetAfterCollectStart", target);
+          return new AutoAlignToPoseHolonomicCommand(drive, target);
+        },
+        Set.of(drive));
+  }
+
   /**
    * Measures the velocity feedforward constants for the drive motors.
    *
