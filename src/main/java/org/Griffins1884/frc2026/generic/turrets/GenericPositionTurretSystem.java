@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -22,7 +21,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   }
 
   public record TurretConfig(
-      GlobalConstants.Gains gains,
+      LoggedTunableNumber kP,
+      LoggedTunableNumber kI,
+      LoggedTunableNumber kD,
       double positionToleranceRad,
       double maxVelocityRadPerSec,
       double maxAccelRadPerSec2,
@@ -55,9 +56,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     this.config = config;
     controller =
         new ProfiledPIDController(
-            config.gains().kP().get(),
-            config.gains().kI().get(),
-            config.gains().kD().get(),
+            config.kP().get(),
+            config.kI().get(),
+            config.kD().get(),
             new TrapezoidProfile.Constraints(
                 config.maxVelocityRadPerSec(), config.maxAccelRadPerSec2()));
     controller.setTolerance(config.positionToleranceRad());
@@ -114,9 +115,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       io.setVoltage(clampedPercent * config.maxVoltage());
       return;
     }
-    double kP = config.gains().kP().get();
-    double kI = config.gains().kI().get();
-    double kD = config.gains().kD().get();
+    double kP = config.kP().get();
+    double kI = config.kI().get();
+    double kD = config.kD().get();
     if (io.usesInternalPositionControl()) {
       io.setPositionSetpoint(goalRad, kP, kI, kD);
       return;
@@ -124,9 +125,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> controller.setPID(values[0], values[1], values[2]),
-        config.gains().kP(),
-        config.gains().kI(),
-        config.gains().kD());
+        config.kP(),
+        config.kI(),
+        config.kD());
     double pidOutput = controller.calculate(positionRad, goalRad);
     double outputVolts = MathUtil.clamp(pidOutput, -config.maxVoltage(), config.maxVoltage());
     io.setVoltage(outputVolts);

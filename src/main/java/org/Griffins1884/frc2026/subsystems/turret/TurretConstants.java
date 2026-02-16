@@ -4,7 +4,6 @@ import static java.lang.Math.PI;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class TurretConstants {
@@ -42,8 +41,9 @@ public final class TurretConstants {
   public static final double MANUAL_PERCENT = 0.2; // TODO: tune manual speed
   public static final double MAX_VOLTAGE = 12.0;
 
-  public static final GlobalConstants.Gains GAINS =
-      new GlobalConstants.Gains("Turret/Gains", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 0.0);
+  public static final LoggedTunableNumber KI = new LoggedTunableNumber("Turret/PID/kI", 0.0);
+  public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 0.0);
 
   // Offset from robot center to turret mount (X forward, Y left).
   public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0.233, 0.233); // TODO
