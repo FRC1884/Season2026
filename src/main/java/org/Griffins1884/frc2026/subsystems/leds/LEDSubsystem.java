@@ -47,6 +47,7 @@ public class LEDSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     io.periodic();
+    io.updateInputs(inputs);
     Logger.processInputs("LED", inputs);
   }
 
@@ -80,8 +81,11 @@ public class LEDSubsystem extends SubsystemBase {
             Pose2d realPose = robotPoseSupplier.get();
             Optional<Pose2d> targetPose = autoStartPoseSupplier.get();
             if (realPose != null && targetPose.isPresent()) {
+              Logger.recordOutput("LED/Mode", "Disabled/Align");
               setPattern(getFieldAlignPattern(realPose, targetPose.get()));
             } else {
+              Logger.recordOutput("LED/Mode", "Disabled/Idle");
+              Logger.recordOutput("LED/SegmentMask", 0b1111);
               setPattern(LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR)));
             }
             return;
@@ -89,6 +93,10 @@ public class LEDSubsystem extends SubsystemBase {
           SuperState state = currentStateSupplier.get();
           boolean hasBall = hasBallSupplier.getAsBoolean();
           String climbPhase = climbPhaseSupplier.get();
+          Logger.recordOutput("LED/Mode", "Enabled");
+          Logger.recordOutput("LED/SuperState", state == null ? "UNKNOWN" : state.name());
+          Logger.recordOutput("LED/HasBall", hasBall);
+          Logger.recordOutput("LED/ClimbPhase", climbPhase == null ? "" : climbPhase);
           setPattern(getTeleopPattern(state, hasBall, climbPhase));
         });
   }
@@ -105,6 +113,11 @@ public class LEDSubsystem extends SubsystemBase {
     double yError = delta.getY();
 
     if (Math.abs(xError) <= TRANSLATION_TOLERANCE && Math.abs(yError) <= TRANSLATION_TOLERANCE) {
+      Logger.recordOutput("LED/Align/XError", xError);
+      Logger.recordOutput("LED/Align/YError", yError);
+      Logger.recordOutput("LED/Align/Aligned", true);
+      Logger.recordOutput("LED/SegmentMask", 0b1111);
+      Logger.recordOutput("LED/Pattern", "Align/Ok");
       return LEDOutputValue.all(LEDPattern.solid(ALIGN_OK_COLOR));
     }
 
@@ -129,6 +142,25 @@ public class LEDSubsystem extends SubsystemBase {
             ? LEDPattern.solid(ALIGN_LESS_COLOR).blink(blinkSpeed)
             : LEDPattern.solid(Color.kBlack);
 
+    int segmentMask = 0;
+    if (yError > TRANSLATION_TOLERANCE) {
+      segmentMask |= 0b0001;
+    }
+    if (xError > TRANSLATION_TOLERANCE) {
+      segmentMask |= 0b0010;
+    }
+    if (yError < -TRANSLATION_TOLERANCE) {
+      segmentMask |= 0b0100;
+    }
+    if (xError < -TRANSLATION_TOLERANCE) {
+      segmentMask |= 0b1000;
+    }
+    Logger.recordOutput("LED/Align/XError", xError);
+    Logger.recordOutput("LED/Align/YError", yError);
+    Logger.recordOutput("LED/Align/Aligned", false);
+    Logger.recordOutput("LED/SegmentMask", segmentMask);
+    Logger.recordOutput("LED/Pattern", "Align/Directional");
+
     return new LEDOutputValue[] {
       new LEDOutputValue(left, LEFT),
       new LEDOutputValue(front, FRONT),
@@ -139,20 +171,28 @@ public class LEDSubsystem extends SubsystemBase {
 
   private LEDOutputValue[] getTeleopPattern(SuperState state, boolean hasBall, String climbPhase) {
     if (state == null) {
+      Logger.recordOutput("LED/SegmentMask", 0b1111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Unknown");
       return LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR));
     }
 
     if (state == SuperState.FERRYING) {
+      Logger.recordOutput("LED/SegmentMask", 0b1111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Ferrying");
       return LEDOutputValue.all(LEDPattern.solid(FERRY_COLOR));
     }
 
     if (state == SuperState.ENDGAME_CLIMB
         || state == SuperState.AUTO_CLIMB
         || state == SuperState.CLIMB_DETACH) {
+      Logger.recordOutput("LED/SegmentMask", 0b1111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Climb");
       return LEDOutputValue.all(getClimbPattern(climbPhase));
     }
 
     if (state == SuperState.IDLING) {
+      Logger.recordOutput("LED/SegmentMask", 0b1111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Idle");
       return LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR));
     }
 
@@ -161,6 +201,8 @@ public class LEDSubsystem extends SubsystemBase {
       if (!HAS_BALL_SOLID) {
         pattern = pattern.breathe(BREATHE_SPEED);
       }
+      Logger.recordOutput("LED/SegmentMask", 0b1111);
+      Logger.recordOutput("LED/Pattern", "Enabled/HasBall");
       return LEDOutputValue.all(pattern);
     }
 
@@ -168,6 +210,8 @@ public class LEDSubsystem extends SubsystemBase {
     if (NO_BALL_BREATHE) {
       pattern = pattern.breathe(BREATHE_SPEED);
     }
+    Logger.recordOutput("LED/SegmentMask", 0b1111);
+    Logger.recordOutput("LED/Pattern", "Enabled/NoBall");
     return LEDOutputValue.all(pattern);
   }
 

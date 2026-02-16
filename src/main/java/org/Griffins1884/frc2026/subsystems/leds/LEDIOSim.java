@@ -26,6 +26,8 @@ public class LEDIOSim implements LEDIO {
 
   private final LEDPattern[] patterns;
   private boolean enabled = true;
+  private boolean lastUpdateOk = false;
+  private String disabledReason = "";
 
   public LEDIOSim() {
     AddressableLED ledLocal = null;
@@ -56,6 +58,7 @@ public class LEDIOSim implements LEDIO {
       ledLocal.start();
     } catch (RuntimeException ex) {
       enabled = false;
+      disabledReason = "InitFailure";
       Logger.recordOutput("LED/DisabledReason", "InitFailure");
     }
 
@@ -110,9 +113,20 @@ public class LEDIOSim implements LEDIO {
       }
 
       led.setData(buffer);
+      lastUpdateOk = true;
     } catch (RuntimeException ex) {
       disableOutputs("PeriodicFailure");
     }
+  }
+
+  @Override
+  public void updateInputs(LEDIOInputs inputs) {
+    inputs.enabled = enabled;
+    inputs.hardwarePresent = led != null && buffer != null && views != null && patterns != null;
+    inputs.lastUpdateOk = lastUpdateOk;
+    inputs.length = buffer != null ? buffer.getLength() : 0;
+    inputs.segmentCount = LEDConstants.SEGMENTS.length;
+    inputs.disabledReason = disabledReason;
   }
 
   @Override
@@ -121,6 +135,7 @@ public class LEDIOSim implements LEDIO {
       led.close();
     }
     enabled = false;
+    disabledReason = "Closed";
   }
 
   private void disableOutputs(String reason) {
@@ -138,6 +153,8 @@ public class LEDIOSim implements LEDIO {
       // Ignore failures while attempting to clear LEDs.
     }
     enabled = false;
+    lastUpdateOk = false;
+    disabledReason = reason;
     Logger.recordOutput("LED/DisabledReason", reason);
   }
 }

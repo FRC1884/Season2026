@@ -11,8 +11,16 @@ public interface LEDIO {
   /** LEDs don't read any sensors, so this inner class should be left empty. */
   @AutoLog
   class LEDIOInputs {
-    // No sensors so no inputs
+    public boolean enabled = true;
+    public boolean hardwarePresent = false;
+    public boolean lastUpdateOk = false;
+    public int length = 0;
+    public int segmentCount = 0;
+    public String disabledReason = "";
   }
+
+  /** Updates the set of loggable inputs. */
+  default void updateInputs(LEDIOInputs inputs) {}
 
   default void setPattern(int idx, LEDPattern pattern) {}
 
