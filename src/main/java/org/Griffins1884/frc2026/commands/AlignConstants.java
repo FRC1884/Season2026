@@ -46,9 +46,9 @@ public final class AlignConstants {
   public static final LoggedTunableNumber AFTER_COLLECT_START_X_METERS =
       new LoggedTunableNumber("Align/AfterCollectStart/XMeters", 7.7);
   public static final LoggedTunableNumber AFTER_COLLECT_START_Y_METERS =
-      new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.0);
+      new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.5);
   public static final LoggedTunableNumber AFTER_COLLECT_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 90.0);
+      new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 220.0);
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
