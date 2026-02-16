@@ -5,29 +5,27 @@ import static org.Griffins1884.frc2026.util.PhoenixUtil.tryUntilOk;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
-import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
-import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
-import com.ctre.phoenix6.signals.SensorDirectionValue;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.util.Units;
 
 public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
+  private static final double TICKS_PER_ROTATION = 2048.0;
   private final TalonFX motor;
   private final TalonFXConfiguration config = new TalonFXConfiguration();
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
   private final PositionTorqueCurrentFOC positionRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final double gearRatio;
-  private final double absoluteGearRatio;
-  private final CANcoder absoluteEncoder;
   private double lastKP = Double.NaN;
   private double lastKI = Double.NaN;
   private double lastKD = Double.NaN;
+  private double lastPositionSetpointRotations = Double.NaN;
 
   private final StatusSignal<?> positionSignal;
   private final StatusSignal<?> velocitySignal;
@@ -35,11 +33,10 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
   private final StatusSignal<?> supplyCurrentSignal;
   private final StatusSignal<?> torqueCurrentSignal;
   private final StatusSignal<?> tempSignal;
-  private final StatusSignal<?> absolutePositionSignal;
 
   public GenericTurretSystemIOKraken(
       int id, int currentLimitAmps, boolean invert, boolean brake, double gearRatio) {
-    this(id, currentLimitAmps, invert, brake, gearRatio, -1, false, 1.0, new CANBus("rio"));
+    this(id, currentLimitAmps, invert, brake, gearRatio, new CANBus("rio"));
   }
 
   public GenericTurretSystemIOKraken(
@@ -48,33 +45,8 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
       boolean invert,
       boolean brake,
       double gearRatio,
-      int cancoderId,
-      boolean cancoderInverted,
-      double absoluteGearRatio) {
-    this(
-        id,
-        currentLimitAmps,
-        invert,
-        brake,
-        gearRatio,
-        cancoderId,
-        cancoderInverted,
-        absoluteGearRatio,
-        new CANBus("rio"));
-  }
-
-  public GenericTurretSystemIOKraken(
-      int id,
-      int currentLimitAmps,
-      boolean invert,
-      boolean brake,
-      double gearRatio,
-      int cancoderId,
-      boolean cancoderInverted,
-      double absoluteGearRatio,
       CANBus canBus) {
     this.gearRatio = gearRatio;
-    this.absoluteGearRatio = absoluteGearRatio;
     motor = new TalonFX(id, canBus);
 
     config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
@@ -95,20 +67,6 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
     config.Slot0.kA = 0.0;
     tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
 
-    if (cancoderId >= 0) {
-      absoluteEncoder = new CANcoder(cancoderId, canBus);
-      CANcoderConfiguration cancoderConfig = new CANcoderConfiguration();
-      cancoderConfig.MagnetSensor.SensorDirection =
-          cancoderInverted
-              ? SensorDirectionValue.Clockwise_Positive
-              : SensorDirectionValue.CounterClockwise_Positive;
-      tryUntilOk(5, () -> absoluteEncoder.getConfigurator().apply(cancoderConfig, 0.25));
-      absolutePositionSignal = absoluteEncoder.getAbsolutePosition();
-    } else {
-      absoluteEncoder = null;
-      absolutePositionSignal = null;
-    }
-
     positionSignal = motor.getPosition();
     velocitySignal = motor.getVelocity();
     appliedVoltageSignal = motor.getMotorVoltage();
@@ -119,24 +77,13 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
 
   @Override
   public void updateInputs(GenericTurretSystemIOInputs inputs) {
-    if (absolutePositionSignal != null) {
-      BaseStatusSignal.refreshAll(
-          positionSignal,
-          velocitySignal,
-          appliedVoltageSignal,
-          supplyCurrentSignal,
-          torqueCurrentSignal,
-          tempSignal,
-          absolutePositionSignal);
-    } else {
-      BaseStatusSignal.refreshAll(
-          positionSignal,
-          velocitySignal,
-          appliedVoltageSignal,
-          supplyCurrentSignal,
-          torqueCurrentSignal,
-          tempSignal);
-    }
+    BaseStatusSignal.refreshAll(
+        positionSignal,
+        velocitySignal,
+        appliedVoltageSignal,
+        supplyCurrentSignal,
+        torqueCurrentSignal,
+        tempSignal);
 
     if (inputs.connected.length != 1) {
       inputs.connected = new boolean[] {true};
@@ -148,19 +95,16 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
     double velocityRotationsPerSec = velocitySignal.getValueAsDouble();
     inputs.positionRad = Units.rotationsToRadians(positionRotations) / gearRatio;
     inputs.velocityRadPerSec = Units.rotationsToRadians(velocityRotationsPerSec) / gearRatio;
+    inputs.motorPositionRotations = positionRotations;
+    inputs.motorPositionTicks = positionRotations * TICKS_PER_ROTATION;
+    inputs.motorGoalRotations = lastPositionSetpointRotations;
+    inputs.motorGoalTicks = lastPositionSetpointRotations * TICKS_PER_ROTATION;
     inputs.appliedVoltage = appliedVoltageSignal.getValueAsDouble();
     inputs.supplyCurrentAmps = supplyCurrentSignal.getValueAsDouble();
     inputs.torqueCurrentAmps = torqueCurrentSignal.getValueAsDouble();
     inputs.tempCelsius = tempSignal.getValueAsDouble();
-
-    if (absolutePositionSignal != null) {
-      inputs.absoluteConnected = true;
-      inputs.absolutePositionRad =
-          Units.rotationsToRadians(absolutePositionSignal.getValueAsDouble()) / absoluteGearRatio;
-    } else {
-      inputs.absoluteConnected = false;
-      inputs.absolutePositionRad = 0.0;
-    }
+    inputs.absoluteConnected = false;
+    inputs.absolutePositionRad = 0.0;
   }
 
   @Override
@@ -184,7 +128,9 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
       lastKI = kI;
       lastKD = kD;
     }
-    double positionRotations = Units.radiansToRotations(positionRad) * gearRatio;
+    double wrappedRad = MathUtil.inputModulus(positionRad, 0.0, 2.0 * Math.PI);
+    double positionRotations = (wrappedRad / (2.0 * Math.PI)) * gearRatio;
+    lastPositionSetpointRotations = positionRotations;
     motor.setControl(positionRequest.withPosition(positionRotations));
   }
 

@@ -9,9 +9,6 @@ public class TurretIOKraken extends GenericTurretSystemIOKraken implements Turre
         TurretConstants.CURRENT_LIMIT_AMPS,
         TurretConstants.INVERTED,
         TurretConstants.BRAKE_MODE,
-        TurretConstants.GEAR_RATIO,
-        TurretConstants.CANCODER_ID,
-        TurretConstants.CANCODER_INVERTED,
-        TurretConstants.ABSOLUTE_ENCODER_GEAR_RATIO);
+        TurretConstants.GEAR_RATIO);
   }
 }

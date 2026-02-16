@@ -258,5 +258,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     Logger.recordOutput(name + "/ControlMode", controlMode.toString());
     Logger.recordOutput(name + "/OpenLoopPercent", openLoopPercent);
     Logger.recordOutput(name + "/SetpointVelocityRadPerSec", controller.getSetpoint().velocity);
+    Logger.recordOutput(name + "/MotorPositionRotations", inputs.motorPositionRotations);
+    Logger.recordOutput(name + "/MotorPositionTicks", inputs.motorPositionTicks);
+    Logger.recordOutput(name + "/MotorGoalRotations", inputs.motorGoalRotations);
+    Logger.recordOutput(name + "/MotorGoalTicks", inputs.motorGoalTicks);
   }
 }

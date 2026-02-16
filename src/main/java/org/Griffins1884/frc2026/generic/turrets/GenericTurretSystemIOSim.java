@@ -37,6 +37,10 @@ public class GenericTurretSystemIOSim implements GenericTurretSystemIO {
     double rawPositionRad = sim.getAngularPositionRad() * invertSign;
     inputs.positionRad = rawPositionRad + positionOffsetRad;
     inputs.velocityRadPerSec = sim.getAngularVelocityRadPerSec() * invertSign;
+    inputs.motorPositionRotations = Double.NaN;
+    inputs.motorPositionTicks = Double.NaN;
+    inputs.motorGoalRotations = Double.NaN;
+    inputs.motorGoalTicks = Double.NaN;
     inputs.appliedVoltage = appliedVolts;
     inputs.supplyCurrentAmps = sim.getCurrentDrawAmps();
     inputs.torqueCurrentAmps = inputs.supplyCurrentAmps;

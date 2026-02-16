@@ -418,8 +418,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     double thetaStd =
         allowYawGate ? stdDevs.theta() : AprilTagVisionConstants.getLimelightLargeVariance();
 
-    double frameAgeSec =
-        Math.max(0.0, Timer.getFPGATimestamp() - timestampSeconds);
+    double frameAgeSec = Math.max(0.0, Timer.getFPGATimestamp() - timestampSeconds);
     double gyroYawDeg =
         getReferencePose(timestampSeconds)
             .map(pose -> Math.toDegrees(pose.getRotation().getRadians()))
@@ -591,13 +590,13 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             <= AprilTagVisionConstants.getLimelightYawGateMaxYawRateDegPerSec();
     boolean frameAgeOk = frameAgeSec <= AprilTagVisionConstants.getLimelightYawGateMaxFrameAgeSec();
     boolean residualOk =
-        residualTranslationMeters
-            <= AprilTagVisionConstants.getLimelightYawGateMaxResidualMeters();
+        residualTranslationMeters <= AprilTagVisionConstants.getLimelightYawGateMaxResidualMeters();
     double yawResidual = wrapDegrees(visionYawDeg - gyroYawDeg);
     boolean yawResidualOk =
         Math.abs(yawResidual) <= AprilTagVisionConstants.getLimelightYawGateMaxYawResidualDeg();
 
-    boolean prereqOk = tagCountOk && distOk && yawRateOk && frameAgeOk && residualOk && yawResidualOk;
+    boolean prereqOk =
+        tagCountOk && distOk && yawRateOk && frameAgeOk && residualOk && yawResidualOk;
     boolean stableOk = false;
     if (prereqOk) {
       recordYawResidual(cameraIndex, cam.megatagPoseEstimate.timestampSeconds(), yawResidual);

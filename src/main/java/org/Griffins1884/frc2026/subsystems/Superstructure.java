@@ -3,6 +3,7 @@ package org.Griffins1884.frc2026.subsystems;
 import static org.Griffins1884.frc2026.Config.Subsystems.*;
 import static org.Griffins1884.frc2026.GlobalConstants.MODE;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -543,7 +544,15 @@ public class Superstructure extends SubsystemBase {
     setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
-    holdTurret();
+    if (turret != null && !isTurretExternallyControlled()) {
+      double desired =
+          MathUtil.clamp(
+              TurretConstants.TEST_GOAL_RAD.get(), 0.0, 2.0 * Math.PI);
+      turret.setGoalRad(desired);
+      lastTurretAction = "TEST_GOAL";
+    } else {
+      holdTurret();
+    }
     stopClimber();
   }
 

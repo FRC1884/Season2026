@@ -14,6 +14,10 @@ public interface GenericTurretSystemIO {
     public double torqueCurrentAmps = 0.0;
     public double tempCelsius = 0.0;
     public double absolutePositionRad = 0.0;
+    public double motorPositionRotations = Double.NaN;
+    public double motorPositionTicks = Double.NaN;
+    public double motorGoalRotations = Double.NaN;
+    public double motorGoalTicks = Double.NaN;
   }
 
   default void updateInputs(GenericTurretSystemIOInputs inputs) {}

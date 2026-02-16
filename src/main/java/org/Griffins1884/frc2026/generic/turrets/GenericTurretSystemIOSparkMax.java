@@ -57,6 +57,10 @@ public class GenericTurretSystemIOSparkMax implements GenericTurretSystemIO {
     inputs.positionRad = Units.rotationsToRadians(relativeEncoder.getPosition()) / gearRatio;
     inputs.velocityRadPerSec =
         Units.rotationsPerMinuteToRadiansPerSecond(relativeEncoder.getVelocity()) / gearRatio;
+    inputs.motorPositionRotations = relativeEncoder.getPosition();
+    inputs.motorPositionTicks = Double.NaN;
+    inputs.motorGoalRotations = Double.NaN;
+    inputs.motorGoalTicks = Double.NaN;
     inputs.appliedVoltage = motor.getAppliedOutput() * motor.getBusVoltage();
     inputs.supplyCurrentAmps = motor.getOutputCurrent();
     inputs.torqueCurrentAmps = inputs.supplyCurrentAmps;

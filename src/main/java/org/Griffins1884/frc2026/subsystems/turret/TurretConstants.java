@@ -15,16 +15,13 @@ public final class TurretConstants {
     KRAKEN_X40
   }
 
-  public static final MotorController MOTOR_CONTROLLER = MotorController.SPARK_FLEX; // TODO
-  public static final int TURRET_ID = 12; // TODO: set turret motor CAN ID
+  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40; // TODO
+  public static final int TURRET_ID = 25; // TODO: set turret motor CAN ID
   public static final boolean INVERTED = false; // TODO: set inversion
   public static final int CURRENT_LIMIT_AMPS = 40; // TODO: set current limit
   public static final boolean BRAKE_MODE = true;
 
-  public static final int CANCODER_ID = -1; // TODO: set to enable absolute encoder
-  public static final boolean CANCODER_INVERTED = false; // TODO: set CANCoder inversion
-
-  public static final double GEAR_RATIO = 12.5;
+  public static final double GEAR_RATIO = 42;
   // this code is accurate for the 2026 season!
   public static final double ABSOLUTE_ENCODER_GEAR_RATIO =
       1.0; // TODO: absolute encoder rotations per turret rotation
@@ -55,6 +52,8 @@ public final class TurretConstants {
       new LoggedTunableNumber("Turret/SimTargetX", 4.5);
   public static final LoggedTunableNumber SIM_TARGET_Y =
       new LoggedTunableNumber("Turret/SimTargetY", 4.0);
+  public static final LoggedTunableNumber TEST_GOAL_RAD =
+      new LoggedTunableNumber("Turret/TestGoalRad", 0.0);
 
   public static final int SIM_MOTOR_COUNT = 1;
   public static final double SIM_MOI = 1; // TODO: update if sim is used

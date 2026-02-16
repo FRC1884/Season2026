@@ -56,14 +56,13 @@ public final class AlignConstants {
         ALIGN_ROTATION_GAINS,
         new FeedforwardGains(
             ALIGN_FEEDFORWARD_KV.get(),
-        ALIGN_FEEDFORWARD_DEADBAND.get(),
-        ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
+            ALIGN_FEEDFORWARD_DEADBAND.get(),
+            ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
   }
 
   public static Pose2d getAfterCollectStartPose() {
     return new Pose2d(
-        new Translation2d(
-            AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
+        new Translation2d(AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
         Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get()));
   }
 
