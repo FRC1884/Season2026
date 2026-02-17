@@ -816,10 +816,33 @@ public class Superstructure extends SubsystemBase {
     chooser.addOption(
         name + " | SysId (Full Routine)",
         sysIdRoutine(name, quasistaticForward, quasistaticReverse, dynamicForward, dynamicReverse));
-    chooser.addOption(name + " | SysId (Quasistatic Forward)", quasistaticForward);
-    chooser.addOption(name + " | SysId (Quasistatic Reverse)", quasistaticReverse);
-    chooser.addOption(name + " | SysId (Dynamic Forward)", dynamicForward);
-    chooser.addOption(name + " | SysId (Dynamic Reverse)", dynamicReverse);
+    chooser.addOption(
+        name + " | SysId (Quasistatic Forward)",
+        sysIdSingle(name, "QuasistaticForward", quasistaticForward));
+    chooser.addOption(
+        name + " | SysId (Quasistatic Reverse)",
+        sysIdSingle(name, "QuasistaticReverse", quasistaticReverse));
+    chooser.addOption(
+        name + " | SysId (Dynamic Forward)", sysIdSingle(name, "DynamicForward", dynamicForward));
+    chooser.addOption(
+        name + " | SysId (Dynamic Reverse)", sysIdSingle(name, "DynamicReverse", dynamicReverse));
+  }
+
+  private void logSysIdStatus(boolean active, String name, String phase) {
+    Logger.recordOutput("Superstructure/SysId/Active", active);
+    Logger.recordOutput("Superstructure/SysId/Name", name);
+    Logger.recordOutput("Superstructure/SysId/Phase", phase);
+  }
+
+  private Command sysIdPhase(String name, String phase) {
+    return Commands.runOnce(() -> logSysIdStatus(true, name, phase));
+  }
+
+  private Command sysIdSingle(String name, String phase, Command command) {
+    return command
+        .beforeStarting(() -> logSysIdStatus(true, name, phase))
+        .finallyDo(interrupted -> logSysIdStatus(false, "NONE", "NONE"))
+        .withName(name + "SysId-" + phase);
   }
 
   private Command sysIdRoutine(
@@ -829,13 +852,18 @@ public class Superstructure extends SubsystemBase {
       Command dynamicForward,
       Command dynamicReverse) {
     return Commands.sequence(
+            sysIdPhase(name, "QuasistaticForward"),
             quasistaticForward,
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            sysIdPhase(name, "QuasistaticReverse"),
             quasistaticReverse,
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            sysIdPhase(name, "DynamicForward"),
             dynamicForward,
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            sysIdPhase(name, "DynamicReverse"),
             dynamicReverse)
+        .finallyDo(interrupted -> logSysIdStatus(false, "NONE", "NONE"))
         .withName(name + "SysIdRoutine");
   }
 

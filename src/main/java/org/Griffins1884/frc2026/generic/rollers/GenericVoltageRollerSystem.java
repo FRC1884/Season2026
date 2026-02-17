@@ -1,5 +1,7 @@
 package org.Griffins1884.frc2026.generic.rollers;
 
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -67,7 +69,14 @@ public abstract class GenericVoltageRollerSystem<G extends GenericVoltageRollerS
                 null,
                 Seconds.of(4),
                 state -> Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString())),
-            new SysIdRoutine.Mechanism(voltage -> io.runVolts(voltage.in(Volts)), null, this));
+            new SysIdRoutine.Mechanism(
+                voltage -> io.runVolts(voltage.in(Volts)),
+                (log) ->
+                    log.motor(name)
+                        .voltage(Volts.of(inputs.appliedVoltage))
+                        .angularVelocity(RadiansPerSecond.of(inputs.velocityRadsPerSec))
+                        .angularPosition(Radian.of(inputs.positionRads)),
+                this));
 
     disconnected = new Alert(name + " motor disconnected!", AlertType.kWarning);
     stateTimer.start();

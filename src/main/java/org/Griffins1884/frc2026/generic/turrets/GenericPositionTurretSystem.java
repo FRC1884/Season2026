@@ -1,5 +1,7 @@
 package org.Griffins1884.frc2026.generic.turrets;
 
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -79,7 +81,14 @@ public class GenericPositionTurretSystem extends SubsystemBase {
                 null,
                 Seconds.of(4),
                 state -> Logger.recordOutput(name + "/SysIdState", state.toString())),
-            new SysIdRoutine.Mechanism(voltage -> io.setVoltage(voltage.in(Volts)), null, this));
+            new SysIdRoutine.Mechanism(
+                voltage -> io.setVoltage(voltage.in(Volts)),
+                (log) ->
+                    log.motor(name)
+                        .voltage(Volts.of(inputs.appliedVoltage))
+                        .angularVelocity(RadiansPerSecond.of(inputs.velocityRadPerSec))
+                        .angularPosition(Radian.of(inputs.positionRad)),
+                this));
     if (config.useAbsoluteEncoder()) {
       input = new DigitalInput(config.absoluteEncoderPort());
       absEncoder = new DutyCycleEncoder(config.absoluteEncoderPort());

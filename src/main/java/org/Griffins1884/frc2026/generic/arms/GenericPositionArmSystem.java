@@ -1,5 +1,7 @@
 package org.Griffins1884.frc2026.generic.arms;
 
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -9,10 +11,12 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.DoubleSupplier;
+import java.util.function.Consumer;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
@@ -77,6 +81,12 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
     pidController.setTolerance(config.positionTolerance());
     feedforward = new ArmFeedforward(0.0, 0.0, 0.0, 0.0);
 
+    Consumer<SysIdRoutineLog> sysIdLog =
+        (log) ->
+            log.motor(name)
+                .voltage(Volts.of(inputs.appliedVoltage))
+                .angularVelocity(RadiansPerSecond.of(inputs.velocity))
+                .angularPosition(Radian.of(inputs.encoderPosition));
     sysIdRoutine =
         new SysIdRoutine(
             new SysIdRoutine.Config(
@@ -84,7 +94,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
                 null,
                 Seconds.of(4),
                 state -> Logger.recordOutput("Arms/" + name + "/SysIdState", state.toString())),
-            new SysIdRoutine.Mechanism(voltage -> io.setVoltage(voltage.in(Volts)), null, this));
+            new SysIdRoutine.Mechanism(voltage -> io.setVoltage(voltage.in(Volts)), sysIdLog, this));
 
     disconnected = new Alert("Motor(s) disconnected on arm: " + name + "!", Alert.AlertType.kError);
     stateTimer.start();

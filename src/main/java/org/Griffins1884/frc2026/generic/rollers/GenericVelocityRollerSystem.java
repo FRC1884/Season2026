@@ -1,5 +1,7 @@
 package org.Griffins1884.frc2026.generic.rollers;
 
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -10,9 +12,11 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
@@ -51,6 +55,8 @@ public abstract class GenericVelocityRollerSystem<
   private final VelocityRollerConfig config;
   private final int tuningId = System.identityHashCode(this);
 
+  private static final double RPM_TO_RAD_PER_SEC = 2.0 * Math.PI / 60.0;
+
   private double goalVelocity = 0.0;
   private boolean manualGoalActive = false;
   private double manualGoalVelocity = 0.0;
@@ -72,6 +78,12 @@ public abstract class GenericVelocityRollerSystem<
     pidController.setTolerance(config.velocityTolerance());
     feedforward = new SimpleMotorFeedforward(config.gains().kS().get(), config.gains().kV().get());
 
+    Consumer<SysIdRoutineLog> sysIdLog =
+        (log) ->
+            log.motor(name)
+                .voltage(Volts.of(inputs.appliedVoltage))
+                .angularVelocity(RadiansPerSecond.of(inputs.velocityRadsPerSec))
+                .angularPosition(Radian.of(inputs.positionRads));
     sysIdRoutine =
         new SysIdRoutine(
             new SysIdRoutine.Config(
@@ -79,7 +91,7 @@ public abstract class GenericVelocityRollerSystem<
                 null,
                 Seconds.of(4),
                 state -> Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString())),
-            new SysIdRoutine.Mechanism(voltage -> io.runVolts(voltage.in(Volts)), null, this));
+            new SysIdRoutine.Mechanism(voltage -> io.runVolts(voltage.in(Volts)), sysIdLog, this));
 
     disconnected = new Alert(name + " motor disconnected!", AlertType.kWarning);
     stateTimer.start();
@@ -142,7 +154,7 @@ public abstract class GenericVelocityRollerSystem<
           config.gains().kP(),
           config.gains().kI(),
           config.gains().kD());
-      double feedforwardOutput = feedforward.calculate(goalVelocity);
+      double feedforwardOutput = feedforward.calculate(goalVelocity * RPM_TO_RAD_PER_SEC);
       io.runVelocity(goalVelocity, feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
@@ -150,7 +162,7 @@ public abstract class GenericVelocityRollerSystem<
     }
 
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
-    double feedforwardOutput = feedforward.calculate(goalVelocity);
+    double feedforwardOutput = feedforward.calculate(goalVelocity * RPM_TO_RAD_PER_SEC);
     double outputVoltage =
         MathUtil.clamp(pidOutput + feedforwardOutput, -config.maxVoltage(), config.maxVoltage());
 
@@ -206,6 +218,8 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
+    Logger.recordOutput(
+        "Rollers/" + name + "/VelocityCommandRadPerSec", goalVelocity * RPM_TO_RAD_PER_SEC);
     Logger.recordOutput("Rollers/" + name + "/Gains/kP", config.gains().kP().get());
     Logger.recordOutput("Rollers/" + name + "/Gains/kI", config.gains().kI().get());
     Logger.recordOutput("Rollers/" + name + "/Gains/kD", config.gains().kD().get());
