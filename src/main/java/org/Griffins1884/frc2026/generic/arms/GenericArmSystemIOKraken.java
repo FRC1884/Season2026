@@ -74,7 +74,10 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       for (int i = 1; i < ids.length; i++) {
         TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
         tryUntilOk(5, () -> follower.getConfigurator().apply(config, 0.25));
-        follower.setControl(new Follower(leader.getDeviceID(), inverted[i] ? MotorAlignmentValue.Opposed: MotorAlignmentValue.Aligned));
+        follower.setControl(
+            new Follower(
+                leader.getDeviceID(),
+                inverted[i] ? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
       }
     }
 

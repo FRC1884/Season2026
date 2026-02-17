@@ -59,7 +59,6 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   private DigitalInput input;
   private DutyCycleEncoder absEncoder;
 
-
   public GenericPositionTurretSystem(String name, GenericTurretSystemIO io, TurretConfig config) {
     this.name = name;
     this.io = io;
@@ -237,9 +236,7 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     double sensorRad = inputs.positionRad;
     double delta = MathUtil.inputModulus(absoluteRad - sensorRad, -Math.PI, Math.PI);
     double threshold =
-        config.absoluteSyncThresholdRad() != null
-            ? config.absoluteSyncThresholdRad().get()
-            : 0.0;
+        config.absoluteSyncThresholdRad() != null ? config.absoluteSyncThresholdRad().get() : 0.0;
     if (!absoluteSynced || Math.abs(delta) > threshold) {
       io.setPosition(absoluteRad);
       absoluteSynced = true;

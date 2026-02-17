@@ -25,7 +25,7 @@ public class AutoStartPoseProvider {
     Path deployDir = Filesystem.getDeployDirectory().toPath();
     autoDir = deployDir.resolve("pathplanner").resolve("autos");
     pathDir = deployDir.resolve("pathplanner").resolve("paths");
-    choreoDir = deployDir.resolve("Choreo");
+    choreoDir = deployDir.resolve("choreo");
   }
 
   public Optional<Pose2d> getStartPoseForAuto(String autoName) {

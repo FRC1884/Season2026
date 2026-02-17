@@ -5,14 +5,13 @@ import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOKraken;
 public class ShooterPivotIOKraken extends GenericArmSystemIOKraken implements ShooterPivotIO {
   public ShooterPivotIOKraken() {
     super(
-        new int[] {ShooterPivotConstants.MOTOR_ID},
+        ShooterPivotConstants.MOTOR_ID,
         ShooterPivotConstants.CURRENT_LIMIT_AMPS,
         ShooterPivotConstants.BRAKE_MODE,
         ShooterPivotConstants.FORWARD_LIMIT,
         ShooterPivotConstants.REVERSE_LIMIT,
-        ShooterPivotConstants.POSITION_COEFFICIENT);
-    if (ShooterPivotConstants.INVERTED) {
-      invert(0);
-    }
+        ShooterPivotConstants.POSITION_COEFFICIENT,
+        ShooterPivotConstants.INVERTED,
+        ShooterPivotConstants.CAN_BUS);
   }
 }

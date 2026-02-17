@@ -77,31 +77,32 @@ public class LEDSubsystem extends SubsystemBase {
       Supplier<String> climbPhaseSupplier) {
     return this.run(
             () -> {
-          if (!isEnabled.getAsBoolean()) {
-            Pose2d realPose = robotPoseSupplier.get();
-            Optional<Pose2d> targetPose = autoStartPoseSupplier.get();
-            if (realPose != null && targetPose.isPresent()) {
-              Logger.recordOutput("LED/Mode", "Disabled/Align");
-              Logger.recordOutput("LED/DisabledReason", "OK");
-              setPattern(getFieldAlignPattern(realPose, targetPose.get()));
-            } else {
-              Logger.recordOutput("LED/Mode", "Disabled/Idle");
-              Logger.recordOutput(
-                  "LED/DisabledReason", realPose == null ? "DrivePoseMissing" : "AutoStartMissing");
-              Logger.recordOutput("LED/SegmentMask", 0b0111);
-              setPattern(LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR)));
-            }
-            return;
-          }
-          SuperState state = currentStateSupplier.get();
-          boolean hasBall = hasBallSupplier.getAsBoolean();
-          String climbPhase = climbPhaseSupplier.get();
-          Logger.recordOutput("LED/Mode", "Enabled");
-          Logger.recordOutput("LED/SuperState", state == null ? "UNKNOWN" : state.name());
-          Logger.recordOutput("LED/HasBall", hasBall);
-          Logger.recordOutput("LED/ClimbPhase", climbPhase == null ? "" : climbPhase);
-          setPattern(getTeleopPattern(state, hasBall, climbPhase));
-        })
+              if (!isEnabled.getAsBoolean()) {
+                Pose2d realPose = robotPoseSupplier.get();
+                Optional<Pose2d> targetPose = autoStartPoseSupplier.get();
+                if (realPose != null && targetPose.isPresent()) {
+                  Logger.recordOutput("LED/Mode", "Disabled/Align");
+                  Logger.recordOutput("LED/DisabledReason", "OK");
+                  setPattern(getFieldAlignPattern(realPose, targetPose.get()));
+                } else {
+                  Logger.recordOutput("LED/Mode", "Disabled/Idle");
+                  Logger.recordOutput(
+                      "LED/DisabledReason",
+                      realPose == null ? "DrivePoseMissing" : "AutoStartMissing");
+                  Logger.recordOutput("LED/SegmentMask", 0b0111);
+                  setPattern(LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR)));
+                }
+                return;
+              }
+              SuperState state = currentStateSupplier.get();
+              boolean hasBall = hasBallSupplier.getAsBoolean();
+              String climbPhase = climbPhaseSupplier.get();
+              Logger.recordOutput("LED/Mode", "Enabled");
+              Logger.recordOutput("LED/SuperState", state == null ? "UNKNOWN" : state.name());
+              Logger.recordOutput("LED/HasBall", hasBall);
+              Logger.recordOutput("LED/ClimbPhase", climbPhase == null ? "" : climbPhase);
+              setPattern(getTeleopPattern(state, hasBall, climbPhase));
+            })
         .ignoringDisable(true);
   }
 
@@ -113,8 +114,7 @@ public class LEDSubsystem extends SubsystemBase {
     }
 
     Translation2d fieldDelta = targetAlliance.getTranslation().minus(realAlliance.getTranslation());
-    Translation2d robotDelta =
-        fieldDelta.rotateBy(realAlliance.getRotation().unaryMinus());
+    Translation2d robotDelta = fieldDelta.rotateBy(realAlliance.getRotation().unaryMinus());
     double xError = robotDelta.getX();
     double yError = robotDelta.getY();
 

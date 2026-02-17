@@ -15,7 +15,7 @@ public final class IntakePivotConstants {
   public static final CANBus CAN_BUS = new CANBus("rio"); // TODO: set CAN bus name if needed
 
   public static final int[] MOTOR_ID = {63, 36}; // TODO: set intake pivot CAN ID
-  public static final boolean[] INVERTED = {false,false};
+  public static final boolean[] INVERTED = {false, false};
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
 

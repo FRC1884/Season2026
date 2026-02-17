@@ -1,7 +1,6 @@
 package org.Griffins1884.frc2026.subsystems.intake;
 
 import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOSparkFlex;
-import org.Griffins1884.frc2026.subsystems.climber.ClimberConstants;
 
 public class IntakePivotIOFlex extends GenericArmSystemIOSparkFlex implements IntakePivotIO {
   public IntakePivotIOFlex() {

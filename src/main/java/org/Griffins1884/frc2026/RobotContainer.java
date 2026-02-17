@@ -353,11 +353,12 @@ public class RobotContainer {
     if (AUTONOMOUS_ENABLED) {
       autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
       autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+      superstructure.setAutoStartPoseSupplier(this::getSelectedAutoStartPose);
     } else {
       autoChooser = new LoggedDashboardChooser<>("Auto Choices");
       autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
     }
-    superstructure.setAutoStartPoseSupplier(this::getSelectedAutoStartPose);
+
     if (SHOOTER_PIVOT_ENABLED) {
       pivot = superstructure.getArms().shooterPivot;
     } else {
