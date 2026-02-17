@@ -10,7 +10,7 @@ public final class ShooterConstants {
   public static final boolean[] SHOOTER_INVERTED = {false, true};
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = false;
-  public static final double REDUCTION = 0.0;
+  public static final double REDUCTION = 1.0; // TODO: set gear ratio
 
   public static final GlobalConstants.Gains gains =
       new GlobalConstants.Gains("Shooter/Gains", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);

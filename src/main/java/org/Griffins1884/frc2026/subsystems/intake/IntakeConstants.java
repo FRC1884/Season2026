@@ -11,7 +11,7 @@ public final class IntakeConstants {
   public static final boolean[] INTAKE_INVERTED = {false}; // TODO: set per-motor inversion
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
-  public static final double REDUCTION = 0.0;
+  public static final double REDUCTION = 1.0; // TODO: set gear ratio
 
   public static final GlobalConstants.Gains gains =
       new GlobalConstants.Gains("Intake/Gains", 1.0, 0.0, 0.0);

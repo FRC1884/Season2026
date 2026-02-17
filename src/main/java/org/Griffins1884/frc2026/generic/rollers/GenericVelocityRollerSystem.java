@@ -70,9 +70,7 @@ public abstract class GenericVelocityRollerSystem<
         new PIDController(
             config.gains().kP().get(), config.gains().kI().get(), config.gains().kD().get());
     pidController.setTolerance(config.velocityTolerance());
-    feedforward =
-        new SimpleMotorFeedforward(
-            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
+    feedforward = new SimpleMotorFeedforward(config.gains().kS().get(), config.gains().kV().get());
 
     sysIdRoutine =
         new SysIdRoutine(
@@ -134,10 +132,9 @@ public abstract class GenericVelocityRollerSystem<
         config.gains().kD());
     LoggedTunableNumber.ifChanged(
         tuningId,
-        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1]),
         config.gains().kS(),
-        config.gains().kV(),
-        config.gains().kA());
+        config.gains().kV());
     if (io.supportsVelocityControl()) {
       LoggedTunableNumber.ifChanged(
           tuningId,
@@ -209,5 +206,10 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
+    Logger.recordOutput("Rollers/" + name + "/Gains/kP", config.gains().kP().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kI", config.gains().kI().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kD", config.gains().kD().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kS", config.gains().kS().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kV", config.gains().kV().get());
   }
 }
