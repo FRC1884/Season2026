@@ -5,6 +5,7 @@ import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -46,6 +47,7 @@ public abstract class GenericVelocityRollerSystem<
 
   private final SysIdRoutine sysIdRoutine;
   private final PIDController pidController;
+  private SimpleMotorFeedforward feedforward;
   private final VelocityRollerConfig config;
   private final int tuningId = System.identityHashCode(this);
 
@@ -68,6 +70,9 @@ public abstract class GenericVelocityRollerSystem<
         new PIDController(
             config.gains().kP().get(), config.gains().kI().get(), config.gains().kD().get());
     pidController.setTolerance(config.velocityTolerance());
+    feedforward =
+        new SimpleMotorFeedforward(
+            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
 
     sysIdRoutine =
         new SysIdRoutine(
@@ -127,6 +132,12 @@ public abstract class GenericVelocityRollerSystem<
         config.gains().kP(),
         config.gains().kI(),
         config.gains().kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
+        config.gains().kS(),
+        config.gains().kV(),
+        config.gains().kA());
     if (io.supportsVelocityControl()) {
       LoggedTunableNumber.ifChanged(
           tuningId,
@@ -134,18 +145,21 @@ public abstract class GenericVelocityRollerSystem<
           config.gains().kP(),
           config.gains().kI(),
           config.gains().kD());
-      io.runVelocity(goalVelocity, 0.0);
-      Logger.recordOutput("Rollers/" + name + "/Feedforward", 0.0);
+      double feedforwardOutput = feedforward.calculate(goalVelocity);
+      io.runVelocity(goalVelocity, feedforwardOutput);
+      Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
       return;
     }
 
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
-    double outputVoltage = MathUtil.clamp(pidOutput, -config.maxVoltage(), config.maxVoltage());
+    double feedforwardOutput = feedforward.calculate(goalVelocity);
+    double outputVoltage =
+        MathUtil.clamp(pidOutput + feedforwardOutput, -config.maxVoltage(), config.maxVoltage());
 
     io.runVolts(outputVoltage);
 
-    Logger.recordOutput("Rollers/" + name + "/Feedforward", 0.0);
+    Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
     Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
   }
 

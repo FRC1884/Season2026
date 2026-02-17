@@ -13,7 +13,7 @@ public final class ShooterConstants {
   public static final double REDUCTION = 0.0;
 
   public static final GlobalConstants.Gains gains =
-      new GlobalConstants.Gains("Shooter/Gains", 0.0, 0.0, 0.0);
+      new GlobalConstants.Gains("Shooter/Gains", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   public static final double VELOCITY_TOLERANCE = 50; // TODO: tune for shooter
   public static final double MAX_VOLTAGE = 12.0; // TODO: tune for shooter
 }

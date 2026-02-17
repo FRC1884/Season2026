@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter
 @Getter
@@ -14,7 +15,8 @@ public class IndexerSubsystem extends GenericVelocityRollerSystem<IndexerSubsyst
   public enum IndexerGoal implements VelocityGoal {
     IDLING(() -> 0.0),
     FORWARD(() -> IndexerConstants.FORWARD_RPM.get()),
-    REVERSE(() -> IndexerConstants.REVERSE_RPM.get());
+    REVERSE(() -> IndexerConstants.REVERSE_RPM.get()),
+    TESTING(new LoggedTunableNumber("Indexer/Testing", 0.0));
 
     private final DoubleSupplier velocitySupplier;
 

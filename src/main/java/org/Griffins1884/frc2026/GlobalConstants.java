@@ -431,6 +431,10 @@ public final class GlobalConstants {
       this(prefix, kP, kI, kD, 0, 0, 0, 0);
     }
 
+    public Gains(String prefix, double kP, double kI, double kD, double kS, double kV, double kA) {
+      this(prefix, kP, kI, kD, kS, kV, kA, 0);
+    }
+
     public Gains(
         String prefix,
         double kP,
