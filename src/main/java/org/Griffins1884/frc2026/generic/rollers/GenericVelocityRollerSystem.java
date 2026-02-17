@@ -58,7 +58,6 @@ public abstract class GenericVelocityRollerSystem<
   private double goalVelocity = 0.0;
   private boolean manualGoalActive = false;
   private double manualGoalVelocity = 0.0;
-  private double feedforwardKv = 0.0;
 
   public GenericVelocityRollerSystem(
       String name, GenericRollerSystemIO io, GlobalConstants.Gains gains) {
@@ -74,8 +73,6 @@ public abstract class GenericVelocityRollerSystem<
     pidController =
         new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
     pidController.setTolerance(config.velocityTolerance());
-    feedforwardKv = config.gains().kV().get();
-
     Consumer<SysIdRoutineLog> sysIdLog =
         (log) ->
             log.motor(name)
@@ -139,22 +136,6 @@ public abstract class GenericVelocityRollerSystem<
         values -> pidController.setPID(values[0], values[1], 0.0),
         config.gains().kP(),
         config.gains().kI());
-    // Feedforward disabled per request; keep kV tunable for visibility only.
-    LoggedTunableNumber.ifChanged(
-        tuningId,
-        values -> feedforwardKv = values[0],
-        config.gains().kV());
-    if (io.supportsVelocityControl()) {
-      LoggedTunableNumber.ifChanged(
-          tuningId,
-          values -> io.setVelocityPID(values[0], values[1], 0.0),
-          config.gains().kP(),
-          config.gains().kI());
-      io.runVelocity(goalVelocity, 0.0);
-      Logger.recordOutput("Rollers/" + name + "/Feedforward", 0.0);
-      Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
-      return;
-    }
 
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
     double outputVoltage = MathUtil.clamp(pidOutput, -config.maxVoltage(), config.maxVoltage());
@@ -207,7 +188,7 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/GoalVelocity", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/Error", goalVelocity - measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/AtGoal", isAtGoal());
-    Logger.recordOutput("Rollers/" + name + "/ControlMode", "CLOSED_LOOP");
+    Logger.recordOutput("Rollers/" + name + "/ControlMode", "EXTERNAL_PID");
     Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
