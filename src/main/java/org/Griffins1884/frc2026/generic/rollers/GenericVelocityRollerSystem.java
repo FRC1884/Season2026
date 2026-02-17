@@ -139,6 +139,7 @@ public abstract class GenericVelocityRollerSystem<
         values -> pidController.setPID(values[0], values[1], 0.0),
         config.gains().kP(),
         config.gains().kI());
+    // Feedforward disabled per request; keep kV tunable for visibility only.
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> feedforwardKv = values[0],
@@ -149,21 +150,18 @@ public abstract class GenericVelocityRollerSystem<
           values -> io.setVelocityPID(values[0], values[1], 0.0),
           config.gains().kP(),
           config.gains().kI());
-      double feedforwardOutput = feedforwardKv * (goalVelocity * RPM_TO_RAD_PER_SEC);
-      io.runVelocity(goalVelocity, feedforwardOutput);
-      Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
+      io.runVelocity(goalVelocity, 0.0);
+      Logger.recordOutput("Rollers/" + name + "/Feedforward", 0.0);
       Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
       return;
     }
 
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
-    double feedforwardOutput = feedforwardKv * (goalVelocity * RPM_TO_RAD_PER_SEC);
-    double outputVoltage =
-        MathUtil.clamp(pidOutput + feedforwardOutput, -config.maxVoltage(), config.maxVoltage());
+    double outputVoltage = MathUtil.clamp(pidOutput, -config.maxVoltage(), config.maxVoltage());
 
     io.runVolts(outputVoltage);
 
-    Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
+    Logger.recordOutput("Rollers/" + name + "/Feedforward", 0.0);
     Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
   }
 
@@ -220,5 +218,6 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/Gains/kD", config.gains().kD().get());
     Logger.recordOutput("Rollers/" + name + "/Gains/kS", config.gains().kS().get());
     Logger.recordOutput("Rollers/" + name + "/Gains/kV", config.gains().kV().get());
+    Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", true);
   }
 }

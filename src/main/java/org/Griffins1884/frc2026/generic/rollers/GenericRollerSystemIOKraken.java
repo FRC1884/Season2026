@@ -7,7 +7,7 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -19,8 +19,8 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   private final TalonFX[] motors;
   private final TalonFX leader;
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
-  private final VelocityTorqueCurrentFOC velocityRequest =
-      new VelocityTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
+  private final VelocityVoltage velocityRequest =
+      new VelocityVoltage(0.0).withSlot(0).withUpdateFreqHz(0);
   private final double reduction;
 
   private final StatusSignal<?> positionSignal;
@@ -125,8 +125,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   @Override
   public void runVelocity(double velocityRpm, double feedforwardVolts) {
     double velocityRotationsPerSecond = velocityRpm / 60.0;
-    leader.setControl(
-        velocityRequest.withVelocity(velocityRotationsPerSecond).withFeedForward(feedforwardVolts));
+    leader.setControl(velocityRequest.withVelocity(velocityRotationsPerSecond));
   }
 
   @Override
