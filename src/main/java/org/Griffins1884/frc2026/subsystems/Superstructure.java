@@ -813,23 +813,25 @@ public class Superstructure extends SubsystemBase {
       Command quasistaticReverse,
       Command dynamicForward,
       Command dynamicReverse) {
-    Command qForward = quasistaticForward.asProxy();
-    Command qReverse = quasistaticReverse.asProxy();
-    Command dForward = dynamicForward.asProxy();
-    Command dReverse = dynamicReverse.asProxy();
+    Command qForwardFull = quasistaticForward.asProxy();
+    Command qReverseFull = quasistaticReverse.asProxy();
+    Command dForwardFull = dynamicForward.asProxy();
+    Command dReverseFull = dynamicReverse.asProxy();
     chooser.addOption(
         name + " | SysId (Full Routine)",
-        sysIdRoutine(name, qForward, qReverse, dForward, dReverse));
+        sysIdRoutine(name, qForwardFull, qReverseFull, dForwardFull, dReverseFull));
     chooser.addOption(
         name + " | SysId (Quasistatic Forward)",
-        sysIdSingle(name, "QuasistaticForward", qForward));
+        sysIdSingle(name, "QuasistaticForward", quasistaticForward.asProxy()));
     chooser.addOption(
         name + " | SysId (Quasistatic Reverse)",
-        sysIdSingle(name, "QuasistaticReverse", qReverse));
+        sysIdSingle(name, "QuasistaticReverse", quasistaticReverse.asProxy()));
     chooser.addOption(
-        name + " | SysId (Dynamic Forward)", sysIdSingle(name, "DynamicForward", dForward));
+        name + " | SysId (Dynamic Forward)",
+        sysIdSingle(name, "DynamicForward", dynamicForward.asProxy()));
     chooser.addOption(
-        name + " | SysId (Dynamic Reverse)", sysIdSingle(name, "DynamicReverse", dReverse));
+        name + " | SysId (Dynamic Reverse)",
+        sysIdSingle(name, "DynamicReverse", dynamicReverse.asProxy()));
   }
 
   private void logSysIdStatus(boolean active, String name, String phase) {
