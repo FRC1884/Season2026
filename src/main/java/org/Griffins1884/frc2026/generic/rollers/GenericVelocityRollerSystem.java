@@ -28,11 +28,6 @@ import org.littletonrobotics.junction.Logger;
 public abstract class GenericVelocityRollerSystem<
         G extends GenericVelocityRollerSystem.VelocityGoal>
     extends SubsystemBase {
-  public enum ControlMode {
-    CLOSED_LOOP,
-    OPEN_LOOP
-  }
-
   public record VelocityRollerConfig(
       GlobalConstants.Gains gains, double velocityTolerance, double maxVoltage) {}
 
@@ -56,9 +51,7 @@ public abstract class GenericVelocityRollerSystem<
   private final VelocityRollerConfig config;
   private final int tuningId = System.identityHashCode(this);
 
-  private ControlMode controlMode = ControlMode.CLOSED_LOOP;
   private double goalVelocity = 0.0;
-  private double openLoopPercent = 0.0;
   private boolean manualGoalActive = false;
   private double manualGoalVelocity = 0.0;
 
@@ -133,11 +126,6 @@ public abstract class GenericVelocityRollerSystem<
       return;
     }
 
-    if (controlMode == ControlMode.OPEN_LOOP) {
-      double clampedPercent = MathUtil.clamp(openLoopPercent, -1.0, 1.0);
-      io.runVolts(clampedPercent * config.maxVoltage());
-      return;
-    }
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> pidController.setPID(values[0], values[1], values[2]),
@@ -158,7 +146,16 @@ public abstract class GenericVelocityRollerSystem<
           config.gains().kP(),
           config.gains().kI(),
           config.gains().kD());
+      LoggedTunableNumber.ifChanged(
+          tuningId,
+          values -> io.setVelocityFF(values[0], values[1], values[2]),
+          config.gains().kS(),
+          config.gains().kV(),
+          config.gains().kA());
       double feedforwardOutput = feedforward.calculate(goalVelocity);
+      if (io.usesVelocitySlotFeedforward()) {
+        feedforwardOutput = 0.0;
+      }
       io.runVelocity(goalVelocity, feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
@@ -179,24 +176,10 @@ public abstract class GenericVelocityRollerSystem<
   public void setGoalVelocity(double velocity) {
     manualGoalVelocity = velocity;
     manualGoalActive = true;
-    if (controlMode != ControlMode.CLOSED_LOOP) {
-      pidController.reset();
-    }
-    controlMode = ControlMode.CLOSED_LOOP;
   }
 
   public void clearGoalOverride() {
     manualGoalActive = false;
-  }
-
-  public void setOpenLoop(double percent) {
-    openLoopPercent = MathUtil.clamp(percent, -1.0, 1.0);
-    controlMode = ControlMode.OPEN_LOOP;
-  }
-
-  public void stopOpenLoop() {
-    openLoopPercent = 0.0;
-    controlMode = ControlMode.CLOSED_LOOP;
   }
 
   public boolean isAtGoal() {
@@ -223,10 +206,6 @@ public abstract class GenericVelocityRollerSystem<
     return inputs.torqueCurrentAmps;
   }
 
-  public ControlMode getControlMode() {
-    return controlMode;
-  }
-
   public void setBrakeMode(boolean enabled) {
     io.setBrakeMode(enabled);
   }
@@ -236,7 +215,9 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/GoalVelocity", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/Error", goalVelocity - measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/AtGoal", isAtGoal());
-    Logger.recordOutput("Rollers/" + name + "/ControlMode", controlMode.toString());
-    Logger.recordOutput("Rollers/" + name + "/OpenLoopPercent", openLoopPercent);
+    Logger.recordOutput("Rollers/" + name + "/ControlMode", "CLOSED_LOOP");
+    Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
+    Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
+    Logger.recordOutput("Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
   }
 }

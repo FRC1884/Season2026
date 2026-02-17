@@ -140,6 +140,21 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   }
 
   @Override
+  public void setVelocityFF(double kS, double kV, double kA) {
+    TalonFXConfiguration updated = new TalonFXConfiguration();
+    leader.getConfigurator().refresh(updated);
+    updated.Slot0.kS = kS;
+    updated.Slot0.kV = kV;
+    updated.Slot0.kA = kA;
+    tryUntilOk(5, () -> leader.getConfigurator().apply(updated, 0.25));
+  }
+
+  @Override
+  public boolean usesVelocitySlotFeedforward() {
+    return true;
+  }
+
+  @Override
   public boolean supportsVelocityControl() {
     return true;
   }
