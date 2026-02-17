@@ -4,14 +4,6 @@ import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
 
 public final class ShooterConstants {
-  public enum MotorController {
-    SPARK_MAX,
-    SPARK_FLEX,
-    KRAKEN_X60,
-    KRAKEN_X40,
-  }
-
-  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X60;
   public static final CANBus CAN_BUS = new CANBus("rio");
 
   public static final int[] SHOOTER_IDS = {20, 41};

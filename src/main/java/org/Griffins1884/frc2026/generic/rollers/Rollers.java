@@ -7,16 +7,10 @@ import static org.Griffins1884.frc2026.Config.Subsystems.SHOOTER_ENABLED;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.subsystems.indexer.IndexerConstants;
-import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOFlex;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOKraken;
-import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOMax;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerIOSim;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem;
-import org.Griffins1884.frc2026.subsystems.intake.IntakeConstants;
-import org.Griffins1884.frc2026.subsystems.intake.IntakeIOFlex;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOKraken;
-import org.Griffins1884.frc2026.subsystems.intake.IntakeIOMax;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOSim;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.*;
@@ -28,11 +22,7 @@ public class Rollers extends SubsystemBase {
               "Intake",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new IntakeIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : switch (IntakeConstants.MOTOR_CONTROLLER) {
-                    case SPARK_FLEX -> new IntakeIOFlex();
-                    case SPARK_MAX -> new IntakeIOMax();
-                    case KRAKEN_X60, KRAKEN_X40 -> new IntakeIOKraken();
-                  })
+                  : new IntakeIOKraken())
           : null;
   public ShooterSubsystem shooter =
       (SHOOTER_ENABLED)
@@ -40,11 +30,7 @@ public class Rollers extends SubsystemBase {
               "Shooter",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new ShooterIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : switch (ShooterConstants.MOTOR_CONTROLLER) {
-                    case SPARK_FLEX -> new ShooterIOFlex();
-                    case SPARK_MAX -> new ShooterIOMax();
-                    case KRAKEN_X60, KRAKEN_X40 -> new ShooterIOKraken();
-                  })
+                  : new ShooterIOKraken())
           : null;
   public IndexerSubsystem indexer =
       (INDEXER_ENABLED)
@@ -52,11 +38,7 @@ public class Rollers extends SubsystemBase {
               "Indexer",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new IndexerIOSim(DCMotor.getNeoVortex(2), 1, 1)
-                  : switch (IndexerConstants.MOTOR_CONTROLLER) {
-                    case SPARK_FLEX -> new IndexerIOFlex();
-                    case SPARK_MAX -> new IndexerIOMax();
-                    case KRAKEN_X60, KRAKEN_X40 -> new IndexerIOKraken();
-                  })
+                  : new IndexerIOKraken())
           : null;
 
   @Override

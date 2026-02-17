@@ -2,16 +2,9 @@ package org.Griffins1884.frc2026.subsystems.intake;
 
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class IntakeConstants {
-  public enum MotorController {
-    SPARK_MAX,
-    SPARK_FLEX,
-    KRAKEN_X60,
-    KRAKEN_X40,
-  }
-
-  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X60;
   public static final CANBus CAN_BUS = new CANBus("rio");
 
   public static final int[] INTAKE_IDS = {62}; // TODO: set intake CAN IDs
@@ -24,6 +17,10 @@ public final class IntakeConstants {
       new GlobalConstants.Gains("Intake/Gains", 1.0, 0.0, 0.0);
   public static final double VELOCITY_TOLERANCE = 0.0; // TODO: tune for intake
   public static final double MAX_VOLTAGE = 12.0; // TODO: tune for intake
+  public static final LoggedTunableNumber FORWARD_RPM =
+      new LoggedTunableNumber("Intake/ForwardRpm", 2500.0);
+  public static final LoggedTunableNumber REVERSE_RPM =
+      new LoggedTunableNumber("Intake/ReverseRpm", -2500.0);
 
   private IntakeConstants() {}
 }

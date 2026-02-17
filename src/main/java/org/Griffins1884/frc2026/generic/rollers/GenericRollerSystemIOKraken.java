@@ -140,21 +140,6 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   }
 
   @Override
-  public void setVelocityFF(double kS, double kV, double kA) {
-    TalonFXConfiguration updated = new TalonFXConfiguration();
-    leader.getConfigurator().refresh(updated);
-    updated.Slot0.kS = kS;
-    updated.Slot0.kV = kV;
-    updated.Slot0.kA = kA;
-    tryUntilOk(5, () -> leader.getConfigurator().apply(updated, 0.25));
-  }
-
-  @Override
-  public boolean usesVelocitySlotFeedforward() {
-    return true;
-  }
-
-  @Override
   public boolean supportsVelocityControl() {
     return true;
   }
@@ -180,6 +165,9 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
     config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
     config.MotorOutput.Inverted =
         inverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+    config.Slot0.kS = 0.0;
+    config.Slot0.kV = 0.0;
+    config.Slot0.kA = 0.0;
     config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;

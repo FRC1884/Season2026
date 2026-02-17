@@ -26,14 +26,6 @@ public interface GenericRollerSystemIO {
   /** Update the onboard velocity PID gains if supported. */
   default void setVelocityPID(double kP, double kI, double kD) {}
 
-  /** Update the onboard velocity feedforward gains if supported. */
-  default void setVelocityFF(double kS, double kV, double kA) {}
-
-  /** Whether this IO uses onboard feedforward (kS/kV/kA) for velocity control. */
-  default boolean usesVelocitySlotFeedforward() {
-    return false;
-  }
-
   /** Whether this IO supports onboard velocity control. */
   default boolean supportsVelocityControl() {
     return false;
