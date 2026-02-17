@@ -7,7 +7,6 @@ import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -51,7 +50,6 @@ public abstract class GenericVelocityRollerSystem<
 
   private final SysIdRoutine sysIdRoutine;
   private final PIDController pidController;
-  private SimpleMotorFeedforward feedforward;
   private final VelocityRollerConfig config;
   private final int tuningId = System.identityHashCode(this);
 
@@ -60,6 +58,7 @@ public abstract class GenericVelocityRollerSystem<
   private double goalVelocity = 0.0;
   private boolean manualGoalActive = false;
   private double manualGoalVelocity = 0.0;
+  private double feedforwardKv = 0.0;
 
   public GenericVelocityRollerSystem(
       String name, GenericRollerSystemIO io, GlobalConstants.Gains gains) {
@@ -73,10 +72,9 @@ public abstract class GenericVelocityRollerSystem<
     this.config = config;
 
     pidController =
-        new PIDController(
-            config.gains().kP().get(), config.gains().kI().get(), config.gains().kD().get());
+        new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
     pidController.setTolerance(config.velocityTolerance());
-    feedforward = new SimpleMotorFeedforward(config.gains().kS().get(), config.gains().kV().get());
+    feedforwardKv = config.gains().kV().get();
 
     Consumer<SysIdRoutineLog> sysIdLog =
         (log) ->
@@ -138,23 +136,20 @@ public abstract class GenericVelocityRollerSystem<
 
     LoggedTunableNumber.ifChanged(
         tuningId,
-        values -> pidController.setPID(values[0], values[1], values[2]),
+        values -> pidController.setPID(values[0], values[1], 0.0),
         config.gains().kP(),
-        config.gains().kI(),
-        config.gains().kD());
+        config.gains().kI());
     LoggedTunableNumber.ifChanged(
         tuningId,
-        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1]),
-        config.gains().kS(),
+        values -> feedforwardKv = values[0],
         config.gains().kV());
     if (io.supportsVelocityControl()) {
       LoggedTunableNumber.ifChanged(
           tuningId,
-          values -> io.setVelocityPID(values[0], values[1], values[2]),
+          values -> io.setVelocityPID(values[0], values[1], 0.0),
           config.gains().kP(),
-          config.gains().kI(),
-          config.gains().kD());
-      double feedforwardOutput = feedforward.calculate(goalVelocity * RPM_TO_RAD_PER_SEC);
+          config.gains().kI());
+      double feedforwardOutput = feedforwardKv * (goalVelocity * RPM_TO_RAD_PER_SEC);
       io.runVelocity(goalVelocity, feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardOutput);
       Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
@@ -162,7 +157,7 @@ public abstract class GenericVelocityRollerSystem<
     }
 
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
-    double feedforwardOutput = feedforward.calculate(goalVelocity * RPM_TO_RAD_PER_SEC);
+    double feedforwardOutput = feedforwardKv * (goalVelocity * RPM_TO_RAD_PER_SEC);
     double outputVoltage =
         MathUtil.clamp(pidOutput + feedforwardOutput, -config.maxVoltage(), config.maxVoltage());
 
