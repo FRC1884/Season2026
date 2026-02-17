@@ -15,8 +15,8 @@ import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
-import java.util.function.DoubleSupplier;
 import java.util.function.Consumer;
+import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
@@ -104,7 +104,8 @@ public abstract class GenericPositionElevatorSystem<
                 Seconds.of(4),
                 state ->
                     Logger.recordOutput("Elevators/" + name + "/SysIdState", state.toString())),
-            new SysIdRoutine.Mechanism(voltage -> io.setVoltage(voltage.in(Volts)), sysIdLog, this));
+            new SysIdRoutine.Mechanism(
+                voltage -> io.setVoltage(voltage.in(Volts)), sysIdLog, this));
 
     disconnected =
         new Alert("Motor(s) disconnected on elevator: " + name + "!", Alert.AlertType.kError);

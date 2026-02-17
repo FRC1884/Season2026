@@ -74,8 +74,7 @@ public abstract class GenericVelocityRollerSystem<
     this.io = io;
     this.config = config;
 
-    pidController =
-        new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
+    pidController = new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
     pidController.setTolerance(config.velocityTolerance());
     feedforward =
         new SimpleMotorFeedforward(
