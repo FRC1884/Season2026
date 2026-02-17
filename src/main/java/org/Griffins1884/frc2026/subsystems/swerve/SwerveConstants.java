@@ -373,7 +373,7 @@ public final class SwerveConstants {
               WHEEL_RADIUS,
               MAX_LINEAR_SPEED,
               WHEEL_FRICTION_COEFF,
-              DRIVE_GEARBOX.withReduction(DRIVE_GEAR_RATIO),
+              DRIVE_GEARBOX.withReduction(KRAKEN_DRIVE_GEAR_RATIO),
               DRIVE_MOTOR_CURRENT_LIMIT,
               1),
           MODULE_TRANSLATIONS);
