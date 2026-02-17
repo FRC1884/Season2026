@@ -7,6 +7,7 @@ import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -50,6 +51,7 @@ public abstract class GenericVelocityRollerSystem<
 
   private final SysIdRoutine sysIdRoutine;
   private final PIDController pidController;
+  private SimpleMotorFeedforward feedforward;
   private final VelocityRollerConfig config;
   private final int tuningId = System.identityHashCode(this);
 
@@ -58,6 +60,8 @@ public abstract class GenericVelocityRollerSystem<
   private double goalVelocity = 0.0;
   private boolean manualGoalActive = false;
   private double manualGoalVelocity = 0.0;
+  private double lastGoalVelocityRadPerSec = 0.0;
+  private double lastTimestampSec = 0.0;
 
   public GenericVelocityRollerSystem(
       String name, GenericRollerSystemIO io, GlobalConstants.Gains gains) {
@@ -73,6 +77,10 @@ public abstract class GenericVelocityRollerSystem<
     pidController =
         new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
     pidController.setTolerance(config.velocityTolerance());
+    feedforward =
+        new SimpleMotorFeedforward(
+            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
+    lastTimestampSec = Timer.getFPGATimestamp();
     Consumer<SysIdRoutineLog> sysIdLog =
         (log) ->
             log.motor(name)
@@ -136,13 +144,32 @@ public abstract class GenericVelocityRollerSystem<
         values -> pidController.setPID(values[0], values[1], 0.0),
         config.gains().kP(),
         config.gains().kI());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
+        config.gains().kS(),
+        config.gains().kV(),
+        config.gains().kA());
 
+    double nowSec = Timer.getFPGATimestamp();
+    double dtSec = nowSec - lastTimestampSec;
+    if (dtSec <= 0.0) {
+      dtSec = 0.02;
+    }
+    lastTimestampSec = nowSec;
+
+    double goalVelocityRadPerSec = goalVelocity * RPM_TO_RAD_PER_SEC;
+    double goalAccelRadPerSec2 = (goalVelocityRadPerSec - lastGoalVelocityRadPerSec) / dtSec;
+    lastGoalVelocityRadPerSec = goalVelocityRadPerSec;
+
+    double feedforwardVolts = feedforward.calculate(goalVelocityRadPerSec, goalAccelRadPerSec2);
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
-    double outputVoltage = MathUtil.clamp(pidOutput, -config.maxVoltage(), config.maxVoltage());
+    double outputVoltage =
+        MathUtil.clamp(pidOutput + feedforwardVolts, -config.maxVoltage(), config.maxVoltage());
 
     io.runVolts(outputVoltage);
 
-    Logger.recordOutput("Rollers/" + name + "/Feedforward", 0.0);
+    Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardVolts);
     Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
   }
 
@@ -199,6 +226,6 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/Gains/kD", config.gains().kD().get());
     Logger.recordOutput("Rollers/" + name + "/Gains/kS", config.gains().kS().get());
     Logger.recordOutput("Rollers/" + name + "/Gains/kV", config.gains().kV().get());
-    Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", true);
+    Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", false);
   }
 }
