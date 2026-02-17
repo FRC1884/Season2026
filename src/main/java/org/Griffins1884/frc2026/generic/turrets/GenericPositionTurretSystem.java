@@ -7,7 +7,9 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
@@ -33,6 +35,8 @@ public class GenericPositionTurretSystem extends SubsystemBase {
       double softLimitMaxRad,
       boolean useAbsoluteEncoder,
       double absoluteEncoderOffsetRad,
+      int absoluteEncoderPort,
+      LoggedTunableNumber absoluteSyncThresholdRad,
       double maxVoltage) {}
 
   private final String name;
@@ -50,6 +54,11 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   private double openLoopPercent = 0.0;
   private boolean initialized = false;
   private double zeroOffsetRad = 0.0;
+  private boolean absoluteSynced = false;
+
+  private DigitalInput input;
+  private DutyCycleEncoder absEncoder;
+
 
   public GenericPositionTurretSystem(String name, GenericTurretSystemIO io, TurretConfig config) {
     this.name = name;
@@ -72,6 +81,10 @@ public class GenericPositionTurretSystem extends SubsystemBase {
                 Seconds.of(4),
                 state -> Logger.recordOutput(name + "/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(voltage -> io.setVoltage(voltage.in(Volts)), null, this));
+    if (config.useAbsoluteEncoder()) {
+      input = new DigitalInput(config.absoluteEncoderPort());
+      absEncoder = new DutyCycleEncoder(config.absoluteEncoderPort());
+    }
   }
 
   public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
@@ -86,6 +99,13 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   public void periodic() {
     io.updateInputs(inputs);
     Logger.processInputs(name, inputs);
+
+    if (config.useAbsoluteEncoder() && absEncoder != null) {
+      double absoluteRad = getAbsoluteEncoderRad();
+      inputs.absoluteConnected = Double.isFinite(absoluteRad);
+      inputs.absolutePositionRad = Double.isFinite(absoluteRad) ? absoluteRad : 0.0;
+      maybeSyncAbsoluteEncoder(absoluteRad);
+    }
 
     boolean anyDisconnected = false;
     for (boolean isConnected : inputs.connected) {
@@ -188,24 +208,43 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     controller.enableContinuousInput(minRad, maxRad);
   }
 
-  public void zeroPosition() {
-    double sensorPosition = getSensorPositionRad();
-    zeroOffsetRad = -sensorPosition;
-    openLoopPercent = 0.0;
-    controlMode = ControlMode.CLOSED_LOOP;
-    goalRad = 0.0;
-    controller.reset(0.0, 0.0);
-    initialized = true;
-    if (!(config.useAbsoluteEncoder() && inputs.absoluteConnected)) {
-      io.setPosition(0.0);
-    }
-  }
-
   private double getSensorPositionRad() {
-    if (config.useAbsoluteEncoder() && inputs.absoluteConnected) {
-      return inputs.absolutePositionRad + config.absoluteEncoderOffsetRad();
+    if (config.useAbsoluteEncoder() && absEncoder != null) {
+      double absoluteRad = getAbsoluteEncoderRad();
+      if (Double.isFinite(absoluteRad)) {
+        return absoluteRad;
+      }
     }
     return inputs.positionRad;
+  }
+
+  private double getAbsoluteEncoderRad() {
+    if (absEncoder == null) {
+      return Double.NaN;
+    }
+    double rotations = absEncoder.get();
+    if (!Double.isFinite(rotations)) {
+      return Double.NaN;
+    }
+    double rad = (rotations * 2.0 * Math.PI) + config.absoluteEncoderOffsetRad();
+    return MathUtil.inputModulus(rad, 0.0, 2.0 * Math.PI);
+  }
+
+  private void maybeSyncAbsoluteEncoder(double absoluteRad) {
+    if (!Double.isFinite(absoluteRad)) {
+      return;
+    }
+    double sensorRad = inputs.positionRad;
+    double delta = MathUtil.inputModulus(absoluteRad - sensorRad, -Math.PI, Math.PI);
+    double threshold =
+        config.absoluteSyncThresholdRad() != null
+            ? config.absoluteSyncThresholdRad().get()
+            : 0.0;
+    if (!absoluteSynced || Math.abs(delta) > threshold) {
+      io.setPosition(absoluteRad);
+      absoluteSynced = true;
+      Logger.recordOutput(name + "/AbsoluteSyncDeltaRad", delta);
+    }
   }
 
   private double clampGoal(double goalRad) {

@@ -33,7 +33,6 @@ import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.IntakeGoal;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOPWM;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOSim;
 import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
-import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
@@ -48,6 +47,7 @@ public class Superstructure extends SubsystemBase {
     IDLING,
     INTAKING,
     SHOOTING,
+    SHOOT_INTAKE,
     FERRYING,
     ENDGAME_CLIMB,
     AUTO_CLIMB,
@@ -166,7 +166,6 @@ public class Superstructure extends SubsystemBase {
       clearStateOverride();
     }
   }
-
 
   public void bindManualControlSuppliers(DoubleSupplier turretAxis, DoubleSupplier pivotAxis) {
     manualTurretAxis = turretAxis != null ? turretAxis : () -> 0.0;
@@ -304,6 +303,7 @@ public class Superstructure extends SubsystemBase {
     stateChooser.addDefaultOption("Idling", SuperState.IDLING);
     stateChooser.addOption("Intaking", SuperState.INTAKING);
     stateChooser.addOption("Shooting", SuperState.SHOOTING);
+    stateChooser.addOption("Shoot+Intake", SuperState.SHOOT_INTAKE);
     stateChooser.addOption("Ferrying", SuperState.FERRYING);
     stateChooser.addOption("Endgame Climb", SuperState.ENDGAME_CLIMB);
     stateChooser.addOption("Auto Climb", SuperState.AUTO_CLIMB);
@@ -368,15 +368,11 @@ public class Superstructure extends SubsystemBase {
     double turretAxis = manualTurretAxis.getAsDouble();
     double pivotAxis = manualPivotAxis.getAsDouble();
     if (turret != null) {
-      double percent =
-              (SuperstructureConstants.MANUAL_JOG_VOLTAGE)
-                      * turretAxis;
+      double percent = (SuperstructureConstants.MANUAL_JOG_VOLTAGE) * turretAxis;
       turret.setOpenLoop(percent);
     }
     if (arms.shooterPivot != null) {
-      double percent =
-          (SuperstructureConstants.MANUAL_JOG_VOLTAGE)
-              * pivotAxis;
+      double percent = (SuperstructureConstants.MANUAL_JOG_VOLTAGE) * pivotAxis;
       arms.shooterPivot.setOpenLoop(percent);
     }
     Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
@@ -432,6 +428,12 @@ public class Superstructure extends SubsystemBase {
                   ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
                   : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
               false);
+      case SHOOT_INTAKE ->
+          applyShootingAndIntaking(
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+                  : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d());
       case FERRYING -> applyFerrying();
       case ENDGAME_CLIMB -> applyClimb(ClimbMode.ENDGAME);
       case AUTO_CLIMB -> applyClimb(ClimbMode.AUTO);
@@ -496,6 +498,16 @@ public class Superstructure extends SubsystemBase {
         requestState(SuperState.IDLING, false);
       }
     }
+  }
+
+  private void applyShootingAndIntaking(Translation2d target) {
+    setIntakeGoal(IntakeGoal.FORWARD);
+    setIndexerGoal(IndexerGoal.FORWARD);
+    setShooterGoal(ShooterGoal.FORWARD);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
+    aimTurretAt(target);
+    aimShooterPivotAt(target);
+    stopClimber();
   }
 
   private void applyFerrying() {

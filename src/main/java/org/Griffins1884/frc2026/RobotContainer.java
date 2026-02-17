@@ -432,11 +432,16 @@ public class RobotContainer {
     operator.autoManualToggle().onTrue(Commands.runOnce(superstructure::toggleManualControl));
     superstructure.bindManualControlSuppliers(
         operator.manualTurretAxis(), operator.manualPivotAxis());
-    operator
-        .intake()
+    var intakeTrigger = operator.intake();
+    var shooterTrigger = operator.shooter();
+    var shootIntakeTrigger = intakeTrigger.and(shooterTrigger);
+    shootIntakeTrigger.whileTrue(
+        superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));
+    intakeTrigger
+        .and(shooterTrigger.negate())
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
-    operator
-        .shooter()
+    shooterTrigger
+        .and(intakeTrigger.negate())
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
     operator
         .endgameClimb()

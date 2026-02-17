@@ -19,6 +19,8 @@ public class TurretSubsystem extends GenericPositionTurretSystem {
             TurretConstants.SOFT_LIMIT_MAX_RAD,
             TurretConstants.USE_ABSOLUTE_ENCODER,
             TurretConstants.ABSOLUTE_ENCODER_OFFSET_RAD,
+            TurretConstants.ABSOLUTE_ENCODER_PORT,
+            TurretConstants.ABSOLUTE_SYNC_THRESHOLD_RAD,
             TurretConstants.MAX_VOLTAGE));
     if (TurretConstants.CONTINUOUS_INPUT) {
       enableContinuousInput(0.0, 2.0 * Math.PI);

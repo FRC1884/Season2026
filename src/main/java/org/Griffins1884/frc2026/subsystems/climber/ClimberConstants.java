@@ -14,8 +14,8 @@ public final class ClimberConstants {
   public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X60; // TODO
   public static final CANBus CAN_BUS = new CANBus("rio");
 
-  public static final int[] CLIMBER_IDS = {42, 41}; // TODO: Change to correct Motor ID's
-  public static final boolean[] CLIMBER_INVERTED = {true, false};
+  public static final int[] CLIMBER_IDS = {42}; // TODO: Change to correct Motor ID's
+  public static final boolean[] CLIMBER_INVERTED = {true};
 
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;

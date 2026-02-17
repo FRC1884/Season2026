@@ -5,7 +5,7 @@ import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOKraken;
 public class IntakePivotIOKraken extends GenericArmSystemIOKraken implements IntakePivotIO {
   public IntakePivotIOKraken() {
     super(
-        new int[] {IntakePivotConstants.MOTOR_ID},
+        IntakePivotConstants.MOTOR_ID,
         IntakePivotConstants.CURRENT_LIMIT_AMPS,
         IntakePivotConstants.BRAKE_MODE,
         IntakePivotConstants.FORWARD_LIMIT,

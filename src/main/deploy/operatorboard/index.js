@@ -59,6 +59,7 @@ const STATES = [
   "IDLING",
   "INTAKING",
   "SHOOTING",
+  "SHOOT_INTAKE",
   "FERRYING",
   "ENDGAME_CLIMB",
   "AUTO_CLIMB",

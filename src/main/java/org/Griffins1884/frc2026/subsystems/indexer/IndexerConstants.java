@@ -10,7 +10,7 @@ public final class IndexerConstants {
     KRAKEN_X40,
   }
 
-  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40; // TODO
+  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X60; // TODO
   public static final CANBus CAN_BUS = new CANBus("rio");
 
   public static final int[] INDEXER_IDS = {0}; // TODO: set indexer CAN IDs

@@ -24,6 +24,9 @@ public final class TurretConstants {
       false; // TODO: set true if absolute encoder is available
   // this code is accurate for the 2026 season as of 30/1/26!
   public static final double ABSOLUTE_ENCODER_OFFSET_RAD = 0.0; // TODO: set absolute offset
+  public static final int ABSOLUTE_ENCODER_PORT = 0; // TODO: set DIO port
+  public static final LoggedTunableNumber ABSOLUTE_SYNC_THRESHOLD_RAD =
+      new LoggedTunableNumber("Turret/AbsoluteSyncThresholdRad", 0.1);
 
   public static final boolean SOFT_LIMITS_ENABLED = true;
   public static final double SOFT_LIMIT_MIN_RAD = 0; // TODO
