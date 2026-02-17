@@ -813,19 +813,23 @@ public class Superstructure extends SubsystemBase {
       Command quasistaticReverse,
       Command dynamicForward,
       Command dynamicReverse) {
+    Command qForward = quasistaticForward.asProxy();
+    Command qReverse = quasistaticReverse.asProxy();
+    Command dForward = dynamicForward.asProxy();
+    Command dReverse = dynamicReverse.asProxy();
     chooser.addOption(
         name + " | SysId (Full Routine)",
-        sysIdRoutine(name, quasistaticForward, quasistaticReverse, dynamicForward, dynamicReverse));
+        sysIdRoutine(name, qForward, qReverse, dForward, dReverse));
     chooser.addOption(
         name + " | SysId (Quasistatic Forward)",
-        sysIdSingle(name, "QuasistaticForward", quasistaticForward));
+        sysIdSingle(name, "QuasistaticForward", qForward));
     chooser.addOption(
         name + " | SysId (Quasistatic Reverse)",
-        sysIdSingle(name, "QuasistaticReverse", quasistaticReverse));
+        sysIdSingle(name, "QuasistaticReverse", qReverse));
     chooser.addOption(
-        name + " | SysId (Dynamic Forward)", sysIdSingle(name, "DynamicForward", dynamicForward));
+        name + " | SysId (Dynamic Forward)", sysIdSingle(name, "DynamicForward", dForward));
     chooser.addOption(
-        name + " | SysId (Dynamic Reverse)", sysIdSingle(name, "DynamicReverse", dynamicReverse));
+        name + " | SysId (Dynamic Reverse)", sysIdSingle(name, "DynamicReverse", dReverse));
   }
 
   private void logSysIdStatus(boolean active, String name, String phase) {
