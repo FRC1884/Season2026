@@ -12,10 +12,12 @@ import java.util.Set;
 import java.util.Map;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 public class ShooterCommands {
+  private static final double GRAVITY = 9.80665;
   private static final Map<Double, Double> lookupTable = interpolate();
   private static final double hubRadius=0.60;
   private static final double shooterDistanceEdge=0.37;//Todo: Tune
@@ -252,6 +254,59 @@ public class ShooterCommands {
     data.put(Vals.RPM, getRPM(distance));
     data.put(Vals.ANGLE, getBestAngle(distance));
     return data;
+  }
+
+  public record ShotTimeEstimate(
+      double timeSeconds,
+      double exitVelocityMetersPerSecond,
+      double predictedHeightMeters,
+      double heightErrorMeters,
+      boolean feasible) {}
+
+  public static ShotTimeEstimate estimateShotTimeDetailed(
+      double distanceMeters,
+      double hoodAngleRad,
+      double shooterExitHeightMeters,
+      double targetHeightMeters,
+      double wheelRpm,
+      double wheelRadiusMeters,
+      double gearRatio,
+      double slipFactor) {
+    if (distanceMeters <= 0.0) {
+      return new ShotTimeEstimate(0.0, 0.0, shooterExitHeightMeters, 0.0, false);
+    }
+    double exitVelocity =
+        (wheelRpm / 60.0)
+            * (2.0 * Math.PI)
+            * wheelRadiusMeters
+            * gearRatio
+            * slipFactor;
+    double cos = Math.cos(hoodAngleRad);
+    if (Math.abs(cos) < 1e-6 || exitVelocity <= 1e-6) {
+      return new ShotTimeEstimate(0.0, exitVelocity, shooterExitHeightMeters, 0.0, false);
+    }
+    double timeSeconds = distanceMeters / (exitVelocity * cos);
+    double predictedHeight =
+        shooterExitHeightMeters
+            + exitVelocity * Math.sin(hoodAngleRad) * timeSeconds
+            - 0.5 * GRAVITY * timeSeconds * timeSeconds;
+    double heightError = targetHeightMeters - predictedHeight;
+    boolean feasible = !Double.isNaN(timeSeconds) && timeSeconds > 0.0;
+    return new ShotTimeEstimate(timeSeconds, exitVelocity, predictedHeight, heightError, feasible);
+  }
+
+  public static double estimateShotTimeSeconds(double distanceMeters, double hoodAngleRad) {
+    ShotTimeEstimate estimate =
+        estimateShotTimeDetailed(
+            distanceMeters,
+            hoodAngleRad,
+            ShooterConstants.EXIT_HEIGHT_METERS,
+            ShooterConstants.TARGET_HEIGHT_METERS,
+            getRPM(distanceMeters),
+            ShooterConstants.FLYWHEEL_RADIUS_METERS,
+            ShooterConstants.FLYWHEEL_GEAR_RATIO,
+            ShooterConstants.SLIP_FACTOR.get());
+    return estimate.timeSeconds();
   }
 
   public static Command pivotOpenLoop(ShooterPivotSubsystem pivot, DoubleSupplier percentSupplier) {
