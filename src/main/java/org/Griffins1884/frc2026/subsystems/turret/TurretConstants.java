@@ -44,7 +44,7 @@ public final class TurretConstants {
   public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 1.5);
 
   // Offset from robot center to turret mount (X forward, Y left).
-  public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0.233, 0.233); // TODO
+  public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0, 0); // TODO
 
   public static final LoggedTunableNumber SIM_TARGET_X =
       new LoggedTunableNumber("Turret/SimTargetX", 4.5);
