@@ -16,6 +16,8 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import java.util.Map;
+
 import lombok.Getter;
 import lombok.Setter;
 import org.Griffins1884.frc2026.Config;
@@ -680,13 +682,15 @@ public class Superstructure extends SubsystemBase {
     if (pose == null) {
       return;
     }
+    
+    Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target);
 
-    double targetPosition = ShooterCommands.calc(pose, target);
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
-    lastShooterPivotPosition = targetPosition;
-    arms.shooterPivot.setGoalPosition(targetPosition);
+    lastShooterPivotPosition = data.get(ShooterCommands.Vals.ANGLE);
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
+    arms.shooterPivot.setGoalPosition((double)data.get(ShooterCommands.Vals.ANGLE));
+    rollers.shooter.setGoalVelocity((double)data.get(ShooterCommands.Vals.RPM));
   }
 
   private boolean isBallSenseAvailable() {
