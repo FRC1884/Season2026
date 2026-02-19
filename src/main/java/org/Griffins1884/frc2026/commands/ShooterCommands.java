@@ -64,8 +64,8 @@ public class ShooterCommands {
     distanceX = robot.getX() - target.getX();
     distanceY = robot.getY() - target.getY();
     yawAngle = robot.getRotation().getDegrees();
-    distanceX += shooterDistanceCenter*Math.cos(Math.toRadians(yawAngle));
-    distanceY += shooterDistanceCenter*Math.sin(Math.toRadians(yawAngle));
+    distanceX -= shooterDistanceCenter*Math.cos(Math.toRadians(yawAngle));
+    distanceY -= shooterDistanceCenter*Math.sin(Math.toRadians(yawAngle));
 
     distance = (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
 
@@ -189,10 +189,11 @@ public class ShooterCommands {
     return table;
   }
   public static boolean isAngle(double distance){
-    if (getValue(distance)<=1.6){
-      return true;
-    }else{
+    if (distance<=segment1End){
       return false;
+    }
+    else{
+      return true;
     }
   }
   public static void setCurrentSegment(double distance){
@@ -200,10 +201,10 @@ public class ShooterCommands {
       currentSegment=Segment.SEGMENT_1;
     }
     else{
-      if(distance<=shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment2End){
+      if(distance<=shooterDistanceEdge+hubRadius+segment2End){
         currentSegment=Segment.SEGMENT_2;
       }
-      else if(distance<=shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment3End){
+      else if(distance<=shooterDistanceEdge+hubRadius+segment3End){
         currentSegment=Segment.SEGMENT_3;
       }
     }
@@ -211,7 +212,7 @@ public class ShooterCommands {
   public static double getRPM(double distance){
     setCurrentSegment(distance);
     if(currentSegment==Segment.SEGMENT_1){
-      return getValue(distance);
+      return lookupTable.get(distance);
     }
     else if(currentSegment==Segment.SEGMENT_2){
       return 2000.0;
@@ -220,32 +221,34 @@ public class ShooterCommands {
       return 2500.0;
     }
     else{
-      return 0.1;
+      return 0.0;
     }
   }
   public static double getBestAngle(double distance){
     setCurrentSegment(distance);
-    if(currentSegment==Segment.SEGMENT_2){
-      return getValue(segment2Start);
-    }
-    else if(currentSegment==Segment.SEGMENT_3){
-      return getValue(segment3Start);
-    }
-    else{
+    if (currentSegment==Segment.SEGMENT_1){
       return 0.1;
     }
+    else if(currentSegment==Segment.SEGMENT_2){
+      return lookupTable.get(segment2Start);
+    }
+    else if(currentSegment==Segment.SEGMENT_3){
+      return lookupTable.get(segment3Start);
+    }
+    return 0.1;
   }
+
   public static double getValue(double distance){
     distance = (double) Math.round(distance * 100) / 100;
-    if (lookupTable.get(distance) != null) {
+    if (lookupTable.get(distance) != null && !isAngle(distance)) {
         return lookupTable.get(distance);
     } else {
       if (Double.isNaN(distance)) {
         return 0.1;
-      } else if (distance > 6.2+shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment3End) {
-        return lookupTable.get(6.2+shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment3End);
-      } else if (distance < shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment1Start) {
-        return lookupTable.get(shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment1Start);
+      } else if (distance > shooterDistanceEdge+hubRadius+segment3End) {
+        return lookupTable.get(shooterDistanceEdge+hubRadius+segment3End);
+      } else if (distance < shooterDistanceEdge+hubRadius+segment1Start) {
+        return 0.1;
       } else if (isAngle(distance)){
         return getBestAngle(distance);
       }
@@ -256,7 +259,7 @@ public class ShooterCommands {
   public static Map<Vals, Double> dataPack(double distance){
     Map<Vals, Double> data = new HashMap<>();
     data.put(Vals.RPM, getRPM(distance));
-    data.put(Vals.ANGLE, getBestAngle(distance));
+    data.put(Vals.ANGLE, getValue(distance));
     return data;
   }
 
