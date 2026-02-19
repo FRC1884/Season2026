@@ -38,7 +38,7 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
  */
 public final class GlobalConstants {
   public static final RobotMode MODE = RobotMode.REAL;
-  public static final RobotType ROBOT = RobotType.DEVBOT;
+  public static final RobotType ROBOT = RobotType.COMPBOT;
   public static final double ODOMETRY_FREQUENCY = 250.0;
   public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
@@ -429,6 +429,10 @@ public final class GlobalConstants {
       LoggedTunableNumber kG) {
     public Gains(String prefix, double kP, double kI, double kD) {
       this(prefix, kP, kI, kD, 0, 0, 0, 0);
+    }
+
+    public Gains(String prefix, double kP, double kI, double kD, double kS, double kV, double kA) {
+      this(prefix, kP, kI, kD, kS, kV, kA, 0);
     }
 
     public Gains(

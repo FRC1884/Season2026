@@ -353,11 +353,12 @@ public class RobotContainer {
     if (AUTONOMOUS_ENABLED) {
       autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
       autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
+      superstructure.setAutoStartPoseSupplier(this::getSelectedAutoStartPose);
     } else {
       autoChooser = new LoggedDashboardChooser<>("Auto Choices");
       autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
     }
-    superstructure.setAutoStartPoseSupplier(this::getSelectedAutoStartPose);
+
     if (SHOOTER_PIVOT_ENABLED) {
       pivot = superstructure.getArms().shooterPivot;
     } else {
@@ -429,14 +430,19 @@ public class RobotContainer {
   }
 
   private void configureOperatorButtonBindings() {
-    operator.autoManualToggle().onTrue(Commands.runOnce(superstructure::toggleAutoStateEnabled));
+    operator.autoManualToggle().onTrue(Commands.runOnce(superstructure::toggleManualControl));
     superstructure.bindManualControlSuppliers(
         operator.manualTurretAxis(), operator.manualPivotAxis());
-    operator
-        .intake()
+    var intakeTrigger = operator.intake();
+    var shooterTrigger = operator.shooter();
+    var shootIntakeTrigger = intakeTrigger.and(shooterTrigger);
+    shootIntakeTrigger.whileTrue(
+        superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));
+    intakeTrigger
+        .and(shooterTrigger.negate())
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
-    operator
-        .shooter()
+    shooterTrigger
+        .and(intakeTrigger.negate())
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
     operator
         .endgameClimb()

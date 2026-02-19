@@ -1,5 +1,7 @@
 package org.Griffins1884.frc2026.generic.elevators;
 
+import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.MetersPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
@@ -9,9 +11,11 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
@@ -86,6 +90,12 @@ public abstract class GenericPositionElevatorSystem<
             config.gains().kV().get(),
             config.gains().kA().get());
 
+    Consumer<SysIdRoutineLog> sysIdLog =
+        (log) ->
+            log.motor(name)
+                .voltage(Volts.of(inputs.appliedVoltage))
+                .linearVelocity(MetersPerSecond.of(inputs.velocity))
+                .linearPosition(Meters.of(inputs.encoderPosition));
     sysIdRoutine =
         new SysIdRoutine(
             new SysIdRoutine.Config(
@@ -94,7 +104,8 @@ public abstract class GenericPositionElevatorSystem<
                 Seconds.of(4),
                 state ->
                     Logger.recordOutput("Elevators/" + name + "/SysIdState", state.toString())),
-            new SysIdRoutine.Mechanism(voltage -> io.setVoltage(voltage.in(Volts)), null, this));
+            new SysIdRoutine.Mechanism(
+                voltage -> io.setVoltage(voltage.in(Volts)), sysIdLog, this));
 
     disconnected =
         new Alert("Motor(s) disconnected on elevator: " + name + "!", Alert.AlertType.kError);

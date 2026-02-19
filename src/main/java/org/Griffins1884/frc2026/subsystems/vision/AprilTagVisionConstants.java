@@ -29,7 +29,17 @@ public final class AprilTagVisionConstants {
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
                 VisionIO.CameraType.OV9281);
-        case COMPBOT, SIMBOT, CRESCENDO ->
+        case COMPBOT ->
+            new VisionIO.CameraConstants(
+                (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
+                new Transform3d(
+                        0.30368,
+                        -0.29575,
+                        0.22454,
+                        new Rotation3d(
+                                degreesToRadians(180), degreesToRadians(15), degreesToRadians(-20))),
+                VisionIO.CameraType.OV9281);
+        case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
@@ -53,7 +63,17 @@ public final class AprilTagVisionConstants {
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
                 VisionIO.CameraType.OV9281);
-        case COMPBOT, SIMBOT, CRESCENDO ->
+        case COMPBOT ->
+                new VisionIO.CameraConstants(
+                        (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
+                        new Transform3d(
+                                0.30368,
+                                0.29575,
+                                0.22454,
+                                new Rotation3d(
+                                        degreesToRadians(180), degreesToRadians(15), degreesToRadians(20))),
+                        VisionIO.CameraType.OV9281);
+        case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
                 new Transform3d(
@@ -64,7 +84,7 @@ public final class AprilTagVisionConstants {
                 VisionIO.CameraType.OV9281);
       };
 
-  public static final boolean BACK_CAM_ENABLED = true;
+  public static final boolean BACK_CAM_ENABLED = false;
   public static final VisionIO.CameraConstants BACK_CAM_CONSTANTS =
       switch (ROBOT) {
         case DEVBOT ->

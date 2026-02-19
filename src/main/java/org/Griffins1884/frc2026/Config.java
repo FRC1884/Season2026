@@ -18,9 +18,9 @@ public final class Config {
     public static final boolean VISION_ENABLED = true;
     public static final boolean LEDS_ENABLED = false;
     public static final boolean WEBUI_ENABLED = true;
-    public static final boolean TURRET_ENABLED = false;
-    public static final boolean SHOOTER_ENABLED = false;
-    public static final boolean SHOOTER_PIVOT_ENABLED = false;
+    public static final boolean TURRET_ENABLED = true;
+    public static final boolean SHOOTER_ENABLED = true;
+    public static final boolean SHOOTER_PIVOT_ENABLED = true;
     public static final boolean INTAKE_PIVOT_ENABLED = false;
     public static final boolean INTAKE_ENABLED = false;
     public static final boolean INDEXER_ENABLED = false;
@@ -46,7 +46,7 @@ public final class Config {
       return switch (ROBOT) {
         case COMPBOT -> new XboxDriverMap(DRIVER_PORT);
         case CRESCENDO -> new PS5DriverMap(DRIVER_PORT);
-        case DEVBOT -> new PS5DriverMap(DRIVER_PORT);
+        case DEVBOT -> new XboxDriverMap(DRIVER_PORT);
         case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
       };
     }

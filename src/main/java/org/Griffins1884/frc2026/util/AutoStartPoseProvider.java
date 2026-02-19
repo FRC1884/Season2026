@@ -11,6 +11,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.littletonrobotics.junction.Logger;
 
 public class AutoStartPoseProvider {
   private final Path autoDir;
@@ -24,13 +25,15 @@ public class AutoStartPoseProvider {
     Path deployDir = Filesystem.getDeployDirectory().toPath();
     autoDir = deployDir.resolve("pathplanner").resolve("autos");
     pathDir = deployDir.resolve("pathplanner").resolve("paths");
-    choreoDir = deployDir.resolve("Choreo");
+    choreoDir = deployDir.resolve("choreo");
   }
 
   public Optional<Pose2d> getStartPoseForAuto(String autoName) {
     if (autoName == null || autoName.isBlank()) {
       lastAutoName = null;
       lastPose = Optional.empty();
+      Logger.recordOutput("AutoStartPose/AutoName", "");
+      Logger.recordOutput("AutoStartPose/ResultValid", false);
       return lastPose;
     }
     String normalized =
@@ -39,44 +42,59 @@ public class AutoStartPoseProvider {
       return lastPose;
     }
     lastAutoName = normalized;
+    Logger.recordOutput("AutoStartPose/AutoName", normalized);
     lastPose = loadStartPose(normalized);
+    Logger.recordOutput("AutoStartPose/ResultValid", lastPose.isPresent());
     return lastPose;
   }
 
   private Optional<Pose2d> loadStartPose(String autoName) {
     Path autoPath = autoDir.resolve(autoName + ".auto");
     if (!Files.exists(autoPath)) {
+      Logger.recordOutput("AutoStartPose/AutoFileExists", false);
+      Logger.recordOutput("AutoStartPose/Reason", "MissingAutoFile");
       return Optional.empty();
     }
+    Logger.recordOutput("AutoStartPose/AutoFileExists", true);
     JSONObject root = readJson(autoPath);
     if (root == null) {
+      Logger.recordOutput("AutoStartPose/Reason", "AutoParseFailed");
       return Optional.empty();
     }
     boolean choreoAuto = Boolean.TRUE.equals(root.get("choreoAuto"));
+    Logger.recordOutput("AutoStartPose/IsChoreoAuto", choreoAuto);
     JSONObject command = asObject(root.get("command"));
     String pathName = findFirstPathName(command);
     if (pathName == null || pathName.isBlank()) {
+      Logger.recordOutput("AutoStartPose/Reason", "NoPathInAuto");
       return Optional.empty();
     }
+    Logger.recordOutput("AutoStartPose/PathName", pathName);
     return choreoAuto ? loadChoreoStartPose(pathName) : loadPathPlannerStartPose(pathName);
   }
 
   private Optional<Pose2d> loadChoreoStartPose(String pathName) {
     Path trajPath = choreoDir.resolve(pathName + ".traj");
     if (!Files.exists(trajPath)) {
+      Logger.recordOutput("AutoStartPose/TrajFileExists", false);
+      Logger.recordOutput("AutoStartPose/Reason", "MissingTrajFile");
       return Optional.empty();
     }
+    Logger.recordOutput("AutoStartPose/TrajFileExists", true);
     JSONObject root = readJson(trajPath);
     if (root == null) {
+      Logger.recordOutput("AutoStartPose/Reason", "TrajParseFailed");
       return Optional.empty();
     }
     JSONObject snapshot = asObject(root.get("snapshot"));
     Pose2d pose = readChoreoWaypointPose(snapshot);
     if (pose != null) {
+      Logger.recordOutput("AutoStartPose/Source", "TRAJ");
       return Optional.of(pose);
     }
     JSONObject params = asObject(root.get("params"));
     pose = readChoreoWaypointPose(params);
+    Logger.recordOutput("AutoStartPose/Source", pose != null ? "TRAJ" : "TRAJ_MISSING_WAYPOINT");
     return Optional.ofNullable(pose);
   }
 
@@ -104,14 +122,19 @@ public class AutoStartPoseProvider {
   private Optional<Pose2d> loadPathPlannerStartPose(String pathName) {
     Path pathPath = pathDir.resolve(pathName + ".path");
     if (!Files.exists(pathPath)) {
+      Logger.recordOutput("AutoStartPose/PathFileExists", false);
+      Logger.recordOutput("AutoStartPose/Reason", "MissingPathFile");
       return Optional.empty();
     }
+    Logger.recordOutput("AutoStartPose/PathFileExists", true);
     JSONObject root = readJson(pathPath);
     if (root == null) {
+      Logger.recordOutput("AutoStartPose/Reason", "PathParseFailed");
       return Optional.empty();
     }
     JSONArray waypoints = asArray(root.get("waypoints"));
     if (waypoints == null || waypoints.isEmpty()) {
+      Logger.recordOutput("AutoStartPose/Reason", "NoWaypointsInPath");
       return Optional.empty();
     }
     JSONObject first = asObject(waypoints.get(0));
@@ -119,11 +142,13 @@ public class AutoStartPoseProvider {
     double x = anchor != null ? readDouble(anchor.get("x"), Double.NaN) : Double.NaN;
     double y = anchor != null ? readDouble(anchor.get("y"), Double.NaN) : Double.NaN;
     if (!Double.isFinite(x) || !Double.isFinite(y)) {
+      Logger.recordOutput("AutoStartPose/Reason", "InvalidAnchor");
       return Optional.empty();
     }
     JSONObject idealStarting = asObject(root.get("idealStartingState"));
     double rotationDeg =
         idealStarting != null ? readDouble(idealStarting.get("rotation"), 0.0) : 0.0;
+    Logger.recordOutput("AutoStartPose/Source", "PATH");
     return Optional.of(new Pose2d(x, y, Rotation2d.fromDegrees(rotationDeg)));
   }
 

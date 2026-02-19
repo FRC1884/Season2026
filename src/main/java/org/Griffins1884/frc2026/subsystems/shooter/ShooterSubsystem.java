@@ -15,8 +15,8 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
   @Getter
   public enum ShooterGoal implements VelocityGoal {
     IDLING(() -> 0.0), // Intake is off
-    FORWARD(() -> 4500), // Maximum forward velocity
-    REVERSE(() -> -4500), // Maximum reverse velocity
+    FORWARD(() -> ShooterConstants.TARGET_RPM), // Constant flywheel velocity
+    REVERSE(() -> -ShooterConstants.TARGET_RPM), // Optional reverse for clearing
     TESTING(new LoggedTunableNumber("Shooter/Testing", 0.0));
 
     private final DoubleSupplier velocitySupplier;

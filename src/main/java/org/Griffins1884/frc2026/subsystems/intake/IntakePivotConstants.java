@@ -11,11 +11,11 @@ public final class IntakePivotConstants {
     KRAKEN_X40,
   }
 
-  public static final MotorController MOTOR_CONTROLLER = MotorController.SPARK_FLEX; // TODO
+  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40; // TODO
   public static final CANBus CAN_BUS = new CANBus("rio"); // TODO: set CAN bus name if needed
 
-  public static final int MOTOR_ID = 63; // TODO: set intake pivot CAN ID
-  public static final boolean INVERTED = false;
+  public static final int[] MOTOR_ID = {63, 36}; // TODO: set intake pivot CAN ID
+  public static final boolean[] INVERTED = {false, false};
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
 

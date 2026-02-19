@@ -4,6 +4,7 @@ import static java.lang.Math.PI;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 
 public final class TurretUtil {
   private TurretUtil() {}
@@ -13,7 +14,7 @@ public final class TurretUtil {
     double dx = target.getX() - robotPose.getX();
     double dy = target.getY() - robotPose.getY();
 
-    double targetAngleField = Math.atan2(dy, dx);
+    double targetAngleField = Math.atan2(dy, dx) + TurretConstants.TURRET_ANGLE_OFFSET;
 
     double desiredTurretRobot = targetAngleField - robotPose.getRotation().getRadians();
 

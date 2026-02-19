@@ -7,7 +7,7 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
-import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.VelocityVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -19,8 +19,8 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   private final TalonFX[] motors;
   private final TalonFX leader;
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
-  private final VelocityTorqueCurrentFOC velocityRequest =
-      new VelocityTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
+  private final VelocityVoltage velocityRequest =
+      new VelocityVoltage(0.0).withSlot(0).withUpdateFreqHz(0);
   private final double reduction;
 
   private final StatusSignal<?> positionSignal;
@@ -67,12 +67,12 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
     motors = new TalonFX[ids.length];
     leader = motors[0] = new TalonFX(ids[0], canBus);
-    applyConfig(leader, currentLimitAmps, brake, inverted[0]);
+    applyConfig(leader, currentLimitAmps, brake, inverted[0], reduction);
 
     if (ids.length > 1) {
       for (int i = 1; i < ids.length; i++) {
         TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
-        applyConfig(follower, currentLimitAmps, brake, inverted[i]);
+        applyConfig(follower, currentLimitAmps, brake, inverted[i], reduction);
         follower.setControl(
             new Follower(
                 leader.getDeviceID(),
@@ -125,8 +125,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   @Override
   public void runVelocity(double velocityRpm, double feedforwardVolts) {
     double velocityRotationsPerSecond = velocityRpm / 60.0;
-    leader.setControl(
-        velocityRequest.withVelocity(velocityRotationsPerSecond).withFeedForward(feedforwardVolts));
+    leader.setControl(velocityRequest.withVelocity(velocityRotationsPerSecond));
   }
 
   @Override
@@ -160,15 +159,24 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   }
 
   private static void applyConfig(
-      TalonFX motor, int currentLimitAmps, boolean brake, boolean inverted) {
+      TalonFX motor, int currentLimitAmps, boolean brake, boolean inverted, double reduction) {
     TalonFXConfiguration config = new TalonFXConfiguration();
     config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
     config.MotorOutput.Inverted =
         inverted ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+    config.Slot0.kS = 0.0;
+    config.Slot0.kV = 0.0;
+    config.Slot0.kA = 0.0;
+    config.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.02;
+    config.TorqueCurrent.PeakForwardTorqueCurrent = currentLimitAmps;
+    config.TorqueCurrent.PeakReverseTorqueCurrent = -currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
     config.CurrentLimits.StatorCurrentLimitEnable = true;
+    if (reduction > 0.0) {
+      config.Feedback.SensorToMechanismRatio = reduction;
+    }
     tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
   }
 }

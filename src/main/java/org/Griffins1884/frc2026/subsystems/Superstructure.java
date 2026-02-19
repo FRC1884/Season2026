@@ -16,6 +16,8 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import java.util.Map;
+
 import lombok.Getter;
 import lombok.Setter;
 import org.Griffins1884.frc2026.Config;
@@ -33,7 +35,6 @@ import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.IntakeGoal;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOPWM;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOSim;
 import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
-import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
@@ -48,6 +49,7 @@ public class Superstructure extends SubsystemBase {
     IDLING,
     INTAKING,
     SHOOTING,
+    SHOOT_INTAKE,
     FERRYING,
     ENDGAME_CLIMB,
     AUTO_CLIMB,
@@ -167,14 +169,6 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
-  public boolean isAutoStateEnabled() {
-    return autoStateEnabled;
-  }
-
-  public void toggleAutoStateEnabled() {
-    setAutoStateEnabled(!autoStateEnabled);
-  }
-
   public void bindManualControlSuppliers(DoubleSupplier turretAxis, DoubleSupplier pivotAxis) {
     manualTurretAxis = turretAxis != null ? turretAxis : () -> 0.0;
     manualPivotAxis = pivotAxis != null ? pivotAxis : () -> 0.0;
@@ -182,6 +176,10 @@ public class Superstructure extends SubsystemBase {
 
   public void clearStateOverride() {
     stateOverrideActive = false;
+  }
+
+  public void toggleManualControl() {
+    manualControlActive = !manualControlActive;
   }
 
   public StateRequestResult requestStateFromDashboard(SuperState state) {
@@ -223,7 +221,6 @@ public class Superstructure extends SubsystemBase {
       Logger.recordOutput(
           "Superstructure/AutoState", autoState != null ? autoState.toString() : "UNKNOWN");
     }
-    manualControlActive = !autoStateEnabled && requestedState != SuperState.TESTING;
     if (requestedState != currentState) {
       enterState(requestedState);
       currentState = requestedState;
@@ -308,6 +305,7 @@ public class Superstructure extends SubsystemBase {
     stateChooser.addDefaultOption("Idling", SuperState.IDLING);
     stateChooser.addOption("Intaking", SuperState.INTAKING);
     stateChooser.addOption("Shooting", SuperState.SHOOTING);
+    stateChooser.addOption("Shoot+Intake", SuperState.SHOOT_INTAKE);
     stateChooser.addOption("Ferrying", SuperState.FERRYING);
     stateChooser.addOption("Endgame Climb", SuperState.ENDGAME_CLIMB);
     stateChooser.addOption("Auto Climb", SuperState.AUTO_CLIMB);
@@ -371,16 +369,21 @@ public class Superstructure extends SubsystemBase {
   private void applyManualJog() {
     double turretAxis = manualTurretAxis.getAsDouble();
     double pivotAxis = manualPivotAxis.getAsDouble();
+    if (turret != null) {
+      double percent = (SuperstructureConstants.MANUAL_JOG_VOLTAGE) * turretAxis;
+      turret.setOpenLoop(percent);
+    }
     if (arms.shooterPivot != null) {
-      double percent =
-          (SuperstructureConstants.MANUAL_JOG_VOLTAGE / ShooterPivotConstants.MAX_VOLTAGE)
-              * pivotAxis;
+      double percent = (SuperstructureConstants.MANUAL_JOG_VOLTAGE) * pivotAxis;
       arms.shooterPivot.setOpenLoop(percent);
     }
     Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
   }
 
   private void stopManualJog() {
+    if (turret != null) {
+      turret.stopOpenLoop();
+    }
     if (arms.shooterPivot != null) {
       arms.shooterPivot.stopOpenLoop();
     }
@@ -427,6 +430,12 @@ public class Superstructure extends SubsystemBase {
                   ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
                   : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
               false);
+      case SHOOT_INTAKE ->
+          applyShootingAndIntaking(
+              (DriverStation.getAlliance().isPresent()
+                      && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+                  ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+                  : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d());
       case FERRYING -> applyFerrying();
       case ENDGAME_CLIMB -> applyClimb(ClimbMode.ENDGAME);
       case AUTO_CLIMB -> applyClimb(ClimbMode.AUTO);
@@ -457,7 +466,6 @@ public class Superstructure extends SubsystemBase {
       rollers.shooter.clearGoalOverride();
     }
     if (arms.intakePivot != null) {
-      arms.intakePivot.stopOpenLoop();
       arms.intakePivot.clearGoalOverride();
     }
     if (arms.shooterPivot != null) {
@@ -469,8 +477,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyIntaking() {
-    boolean intakeReady = arms.intakePivot == null || arms.intakePivot.isAtGoal();
-    setIntakeGoal(intakeReady ? IntakeGoal.FORWARD : IntakeGoal.IDLING);
+    setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
@@ -493,6 +500,16 @@ public class Superstructure extends SubsystemBase {
         requestState(SuperState.IDLING, false);
       }
     }
+  }
+
+  private void applyShootingAndIntaking(Translation2d target) {
+    setIntakeGoal(IntakeGoal.FORWARD);
+    setIndexerGoal(IndexerGoal.FORWARD);
+    setShooterGoal(ShooterGoal.FORWARD);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
+    aimTurretAt(target);
+    aimShooterPivotAt(target);
+    stopClimber();
   }
 
   private void applyFerrying() {
@@ -528,8 +545,8 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyTesting() {
-    setIntakeGoal(IntakeGoal.IDLING);
-    setIndexerGoal(IndexerGoal.IDLING);
+    setIntakeGoal(IntakeGoal.TESTING);
+    setIndexerGoal(IndexerGoal.TESTING);
     setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
@@ -665,13 +682,18 @@ public class Superstructure extends SubsystemBase {
     if (pose == null) {
       return;
     }
+    
+    Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target);
 
-    double targetPosition = ShooterCommands.calc(pose, target);
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
-    lastShooterPivotPosition = targetPosition;
-    arms.shooterPivot.setGoalPosition(targetPosition);
+    lastShooterPivotPosition = data.get(ShooterCommands.Vals.ANGLE);
+    
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
+    arms.shooterPivot.setGoalPosition((double)data.get(ShooterCommands.Vals.ANGLE));
+
+    rollers.shooter.setGoal(ShooterGoal.IDLING);
+    rollers.shooter.setGoalVelocity((double)data.get(ShooterCommands.Vals.RPM));
   }
 
   private boolean isBallSenseAvailable() {
@@ -798,13 +820,42 @@ public class Superstructure extends SubsystemBase {
       Command quasistaticReverse,
       Command dynamicForward,
       Command dynamicReverse) {
+    Command qForwardFull = quasistaticForward.asProxy();
+    Command qReverseFull = quasistaticReverse.asProxy();
+    Command dForwardFull = dynamicForward.asProxy();
+    Command dReverseFull = dynamicReverse.asProxy();
     chooser.addOption(
         name + " | SysId (Full Routine)",
-        sysIdRoutine(name, quasistaticForward, quasistaticReverse, dynamicForward, dynamicReverse));
-    chooser.addOption(name + " | SysId (Quasistatic Forward)", quasistaticForward);
-    chooser.addOption(name + " | SysId (Quasistatic Reverse)", quasistaticReverse);
-    chooser.addOption(name + " | SysId (Dynamic Forward)", dynamicForward);
-    chooser.addOption(name + " | SysId (Dynamic Reverse)", dynamicReverse);
+        sysIdRoutine(name, qForwardFull, qReverseFull, dForwardFull, dReverseFull));
+    chooser.addOption(
+        name + " | SysId (Quasistatic Forward)",
+        sysIdSingle(name, "QuasistaticForward", quasistaticForward.asProxy()));
+    chooser.addOption(
+        name + " | SysId (Quasistatic Reverse)",
+        sysIdSingle(name, "QuasistaticReverse", quasistaticReverse.asProxy()));
+    chooser.addOption(
+        name + " | SysId (Dynamic Forward)",
+        sysIdSingle(name, "DynamicForward", dynamicForward.asProxy()));
+    chooser.addOption(
+        name + " | SysId (Dynamic Reverse)",
+        sysIdSingle(name, "DynamicReverse", dynamicReverse.asProxy()));
+  }
+
+  private void logSysIdStatus(boolean active, String name, String phase) {
+    Logger.recordOutput("Superstructure/SysId/Active", active);
+    Logger.recordOutput("Superstructure/SysId/Name", name);
+    Logger.recordOutput("Superstructure/SysId/Phase", phase);
+  }
+
+  private Command sysIdPhase(String name, String phase) {
+    return Commands.runOnce(() -> logSysIdStatus(true, name, phase));
+  }
+
+  private Command sysIdSingle(String name, String phase, Command command) {
+    return command
+        .beforeStarting(() -> logSysIdStatus(true, name, phase))
+        .finallyDo(interrupted -> logSysIdStatus(false, "NONE", "NONE"))
+        .withName(name + "SysId-" + phase);
   }
 
   private Command sysIdRoutine(
@@ -814,13 +865,18 @@ public class Superstructure extends SubsystemBase {
       Command dynamicForward,
       Command dynamicReverse) {
     return Commands.sequence(
+            sysIdPhase(name, "QuasistaticForward"),
             quasistaticForward,
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            sysIdPhase(name, "QuasistaticReverse"),
             quasistaticReverse,
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            sysIdPhase(name, "DynamicForward"),
             dynamicForward,
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
+            sysIdPhase(name, "DynamicReverse"),
             dynamicReverse)
+        .finallyDo(interrupted -> logSysIdStatus(false, "NONE", "NONE"))
         .withName(name + "SysIdRoutine");
   }
 

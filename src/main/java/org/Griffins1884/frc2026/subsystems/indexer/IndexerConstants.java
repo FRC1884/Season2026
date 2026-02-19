@@ -1,16 +1,10 @@
 package org.Griffins1884.frc2026.subsystems.indexer;
 
 import com.ctre.phoenix6.CANBus;
+import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class IndexerConstants {
-  public enum MotorController {
-    SPARK_MAX,
-    SPARK_FLEX,
-    KRAKEN_X60,
-    KRAKEN_X40,
-  }
-
-  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40; // TODO
   public static final CANBus CAN_BUS = new CANBus("rio");
 
   public static final int[] INDEXER_IDS = {0}; // TODO: set indexer CAN IDs
@@ -20,6 +14,13 @@ public final class IndexerConstants {
   public static final boolean BRAKE_MODE = true;
   public static final double REDUCTION = 1.0;
   public static final double MAX_VOLTAGE = 12.0;
+  public static final GlobalConstants.Gains gains =
+      new GlobalConstants.Gains("Indexer/Gains", 1.0, 0.0, 0.0);
+  public static final double VELOCITY_TOLERANCE = 0.0;
+  public static final LoggedTunableNumber FORWARD_RPM =
+      new LoggedTunableNumber("Indexer/ForwardRpm", 2000.0);
+  public static final LoggedTunableNumber REVERSE_RPM =
+      new LoggedTunableNumber("Indexer/ReverseRpm", -2000.0);
 
   private IndexerConstants() {}
 }

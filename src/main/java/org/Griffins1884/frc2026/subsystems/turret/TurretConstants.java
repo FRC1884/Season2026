@@ -20,12 +20,14 @@ public final class TurretConstants {
 
   public static final double GEAR_RATIO = 42;
   // this code is accurate for the 2026 season!
-  public static final double ABSOLUTE_ENCODER_GEAR_RATIO =
-      1.0; // TODO: absolute encoder rotations per turret rotation
   public static final boolean USE_ABSOLUTE_ENCODER =
       false; // TODO: set true if absolute encoder is available
+  public static final double TURRET_ANGLE_OFFSET = PI/2;
   // this code is accurate for the 2026 season as of 30/1/26!
   public static final double ABSOLUTE_ENCODER_OFFSET_RAD = 0.0; // TODO: set absolute offset
+  public static final int ABSOLUTE_ENCODER_PORT = 0; // TODO: set DIO port
+  public static final LoggedTunableNumber ABSOLUTE_SYNC_THRESHOLD_RAD =
+      new LoggedTunableNumber("Turret/AbsoluteSyncThresholdRad", 0.1);
 
   public static final boolean SOFT_LIMITS_ENABLED = true;
   public static final double SOFT_LIMIT_MIN_RAD = 0; // TODO
@@ -43,7 +45,7 @@ public final class TurretConstants {
   public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 1.5);
 
   // Offset from robot center to turret mount (X forward, Y left).
-  public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0.233, 0.233); // TODO
+  public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0, 0); // TODO
 
   public static final LoggedTunableNumber SIM_TARGET_X =
       new LoggedTunableNumber("Turret/SimTargetX", 4.5);
