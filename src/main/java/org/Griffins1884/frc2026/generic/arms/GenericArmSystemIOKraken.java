@@ -26,7 +26,10 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   private final MotionMagicTorqueCurrentFOC motionMagicRequest =
       new MotionMagicTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final double positionCoefficient;
-  private final boolean useMotionMagic;
+  private boolean useMotionMagic;
+  private double lastMotionMagicCruise = Double.NaN;
+  private double lastMotionMagicAccel = Double.NaN;
+  private double lastMotionMagicJerk = Double.NaN;
   private double lastKP = Double.NaN;
   private double lastKI = Double.NaN;
   private double lastKD = Double.NaN;
@@ -75,7 +78,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       double motionMagicAcceleration,
       double motionMagicJerk) {
     this.positionCoefficient = positionCoefficient;
-    this.useMotionMagic = motionMagicCruiseVelocity > 0.0 && motionMagicAcceleration > 0.0;
+    this.useMotionMagic = false;
 
     motors = new TalonFX[ids.length];
     leader = motors[0] = new TalonFX(ids[0], canBus);
@@ -108,6 +111,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     }
 
     tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
+    setMotionMagicParams(motionMagicCruiseVelocity, motionMagicAcceleration, motionMagicJerk);
 
     if (ids.length > 1) {
       for (int i = 1; i < ids.length; i++) {
@@ -187,6 +191,28 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     } else {
       leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
     }
+  }
+
+  @Override
+  public void setMotionMagicParams(double cruiseVelocity, double acceleration, double jerk) {
+    if (!Double.isFinite(cruiseVelocity)
+        || !Double.isFinite(acceleration)
+        || !Double.isFinite(jerk)) {
+      return;
+    }
+    if (Double.compare(cruiseVelocity, lastMotionMagicCruise) == 0
+        && Double.compare(acceleration, lastMotionMagicAccel) == 0
+        && Double.compare(jerk, lastMotionMagicJerk) == 0) {
+      return;
+    }
+    lastMotionMagicCruise = cruiseVelocity;
+    lastMotionMagicAccel = acceleration;
+    lastMotionMagicJerk = jerk;
+    useMotionMagic = cruiseVelocity > 0.0 && acceleration > 0.0;
+    config.MotionMagic.MotionMagicCruiseVelocity = cruiseVelocity / positionCoefficient;
+    config.MotionMagic.MotionMagicAcceleration = acceleration / positionCoefficient;
+    config.MotionMagic.MotionMagicJerk = jerk > 0.0 ? jerk / positionCoefficient : 0.0;
+    tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
   }
 
   @Override

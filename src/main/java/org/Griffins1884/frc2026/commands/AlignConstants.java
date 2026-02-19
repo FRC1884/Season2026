@@ -51,11 +51,11 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 220.0);
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
-          new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 5.9);
+      new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 5.9);
   public static final LoggedTunableNumber AFTER_BUMP_START_Y_METERS =
-          new LoggedTunableNumber("Align/AfterBumpCollectStart/YMeters", 2.5);
+      new LoggedTunableNumber("Align/AfterBumpCollectStart/YMeters", 2.5);
   public static final LoggedTunableNumber AFTER_BUMP_START_HEADING_DEG =
-          new LoggedTunableNumber("Align/AfterBumpCollectStart/HeadingDeg",140);
+      new LoggedTunableNumber("Align/AfterBumpCollectStart/HeadingDeg", 140);
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
@@ -73,11 +73,12 @@ public final class AlignConstants {
         Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get()));
   }
 
-    public static Pose2d getAfterOverBumpStartPose(){
-      return new Pose2d(
-              new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
-              Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get()));
-    }
+  public static Pose2d getAfterOverBumpStartPose() {
+    return new Pose2d(
+        new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
+        Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get()));
+  }
+
   /** Feedforward definition for translation alignment. */
   public static record FeedforwardGains(
       double kV, double deadbandMeters, double maxSpeedMetersPerSecond) {

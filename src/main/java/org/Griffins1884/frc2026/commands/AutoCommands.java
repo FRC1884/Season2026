@@ -16,10 +16,10 @@ public class AutoCommands {
         "OverBump", superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING));
 
     NamedCommands.registerCommand(
-            "FirstOverBump",
-            Commands.sequence(
-                    superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-                    DriveCommands.alignToAfterBumpStartCommand(drive)));
+        "FirstOverBump",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
+            DriveCommands.alignToAfterBumpStartCommand(drive)));
 
     NamedCommands.registerCommand(
         "OverBumpAndShoot",

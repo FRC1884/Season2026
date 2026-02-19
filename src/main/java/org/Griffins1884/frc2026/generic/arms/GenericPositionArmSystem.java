@@ -37,6 +37,9 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
       LoggedTunableNumber kG,
       LoggedTunableNumber kV,
       LoggedTunableNumber kA,
+      LoggedTunableNumber motionMagicCruiseVelocity,
+      LoggedTunableNumber motionMagicAcceleration,
+      LoggedTunableNumber motionMagicJerk,
       double positionTolerance,
       boolean softLimitsEnabled,
       double softLimitMin,
@@ -84,6 +87,9 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
             gains.kG(),
             gains.kV(),
             gains.kA(),
+            null,
+            null,
+            null,
             0.0,
             false,
             0.0,
@@ -191,6 +197,16 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
         config.kP(),
         config.kI(),
         config.kD());
+    if (config.motionMagicCruiseVelocity() != null
+        && config.motionMagicAcceleration() != null
+        && config.motionMagicJerk() != null) {
+      LoggedTunableNumber.ifChanged(
+          tuningId,
+          values -> io.setMotionMagicParams(values[0], values[1], values[2]),
+          config.motionMagicCruiseVelocity(),
+          config.motionMagicAcceleration(),
+          config.motionMagicJerk());
+    }
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> feedforward = new ArmFeedforward(values[0], values[1], values[2], values[3]),

@@ -2,6 +2,7 @@ package org.Griffins1884.frc2026.subsystems.shooter;
 
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterPivotConstants {
   public enum MotorController {
@@ -23,9 +24,12 @@ public final class ShooterPivotConstants {
   public static final double REVERSE_LIMIT = 0.1;
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversiond
   // Set to 0 to disable Motion Magic for ShooterPivot (uses PositionTorqueCurrentFOC instead).
-  public static final double MOTION_MAGIC_CRUISE_VEL = 0.0;
-  public static final double MOTION_MAGIC_ACCEL = 0.0;
-  public static final double MOTION_MAGIC_JERK = 0.0;
+  public static final LoggedTunableNumber MOTION_MAGIC_CRUISE_VEL =
+      new LoggedTunableNumber("ShooterPivot/MotionMagic/CruiseVel", 0.0);
+  public static final LoggedTunableNumber MOTION_MAGIC_ACCEL =
+      new LoggedTunableNumber("ShooterPivot/MotionMagic/Accel", 0.0);
+  public static final LoggedTunableNumber MOTION_MAGIC_JERK =
+      new LoggedTunableNumber("ShooterPivot/MotionMagic/Jerk", 0.0);
 
   public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains("ShooterPivot/Gains", 1500.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
