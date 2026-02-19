@@ -3,15 +3,15 @@ package org.Griffins1884.frc2026.subsystems.intake;
 import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOKraken;
 
 public class IntakePivotIOKraken extends GenericArmSystemIOKraken implements IntakePivotIO {
-  public IntakePivotIOKraken() {
+  public IntakePivotIOKraken(int id, boolean inverted) {
     super(
-        IntakePivotConstants.MOTOR_ID,
+        new int[] {id},
         IntakePivotConstants.CURRENT_LIMIT_AMPS,
         IntakePivotConstants.BRAKE_MODE,
         IntakePivotConstants.FORWARD_LIMIT,
         IntakePivotConstants.REVERSE_LIMIT,
         IntakePivotConstants.POSITION_COEFFICIENT,
-        IntakePivotConstants.INVERTED,
+        new boolean[] {inverted},
         IntakePivotConstants.CAN_BUS);
   }
 }
