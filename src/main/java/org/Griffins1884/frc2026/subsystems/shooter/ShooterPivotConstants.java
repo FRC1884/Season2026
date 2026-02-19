@@ -13,7 +13,7 @@ public final class ShooterPivotConstants {
 
   public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40; // TODO
 
-  public static final int[] MOTOR_ID = {7}; // TODO: set shooter pivot CAN ID
+  public static final int[] MOTOR_ID = {24}; // TODO: set shooter pivot CAN ID
   public static final boolean[] INVERTED = {false};
   public static final CANBus CAN_BUS = new CANBus("rio");
   public static final int CURRENT_LIMIT_AMPS = 40;

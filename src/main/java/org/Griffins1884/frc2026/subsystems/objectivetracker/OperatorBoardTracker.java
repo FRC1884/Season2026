@@ -10,6 +10,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -33,6 +34,9 @@ import org.Griffins1884.frc2026.util.LogRollover;
 import org.littletonrobotics.junction.Logger;
 
 public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable {
+  private static final double TELEMETRY_PUBLISH_PERIOD_SEC = 0.05;
+  private static final double DISABLED_TELEMETRY_PUBLISH_PERIOD_SEC = 0.10;
+
   private final OperatorBoardIO io;
   private final OperatorBoardIOInputsAutoLogged inputs = new OperatorBoardIOInputsAutoLogged();
   private final Superstructure superstructure;
@@ -43,6 +47,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   private String lastRequestedState = "";
   private boolean lastRequestAccepted = true;
   private String lastRequestReason = "";
+  private double lastTelemetryPublishTimestampSec = Double.NEGATIVE_INFINITY;
 
   public OperatorBoardTracker(OperatorBoardIO io, Superstructure superstructure) {
     this(io, superstructure, null, null);
@@ -94,7 +99,9 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     Logger.processInputs("OperatorBoard", inputs);
 
     handleStateRequests();
-    publishTelemetry();
+    if (shouldPublishTelemetry()) {
+      publishTelemetry();
+    }
   }
 
   private void handleStateRequests() {
@@ -241,6 +248,19 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setSysIdTurnActive(drive != null && drive.isTurnSysIdActive());
     io.setSysIdTurnLastCompleted(drive != null ? drive.getTurnSysIdLastCompleted() : Double.NaN);
     io.setVisionStatus(Config.Subsystems.VISION_ENABLED ? "ENABLED" : "DISABLED");
+  }
+
+  private boolean shouldPublishTelemetry() {
+    double now = Timer.getFPGATimestamp();
+    double publishPeriod =
+        DriverStation.isDisabled()
+            ? DISABLED_TELEMETRY_PUBLISH_PERIOD_SEC
+            : TELEMETRY_PUBLISH_PERIOD_SEC;
+    if (now - lastTelemetryPublishTimestampSec < publishPeriod) {
+      return false;
+    }
+    lastTelemetryPublishTimestampSec = now;
+    return true;
   }
 
   private TargetSnapshot computeTargetSnapshot() {

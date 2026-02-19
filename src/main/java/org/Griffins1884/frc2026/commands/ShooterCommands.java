@@ -8,27 +8,29 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
-import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
-  private static final Map<Double, Double> lookupTable = interpolate();
-  private static final double hubRadius=0.60;
-  private static final double shooterDistanceEdge=0.37;//Todo: Tune
-  private static final double shooterDistanceCenter = 0.02;//Todo: Tune
+  private static final NavigableMap<Double, Double> lookupTable = new TreeMap<>(interpolate());
+  private static final double hubRadius = 0.60;
+  private static final double shooterDistanceEdge = 0.37; // Todo: Tune
+  private static final double shooterDistanceCenter = 0.02; // Todo: Tune
 
-  private static final double segment1Start=0.97;
-  private static final double segment1End=2.98;
-  private static final double segment2Start=2.99;
-  private static final double segment2End=4.04;
-  private static final double segment3Start=4.05;
-  private static final double segment3End=6.20;
+  private static final double segment1Start = 0.97;
+  private static final double segment1End = 2.98;
+  private static final double segment2Start = 2.99;
+  private static final double segment2End = 4.04;
+  private static final double segment3Start = 4.05;
+  private static final double segment3End = 6.20;
 
   private enum Segment {
     SEGMENT_1,
@@ -41,7 +43,9 @@ public class ShooterCommands {
     ANGLE
   }
 
-  private static Segment currentSegment = Segment.SEGMENT_1; 
+  private static Segment currentSegment = Segment.SEGMENT_1;
+  private static final double minLookupDistance = shooterDistanceEdge + hubRadius + segment1Start;
+  private static final double maxLookupDistance = shooterDistanceEdge + hubRadius + segment3End;
 
   public static Map<Vals, Double> calc(Pose2d robot, Translation2d target) {
     // Distance Vector Calculation
@@ -64,10 +68,11 @@ public class ShooterCommands {
     distanceX = robot.getX() - target.getX();
     distanceY = robot.getY() - target.getY();
     yawAngle = robot.getRotation().getDegrees();
-    distanceX += shooterDistanceCenter*Math.cos(Math.toRadians(yawAngle));
-    distanceY += shooterDistanceCenter*Math.sin(Math.toRadians(yawAngle));
+    distanceX -= shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
+    distanceY -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
 
-    distance = (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
+    distance =
+        (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
 
     return dataPack(distance);
   }
@@ -153,7 +158,7 @@ public class ShooterCommands {
   public static Map<Double, Double> interpolate() {
     Map<Double, Double> table = new HashMap<>();
 
-    for (int i=0; i<lookupTable().size(); i++) {
+    for (int i = 0; i < lookupTable().size(); i++) {
       Map<Double, Double> temp = lookupTable().get(i);
       Set<Double> lookupTable = temp.keySet();
       List<Double> sortedKeys = new ArrayList<>(lookupTable);
@@ -161,102 +166,130 @@ public class ShooterCommands {
 
       double[] x = new double[lookupTable.size()];
       double[] y = new double[lookupTable.size()];
-      
+
       for (int j = 0; j < lookupTable.size(); j++) {
         x[j] = sortedKeys.get(j);
         y[j] = temp.get(sortedKeys.get(j));
       }
       SplineInterpolator interpolator = new SplineInterpolator();
       PolynomialSplineFunction function = interpolator.interpolate(x, y);
+      double domainStart = sortedKeys.get(0);
+      double domainEnd = sortedKeys.get(sortedKeys.size() - 1);
 
-      if (currentSegment==Segment.SEGMENT_1) {
-        for (double j = segment1Start; j <= segment1End; j+=0.01) {
-          table.put(j+shooterDistanceEdge+hubRadius, function.value(j));
+      if (i == 0) {
+        double sampleStart = Math.max(segment1Start, domainStart);
+        double sampleEnd = Math.min(segment1End, domainEnd);
+        for (double j = sampleStart; j <= sampleEnd + 1e-9; j += 0.01) {
+          double sample = Math.min(j, sampleEnd);
+          table.put(sample + shooterDistanceEdge + hubRadius, function.value(sample));
         }
-        currentSegment=Segment.SEGMENT_2;
-      } else if (currentSegment==Segment.SEGMENT_2) {
-        for (double j = segment2Start; j <= segment2End; j+=0.01) {
-          table.put(j+shooterDistanceEdge+hubRadius,function.value(j));
+      } else if (i == 1) {
+        double sampleStart = Math.max(segment2Start, domainStart);
+        double sampleEnd = Math.min(segment2End, domainEnd);
+        for (double j = sampleStart; j <= sampleEnd + 1e-9; j += 0.01) {
+          double sample = Math.min(j, sampleEnd);
+          table.put(sample + shooterDistanceEdge + hubRadius, function.value(sample));
         }
-        currentSegment=Segment.SEGMENT_3;
-      } else if (currentSegment==Segment.SEGMENT_3) {
-        for (double j = segment3Start; j <= segment3End; j+=0.01) {
-          table.put(j+shooterDistanceEdge+hubRadius,function.value(j));
+      } else if (i == 2) {
+        double sampleStart = Math.max(segment3Start, domainStart);
+        double sampleEnd = Math.min(segment3End, domainEnd);
+        for (double j = sampleStart; j <= sampleEnd + 1e-9; j += 0.01) {
+          double sample = Math.min(j, sampleEnd);
+          table.put(sample + shooterDistanceEdge + hubRadius, function.value(sample));
         }
       }
-
     }
     return table;
   }
-  public static boolean isAngle(double distance){
-    if (getValue(distance)<=1.6){
-      return true;
-    }else{
+
+  public static boolean isAngle(double distance) {
+    if (distance <= segment1End) {
       return false;
+    } else {
+      return true;
     }
   }
-  public static void setCurrentSegment(double distance){
-    if (!isAngle(distance)){
-      currentSegment=Segment.SEGMENT_1;
-    }
-    else{
-      if(distance<=shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment2End){
-        currentSegment=Segment.SEGMENT_2;
-      }
-      else if(distance<=shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment3End){
-        currentSegment=Segment.SEGMENT_3;
+
+  public static void setCurrentSegment(double distance) {
+    if (!isAngle(distance)) {
+      currentSegment = Segment.SEGMENT_1;
+    } else {
+      if (distance <= shooterDistanceEdge + hubRadius + segment2End) {
+        currentSegment = Segment.SEGMENT_2;
+      } else if (distance <= shooterDistanceEdge + hubRadius + segment3End) {
+        currentSegment = Segment.SEGMENT_3;
+      } else {
+        currentSegment = Segment.SEGMENT_3;
       }
     }
   }
-  public static double getRPM(double distance){
+
+  private static double lookupValueOrNearest(double distance) {
+    if (lookupTable.isEmpty()) {
+      return 0.1;
+    }
+    var floor = lookupTable.floorEntry(distance);
+    var ceil = lookupTable.ceilingEntry(distance);
+    if (floor == null) {
+      return ceil.getValue();
+    }
+    if (ceil == null) {
+      return floor.getValue();
+    }
+    if (Double.compare(floor.getKey(), ceil.getKey()) == 0) {
+      return floor.getValue();
+    }
+    double t = (distance - floor.getKey()) / (ceil.getKey() - floor.getKey());
+    return floor.getValue() + (ceil.getValue() - floor.getValue()) * t;
+  }
+
+  public static double getRPM(double distance) {
     setCurrentSegment(distance);
-    if(currentSegment==Segment.SEGMENT_1){
-      return getValue(distance);
-    }
-    else if(currentSegment==Segment.SEGMENT_2){
+    if (currentSegment == Segment.SEGMENT_1) {
+      return lookupValueOrNearest(distance);
+    } else if (currentSegment == Segment.SEGMENT_2) {
       return 2000.0;
-    }
-    else if(currentSegment==Segment.SEGMENT_3){
+    } else if (currentSegment == Segment.SEGMENT_3) {
       return 2500.0;
-    }
-    else{
-      return 0.1;
+    } else {
+      return 0.0;
     }
   }
-  public static double getBestAngle(double distance){
+
+  public static double getBestAngle(double distance) {
     setCurrentSegment(distance);
-    if(currentSegment==Segment.SEGMENT_2){
-      return getValue(segment2Start);
-    }
-    else if(currentSegment==Segment.SEGMENT_3){
-      return getValue(segment3Start);
-    }
-    else{
+    if (currentSegment == Segment.SEGMENT_1) {
       return 0.1;
+    } else if (currentSegment == Segment.SEGMENT_2) {
+      return lookupValueOrNearest(segment2Start + hubRadius + shooterDistanceEdge);
+    } else if (currentSegment == Segment.SEGMENT_3) {
+      return lookupValueOrNearest(segment3Start + hubRadius + shooterDistanceEdge);
     }
+    return 0.1;
   }
-  public static double getValue(double distance){
+
+  public static double getValue(double distance) {
     distance = (double) Math.round(distance * 100) / 100;
-    if (lookupTable.get(distance) != null) {
-        return lookupTable.get(distance);
+    if (!Double.isNaN(distance) && !isAngle(distance)) {
+      return lookupValueOrNearest(distance);
     } else {
       if (Double.isNaN(distance)) {
         return 0.1;
-      } else if (distance > 6.2+shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment3End) {
-        return lookupTable.get(6.2+shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment3End);
-      } else if (distance < shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment1Start) {
-        return lookupTable.get(shooterDistanceEdge+shooterDistanceCenter+hubRadius+segment1Start);
-      } else if (isAngle(distance)){
+      } else if (distance > maxLookupDistance) {
+        return lookupValueOrNearest(maxLookupDistance);
+      } else if (distance < minLookupDistance) {
+        return 0.1;
+      } else if (isAngle(distance)) {
         return getBestAngle(distance);
       }
       return 0.1;
     }
   }
 
-  public static Map<Vals, Double> dataPack(double distance){
+  public static Map<Vals, Double> dataPack(double distance) {
     Map<Vals, Double> data = new HashMap<>();
-    data.put(Vals.RPM, getRPM(distance));
-    data.put(Vals.ANGLE, getBestAngle(distance));
+    data.put(Vals.RPM, 4500.0); // getRPM(distance));
+    data.put(Vals.ANGLE, getValue(distance));
     return data;
   }
 
@@ -280,11 +313,7 @@ public class ShooterCommands {
       return new ShotTimeEstimate(0.0, 0.0, shooterExitHeightMeters, 0.0, false);
     }
     double exitVelocity =
-        (wheelRpm / 60.0)
-            * (2.0 * Math.PI)
-            * wheelRadiusMeters
-            * gearRatio
-            * slipFactor;
+        (wheelRpm / 60.0) * (2.0 * Math.PI) * wheelRadiusMeters * gearRatio * slipFactor;
     double cos = Math.cos(hoodAngleRad);
     if (Math.abs(cos) < 1e-6 || exitVelocity <= 1e-6) {
       return new ShotTimeEstimate(0.0, exitVelocity, shooterExitHeightMeters, 0.0, false);

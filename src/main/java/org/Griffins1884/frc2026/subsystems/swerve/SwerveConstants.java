@@ -16,7 +16,6 @@ import edu.wpi.first.math.util.Units;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
 import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
-import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.util.swerve.ModuleLimits;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
@@ -85,37 +84,37 @@ public final class SwerveConstants {
   private static final int FRD_ID =
       switch (ROBOT) {
         case DEVBOT -> 14;
-        case COMPBOT, SIMBOT -> 11;
+        case COMPBOT, SIMBOT -> 13;
         case CRESCENDO -> 43;
       };
   private static final int FRR_ID =
       switch (ROBOT) {
         case DEVBOT -> 15;
-        case COMPBOT, SIMBOT -> 21;
+        case COMPBOT, SIMBOT -> 12;
         case CRESCENDO -> 5;
       };
   private static final int FRR_CANCODER_ID =
       switch (ROBOT) {
         case DEVBOT -> 5;
-        case COMPBOT, SIMBOT -> -1;
+        case COMPBOT, SIMBOT -> 4;
         case CRESCENDO -> -1;
       };
   private static final int FLD_ID =
       switch (ROBOT) {
         case DEVBOT -> 13;
-        case COMPBOT, SIMBOT -> 12;
+        case COMPBOT, SIMBOT -> 11;
         case CRESCENDO -> 41;
       };
   private static final int FLR_ID =
       switch (ROBOT) {
         case DEVBOT -> 12;
-        case COMPBOT, SIMBOT -> 22;
+        case COMPBOT, SIMBOT -> 10;
         case CRESCENDO -> 1;
       };
   private static final int FLR_CANCODER_ID =
       switch (ROBOT) {
         case DEVBOT -> 4;
-        case COMPBOT, SIMBOT -> -1;
+        case COMPBOT, SIMBOT -> 3;
         case CRESCENDO -> -1;
       };
   private static final int BRD_ID =
@@ -127,50 +126,50 @@ public final class SwerveConstants {
   private static final int BRR_ID =
       switch (ROBOT) {
         case DEVBOT -> 17;
-        case COMPBOT, SIMBOT -> 24;
+        case COMPBOT, SIMBOT -> 15;
         case CRESCENDO -> 7;
       };
   private static final int BRR_CANCODER_ID =
       switch (ROBOT) {
         case DEVBOT -> 6;
-        case COMPBOT, SIMBOT -> -1;
+        case COMPBOT, SIMBOT -> 5;
         case CRESCENDO -> -1;
       };
   private static final int BLD_ID =
       switch (ROBOT) {
         case DEVBOT -> 11;
-        case COMPBOT, SIMBOT -> 13;
+        case COMPBOT, SIMBOT -> 16;
         case CRESCENDO -> 31;
       };
   private static final int BLR_ID =
       switch (ROBOT) {
         case DEVBOT -> 10;
-        case COMPBOT, SIMBOT -> 23;
+        case COMPBOT, SIMBOT -> 17;
         case CRESCENDO -> 3;
       };
   private static final int BLR_CANCODER_ID =
       switch (ROBOT) {
         case DEVBOT -> 3;
-        case COMPBOT, SIMBOT -> -1;
+        case COMPBOT, SIMBOT -> 6;
         case CRESCENDO -> -1;
       };
 
   // Zeroed rotation values for each module, see setup instructions
   private static final Rotation2d FLR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(0.075927734375 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.481201171875 * (2 * PI))
           : Rotation2d.fromRadians(-PI / 2);
   private static final Rotation2d FRR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.204345703125 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.1123046875 * (2 * PI))
           : Rotation2d.fromRadians(0);
   private static final Rotation2d BLR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(0.253173828125 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.001220703125 * (2 * PI))
           : Rotation2d.fromRadians(PI);
   private static final Rotation2d BRR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(0.432373046875 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.291259765625 * (2 * PI))
           : Rotation2d.fromRadians(PI / 2);
 
   // Inverted encoders or turn motors
@@ -254,7 +253,7 @@ public final class SwerveConstants {
   public static final double DRIVE_GEAR_RATIO = 5.08; // Spark Max
   public static final double KRAKEN_DRIVE_GEAR_RATIO = 6.03; // MK5n drive ratio (per team)
 
-  static final boolean DRIVE_INVERTED = ROBOT == RobotType.DEVBOT;
+  static final boolean DRIVE_INVERTED = true;
 
   /** Amps */
   static final int DRIVE_MOTOR_CURRENT_LIMIT = 40;
