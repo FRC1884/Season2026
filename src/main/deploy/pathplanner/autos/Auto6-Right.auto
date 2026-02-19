@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightDepot"
+            "pathName": "LeftDepot"
           }
         },
         {
@@ -20,6 +20,6 @@
     }
   },
   "resetOdom": true,
-  "folder": null,
+  "folder": "Rebuilt Paths",
   "choreoAuto": true
 }
