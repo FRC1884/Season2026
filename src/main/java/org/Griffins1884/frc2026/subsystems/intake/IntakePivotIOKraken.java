@@ -12,6 +12,9 @@ public class IntakePivotIOKraken extends GenericArmSystemIOKraken implements Int
         IntakePivotConstants.REVERSE_LIMIT,
         IntakePivotConstants.POSITION_COEFFICIENT,
         new boolean[] {inverted},
-        IntakePivotConstants.CAN_BUS);
+        IntakePivotConstants.CAN_BUS,
+        IntakePivotConstants.MOTION_MAGIC_CRUISE_VEL.get(),
+        IntakePivotConstants.MOTION_MAGIC_ACCEL.get(),
+        IntakePivotConstants.MOTION_MAGIC_JERK.get());
   }
 }
