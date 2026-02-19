@@ -17,11 +17,11 @@ import java.util.Optional;
  * <p>Calibration:
  *
  * <ol>
- *   <li>Lock the pivot at a known angle (ex: 45°).</li>
- *   <li>Shoot from several distances and record the RPM used.</li>
- *   <li>Compute required exit velocity v using the physics equation.</li>
- *   <li>Fit a linear regression from RPM → v.</li>
- *   <li>Paste kV (slope) and kS (intercept) below.</li>
+ *   <li>Lock the pivot at a known angle (ex: 45°).
+ *   <li>Shoot from several distances and record the RPM used.
+ *   <li>Compute required exit velocity v using the physics equation.
+ *   <li>Fit a linear regression from RPM → v.
+ *   <li>Paste kV (slope) and kS (intercept) below.
  * </ol>
  */
 public final class ShotSolver {

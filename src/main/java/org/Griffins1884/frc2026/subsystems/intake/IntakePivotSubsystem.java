@@ -1,10 +1,10 @@
 package org.Griffins1884.frc2026.subsystems.intake;
 
-import java.util.function.DoubleSupplier;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -92,6 +92,10 @@ public class IntakePivotSubsystem extends SubsystemBase {
               IntakePivotConstants.GAINS.kP(),
               IntakePivotConstants.GAINS.kI(),
               IntakePivotConstants.GAINS.kD(),
+              IntakePivotConstants.GAINS.kS(),
+              IntakePivotConstants.GAINS.kG(),
+              IntakePivotConstants.GAINS.kV(),
+              IntakePivotConstants.GAINS.kA(),
               IntakePivotConstants.POSITION_TOLERANCE,
               IntakePivotConstants.SOFT_LIMITS_ENABLED,
               IntakePivotConstants.SOFT_LIMIT_MIN,

@@ -10,6 +10,7 @@ import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
@@ -25,6 +26,7 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   private double lastKP = Double.NaN;
   private double lastKI = Double.NaN;
   private double lastKD = Double.NaN;
+  private double lastKG = Double.NaN;
 
   private final StatusSignal<?> positionSignal;
   private final StatusSignal<?> velocitySignal;
@@ -75,11 +77,12 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       for (int i = 1; i < ids.length; i++) {
         TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
         config.MotorOutput.Inverted =
-            inverted[i] ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+            inverted[i]
+                ? InvertedValue.Clockwise_Positive
+                : InvertedValue.CounterClockwise_Positive;
         tryUntilOk(5, () -> follower.getConfigurator().apply(config, 0.25));
         config.MotorOutput.Inverted = leaderInvertedValue;
-        follower.setControl(
-            new Follower(leader.getDeviceID(), MotorAlignmentValue.Aligned));
+        follower.setControl(new Follower(leader.getDeviceID(), MotorAlignmentValue.Aligned));
         follower.setPosition(0.0);
       }
     }
@@ -130,15 +133,18 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   }
 
   @Override
-  public void setPositionSetpoint(double position, double kP, double kI, double kD) {
-    if (pidChanged(kP, kI, kD)) {
+  public void setPositionSetpoint(double position, double kP, double kI, double kD, double kG) {
+    if (pidChanged(kP, kI, kD, kG)) {
       config.Slot0.kP = kP;
       config.Slot0.kI = kI;
       config.Slot0.kD = kD;
+      config.Slot0.kG = kG;
+      config.Slot0.GravityType = GravityTypeValue.Arm_Cosine;
       tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
       lastKP = kP;
       lastKI = kI;
       lastKD = kD;
+      lastKG = kG;
     }
     leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
   }
@@ -166,12 +172,16 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     tryUntilOk(5, () -> motor.getConfigurator().apply(invertedConfig, 0.25));
   }
 
-  private boolean pidChanged(double kP, double kI, double kD) {
-    if (Double.isNaN(lastKP) || Double.isNaN(lastKI) || Double.isNaN(lastKD)) {
+  private boolean pidChanged(double kP, double kI, double kD, double kG) {
+    if (Double.isNaN(lastKP)
+        || Double.isNaN(lastKI)
+        || Double.isNaN(lastKD)
+        || Double.isNaN(lastKG)) {
       return true;
     }
     return Double.compare(kP, lastKP) != 0
         || Double.compare(kI, lastKI) != 0
-        || Double.compare(kD, lastKD) != 0;
+        || Double.compare(kD, lastKD) != 0
+        || Double.compare(kG, lastKG) != 0;
   }
 }

@@ -33,6 +33,10 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
       LoggedTunableNumber kP,
       LoggedTunableNumber kI,
       LoggedTunableNumber kD,
+      LoggedTunableNumber kS,
+      LoggedTunableNumber kG,
+      LoggedTunableNumber kV,
+      LoggedTunableNumber kA,
       double positionTolerance,
       boolean softLimitsEnabled,
       double softLimitMin,
@@ -54,7 +58,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   private G lastGoal;
 
   private final PIDController pidController;
-  private final ArmFeedforward feedforward;
+  private ArmFeedforward feedforward;
   private final SysIdRoutine sysIdRoutine;
   private final ArmConfig config;
   private final int tuningId = System.identityHashCode(this);
@@ -69,7 +73,22 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   private double manualGoalPosition = 0.0;
 
   public GenericPositionArmSystem(String name, GenericArmSystemIO io, GlobalConstants.Gains gains) {
-    this(name, io, new ArmConfig(null, null, null, 0.0, false, 0.0, 0.0, 12.0));
+    this(
+        name,
+        io,
+        new ArmConfig(
+            gains.kP(),
+            gains.kI(),
+            gains.kD(),
+            gains.kS(),
+            gains.kG(),
+            gains.kV(),
+            gains.kA(),
+            0.0,
+            false,
+            0.0,
+            0.0,
+            12.0));
   }
 
   public GenericPositionArmSystem(String name, GenericArmSystemIO io, ArmConfig config) {
@@ -79,7 +98,9 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
 
     pidController = new PIDController(config.kP().get(), config.kI().get(), config.kD().get());
     pidController.setTolerance(config.positionTolerance());
-    feedforward = new ArmFeedforward(0.0, 0.0, 0.0, 0.0);
+    feedforward =
+        new ArmFeedforward(
+            config.kS().get(), config.kG().get(), config.kV().get(), config.kA().get());
 
     Consumer<SysIdRoutineLog> sysIdLog =
         (log) ->
@@ -157,7 +178,8 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
     double kD = config.kD().get();
 
     if (io.usesInternalPositionControl()) {
-      io.setPositionSetpoint(goalPosition, kP, kI, kD);
+      double kG = config.kG() != null ? config.kG().get() : 0.0;
+      io.setPositionSetpoint(goalPosition, kP, kI, kD, kG);
       Logger.recordOutput("Arms/" + name + "/Feedforward", 0.0);
       Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
       return;
@@ -169,6 +191,13 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
         config.kP(),
         config.kI(),
         config.kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new ArmFeedforward(values[0], values[1], values[2], values[3]),
+        config.kS(),
+        config.kG(),
+        config.kV(),
+        config.kA());
 
     double pidOutput = pidController.calculate(position, goalPosition);
     double feedforwardOutput = feedforward.calculate(position, inputs.velocity);
