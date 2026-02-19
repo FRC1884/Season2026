@@ -688,8 +688,11 @@ public class Superstructure extends SubsystemBase {
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
     lastShooterPivotPosition = data.get(ShooterCommands.Vals.ANGLE);
+    
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
     arms.shooterPivot.setGoalPosition((double)data.get(ShooterCommands.Vals.ANGLE));
+
+    rollers.shooter.setGoal(ShooterGoal.IDLING);
     rollers.shooter.setGoalVelocity((double)data.get(ShooterCommands.Vals.RPM));
   }
 
