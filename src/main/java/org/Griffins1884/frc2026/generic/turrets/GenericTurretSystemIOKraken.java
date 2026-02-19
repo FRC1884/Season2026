@@ -66,6 +66,7 @@ public class GenericTurretSystemIOKraken implements GenericTurretSystemIO {
     config.Slot0.kA = 0.0;
     tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
 
+    motor.setPosition(0.0);
     positionSignal = motor.getPosition();
     velocitySignal = motor.getVelocity();
     appliedVoltageSignal = motor.getMotorVoltage();
