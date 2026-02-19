@@ -22,9 +22,13 @@ public final class ShooterPivotConstants {
   public static final double FORWARD_LIMIT = 1.6;
   public static final double REVERSE_LIMIT = 0.1;
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversiond
+  // Set to 0 to disable Motion Magic for ShooterPivot (uses PositionTorqueCurrentFOC instead).
+  public static final double MOTION_MAGIC_CRUISE_VEL = 0.0;
+  public static final double MOTION_MAGIC_ACCEL = 0.0;
+  public static final double MOTION_MAGIC_JERK = 0.0;
 
   public static final GlobalConstants.Gains GAINS =
-      new GlobalConstants.Gains("ShooterPivot/Gains", 1500.0, 0.0, 0.0);
+      new GlobalConstants.Gains("ShooterPivot/Gains", 1500.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
   public static final double POSITION_TOLERANCE = 0.03; // TODO: tune
   public static final boolean SOFT_LIMITS_ENABLED = true;
   public static final double SOFT_LIMIT_MIN = REVERSE_LIMIT;

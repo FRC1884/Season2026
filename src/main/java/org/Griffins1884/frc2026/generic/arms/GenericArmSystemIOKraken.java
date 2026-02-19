@@ -7,6 +7,7 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
+import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
@@ -22,7 +23,10 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
   private final PositionTorqueCurrentFOC positionTorqueRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
+  private final MotionMagicTorqueCurrentFOC motionMagicRequest =
+      new MotionMagicTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final double positionCoefficient;
+  private final boolean useMotionMagic;
   private double lastKP = Double.NaN;
   private double lastKI = Double.NaN;
   private double lastKD = Double.NaN;
@@ -44,7 +48,34 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       double positionCoefficient,
       boolean[] inverted,
       CANBus canBus) {
+    this(
+        ids,
+        currentLimitAmps,
+        brake,
+        forwardSoftLimit,
+        reverseSoftLimit,
+        positionCoefficient,
+        inverted,
+        canBus,
+        0.0,
+        0.0,
+        0.0);
+  }
+
+  public GenericArmSystemIOKraken(
+      int[] ids,
+      int currentLimitAmps,
+      boolean brake,
+      double forwardSoftLimit,
+      double reverseSoftLimit,
+      double positionCoefficient,
+      boolean[] inverted,
+      CANBus canBus,
+      double motionMagicCruiseVelocity,
+      double motionMagicAcceleration,
+      double motionMagicJerk) {
     this.positionCoefficient = positionCoefficient;
+    this.useMotionMagic = motionMagicCruiseVelocity > 0.0 && motionMagicAcceleration > 0.0;
 
     motors = new TalonFX[ids.length];
     leader = motors[0] = new TalonFX(ids[0], canBus);
@@ -70,6 +101,11 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     config.SoftwareLimitSwitch.ForwardSoftLimitThreshold = forwardSoftLimit / positionCoefficient;
     config.SoftwareLimitSwitch.ReverseSoftLimitEnable = true;
     config.SoftwareLimitSwitch.ReverseSoftLimitThreshold = reverseSoftLimit / positionCoefficient;
+    config.MotionMagic.MotionMagicCruiseVelocity = motionMagicCruiseVelocity / positionCoefficient;
+    config.MotionMagic.MotionMagicAcceleration = motionMagicAcceleration / positionCoefficient;
+    if (motionMagicJerk > 0.0) {
+      config.MotionMagic.MotionMagicJerk = motionMagicJerk / positionCoefficient;
+    }
 
     tryUntilOk(5, () -> leader.getConfigurator().apply(config, 0.25));
 
@@ -146,7 +182,11 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
       lastKD = kD;
       lastKG = kG;
     }
-    leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
+    if (useMotionMagic) {
+      leader.setControl(motionMagicRequest.withPosition(position / positionCoefficient));
+    } else {
+      leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
+    }
   }
 
   @Override
