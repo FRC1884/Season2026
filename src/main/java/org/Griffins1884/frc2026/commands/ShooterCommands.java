@@ -21,7 +21,7 @@ public class ShooterCommands {
   private static final Map<Double, Double> lookupTable = interpolate();
   private static final double hubRadius=0.60;
   private static final double shooterDistanceEdge=0.37;//Todo: Tune
-  private static final double shooterDistanceCenter=0.35;//Todo: Tune
+  private static final double shooterDistanceCenter = 0.02;//Todo: Tune
 
   private static final double segment1Start=0.97;
   private static final double segment1End=2.98;
@@ -51,6 +51,7 @@ public class ShooterCommands {
     double distanceX;
     double distanceY;
     double distance;
+    double yawAngle;
 
     // Angle/RPM
     double value;
@@ -60,10 +61,13 @@ public class ShooterCommands {
             Math.abs(robot.getX() - target.getX()), Math.abs(robot.getY() - target.getY()));
 
     // Calculate the Straight line distance in (m) to the hub
-    distanceX = distance2d.getX();
-    distanceY = distance2d.getY();
+    distanceX = robot.getX() - target.getX();
+    distanceY = robot.getY() - target.getY();
+    yawAngle = robot.getRotation().getDegrees();
+    distanceX += shooterDistanceCenter*Math.cos(Math.toRadians(yawAngle));
+    distanceY += shooterDistanceCenter*Math.sin(Math.toRadians(yawAngle));
 
-    distance = (double) Math.round(Math.hypot(distanceX, distanceY) * 100) / 100;
+    distance = (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
 
     return dataPack(distance);
   }
@@ -167,17 +171,17 @@ public class ShooterCommands {
 
       if (currentSegment==Segment.SEGMENT_1) {
         for (double j = segment1Start; j <= segment1End; j+=0.01) {
-          table.put(j+shooterDistanceEdge+shooterDistanceCenter+hubRadius, function.value(j));
+          table.put(j+shooterDistanceEdge+hubRadius, function.value(j));
         }
         currentSegment=Segment.SEGMENT_2;
       } else if (currentSegment==Segment.SEGMENT_2) {
         for (double j = segment2Start; j <= segment2End; j+=0.01) {
-          table.put(j+shooterDistanceEdge+shooterDistanceCenter+hubRadius,function.value(j));
+          table.put(j+shooterDistanceEdge+hubRadius,function.value(j));
         }
         currentSegment=Segment.SEGMENT_3;
       } else if (currentSegment==Segment.SEGMENT_3) {
         for (double j = segment3Start; j <= segment3End; j+=0.01) {
-          table.put(j+shooterDistanceEdge+shooterDistanceCenter+hubRadius,function.value(j));
+          table.put(j+shooterDistanceEdge+hubRadius,function.value(j));
         }
       }
 
