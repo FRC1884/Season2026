@@ -48,8 +48,9 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     leader = motors[0] = new TalonFX(ids[0], canBus);
 
     config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
-    config.MotorOutput.Inverted =
+    InvertedValue leaderInvertedValue =
         inverted[0] ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
+    config.MotorOutput.Inverted = leaderInvertedValue;
     config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
     config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
@@ -73,11 +74,13 @@ public class GenericArmSystemIOKraken implements GenericArmSystemIO {
     if (ids.length > 1) {
       for (int i = 1; i < ids.length; i++) {
         TalonFX follower = motors[i] = new TalonFX(ids[i], canBus);
+        config.MotorOutput.Inverted =
+            inverted[i] ? InvertedValue.Clockwise_Positive : InvertedValue.CounterClockwise_Positive;
         tryUntilOk(5, () -> follower.getConfigurator().apply(config, 0.25));
+        config.MotorOutput.Inverted = leaderInvertedValue;
         follower.setControl(
-            new Follower(
-                leader.getDeviceID(),
-                inverted[i] ? MotorAlignmentValue.Opposed : MotorAlignmentValue.Aligned));
+            new Follower(leader.getDeviceID(), MotorAlignmentValue.Aligned));
+        follower.setPosition(0.0);
       }
     }
 
