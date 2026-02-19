@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftPos_PreShoot"
+            "pathName": "RightPos_PreShoot"
           }
         },
         {
@@ -19,7 +19,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftPos_OverBump"
+            "pathName": "RightPos_OverBump"
           }
         },
         {
