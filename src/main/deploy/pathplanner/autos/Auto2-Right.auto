@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightPos_PreShoot"
+            "pathName": "LeftPos_PreShoot"
           }
         },
         {
@@ -19,7 +19,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightPos_OverBump"
+            "pathName": "LeftPos_OverBump"
           }
         },
         {
@@ -104,6 +104,6 @@
     }
   },
   "resetOdom": true,
-  "folder": null,
+  "folder": "Rebuilt Paths",
   "choreoAuto": true
 }

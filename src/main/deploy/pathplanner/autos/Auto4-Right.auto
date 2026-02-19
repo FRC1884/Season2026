@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightOverBump"
+            "pathName": "LeftOverBump"
           }
         },
         {
@@ -32,6 +32,6 @@
     }
   },
   "resetOdom": true,
-  "folder": null,
+  "folder": "Rebuilt Paths",
   "choreoAuto": true
 }
