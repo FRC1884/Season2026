@@ -15,7 +15,6 @@ import org.littletonrobotics.junction.Logger;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
-  private static final double shooterDistanceCenter = 0.02; // TODO: Tune
 
   public enum Vals {
     RPM,
@@ -31,14 +30,10 @@ public class ShooterCommands {
     double distanceX;
     double distanceY;
     double distance;
-    double yawAngle;
 
     // Calculate the Straight line distance in (m) to the hub
     distanceX = robot.getX() - target.getX();
     distanceY = robot.getY() - target.getY();
-    yawAngle = robot.getRotation().getDegrees();
-    distanceX -= shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
-    distanceY -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
 
     distance =
         (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
@@ -51,21 +46,8 @@ public class ShooterCommands {
     return lookupInterpolated(rpmByDistance, distanceMeters);
   }
 
-  public static double getPivotAngleDegrees(double distanceMeters) {
-    return lookupInterpolated(angleByDistanceDeg, distanceMeters);
-  }
-
-  /** Placeholder conversion from degrees to pivot units (0.1 to 1.6 scale). */
-  public static double pivotUnitsFromDegrees(double degrees) {
-    return degrees;
-  }
-
   public static double getPivotAngleOutput(double distanceMeters) {
-    return pivotUnitsFromDegrees(getPivotAngleDegrees(distanceMeters));
-  }
-
-  public static double getPivotAngleRad(double distanceMeters) {
-    return Math.toRadians(getPivotAngleDegrees(distanceMeters));
+    return lookupInterpolated(angleByDistanceDeg, distanceMeters);
   }
 
   public static Map<Vals, Double> dataPack(double distanceMeters) {
@@ -97,19 +79,157 @@ public class ShooterCommands {
 
   private static NavigableMap<Double, Double> buildAngleTable() {
     NavigableMap<Double, Double> table = new TreeMap<>();
-    // Distance meters -> pivot angle radians. Add/edit your mapping here.
-    table.put(2.0, 0.20);
-    table.put(3.0, 0.35);
-    table.put(4.0, 0.55);
+    // Distance meters -> pivot angle encoder position. Add/edit your mapping here.
+    table.put(0.0,0.0);
+    table.put(0.1,0.0);
+    table.put(0.2,0.0);
+    table.put(0.3,0.0);
+    table.put(0.4,0.0);
+    table.put(0.5,0.0);
+    table.put(0.6,0.0);
+    table.put(0.7,0.0);
+    table.put(0.8,0.0);
+    table.put(0.9,0.0);
+    table.put(1.0,0.0);
+    table.put(1.1,0.0);
+    table.put(1.2,0.0);
+    table.put(1.3,0.0);
+    table.put(1.4,0.0);
+    table.put(1.5,0.0);
+    table.put(1.6,0.0);
+    table.put(1.7,0.0);
+    table.put(1.8,0.0);
+    table.put(1.9,0.0);
+    table.put(2.0,0.0);
+    table.put(2.1,0.0);
+    table.put(2.2,0.0);
+    table.put(2.3,0.0);
+    table.put(2.4,0.0);
+    table.put(2.5,0.0);
+    table.put(2.6,0.0);
+    table.put(2.7,0.0);
+    table.put(2.8,0.0);
+    table.put(2.9,0.0);
+    table.put(3.0,0.0);
+    table.put(3.1,0.0);
+    table.put(3.2,0.0);
+    table.put(3.3,0.0);
+    table.put(3.4,0.0);
+    table.put(3.5,0.0);
+    table.put(3.6,0.0);
+    table.put(3.7,0.0);
+    table.put(3.8,0.0);
+    table.put(3.9,0.0);
+    table.put(4.0,0.0);
+    table.put(4.1,0.0);
+    table.put(4.2,0.0);
+    table.put(4.3,0.0);
+    table.put(4.4,0.0);
+    table.put(4.5,0.0);
+    table.put(4.6,0.0);
+    table.put(4.7,0.0);
+    table.put(4.8,0.0);
+    table.put(4.9,0.0);
+    table.put(5.0,0.0);
+    table.put(5.1,0.0);
+    table.put(5.2,0.0);
+    table.put(5.3,0.0);
+    table.put(5.4,0.0);
+    table.put(5.5,0.0);
+    table.put(5.6,0.0);
+    table.put(5.7,0.0);
+    table.put(5.8,0.0);
+    table.put(5.9,0.0);
+    table.put(6.0,0.0);
+    table.put(6.1,0.0);
+    table.put(6.2,0.0);
+    table.put(6.3,0.0);
+    table.put(6.4,0.0);
+    table.put(6.5,0.0);
+    table.put(6.6,0.0);
+    table.put(6.7,0.0);
+    table.put(6.8,0.0);
+    table.put(6.9,0.0);
+    table.put(7.0,0.0);
+    
     return table;
   }
 
   private static NavigableMap<Double, Double> buildRpmTable() {
     NavigableMap<Double, Double> table = new TreeMap<>();
     // Distance meters -> shooter RPM. Add/edit your mapping here.
-    table.put(2.0, 2200.0);
-    table.put(3.0, 2500.0);
-    table.put(4.0, 3000.0);
+    table.put(0.0,0.0);
+    table.put(0.1,0.0);
+    table.put(0.2,0.0);
+    table.put(0.3,0.0);
+    table.put(0.4,0.0);
+    table.put(0.5,0.0);
+    table.put(0.6,0.0);
+    table.put(0.7,0.0);
+    table.put(0.8,0.0);
+    table.put(0.9,0.0);
+    table.put(1.0,0.0);
+    table.put(1.1,0.0);
+    table.put(1.2,0.0);
+    table.put(1.3,0.0);
+    table.put(1.4,0.0);
+    table.put(1.5,0.0);
+    table.put(1.6,0.0);
+    table.put(1.7,0.0);
+    table.put(1.8,0.0);
+    table.put(1.9,0.0);
+    table.put(2.0,0.0);
+    table.put(2.1,0.0);
+    table.put(2.2,0.0);
+    table.put(2.3,0.0);
+    table.put(2.4,0.0);
+    table.put(2.5,0.0);
+    table.put(2.6,0.0);
+    table.put(2.7,0.0);
+    table.put(2.8,0.0);
+    table.put(2.9,0.0);
+    table.put(3.0,0.0);
+    table.put(3.1,0.0);
+    table.put(3.2,0.0);
+    table.put(3.3,0.0);
+    table.put(3.4,0.0);
+    table.put(3.5,0.0);
+    table.put(3.6,0.0);
+    table.put(3.7,0.0);
+    table.put(3.8,0.0);
+    table.put(3.9,0.0);
+    table.put(4.0,0.0);
+    table.put(4.1,0.0);
+    table.put(4.2,0.0);
+    table.put(4.3,0.0);
+    table.put(4.4,0.0);
+    table.put(4.5,0.0);
+    table.put(4.6,0.0);
+    table.put(4.7,0.0);
+    table.put(4.8,0.0);
+    table.put(4.9,0.0);
+    table.put(5.0,0.0);
+    table.put(5.1,0.0);
+    table.put(5.2,0.0);
+    table.put(5.3,0.0);
+    table.put(5.4,0.0);
+    table.put(5.5,0.0);
+    table.put(5.6,0.0);
+    table.put(5.7,0.0);
+    table.put(5.8,0.0);
+    table.put(5.9,0.0);
+    table.put(6.0,0.0);
+    table.put(6.1,0.0);
+    table.put(6.2,0.0);
+    table.put(6.3,0.0);
+    table.put(6.4,0.0);
+    table.put(6.5,0.0);
+    table.put(6.6,0.0);
+    table.put(6.7,0.0);
+    table.put(6.8,0.0);
+    table.put(6.9,0.0);
+    table.put(7.0,0.0);
+
     return table;
   }
 
