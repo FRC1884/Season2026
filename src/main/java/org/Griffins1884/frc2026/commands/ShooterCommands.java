@@ -15,6 +15,7 @@ import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 
@@ -68,8 +69,8 @@ public class ShooterCommands {
     distanceX = robot.getX() - target.getX();
     distanceY = robot.getY() - target.getY();
     yawAngle = robot.getRotation().getDegrees();
-    distanceX -= shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
-    distanceY -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
+    distanceX -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
+    distanceY += shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
 
     distance =
         (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
