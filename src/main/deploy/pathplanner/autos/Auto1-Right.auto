@@ -43,31 +43,67 @@
         {
           "type": "path",
           "data": {
-            "pathName": "BackOverBump"
+            "pathName": "BackOverBumpShoot"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "OverBump"
+            "name": "OverBumpAndShoot"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "ShootAndClimb"
+            "pathName": "ToSecondCollect"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "ShootAndClimb"
+            "name": "FirstOverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Collect"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Collect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BackOverBumpShoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBumpAndShoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "ToNeutral"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "BumpToNeutral"
           }
         }
       ]
     }
   },
   "resetOdom": true,
-  "folder": "Not Using",
+  "folder": "Rebuilt Paths",
   "choreoAuto": true
 }

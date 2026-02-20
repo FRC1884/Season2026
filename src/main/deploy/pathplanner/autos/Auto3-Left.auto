@@ -7,25 +7,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftPos_PreShoot"
+            "pathName": "LeftOverBump"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "LeftPos_OverBump"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "OverBump"
+            "name": "FirstOverBump"
           }
         },
         {
@@ -38,30 +26,6 @@
           "type": "named",
           "data": {
             "name": "Collect"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "BackOverBumpShoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "OverBumpAndShoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "ToNeutral"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "OverBump"
           }
         }
       ]

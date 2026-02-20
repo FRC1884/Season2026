@@ -255,6 +255,27 @@ public class DriveCommands {
         Set.of(drive));
   }
 
+  public static Command alignToAfterSecondBumpCommand(SwerveSubsystem drive){
+      return Commands.defer(
+              () -> {
+          Pose2d target = AlignConstants.getAfterSecondBumpStartPose();
+          Logger.recordOutput("Autonomy/AlignTargetAfterSecondBumpStart", target);
+          return new AutoAlignToPoseHolonomicCommand(drive, target);
+      },
+      Set.of(drive));
+  }
+
+    public static Command alignToAfterBumpToNeutralCommand(SwerveSubsystem drive){
+        return Commands.defer(
+                () -> {
+                    Pose2d target = AlignConstants.getAfterBumpToNeutralStartPose();
+                    Logger.recordOutput("Autonomy/AlignTargetAfterBumpToNeutralStart", target);
+                    return new AutoAlignToPoseHolonomicCommand(drive, target);
+                },
+                Set.of(drive));
+    }
+
+
   /**
    * Measures the velocity feedforward constants for the drive motors.
    *
