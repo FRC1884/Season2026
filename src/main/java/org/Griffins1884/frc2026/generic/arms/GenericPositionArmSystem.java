@@ -183,14 +183,6 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
     double kI = config.kI().get();
     double kD = config.kD().get();
 
-    if (io.usesInternalPositionControl()) {
-      double kG = config.kG() != null ? config.kG().get() : 0.0;
-      io.setPositionSetpoint(goalPosition, kP, kI, kD, kG);
-      Logger.recordOutput("Arms/" + name + "/Feedforward", 0.0);
-      Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
-      return;
-    }
-
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> pidController.setPID(values[0], values[1], values[2]),
@@ -206,6 +198,14 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
           config.motionMagicCruiseVelocity(),
           config.motionMagicAcceleration(),
           config.motionMagicJerk());
+    }
+
+    if (io.usesInternalPositionControl()) {
+      double kG = config.kG() != null ? config.kG().get() : 0.0;
+      io.setPositionSetpoint(goalPosition, kP, kI, kD, kG);
+      Logger.recordOutput("Arms/" + name + "/Feedforward", 0.0);
+      Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
+      return;
     }
     LoggedTunableNumber.ifChanged(
         tuningId,
