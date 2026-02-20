@@ -52,7 +52,7 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 220.0);
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
-          new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 5.9);
+      new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 5.9);
   public static final LoggedTunableNumber AFTER_BUMP_START_Y_METERS =
           new LoggedTunableNumber("Align/AfterBumpStart/YMeters", 2.5);
   public static final LoggedTunableNumber AFTER_BUMP_START_HEADING_DEG =

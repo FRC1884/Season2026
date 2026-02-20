@@ -54,7 +54,8 @@ public final class TurretCommands {
     ChassisSpeeds speeds = robotVelocitySupplier.get();
     Translation2d currentTranslation = currentPose.getTranslation();
     double dist = target.getDistance(currentTranslation);
-    double shotTime = ShooterCommands.estimateShotTimeSeconds(dist, ShooterCommands.getBestAngle(dist));
+    double shotTime =
+        ShooterCommands.estimateShotTimeSeconds(dist, ShooterCommands.getPivotAngleRad(dist));
 
     Translation2d fieldVelocity =
         new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)

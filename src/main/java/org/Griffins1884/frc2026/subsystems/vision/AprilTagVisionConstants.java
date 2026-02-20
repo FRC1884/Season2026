@@ -33,11 +33,11 @@ public final class AprilTagVisionConstants {
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
-                        0.30368,
-                        -0.29575,
-                        0.22454,
-                        new Rotation3d(
-                                degreesToRadians(180), degreesToRadians(15), degreesToRadians(-20))),
+                    0.30368,
+                    -0.29575,
+                    0.22454,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(15), degreesToRadians(20))),
                 VisionIO.CameraType.OV9281);
         case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
@@ -50,7 +50,7 @@ public final class AprilTagVisionConstants {
                 VisionIO.CameraType.OV9281);
       };
 
-  public static final boolean RIGHT_CAM_ENABLED = false;
+  public static final boolean RIGHT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
         case DEVBOT ->
@@ -64,15 +64,15 @@ public final class AprilTagVisionConstants {
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
                 VisionIO.CameraType.OV9281);
         case COMPBOT ->
-                new VisionIO.CameraConstants(
-                        (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
-                        new Transform3d(
-                                0.30368,
-                                0.29575,
-                                0.22454,
-                                new Rotation3d(
-                                        degreesToRadians(180), degreesToRadians(15), degreesToRadians(20))),
-                        VisionIO.CameraType.OV9281);
+            new VisionIO.CameraConstants(
+                (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
+                new Transform3d(
+                    0.30368,
+                    0.29575,
+                    0.22454,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(15), degreesToRadians(-20))),
+                VisionIO.CameraType.OV9281);
         case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
@@ -168,7 +168,7 @@ public final class AprilTagVisionConstants {
   public static final double POSE_AMBIGUITY_MULTIPLIER = 4;
 
   public static final LoggedTunableNumber LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS =
-      new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 1.0);
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 2.5);
   public static final LoggedTunableNumber LIMELIGHT_REJECT_OUTLIERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/RejectOutliers", 1.0);
 

@@ -52,6 +52,7 @@ public abstract class GenericVelocityRollerSystem<
   private final SysIdRoutine sysIdRoutine;
   private final PIDController pidController;
   private SimpleMotorFeedforward feedforward;
+  private double feedforwardKa = 0.0;
   private final VelocityRollerConfig config;
   private final int tuningId = System.identityHashCode(this);
 
@@ -76,9 +77,8 @@ public abstract class GenericVelocityRollerSystem<
 
     pidController = new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
     pidController.setTolerance(config.velocityTolerance());
-    feedforward =
-        new SimpleMotorFeedforward(
-            config.gains().kS().get(), config.gains().kV().get(), config.gains().kA().get());
+    feedforward = new SimpleMotorFeedforward(config.gains().kS().get(), config.gains().kV().get());
+    feedforwardKa = config.gains().kA().get();
     lastTimestampSec = Timer.getFPGATimestamp();
     Consumer<SysIdRoutineLog> sysIdLog =
         (log) ->
@@ -145,10 +145,11 @@ public abstract class GenericVelocityRollerSystem<
         config.gains().kI());
     LoggedTunableNumber.ifChanged(
         tuningId,
-        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1], values[2]),
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1]),
         config.gains().kS(),
-        config.gains().kV(),
-        config.gains().kA());
+        config.gains().kV());
+    LoggedTunableNumber.ifChanged(
+        tuningId, values -> feedforwardKa = values[0], config.gains().kA());
 
     double nowSec = Timer.getFPGATimestamp();
     double dtSec = nowSec - lastTimestampSec;
@@ -161,7 +162,8 @@ public abstract class GenericVelocityRollerSystem<
     double goalAccelRadPerSec2 = (goalVelocityRadPerSec - lastGoalVelocityRadPerSec) / dtSec;
     lastGoalVelocityRadPerSec = goalVelocityRadPerSec;
 
-    double feedforwardVolts = feedforward.calculate(goalVelocityRadPerSec, goalAccelRadPerSec2);
+    double feedforwardVolts =
+        feedforward.calculate(goalVelocityRadPerSec) + feedforwardKa * goalAccelRadPerSec2;
     double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
     double outputVoltage =
         MathUtil.clamp(pidOutput + feedforwardVolts, -config.maxVoltage(), config.maxVoltage());

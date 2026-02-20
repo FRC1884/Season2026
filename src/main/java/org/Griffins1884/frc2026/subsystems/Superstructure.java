@@ -13,11 +13,10 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-import java.util.Map;
-
 import lombok.Getter;
 import lombok.Setter;
 import org.Griffins1884.frc2026.Config;
@@ -480,36 +479,56 @@ public class Superstructure extends SubsystemBase {
     setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterGoal(ShooterGoal.IDLING);
-    setIntakePivotGoal(IntakePivotGoal.IDLING);
+    setIntakePivotGoal(IntakePivotGoal.PICKUP);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
     stopClimber();
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
-    setIntakeGoal(IntakeGoal.IDLING);
-    setIndexerGoal(IndexerGoal.FORWARD);
-    setShooterGoal(ShooterGoal.FORWARD);
-    setIntakePivotGoal(IntakePivotGoal.IDLING);
-    aimTurretAt(target);
-    aimShooterPivotAt(target);
-    stopClimber();
+    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
+      setIntakeGoal(IntakeGoal.IDLING);
+      setIndexerGoal(IndexerGoal.FORWARD);
+      setShooterGoal(ShooterGoal.FORWARD);
+      setIntakePivotGoal(IntakePivotGoal.IDLING);
+      aimTurretAt(target);
+      aimShooterPivotAt(target);
+      stopClimber();
 
-    if (autoStopOnEmpty && SuperstructureConstants.AUTO_STOP_ON_EMPTY && isBallSenseAvailable()) {
-      if (!isBallPresent()) {
-        requestState(SuperState.IDLING, false);
+      if (autoStopOnEmpty && SuperstructureConstants.AUTO_STOP_ON_EMPTY && isBallSenseAvailable()) {
+        if (!isBallPresent()) {
+          requestState(SuperState.IDLING, false);
+        }
       }
+    } else {
+      setIntakeGoal(IntakeGoal.IDLING);
+      setIndexerGoal(IndexerGoal.IDLING);
+      setShooterGoal(ShooterGoal.FORWARD);
+      setIntakePivotGoal(IntakePivotGoal.IDLING);
+      aimTurretAt(target);
+      aimShooterPivotAt(target);
+      stopClimber();
     }
   }
 
   private void applyShootingAndIntaking(Translation2d target) {
-    setIntakeGoal(IntakeGoal.FORWARD);
-    setIndexerGoal(IndexerGoal.FORWARD);
-    setShooterGoal(ShooterGoal.FORWARD);
-    setIntakePivotGoal(IntakePivotGoal.IDLING);
-    aimTurretAt(target);
-    aimShooterPivotAt(target);
-    stopClimber();
+    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
+      setIntakeGoal(IntakeGoal.FORWARD);
+      setIndexerGoal(IndexerGoal.FORWARD);
+      setShooterGoal(ShooterGoal.FORWARD);
+      setIntakePivotGoal(IntakePivotGoal.PICKUP);
+      aimTurretAt(target);
+      aimShooterPivotAt(target);
+      stopClimber();
+    } else {
+      setIntakeGoal(IntakeGoal.FORWARD);
+      setIndexerGoal(IndexerGoal.IDLING);
+      setShooterGoal(ShooterGoal.FORWARD);
+      setIntakePivotGoal(IntakePivotGoal.PICKUP);
+      aimTurretAt(target);
+      aimShooterPivotAt(target);
+      stopClimber();
+    }
   }
 
   private void applyFerrying() {
@@ -519,7 +538,7 @@ public class Superstructure extends SubsystemBase {
     setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
-    setIntakePivotGoal(IntakePivotGoal.IDLING);
+    setIntakePivotGoal(IntakePivotGoal.PICKUP);
     aimTurretAt(target);
     aimShooterPivotAt(target);
     stopClimber();
@@ -682,18 +701,18 @@ public class Superstructure extends SubsystemBase {
     if (pose == null) {
       return;
     }
-    
+
     Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target);
 
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
     lastShooterPivotPosition = data.get(ShooterCommands.Vals.ANGLE);
-    
+
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
-    arms.shooterPivot.setGoalPosition((double)data.get(ShooterCommands.Vals.ANGLE));
+    arms.shooterPivot.setGoalPosition((double) data.get(ShooterCommands.Vals.ANGLE));
 
     rollers.shooter.setGoal(ShooterGoal.IDLING);
-    rollers.shooter.setGoalVelocity((double)data.get(ShooterCommands.Vals.RPM));
+    rollers.shooter.setGoalVelocity((double) data.get(ShooterCommands.Vals.RPM));
   }
 
   private boolean isBallSenseAvailable() {
