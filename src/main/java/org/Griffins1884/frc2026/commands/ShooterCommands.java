@@ -132,48 +132,6 @@ public class ShooterCommands {
       double heightErrorMeters,
       boolean feasible) {}
 
-  public static ShotTimeEstimate estimateShotTimeDetailed(
-      double distanceMeters,
-      double hoodAngleRad,
-      double shooterExitHeightMeters,
-      double targetHeightMeters,
-      double wheelRpm,
-      double wheelRadiusMeters,
-      double gearRatio,
-      double slipFactor) {
-    if (distanceMeters <= 0.0) {
-      return new ShotTimeEstimate(0.0, 0.0, shooterExitHeightMeters, 0.0, false);
-    }
-    double exitVelocity =
-        (wheelRpm / 60.0) * (2.0 * Math.PI) * wheelRadiusMeters * gearRatio * slipFactor;
-    double cos = Math.cos(hoodAngleRad);
-    if (Math.abs(cos) < 1e-6 || exitVelocity <= 1e-6) {
-      return new ShotTimeEstimate(0.0, exitVelocity, shooterExitHeightMeters, 0.0, false);
-    }
-    double timeSeconds = distanceMeters / (exitVelocity * cos);
-    double predictedHeight =
-        shooterExitHeightMeters
-            + exitVelocity * Math.sin(hoodAngleRad) * timeSeconds
-            - 0.5 * GRAVITY * timeSeconds * timeSeconds;
-    double heightError = targetHeightMeters - predictedHeight;
-    boolean feasible = !Double.isNaN(timeSeconds) && timeSeconds > 0.0;
-    return new ShotTimeEstimate(timeSeconds, exitVelocity, predictedHeight, heightError, feasible);
-  }
-
-  public static double estimateShotTimeSeconds(double distanceMeters, double hoodAngleRad) {
-    ShotTimeEstimate estimate =
-        estimateShotTimeDetailed(
-            distanceMeters,
-            hoodAngleRad,
-            ShooterConstants.EXIT_HEIGHT_METERS,
-            ShooterConstants.TARGET_HEIGHT_METERS,
-            getShooterRpm(distanceMeters),
-            ShooterConstants.FLYWHEEL_RADIUS_METERS,
-            ShooterConstants.FLYWHEEL_GEAR_RATIO,
-            ShooterConstants.SLIP_FACTOR.get());
-    return estimate.timeSeconds();
-  }
-
   public static Command pivotOpenLoop(ShooterPivotSubsystem pivot, DoubleSupplier percentSupplier) {
     return Commands.runEnd(
         () -> pivot.setOpenLoop(percentSupplier.getAsDouble()), pivot::stopOpenLoop, pivot);

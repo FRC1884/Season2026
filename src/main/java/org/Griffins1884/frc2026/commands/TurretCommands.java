@@ -17,7 +17,6 @@ import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 
 import static org.Griffins1884.frc2026.commands.AlignConstants.*;
-import static org.Griffins1884.frc2026.commands.ShooterCommands.getRPM;
 import static org.Griffins1884.frc2026.commands.ShooterCommands.getShooterRpm;
 import static org.ironmaple.simulation.gamepieces.GamePieceProjectile.GRAVITY;
 
@@ -135,7 +134,7 @@ public final class TurretCommands {
       ShooterCommands.ShotTimeEstimate estimate =
                 estimateShotTimeDetailed(
                         distanceMeters,
-                        ShooterCommands.getBestAngle(distanceMeters),
+                        ShooterCommands.getPivotAngleDegrees(distanceMeters),
                         ShooterConstants.EXIT_HEIGHT_METERS,
                         ShooterConstants.TARGET_HEIGHT_METERS,
                         getShooterRpm(distanceMeters),
