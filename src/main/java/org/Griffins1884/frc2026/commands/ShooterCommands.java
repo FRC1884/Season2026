@@ -37,8 +37,8 @@ public class ShooterCommands {
     distanceX = robot.getX() - target.getX();
     distanceY = robot.getY() - target.getY();
     yawAngle = robot.getRotation().getDegrees();
-    distanceX -= shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
-    distanceY -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
+    distanceX -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
+    distanceY += shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
 
     distance =
         (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;

@@ -16,8 +16,8 @@ public final class ShooterConstants {
   public static final double TARGET_RPM = 4500.0;
 
   public static final GlobalConstants.Gains gains =
-      new GlobalConstants.Gains("Shooter/Gains", 0.001, 0.01, 1, 0.4621, 0.02, 0.010901);
-  public static final double VELOCITY_TOLERANCE = 10; // TODO: tune for shooter
+      new GlobalConstants.Gains("Shooter/Gains", 0.001, 0.01, 1, 1.4621, 0.1, 0.010901);
+  public static final double VELOCITY_TOLERANCE = 50; // TODO: tune for shooter
   public static final double MAX_VOLTAGE = 12.0; // TODO: tune for shooter
 
   public static final double FLYWHEEL_RADIUS_METERS = 0.05;

@@ -21,7 +21,7 @@ public final class IntakePivotConstants {
   public static final boolean BRAKE_MODE = true;
 
   public static final double FORWARD_LIMIT = 0.0; // TODO: set limits
-  public static final double REVERSE_LIMIT = -5.2; // TODO: set limits
+  public static final double REVERSE_LIMIT = -9.0; // TODO: set limits
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversion
   public static final LoggedTunableNumber MOTION_MAGIC_CRUISE_VEL =
       new LoggedTunableNumber("IntakePivot/MotionMagic/CruiseVel", 2.0);
@@ -31,15 +31,15 @@ public final class IntakePivotConstants {
       new LoggedTunableNumber("IntakePivot/MotionMagic/Jerk", 0.0);
 
   public static final GlobalConstants.Gains GAINS =
-      new GlobalConstants.Gains("IntakePivot/Gains", 500.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+      new GlobalConstants.Gains("IntakePivot/Gains", 450.0, 55.0, 60.0, 0.0, 0., 0.0, 3);
   public static final double POSITION_TOLERANCE = 0.0; // TODO: tune
-  public static final boolean SOFT_LIMITS_ENABLED = false;
+  public static final boolean SOFT_LIMITS_ENABLED = true;
   public static final double SOFT_LIMIT_MIN = REVERSE_LIMIT;
   public static final double SOFT_LIMIT_MAX = FORWARD_LIMIT;
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final double IDLE_ANGLE_RAD = 0.0; // TODO: set idle angle
-  public static final double PICKUP_RAD = -4.7; // TODO: set idle angle
+  public static final double PICKUP_RAD = -7.8; // TODO: set idle angle
   public static final int SIM_MOTOR_COUNT = 1;
   public static final double SIM_START_ANGLE_RAD = 0.0;
 

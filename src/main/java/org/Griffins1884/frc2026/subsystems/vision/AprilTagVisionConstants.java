@@ -168,7 +168,7 @@ public final class AprilTagVisionConstants {
   public static final double POSE_AMBIGUITY_MULTIPLIER = 4;
 
   public static final LoggedTunableNumber LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS =
-      new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 1.0);
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 2.5);
   public static final LoggedTunableNumber LIMELIGHT_REJECT_OUTLIERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/RejectOutliers", 1.0);
 
