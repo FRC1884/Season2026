@@ -486,7 +486,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
-    if (rollers.shooter.isAtGoal()) {
+    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
       setIntakeGoal(IntakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.FORWARD);
       setShooterGoal(ShooterGoal.FORWARD);
@@ -500,13 +500,29 @@ public class Superstructure extends SubsystemBase {
           requestState(SuperState.IDLING, false);
         }
       }
+    } else {
+      setIntakeGoal(IntakeGoal.IDLING);
+      setIndexerGoal(IndexerGoal.IDLING);
+      setShooterGoal(ShooterGoal.FORWARD);
+      setIntakePivotGoal(IntakePivotGoal.IDLING);
+      aimTurretAt(target);
+      aimShooterPivotAt(target);
+      stopClimber();
     }
   }
 
   private void applyShootingAndIntaking(Translation2d target) {
-    if (rollers.shooter.isAtGoal()) {
+    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
       setIntakeGoal(IntakeGoal.FORWARD);
       setIndexerGoal(IndexerGoal.FORWARD);
+      setShooterGoal(ShooterGoal.FORWARD);
+      setIntakePivotGoal(IntakePivotGoal.PICKUP);
+      aimTurretAt(target);
+      aimShooterPivotAt(target);
+      stopClimber();
+    } else {
+      setIntakeGoal(IntakeGoal.FORWARD);
+      setIndexerGoal(IndexerGoal.IDLING);
       setShooterGoal(ShooterGoal.FORWARD);
       setIntakePivotGoal(IntakePivotGoal.PICKUP);
       aimTurretAt(target);

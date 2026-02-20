@@ -26,9 +26,28 @@ public class Arms extends SubsystemBase {
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
                   ? new IntakePivotIOSim()
                   : switch (IntakePivotConstants.MOTOR_CONTROLLER) {
-                    case SPARK_MAX -> new IntakePivotIOMax();
-                    case SPARK_FLEX -> new IntakePivotIOFlex();
-                    case KRAKEN_X60, KRAKEN_X40 -> new IntakePivotIOKraken();
+                    case SPARK_MAX ->
+                        new IntakePivotIOMax(
+                            IntakePivotConstants.MOTOR_ID[0], IntakePivotConstants.INVERTED[0]);
+                    case SPARK_FLEX ->
+                        new IntakePivotIOFlex(
+                            IntakePivotConstants.MOTOR_ID[0], IntakePivotConstants.INVERTED[0]);
+                    case KRAKEN_X60, KRAKEN_X40 ->
+                        new IntakePivotIOKraken(
+                            IntakePivotConstants.MOTOR_ID[0], IntakePivotConstants.INVERTED[0]);
+                  },
+              (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
+                  ? new IntakePivotIOSim()
+                  : switch (IntakePivotConstants.MOTOR_CONTROLLER) {
+                    case SPARK_MAX ->
+                        new IntakePivotIOMax(
+                            IntakePivotConstants.MOTOR_ID[1], IntakePivotConstants.INVERTED[1]);
+                    case SPARK_FLEX ->
+                        new IntakePivotIOFlex(
+                            IntakePivotConstants.MOTOR_ID[1], IntakePivotConstants.INVERTED[1]);
+                    case KRAKEN_X60, KRAKEN_X40 ->
+                        new IntakePivotIOKraken(
+                            IntakePivotConstants.MOTOR_ID[1], IntakePivotConstants.INVERTED[1]);
                   })
           : null;
 

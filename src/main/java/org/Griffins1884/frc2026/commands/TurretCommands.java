@@ -18,6 +18,7 @@ import org.littletonrobotics.junction.Logger;
 
 import static org.Griffins1884.frc2026.commands.AlignConstants.*;
 import static org.Griffins1884.frc2026.commands.ShooterCommands.getRPM;
+import static org.Griffins1884.frc2026.commands.ShooterCommands.getShooterRpm;
 import static org.ironmaple.simulation.gamepieces.GamePieceProjectile.GRAVITY;
 
 public final class TurretCommands {
@@ -137,7 +138,7 @@ public final class TurretCommands {
                         ShooterCommands.getBestAngle(distanceMeters),
                         ShooterConstants.EXIT_HEIGHT_METERS,
                         ShooterConstants.TARGET_HEIGHT_METERS,
-                        getRPM(distanceMeters),
+                        getShooterRpm(distanceMeters),
                         ShooterConstants.FLYWHEEL_RADIUS_METERS,
                         ShooterConstants.FLYWHEEL_GEAR_RATIO,
                         ShooterConstants.SLIP_FACTOR.get());
