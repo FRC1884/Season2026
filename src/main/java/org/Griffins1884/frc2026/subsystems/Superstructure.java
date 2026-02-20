@@ -37,7 +37,6 @@ import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
-import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
@@ -569,12 +568,19 @@ public class Superstructure extends SubsystemBase {
     setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
-    if (turret != null) {
-      turret.setGoalRad(TurretConstants.TEST_GOAL_RAD.get());
-      lastTurretAction = "TEST_GOAL";
-    } else {
-      holdTurret();
-    }
+    Translation2d target =
+        (DriverStation.getAlliance().isPresent()
+                && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
+            ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+            : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
+    aimTurretAt(target);
+    ShooterCommands.calc(drive.getPose(), target);
+    // if (turret != null) {
+    //   turret.setGoalRad(TurretConstants.TEST_GOAL_RAD.get());
+    //   lastTurretAction = "TEST_GOAL";
+    // } else {
+    //   holdTurret();
+    // }
     stopClimber();
   }
 

@@ -14,9 +14,9 @@ public class AutoCommands {
 
     NamedCommands.registerCommand(
         "OverSecondBump",
-            Commands.sequence(
-                    superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-                    DriveCommands.alignToAfterSecondBumpCommand(drive)));
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
+            DriveCommands.alignToAfterSecondBumpCommand(drive)));
 
     NamedCommands.registerCommand(
         "FirstOverBump",
@@ -32,10 +32,10 @@ public class AutoCommands {
             superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
 
     NamedCommands.registerCommand(
-            "BumpToNeutral",
-            Commands.sequence(
-                    superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-                    DriveCommands.alignToAfterBumpToNeutralCommand(drive)));
+        "BumpToNeutral",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
+            DriveCommands.alignToAfterBumpToNeutralCommand(drive)));
 
     NamedCommands.registerCommand(
         "Collect",
@@ -47,18 +47,17 @@ public class AutoCommands {
     NamedCommands.registerCommand(
         "DepotCollect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
 
+    NamedCommands.registerCommand(
+        "Climb",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
+            superstructure.setSuperStateCmd(Superstructure.SuperState.AUTO_CLIMB)));
 
-//    NamedCommands.registerCommand(
-//        "Climb",
-//        Commands.sequence(
-//            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-//            superstructure.setSuperStateCmd(Superstructure.SuperState.AUTO_CLIMB)));
-//
-//    NamedCommands.registerCommand(
-//        "ShootAndClimb",
-//        Commands.sequence(
-//            superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING),
-//            DriveCommands.alignToClimbCommand(drive, vision),
-//            superstructure.setSuperStateCmd(Superstructure.SuperState.AUTO_CLIMB)));
+    NamedCommands.registerCommand(
+        "ShootAndClimb",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING),
+            DriveCommands.alignToClimbCommand(drive, vision),
+            superstructure.setSuperStateCmd(Superstructure.SuperState.AUTO_CLIMB)));
   }
 }
