@@ -15,37 +15,19 @@ import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
-import org.apache.commons.math3.analysis.interpolation.SplineInterpolator;
-import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+import org.littletonrobotics.junction.Logger;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
-  private static final NavigableMap<Double, Double> lookupTable = new TreeMap<>(interpolate());
-  private static final double hubRadius = 0.60;
-  private static final double shooterDistanceEdge = 0.37; // Todo: Tune
-  private static final double shooterDistanceCenter = 0.02; // Todo: Tune
-
-  private static final double segment1Start = 0.97;
-  private static final double segment1End = 2.98;
-  private static final double segment2Start = 2.99;
-  private static final double segment2End = 4.04;
-  private static final double segment3Start = 4.05;
-  private static final double segment3End = 6.20;
-
-  private enum Segment {
-    SEGMENT_1,
-    SEGMENT_2,
-    SEGMENT_3;
-  }
+  private static final double shooterDistanceCenter = 0.02; // TODO: Tune
 
   public enum Vals {
     RPM,
     ANGLE
   }
 
-  private static Segment currentSegment = Segment.SEGMENT_1;
-  private static final double minLookupDistance = shooterDistanceEdge + hubRadius + segment1Start;
-  private static final double maxLookupDistance = shooterDistanceEdge + hubRadius + segment3End;
+  private static final NavigableMap<Double, Double> angleByDistanceDeg = buildAngleTable();
+  private static final NavigableMap<Double, Double> rpmByDistance = buildRpmTable();
 
   public static Map<Vals, Double> calc(Pose2d robot, Translation2d target) {
     // Distance Vector Calculation
@@ -68,8 +50,8 @@ public class ShooterCommands {
     distanceX = robot.getX() - target.getX();
     distanceY = robot.getY() - target.getY();
     yawAngle = robot.getRotation().getDegrees();
-    distanceX -= shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
-    distanceY -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
+    distanceX -= shooterDistanceCenter * Math.sin(Math.toRadians(yawAngle));
+    distanceY += shooterDistanceCenter * Math.cos(Math.toRadians(yawAngle));
 
     distance =
         (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
@@ -77,159 +59,41 @@ public class ShooterCommands {
     return dataPack(distance);
   }
 
-  public static List<Map<Double, Double>> lookupTable() {
-    /*
-     * Key: Distance From Hub (double)
-     * Value: Angle (double)
-     * Value: Velocity (double, but technically integer)
-     * Keys are spaced out by increments of 0.1
-     *
-     * Closest point is 0m away
-     * Farthest point is 6.2m
-     * */
-
-    // Calculated manually and entered
-
-    Map<Double, Double> segment1 = new HashMap<>(); // THETA:0.1
-    Map<Double, Double> segment2 = new HashMap<>(); // RPM:2000
-    Map<Double, Double> segment3 = new HashMap<>(); // RPM:2500
-
-    segment1.put(0.9652019304, (double) 1638);
-    segment1.put(1.092202184, (double) 1650);
-    segment1.put(1.219202438, (double) 1670);
-    segment1.put(1.346202692, (double) 1685);
-    segment1.put(1.473202946, (double) 1730);
-    segment1.put(1.6002032, (double) 1750);
-    segment1.put(1.727203454, (double) 1760);
-    segment1.put(1.854203708, (double) 1770);
-    segment1.put(1.981203962, (double) 1836);
-    segment1.put(2.108204216, (double) 1855);
-    segment1.put(2.23520447, (double) 1895);
-    segment1.put(2.362204724, (double) 1915);
-    segment1.put(2.489204978, (double) 1935);
-    segment1.put(2.616205232, (double) 1955);
-    segment1.put(2.743205486, (double) 1961);
-    segment1.put(2.87020574, (double) 1970);
-    segment1.put(2.984505969, (double) 2000);
-
-    segment2.put(2.997205994, 0.18);
-    segment2.put(3.124206248, 0.2);
-    segment2.put(3.251206502, 0.25);
-    segment2.put(3.378206756, 0.28);
-    segment2.put(3.50520701, 0.38);
-    segment2.put(3.632207264, 0.42);
-    segment2.put(3.759207518, 0.48);
-    segment2.put(3.886207772, 0.53);
-    segment2.put(4.013208026, 0.57);
-    segment2.put(4.038608077, 0.6);
-
-    segment3.put(4.051308103, 0.1);
-    segment3.put(4.14020828, 0.1);
-    segment3.put(4.267208534, 0.25);
-    segment3.put(4.394208788, 0.3);
-    segment3.put(4.521209042, 0.3);
-    segment3.put(4.648209296, 0.31);
-    segment3.put(4.77520955, 0.34);
-    segment3.put(4.902209804, 0.37);
-    segment3.put(5.029210058, 0.45);
-    segment3.put(5.156210312, 0.4);
-    segment3.put(5.283210566, 0.6);
-    segment3.put(5.41021082, 0.7);
-    segment3.put(5.537211074, 0.74);
-    segment3.put(5.664211328, 0.97);
-    segment3.put(5.791211582, 0.97);
-    segment3.put(5.918211836, 1.2);
-    segment3.put(6.04521209, 1.21);
-    segment3.put(6.197612395, 1.25);
-
-    List<Map<Double, Double>> temp = new ArrayList<>(List.of(segment1, segment2, segment3));
-
-    return temp;
+  public static double getShooterRpm(double distanceMeters) {
+    return lookupInterpolated(rpmByDistance, distanceMeters);
   }
 
-  /*
-   * Key: Distance From Hub (double)
-   * Value: Angle (double) (0-90)
-   * Keys are spaced out by increments of 0.1
-   *
-   * Closest point is 0m away
-   * Farthest point is 6.2m
-   */
-  public static Map<Double, Double> interpolate() {
-    Map<Double, Double> table = new HashMap<>();
-
-    for (int i = 0; i < lookupTable().size(); i++) {
-      Map<Double, Double> temp = lookupTable().get(i);
-      Set<Double> lookupTable = temp.keySet();
-      List<Double> sortedKeys = new ArrayList<>(lookupTable);
-      Collections.sort(sortedKeys);
-
-      double[] x = new double[lookupTable.size()];
-      double[] y = new double[lookupTable.size()];
-
-      for (int j = 0; j < lookupTable.size(); j++) {
-        x[j] = sortedKeys.get(j);
-        y[j] = temp.get(sortedKeys.get(j));
-      }
-      SplineInterpolator interpolator = new SplineInterpolator();
-      PolynomialSplineFunction function = interpolator.interpolate(x, y);
-      double domainStart = sortedKeys.get(0);
-      double domainEnd = sortedKeys.get(sortedKeys.size() - 1);
-
-      if (i == 0) {
-        double sampleStart = Math.max(segment1Start, domainStart);
-        double sampleEnd = Math.min(segment1End, domainEnd);
-        for (double j = sampleStart; j <= sampleEnd + 1e-9; j += 0.01) {
-          double sample = Math.min(j, sampleEnd);
-          table.put(sample + shooterDistanceEdge + hubRadius, function.value(sample));
-        }
-      } else if (i == 1) {
-        double sampleStart = Math.max(segment2Start, domainStart);
-        double sampleEnd = Math.min(segment2End, domainEnd);
-        for (double j = sampleStart; j <= sampleEnd + 1e-9; j += 0.01) {
-          double sample = Math.min(j, sampleEnd);
-          table.put(sample + shooterDistanceEdge + hubRadius, function.value(sample));
-        }
-      } else if (i == 2) {
-        double sampleStart = Math.max(segment3Start, domainStart);
-        double sampleEnd = Math.min(segment3End, domainEnd);
-        for (double j = sampleStart; j <= sampleEnd + 1e-9; j += 0.01) {
-          double sample = Math.min(j, sampleEnd);
-          table.put(sample + shooterDistanceEdge + hubRadius, function.value(sample));
-        }
-      }
-    }
-    return table;
+  public static double getPivotAngleDegrees(double distanceMeters) {
+    return lookupInterpolated(angleByDistanceDeg, distanceMeters);
   }
 
-  public static boolean isAngle(double distance) {
-    if (distance <= segment1End) {
-      return false;
-    } else {
-      return true;
-    }
+  /** Placeholder conversion from degrees to pivot units (0.1 to 1.6 scale). */
+  public static double pivotUnitsFromDegrees(double degrees) {
+    return degrees;
   }
 
-  public static void setCurrentSegment(double distance) {
-    if (!isAngle(distance)) {
-      currentSegment = Segment.SEGMENT_1;
-    } else {
-      if (distance <= shooterDistanceEdge + hubRadius + segment2End) {
-        currentSegment = Segment.SEGMENT_2;
-      } else if (distance <= shooterDistanceEdge + hubRadius + segment3End) {
-        currentSegment = Segment.SEGMENT_3;
-      } else {
-        currentSegment = Segment.SEGMENT_3;
-      }
-    }
+  public static double getPivotAngleOutput(double distanceMeters) {
+    return pivotUnitsFromDegrees(getPivotAngleDegrees(distanceMeters));
   }
 
-  private static double lookupValueOrNearest(double distance) {
-    if (lookupTable.isEmpty()) {
-      return 0.1;
+  public static double getPivotAngleRad(double distanceMeters) {
+    return Math.toRadians(getPivotAngleDegrees(distanceMeters));
+  }
+
+  public static Map<Vals, Double> dataPack(double distanceMeters) {
+    Map<Vals, Double> data = new HashMap<>();
+    data.put(Vals.RPM, getShooterRpm(distanceMeters));
+    data.put(Vals.ANGLE, getPivotAngleOutput(distanceMeters));
+    return data;
+  }
+
+  private static double lookupInterpolated(
+      NavigableMap<Double, Double> table, double distanceMeters) {
+    if (table.isEmpty() || Double.isNaN(distanceMeters)) {
+      return 0.0;
     }
-    var floor = lookupTable.floorEntry(distance);
-    var ceil = lookupTable.ceilingEntry(distance);
+    var floor = table.floorEntry(distanceMeters);
+    var ceil = table.ceilingEntry(distanceMeters);
     if (floor == null) {
       return ceil.getValue();
     }
@@ -239,58 +103,96 @@ public class ShooterCommands {
     if (Double.compare(floor.getKey(), ceil.getKey()) == 0) {
       return floor.getValue();
     }
-    double t = (distance - floor.getKey()) / (ceil.getKey() - floor.getKey());
+    double t = (distanceMeters - floor.getKey()) / (ceil.getKey() - floor.getKey());
     return floor.getValue() + (ceil.getValue() - floor.getValue()) * t;
   }
 
-  public static double getRPM(double distance) {
-    setCurrentSegment(distance);
-    if (currentSegment == Segment.SEGMENT_1) {
-      return lookupValueOrNearest(distance);
-    } else if (currentSegment == Segment.SEGMENT_2) {
-      return 2000.0;
-    } else if (currentSegment == Segment.SEGMENT_3) {
-      return 2500.0;
-    } else {
-      return 0.0;
-    }
+  private static NavigableMap<Double, Double> buildAngleTable() {
+    NavigableMap<Double, Double> table = new TreeMap<>();
+    // Distance meters -> pivot angle setpoint.
+    table.put(2.2, 0.1);
+    table.put(2.3, 0.1);
+    table.put(2.4, 0.18);
+    table.put(2.5, 0.18);
+    table.put(2.6, 0.18);
+    table.put(2.7, 0.19);
+    table.put(2.8, 0.19);
+    table.put(2.9, 0.195);
+    table.put(3.0, 0.198);
+    table.put(3.1, 0.2);
+    table.put(3.2, 0.208);
+    table.put(3.3, 0.21);
+    table.put(3.4, 0.215);
+    table.put(3.5, 0.22);
+    table.put(3.6, 0.226);
+    table.put(3.7, 0.228);
+    table.put(3.8, 0.235);
+    table.put(3.9, 0.237);
+    table.put(4.0, 0.24);
+    table.put(4.1, 0.241);
+    table.put(4.2, 0.243);
+    table.put(4.3, 0.245);
+    table.put(4.4, 0.248);
+    table.put(4.5, 0.25);
+    table.put(4.6, 0.25);
+    table.put(4.7, 0.25);
+    table.put(4.8, 0.25);
+    table.put(4.9, 0.25);
+    table.put(5.0, 0.251);
+    table.put(5.1, 0.252);
+    table.put(5.2, 0.253);
+    table.put(5.3, 0.254);
+    table.put(5.4, 0.255);
+    table.put(5.5, 0.256);
+    table.put(5.6, 0.257);
+    table.put(5.7, 0.258);
+    table.put(5.8, 0.259);
+    table.put(5.9, 0.26);
+    return table;
   }
 
-  public static double getBestAngle(double distance) {
-    setCurrentSegment(distance);
-    if (currentSegment == Segment.SEGMENT_1) {
-      return 0.1;
-    } else if (currentSegment == Segment.SEGMENT_2) {
-      return lookupValueOrNearest(segment2Start + hubRadius + shooterDistanceEdge);
-    } else if (currentSegment == Segment.SEGMENT_3) {
-      return lookupValueOrNearest(segment3Start + hubRadius + shooterDistanceEdge);
-    }
-    return 0.1;
-  }
-
-  public static double getValue(double distance) {
-    distance = (double) Math.round(distance * 100) / 100;
-    if (!Double.isNaN(distance) && !isAngle(distance)) {
-      return lookupValueOrNearest(distance);
-    } else {
-      if (Double.isNaN(distance)) {
-        return 0.1;
-      } else if (distance > maxLookupDistance) {
-        return lookupValueOrNearest(maxLookupDistance);
-      } else if (distance < minLookupDistance) {
-        return 0.1;
-      } else if (isAngle(distance)) {
-        return getBestAngle(distance);
-      }
-      return 0.1;
-    }
-  }
-
-  public static Map<Vals, Double> dataPack(double distance) {
-    Map<Vals, Double> data = new HashMap<>();
-    data.put(Vals.RPM, 4500.0); // getRPM(distance));
-    data.put(Vals.ANGLE, getValue(distance));
-    return data;
+  private static NavigableMap<Double, Double> buildRpmTable() {
+    NavigableMap<Double, Double> table = new TreeMap<>();
+    // Distance meters -> shooter RPM.
+    table.put(2.2, 2800.0);
+    table.put(2.3, 2800.0);
+    table.put(2.4, 2830.0);
+    table.put(2.5, 2840.0);
+    table.put(2.6, 2850.0);
+    table.put(2.7, 2890.0);
+    table.put(2.8, 2980.0);
+    table.put(2.9, 3050.0);
+    table.put(3.0, 3080.0);
+    table.put(3.1, 3100.0);
+    table.put(3.2, 3150.0);
+    table.put(3.3, 3200.0);
+    table.put(3.4, 3240.0);
+    table.put(3.5, 3250.0);
+    table.put(3.6, 3270.0);
+    table.put(3.7, 3290.0);
+    table.put(3.8, 3300.0);
+    table.put(3.9, 3310.0);
+    table.put(4.0, 3380.0);
+    table.put(4.1, 3400.0);
+    table.put(4.2, 3430.0);
+    table.put(4.3, 3470.0);
+    table.put(4.4, 3470.0);
+    table.put(4.5, 3550.0);
+    table.put(4.6, 3580.0);
+    table.put(4.7, 3620.0);
+    table.put(4.8, 3680.0);
+    table.put(4.9, 3700.0);
+    table.put(5.0, 3740.0);
+    table.put(5.1, 3780.0);
+    table.put(5.2, 3820.0);
+    table.put(5.3, 3860.0);
+    table.put(5.4, 3980.0);
+    table.put(5.5, 4000.0);
+    table.put(5.6, 4020.0);
+    table.put(5.7, 4060.0);
+    table.put(5.8, 4080.0);
+    table.put(5.9, 4140.0);
+    return table;
   }
 
   public record ShotTimeEstimate(
@@ -299,48 +201,6 @@ public class ShooterCommands {
       double predictedHeightMeters,
       double heightErrorMeters,
       boolean feasible) {}
-
-  public static ShotTimeEstimate estimateShotTimeDetailed(
-      double distanceMeters,
-      double hoodAngleRad,
-      double shooterExitHeightMeters,
-      double targetHeightMeters,
-      double wheelRpm,
-      double wheelRadiusMeters,
-      double gearRatio,
-      double slipFactor) {
-    if (distanceMeters <= 0.0) {
-      return new ShotTimeEstimate(0.0, 0.0, shooterExitHeightMeters, 0.0, false);
-    }
-    double exitVelocity =
-        (wheelRpm / 60.0) * (2.0 * Math.PI) * wheelRadiusMeters * gearRatio * slipFactor;
-    double cos = Math.cos(hoodAngleRad);
-    if (Math.abs(cos) < 1e-6 || exitVelocity <= 1e-6) {
-      return new ShotTimeEstimate(0.0, exitVelocity, shooterExitHeightMeters, 0.0, false);
-    }
-    double timeSeconds = distanceMeters / (exitVelocity * cos);
-    double predictedHeight =
-        shooterExitHeightMeters
-            + exitVelocity * Math.sin(hoodAngleRad) * timeSeconds
-            - 0.5 * GRAVITY * timeSeconds * timeSeconds;
-    double heightError = targetHeightMeters - predictedHeight;
-    boolean feasible = !Double.isNaN(timeSeconds) && timeSeconds > 0.0;
-    return new ShotTimeEstimate(timeSeconds, exitVelocity, predictedHeight, heightError, feasible);
-  }
-
-  public static double estimateShotTimeSeconds(double distanceMeters, double hoodAngleRad) {
-    ShotTimeEstimate estimate =
-        estimateShotTimeDetailed(
-            distanceMeters,
-            hoodAngleRad,
-            ShooterConstants.EXIT_HEIGHT_METERS,
-            ShooterConstants.TARGET_HEIGHT_METERS,
-            getRPM(distanceMeters),
-            ShooterConstants.FLYWHEEL_RADIUS_METERS,
-            ShooterConstants.FLYWHEEL_GEAR_RATIO,
-            ShooterConstants.SLIP_FACTOR.get());
-    return estimate.timeSeconds();
-  }
 
   public static Command pivotOpenLoop(ShooterPivotSubsystem pivot, DoubleSupplier percentSupplier) {
     return Commands.runEnd(

@@ -12,6 +12,9 @@ public class ShooterPivotIOKraken extends GenericArmSystemIOKraken implements Sh
         ShooterPivotConstants.REVERSE_LIMIT,
         ShooterPivotConstants.POSITION_COEFFICIENT,
         ShooterPivotConstants.INVERTED,
-        ShooterPivotConstants.CAN_BUS);
+        ShooterPivotConstants.CAN_BUS,
+        ShooterPivotConstants.MOTION_MAGIC_CRUISE_VEL.get(),
+        ShooterPivotConstants.MOTION_MAGIC_ACCEL.get(),
+        ShooterPivotConstants.MOTION_MAGIC_JERK.get());
   }
 }

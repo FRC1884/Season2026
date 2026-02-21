@@ -27,7 +27,10 @@ public interface GenericArmSystemIO {
   }
 
   /** Run arm system to a position using internal controller. */
-  default void setPositionSetpoint(double position, double kP, double kI, double kD) {}
+  default void setPositionSetpoint(double position, double kP, double kI, double kD, double kG) {}
+
+  /** Update Motion Magic constraints if supported. */
+  default void setMotionMagicParams(double cruiseVelocity, double acceleration, double jerk) {}
 
   /** Enable or disable brake mode. */
   default void setBrakeMode(boolean enabled) {}

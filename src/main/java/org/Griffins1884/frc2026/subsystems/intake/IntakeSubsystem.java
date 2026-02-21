@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
+import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem.VelocityGoal;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter

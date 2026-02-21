@@ -7,25 +7,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightOverBump"
+            "pathName": "RightDepot"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "OverBump"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Collect"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Collect"
+            "name": "DepotCollect"
           }
         }
       ]
