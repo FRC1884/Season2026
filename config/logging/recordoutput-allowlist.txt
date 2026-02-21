@@ -15,6 +15,7 @@ src/main/java/org/Griffins1884/frc2026/subsystems/Superstructure.java
 src/main/java/org/Griffins1884/frc2026/subsystems/leds/LEDIOPWM.java
 src/main/java/org/Griffins1884/frc2026/subsystems/leds/LEDIOSim.java
 src/main/java/org/Griffins1884/frc2026/subsystems/leds/LEDSubsystem.java
+src/main/java/org/Griffins1884/frc2026/subsystems/intake/IntakePivotSubsystem.java
 src/main/java/org/Griffins1884/frc2026/subsystems/swerve/SwerveMusicPlayer.java
 src/main/java/org/Griffins1884/frc2026/subsystems/swerve/SwerveSubsystem.java
 src/main/java/org/Griffins1884/frc2026/subsystems/vision/AprilTagVisionIOLimelight.java
