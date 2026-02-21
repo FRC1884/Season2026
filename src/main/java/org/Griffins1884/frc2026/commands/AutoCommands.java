@@ -1,6 +1,7 @@
 package org.Griffins1884.frc2026.commands;
 
 import com.pathplanner.lib.auto.NamedCommands;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Commands;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
@@ -40,9 +41,11 @@ public class AutoCommands {
     NamedCommands.registerCommand(
         "Collect",
         Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
+                Commands.runOnce(() -> DriveCommands.setTest(true)),
+                    superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
             AutoAlignToFuelCommand.alignToFuelCommand(drive),
-            DriveCommands.alignToAfterCollectStartCommand(drive)));
+            DriveCommands.alignToAfterCollectStartCommand(drive),
+            Commands.runOnce(() -> DriveCommands.setTest(false))));
 
     NamedCommands.registerCommand(
         "DepotCollect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
