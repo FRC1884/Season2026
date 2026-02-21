@@ -35,9 +35,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-
-import lombok.Setter;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.util.RobotLogging;
@@ -46,18 +43,17 @@ import org.littletonrobotics.junction.Logger;
 public class DriveCommands {
   private DriveCommands() {}
 
-    private static boolean test = false;
+  private static boolean test = false;
 
-  public static Supplier<Boolean> getTest(){
-      return () -> test;
-    }
+  public static Supplier<Boolean> getTest() {
+    return () -> test;
+  }
 
-    public static void setTest(boolean newTest){
-        test = newTest;
-    }
+  public static void setTest(boolean newTest) {
+    test = newTest;
+  }
 
-
-    private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
+  private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
     double linearMagnitude =
         MathUtil.applyDeadband(Math.hypot(x, y), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
