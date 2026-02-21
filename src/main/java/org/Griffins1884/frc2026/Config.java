@@ -25,6 +25,7 @@ public final class Config {
     public static final boolean INTAKE_ENABLED = false;
     public static final boolean INDEXER_ENABLED = false;
     public static final boolean CLIMBER_ENABLED = false;
+    public static final boolean SHOOTING_WHILE_MOVING_ENABLED = false;
   }
 
   public static final class WebUIConfig {

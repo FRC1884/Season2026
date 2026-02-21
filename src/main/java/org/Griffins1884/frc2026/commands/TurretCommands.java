@@ -1,5 +1,6 @@
 package org.Griffins1884.frc2026.commands;
 
+import static org.Griffins1884.frc2026.Config.Subsystems.*;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -55,7 +56,7 @@ public final class TurretCommands {
       Supplier<ChassisSpeeds> robotVelocitySupplier) {
     Pose2d currentPose = robotPoseSupplier.get();
     Translation2d target = targetSupplier.get();
-    if (currentPose == null || target == null) {
+    if (currentPose == null || target == null || !SHOOTING_WHILE_MOVING_ENABLED) {
       return 0.0;
     }
     ChassisSpeeds speeds = robotVelocitySupplier.get();
