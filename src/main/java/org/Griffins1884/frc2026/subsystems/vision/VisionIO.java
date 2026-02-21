@@ -32,6 +32,12 @@ public interface VisionIO {
     }
   }
 
+  enum LimelightProfile {
+    AUTO,
+    LL3,
+    LL4
+  }
+
   public static enum RejectReason {
     VISION_DISABLED,
     DISCONNECTED,
@@ -40,6 +46,7 @@ public interface VisionIO {
     NO_TAGS,
     LOW_SINGLE_TAG_QUALITY,
     OUT_OF_FIELD,
+    EXCLUSIVE_ID_MISMATCH,
     STDDEV_NONFINITE,
     RESIDUAL_OUTLIER,
     LARGE_ROTATION_RESIDUAL,
@@ -63,6 +70,8 @@ public interface VisionIO {
     public int[] tagIds = new int[0];
     public double residualTranslationMeters = 0.0;
     public RejectReason rejectReason = RejectReason.UNKNOWN;
+    public String limelightProfile = LimelightProfile.LL4.name();
+    public String limelightProfileSource = "DEFAULT";
   }
 
   public default void updateInputs(VisionIOInputs inputs) {}

@@ -39,16 +39,6 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap, Ope
   }
 
   @Override
-  public Trigger endgameClimb() {
-    return cross();
-  }
-
-  @Override
-  public Trigger detachClimb() {
-    return square();
-  }
-
-  @Override
   public Trigger autoManualToggle() {
     return create();
   }

@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import lombok.Getter;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -80,7 +81,11 @@ public class GenericPositionTurretSystem extends SubsystemBase {
                 null,
                 null,
                 Seconds.of(4),
-                state -> Logger.recordOutput(name + "/SysIdState", state.toString())),
+                state -> {
+                  if (GlobalConstants.isDebugMode()) {
+                    Logger.recordOutput(name + "/SysIdState", state.toString());
+                  }
+                }),
             new SysIdRoutine.Mechanism(
                 voltage -> io.setVoltage(voltage.in(Volts)),
                 (log) ->
@@ -106,7 +111,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs(name, inputs);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.processInputs(name, inputs);
+    }
 
     if (config.useAbsoluteEncoder() && absEncoder != null) {
       double absoluteRad = getAbsoluteEncoderRad();
@@ -249,7 +256,9 @@ public class GenericPositionTurretSystem extends SubsystemBase {
     if (!absoluteSynced || Math.abs(delta) > threshold) {
       io.setPosition(absoluteRad);
       absoluteSynced = true;
-      Logger.recordOutput(name + "/AbsoluteSyncDeltaRad", delta);
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput(name + "/AbsoluteSyncDeltaRad", delta);
+      }
     }
   }
 
@@ -277,16 +286,18 @@ public class GenericPositionTurretSystem extends SubsystemBase {
   private void logOutputs(double positionRad) {
     Logger.recordOutput(name + "/PositionRad", positionRad);
     Logger.recordOutput(name + "/GoalRad", goalRad);
-    Logger.recordOutput(name + "/PositionRotations", positionRad / (2.0 * Math.PI));
-    Logger.recordOutput(name + "/GoalRotations", goalRad / (2.0 * Math.PI));
     Logger.recordOutput(name + "/ErrorRad", goalRad - positionRad);
     Logger.recordOutput(name + "/AtGoal", isAtGoal());
     Logger.recordOutput(name + "/ControlMode", controlMode.toString());
     Logger.recordOutput(name + "/OpenLoopPercent", openLoopPercent);
-    Logger.recordOutput(name + "/SetpointVelocityRadPerSec", controller.getSetpoint().velocity);
-    Logger.recordOutput(name + "/MotorPositionRotations", inputs.motorPositionRotations);
-    Logger.recordOutput(name + "/MotorPositionTicks", inputs.motorPositionTicks);
-    Logger.recordOutput(name + "/MotorGoalRotations", inputs.motorGoalRotations);
-    Logger.recordOutput(name + "/MotorGoalTicks", inputs.motorGoalTicks);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput(name + "/PositionRotations", positionRad / (2.0 * Math.PI));
+      Logger.recordOutput(name + "/GoalRotations", goalRad / (2.0 * Math.PI));
+      Logger.recordOutput(name + "/SetpointVelocityRadPerSec", controller.getSetpoint().velocity);
+      Logger.recordOutput(name + "/MotorPositionRotations", inputs.motorPositionRotations);
+      Logger.recordOutput(name + "/MotorPositionTicks", inputs.motorPositionTicks);
+      Logger.recordOutput(name + "/MotorGoalRotations", inputs.motorGoalRotations);
+      Logger.recordOutput(name + "/MotorGoalTicks", inputs.motorGoalTicks);
+    }
   }
 }

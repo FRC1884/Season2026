@@ -16,7 +16,6 @@ package org.Griffins1884.frc2026;
 import static org.Griffins1884.frc2026.Config.Controllers.getDriverController;
 import static org.Griffins1884.frc2026.Config.Controllers.getOperatorController;
 import static org.Griffins1884.frc2026.Config.Subsystems.AUTONOMOUS_ENABLED;
-import static org.Griffins1884.frc2026.Config.Subsystems.CLIMBER_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.DRIVETRAIN_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.SHOOTER_PIVOT_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.TURRET_ENABLED;
@@ -52,8 +51,6 @@ import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.ShooterCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
-import org.Griffins1884.frc2026.subsystems.climber.*;
-import org.Griffins1884.frc2026.subsystems.climber.ClimberSubsystem;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardIOServer;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardTracker;
 import org.Griffins1884.frc2026.subsystems.shooter.*;
@@ -84,7 +81,6 @@ public class RobotContainer {
   private SwerveDriveSimulation driveSimulation;
   private final TurretSubsystem turret;
   private final ShooterPivotSubsystem pivot;
-  private final ClimberSubsystem climber;
   private final OperatorBoardTracker operatorBoard;
 
   // Controller
@@ -313,8 +309,8 @@ public class RobotContainer {
     }
 
     if (AUTONOMOUS_ENABLED) {
-      if (drive != null && vision != null) {
-        AutoCommands.registerAutoCommands(superstructure, drive, vision);
+      if (drive != null) {
+        AutoCommands.registerAutoCommands(superstructure, drive);
       }
     }
 
@@ -367,12 +363,6 @@ public class RobotContainer {
     } else {
       pivot = null;
     }
-
-    if (CLIMBER_ENABLED) {
-      climber = superstructure.getElevators().climber;
-    } else {
-      climber = null;
-    }
   }
 
   /**
@@ -393,10 +383,6 @@ public class RobotContainer {
 
       // Switch to X pattern when X button is pressed
       driver.alignWithBall().whileTrue(new AutoAlignToFuelCommand(drive));
-
-      // align to the climb target
-      driver.rightAlign().whileTrue(DriveCommands.alignToClimbCommand(drive, vision));
-      driver.leftAlign().whileTrue(DriveCommands.alignToClimbHolonomicCommand(drive, vision));
 
       driver
           .slowMode()
@@ -447,12 +433,6 @@ public class RobotContainer {
     shooterTrigger
         .and(intakeTrigger.negate())
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
-    operator
-        .endgameClimb()
-        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.ENDGAME_CLIMB));
-    operator
-        .detachClimb()
-        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.CLIMB_DETACH));
     operator.idling().whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING));
     operator
         .ferrying()
@@ -475,28 +455,6 @@ public class RobotContainer {
             && (operator.manualTurretAxis().getAsDouble() != -1
                 || operator.manualTurretAxis().getAsDouble() != 1)) {
           ShooterCommands.pivotOpenLoop(pivot, () -> ShooterPivotConstants.MANUAL_PERCENT);
-        }
-      }
-    }
-
-    if (climber == null) {
-      return;
-    }
-    if (superstructure.getCurrentState() == Superstructure.SuperState.ENDGAME_CLIMB) {
-      if (operator.manualPivotAxis() != null) {
-        while (operator.manualPivotAxis().getAsDouble() == -1
-            && (operator.manualTurretAxis().getAsDouble() != -1
-                || operator.manualTurretAxis().getAsDouble() != 1)) {
-          superstructure
-              .getElevators()
-              .climberOpenLoop(climber, () -> -ShooterPivotConstants.MANUAL_PERCENT);
-        }
-        while (operator.manualPivotAxis().getAsDouble() == 1
-            && (operator.manualTurretAxis().getAsDouble() != -1
-                || operator.manualTurretAxis().getAsDouble() != 1)) {
-          superstructure
-              .getElevators()
-              .climberOpenLoop(climber, () -> ShooterPivotConstants.MANUAL_PERCENT);
         }
       }
     }

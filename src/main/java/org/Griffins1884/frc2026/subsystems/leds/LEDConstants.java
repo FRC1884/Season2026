@@ -16,16 +16,12 @@ public final class LEDConstants {
   public static Color INTAKE_SHOOT_COLOR = Color.kBlue;
   public static Color HAS_BALL_COLOR = Color.kGreen;
   public static Color FERRY_COLOR = Color.kYellow;
-  public static Color CLIMB_DETACH_COLOR = Color.kRed;
-  public static Color CLIMB_PULL_COLOR = Color.kBlue;
-  public static Color CLIMB_DONE_COLOR = Color.kGreen;
 
   public static Color ALIGN_MORE_COLOR = Color.kGreen;
   public static Color ALIGN_LESS_COLOR = Color.kRed;
   public static Color ALIGN_OK_COLOR = Color.kBlue;
 
   public static Time BREATHE_SPEED = Second.of(2.5);
-  public static Time CLIMB_BLINK_SPEED = Second.of(0.35);
 
   public static double TRANSLATION_TOLERANCE = 0.1;
   public static double ROTATION_TOLERANCE = 0.1;

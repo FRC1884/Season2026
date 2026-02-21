@@ -102,8 +102,11 @@ public abstract class GenericPositionElevatorSystem<
                 null,
                 null,
                 Seconds.of(4),
-                state ->
-                    Logger.recordOutput("Elevators/" + name + "/SysIdState", state.toString())),
+                state -> {
+                  if (GlobalConstants.isDebugMode()) {
+                    Logger.recordOutput("Elevators/" + name + "/SysIdState", state.toString());
+                  }
+                }),
             new SysIdRoutine.Mechanism(
                 voltage -> io.setVoltage(voltage.in(Volts)), sysIdLog, this));
 
@@ -123,7 +126,9 @@ public abstract class GenericPositionElevatorSystem<
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs(name, inputs);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.processInputs(name, inputs);
+    }
 
     boolean anyDisconnected = false;
     for (boolean isConnected : inputs.connected) {
@@ -184,8 +189,10 @@ public abstract class GenericPositionElevatorSystem<
 
     io.setVoltage(outputVoltage);
 
-    Logger.recordOutput("Elevators/" + name + "/Feedforward", feedforwardOutput);
-    Logger.recordOutput("Elevators/" + name + "Goal", getGoal().toString());
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("Elevators/" + name + "/Feedforward", feedforwardOutput);
+      Logger.recordOutput("Elevators/" + name + "Goal", getGoal().toString());
+    }
   }
 
   public void setGoalPosition(double position) {

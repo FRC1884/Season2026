@@ -18,6 +18,7 @@ public interface OperatorBoardIO {
     public boolean stopSwerveMusicRequested = false;
     public double swerveMusicVolume = Double.NaN;
     public boolean rollLogsRequested = false;
+    public boolean cleanLogsRequested = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}
@@ -29,10 +30,6 @@ public interface OperatorBoardIO {
   default void setRequestAccepted(boolean value) {}
 
   default void setRequestReason(String value) {}
-
-  default void setClimbPhase(String value) {}
-
-  default void setClimbLevel(int value) {}
 
   default void setTargetType(String value) {}
 
@@ -82,11 +79,29 @@ public interface OperatorBoardIO {
 
   default void setSysIdDriveLastCompleted(double value) {}
 
+  default void setSysIdDriveLastCompletedPhase(String value) {}
+
   default void setSysIdTurnPhase(String value) {}
 
   default void setSysIdTurnActive(boolean value) {}
 
   default void setSysIdTurnLastCompleted(double value) {}
 
+  default void setSysIdTurnLastCompletedPhase(String value) {}
+
   default void setVisionStatus(String value) {}
+
+  default void setLogRollStatus(String value) {}
+
+  default void setLogRollLastTimestamp(double value) {}
+
+  default void setLogRollCount(int value) {}
+
+  default void setLogCleanStatus(String value) {}
+
+  default void setLogCleanLastTimestamp(double value) {}
+
+  default void setLogCleanCount(int value) {}
+
+  default void setLogCleanDeletedEntries(int value) {}
 }

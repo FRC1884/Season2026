@@ -19,17 +19,25 @@ const contract = {
     stopSwerveMusic: "StopSwerveMusic",
     swerveMusicVolume: "SwerveMusicVolume",
     rollLogs: "RollLogs",
+    cleanLogs: "CleanLogs",
     sysIdDrivePhase: "SysIdDrivePhase",
     sysIdDriveActive: "SysIdDriveActive",
     sysIdDriveLastCompleted: "SysIdDriveLastCompleted",
+    sysIdDriveLastCompletedPhase: "SysIdDriveLastCompletedPhase",
     sysIdTurnPhase: "SysIdTurnPhase",
     sysIdTurnActive: "SysIdTurnActive",
     sysIdTurnLastCompleted: "SysIdTurnLastCompleted",
+    sysIdTurnLastCompletedPhase: "SysIdTurnLastCompletedPhase",
+    logRollStatus: "LogRollStatus",
+    logRollLastTimestamp: "LogRollLastTimestamp",
+    logRollCount: "LogRollCount",
+    logCleanStatus: "LogCleanStatus",
+    logCleanLastTimestamp: "LogCleanLastTimestamp",
+    logCleanCount: "LogCleanCount",
+    logCleanDeletedEntries: "LogCleanDeletedEntries",
     currentState: "CurrentState",
     requestAccepted: "RequestAccepted",
     requestReason: "RequestReason",
-    climbPhase: "ClimbPhase",
-    climbLevel: "ClimbLevel",
     targetType: "TargetType",
     targetPose: "TargetPose",
     targetPoseValid: "TargetPoseValid",
@@ -61,9 +69,6 @@ const STATES = [
   "SHOOTING",
   "SHOOT_INTAKE",
   "FERRYING",
-  "ENDGAME_CLIMB",
-  "AUTO_CLIMB",
-  "CLIMB_DETACH",
   "TESTING",
 ];
 
@@ -72,8 +77,6 @@ const state = {
   currentState: null,
   requestAccepted: null,
   requestReason: null,
-  climbPhase: null,
-  climbLevel: null,
   targetType: null,
   targetPose: null,
   targetPoseValid: false,
@@ -98,13 +101,24 @@ const state = {
   sysIdDrivePhase: null,
   sysIdDriveActive: null,
   sysIdDriveLastCompleted: null,
+  sysIdDriveLastCompletedPhase: null,
   sysIdTurnPhase: null,
   sysIdTurnActive: null,
   sysIdTurnLastCompleted: null,
+  sysIdTurnLastCompletedPhase: null,
+  logRollStatus: null,
+  logRollLastTimestamp: null,
+  logRollCount: null,
+  logCleanStatus: null,
+  logCleanLastTimestamp: null,
+  logCleanCount: null,
+  logCleanDeletedEntries: null,
   visionStatus: null,
 };
 
 const ui = {
+  tabButtons: [],
+  tabPages: [],
   chipNt: null,
   chipData: null,
   chipMode: null,
@@ -123,11 +137,19 @@ const ui = {
   hasBall: null,
   visionStatus: null,
   turretStatus: null,
-  climb: null,
   sysIdDrive: null,
   sysIdTurn: null,
+  sysIdDriveOptions: null,
+  sysIdTurnOptions: null,
   robotPose: null,
   target: null,
+  logRollStatus: null,
+  logRollLast: null,
+  logRollCount: null,
+  logCleanStatus: null,
+  logCleanLast: null,
+  logCleanCount: null,
+  logCleanDeleted: null,
   toast: null,
   stateButtons: [],
   autoStateButton: null,
@@ -139,6 +161,7 @@ const ui = {
   musicVolume: null,
   musicVolumeValue: null,
   rollLogsButton: null,
+  cleanLogsButton: null,
   fieldImage: null,
   fieldCanvas: null,
 };
@@ -148,6 +171,8 @@ let lastAnyData = 0;
 let ntConnected = false;
 let sysIdDriveInitialized = false;
 let sysIdTurnInitialized = false;
+let logRollInitialized = false;
+let logCleanInitialized = false;
 
 const queryParams = new URLSearchParams(window.location.search);
 const { host: ntHost, port: ntPort } = resolveNtConnectionParams(queryParams);
@@ -171,6 +196,7 @@ const ntClient = new NT4_Client(
 
 window.addEventListener("DOMContentLoaded", () => {
   cacheUi();
+  setupTabs(queryParams.get("tab"));
   buildStateButtons();
   setupFieldCanvas();
   startNetworkTables();
@@ -182,6 +208,8 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 function cacheUi() {
+  ui.tabButtons = Array.from(document.querySelectorAll("[data-tab-target]"));
+  ui.tabPages = Array.from(document.querySelectorAll("[data-tab-page]"));
   ui.chipNt = document.getElementById("chip-nt");
   ui.chipData = document.getElementById("chip-data");
   ui.chipMode = document.getElementById("chip-mode");
@@ -200,11 +228,19 @@ function cacheUi() {
   ui.hasBall = document.getElementById("has-ball");
   ui.visionStatus = document.getElementById("vision-status");
   ui.turretStatus = document.getElementById("turret-status");
-  ui.climb = document.getElementById("climb");
   ui.sysIdDrive = document.getElementById("sysid-drive");
   ui.sysIdTurn = document.getElementById("sysid-turn");
+  ui.sysIdDriveOptions = document.getElementById("sysid-drive-options");
+  ui.sysIdTurnOptions = document.getElementById("sysid-turn-options");
   ui.robotPose = document.getElementById("robot-pose");
   ui.target = document.getElementById("target");
+  ui.logRollStatus = document.getElementById("log-roll-status");
+  ui.logRollLast = document.getElementById("log-roll-last");
+  ui.logRollCount = document.getElementById("log-roll-count");
+  ui.logCleanStatus = document.getElementById("log-clean-status");
+  ui.logCleanLast = document.getElementById("log-clean-last");
+  ui.logCleanCount = document.getElementById("log-clean-count");
+  ui.logCleanDeleted = document.getElementById("log-clean-deleted");
   ui.toast = document.getElementById("toast");
   ui.fieldImage = document.getElementById("field-image");
   ui.fieldCanvas = document.getElementById("field-canvas");
@@ -238,6 +274,42 @@ function cacheUi() {
   ui.rollLogsButton = document.getElementById("roll-logs-button");
   if (ui.rollLogsButton) {
     ui.rollLogsButton.addEventListener("click", sendRollLogs);
+  }
+  ui.cleanLogsButton = document.getElementById("clean-logs-button");
+  if (ui.cleanLogsButton) {
+    ui.cleanLogsButton.addEventListener("click", sendCleanLogs);
+  }
+}
+
+function setupTabs(defaultTab) {
+  const preferred =
+    defaultTab && ["game", "debugging"].includes(defaultTab.toLowerCase())
+      ? defaultTab.toLowerCase()
+      : "game";
+  activateTab(preferred);
+  ui.tabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tab = (button.dataset.tabTarget || "").toLowerCase();
+      activateTab(tab);
+    });
+  });
+}
+
+function activateTab(tabName) {
+  const target = tabName === "debugging" ? "debugging" : "game";
+  ui.tabButtons.forEach((button) => {
+    const isActive = (button.dataset.tabTarget || "").toLowerCase() === target;
+    button.classList.toggle("is-active", isActive);
+  });
+  ui.tabPages.forEach((page) => {
+    const isActive = (page.dataset.tabPage || "").toLowerCase() === target;
+    page.classList.toggle("is-active", isActive);
+  });
+  if (target === "game") {
+    window.requestAnimationFrame(() => {
+      setupFieldCanvas();
+      renderField();
+    });
   }
 }
 
@@ -283,6 +355,10 @@ function sendRollLogs() {
   ntClient.addSample(contract.toRobot + contract.keys.rollLogs, true);
 }
 
+function sendCleanLogs() {
+  ntClient.addSample(contract.toRobot + contract.keys.cleanLogs, true);
+}
+
 async function uploadMusicFile() {
   if (!ui.musicFile || !ui.musicFile.files || ui.musicFile.files.length === 0) {
     setText(ui.musicUploadStatus, "Select a .chrp file first");
@@ -315,6 +391,7 @@ function startNetworkTables() {
   ntClient.publishTopic(contract.toRobot + contract.keys.stopSwerveMusic, "boolean");
   ntClient.publishTopic(contract.toRobot + contract.keys.swerveMusicVolume, "double");
   ntClient.publishTopic(contract.toRobot + contract.keys.rollLogs, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.cleanLogs, "boolean");
   ntClient.connect();
 }
 
@@ -334,12 +411,6 @@ function handleTopicUpdate(topic, value) {
       break;
     case contract.toDashboard + contract.keys.requestReason:
       state.requestReason = parseString(value);
-      break;
-    case contract.toDashboard + contract.keys.climbPhase:
-      state.climbPhase = parseString(value);
-      break;
-    case contract.toDashboard + contract.keys.climbLevel:
-      state.climbLevel = Number.isFinite(value) ? value : null;
       break;
     case contract.toDashboard + contract.keys.targetType:
       state.targetType = parseString(value);
@@ -421,6 +492,9 @@ function handleTopicUpdate(topic, value) {
       state.sysIdDriveLastCompleted = parsed;
       break;
     }
+    case contract.toDashboard + contract.keys.sysIdDriveLastCompletedPhase:
+      state.sysIdDriveLastCompletedPhase = parseString(value);
+      break;
     case contract.toDashboard + contract.keys.sysIdTurnPhase:
       state.sysIdTurnPhase = parseString(value);
       break;
@@ -438,6 +512,46 @@ function handleTopicUpdate(topic, value) {
       state.sysIdTurnLastCompleted = parsed;
       break;
     }
+    case contract.toDashboard + contract.keys.sysIdTurnLastCompletedPhase:
+      state.sysIdTurnLastCompletedPhase = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.logRollStatus:
+      state.logRollStatus = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.logRollLastTimestamp:
+      state.logRollLastTimestamp = Number.isFinite(value) ? value : null;
+      break;
+    case contract.toDashboard + contract.keys.logRollCount: {
+      const parsed = Number.isFinite(value) ? value : null;
+      if (parsed !== null) {
+        if (logRollInitialized && state.logRollCount !== parsed) {
+          showToast("Logs rolled");
+        }
+        logRollInitialized = true;
+      }
+      state.logRollCount = parsed;
+      break;
+    }
+    case contract.toDashboard + contract.keys.logCleanStatus:
+      state.logCleanStatus = parseString(value);
+      break;
+    case contract.toDashboard + contract.keys.logCleanLastTimestamp:
+      state.logCleanLastTimestamp = Number.isFinite(value) ? value : null;
+      break;
+    case contract.toDashboard + contract.keys.logCleanCount: {
+      const parsed = Number.isFinite(value) ? value : null;
+      if (parsed !== null) {
+        if (logCleanInitialized && state.logCleanCount !== parsed) {
+          showToast("Logs folder cleaned");
+        }
+        logCleanInitialized = true;
+      }
+      state.logCleanCount = parsed;
+      break;
+    }
+    case contract.toDashboard + contract.keys.logCleanDeletedEntries:
+      state.logCleanDeletedEntries = Number.isFinite(value) ? value : null;
+      break;
     case contract.toDashboard + contract.keys.visionStatus:
       state.visionStatus = parseString(value);
       break;
@@ -487,27 +601,61 @@ function render() {
         : " (MOVING)";
   setText(ui.turretStatus, turret + turretExtra);
 
-  const climb = [state.climbPhase || "UNKNOWN", state.climbLevel || 0].join(" • L");
-  setText(ui.climb, climb);
-
   const driveSysIdText = formatSysId(
     state.sysIdDrivePhase,
     state.sysIdDriveActive,
-    state.sysIdDriveLastCompleted
+    state.sysIdDriveLastCompleted,
+    state.sysIdDriveLastCompletedPhase
   );
   setText(ui.sysIdDrive, driveSysIdText);
   applySysIdClass(ui.sysIdDrive, state.sysIdDrivePhase, state.sysIdDriveActive);
+  setText(
+    ui.sysIdDriveOptions,
+    formatSysIdOptions(
+      state.sysIdDrivePhase,
+      state.sysIdDriveActive,
+      state.sysIdDriveLastCompletedPhase
+    )
+  );
 
   const turnSysIdText = formatSysId(
     state.sysIdTurnPhase,
     state.sysIdTurnActive,
-    state.sysIdTurnLastCompleted
+    state.sysIdTurnLastCompleted,
+    state.sysIdTurnLastCompletedPhase
   );
   setText(ui.sysIdTurn, turnSysIdText);
   applySysIdClass(ui.sysIdTurn, state.sysIdTurnPhase, state.sysIdTurnActive);
-
+  setText(
+    ui.sysIdTurnOptions,
+    formatSysIdOptions(
+      state.sysIdTurnPhase,
+      state.sysIdTurnActive,
+      state.sysIdTurnLastCompletedPhase
+    )
+  );
   setText(ui.robotPose, formatPose(state.robotPose, true));
   setText(ui.target, formatTarget(state.targetType, state.targetPose, state.targetPoseValid));
+  setText(ui.logRollStatus, state.logRollStatus || "--");
+  setText(ui.logRollLast, formatTimestampSeconds(state.logRollLastTimestamp));
+  setText(
+    ui.logRollCount,
+    Number.isFinite(state.logRollCount) ? String(Math.trunc(state.logRollCount)) : "--"
+  );
+  applyLogRollClass(ui.logRollStatus, state.logRollStatus);
+  setText(ui.logCleanStatus, state.logCleanStatus || "--");
+  setText(ui.logCleanLast, formatTimestampSeconds(state.logCleanLastTimestamp));
+  setText(
+    ui.logCleanCount,
+    Number.isFinite(state.logCleanCount) ? String(Math.trunc(state.logCleanCount)) : "--"
+  );
+  setText(
+    ui.logCleanDeleted,
+    Number.isFinite(state.logCleanDeletedEntries)
+      ? String(Math.trunc(state.logCleanDeletedEntries))
+      : "--"
+  );
+  applyLogRollClass(ui.logCleanStatus, state.logCleanStatus);
 
   // Button highlight
   ui.stateButtons.forEach((b) => {
@@ -583,13 +731,99 @@ function applySysIdClass(el, phase, active) {
   }
 }
 
-function formatSysId(phase, active, lastCompleted) {
-  const phaseText = phase || "UNKNOWN";
+function applyLogRollClass(el, status) {
+  if (!el) return;
+  el.classList.remove("kv__v--ok", "kv__v--bad", "kv__v--warn");
+  const token = (status || "").toUpperCase();
+  if (token === "ROLLED" || token === "READY" || token === "CLEANED") {
+    el.classList.add("kv__v--ok");
+  } else if (token === "FAILED" || token === "UNAVAILABLE") {
+    el.classList.add("kv__v--bad");
+  } else if (token === "CLEANING") {
+    el.classList.add("kv__v--warn");
+  } else if (token) {
+    el.classList.add("kv__v--warn");
+  }
+}
+
+function formatSysId(phase, active, lastCompleted, lastCompletedPhase) {
+  const phaseText = decodeSysIdPhase(phase || "UNKNOWN");
   const statusText = active ? "ACTIVE" : "IDLE";
-  const lastText = Number.isFinite(lastCompleted)
-    ? `Last t=${round(lastCompleted, 1)}s`
-    : "Last --";
-  return `${phaseText} • ${statusText} • ${lastText}`;
+  const lastPhaseText = lastCompletedPhase
+    ? decodeSysIdPhase(lastCompletedPhase)
+    : "--";
+  const lastTimeText = formatTimestampSeconds(lastCompleted);
+  return `${phaseText} • ${statusText} • Last=${lastPhaseText} @ ${lastTimeText}`;
+}
+
+function formatSysIdOptions(currentPhase, active, lastCompletedPhase) {
+  const options = [
+    ["Full Routine", "FULL"],
+    ["Quasistatic Forward", "QS_FWD"],
+    ["Quasistatic Reverse", "QS_REV"],
+    ["Dynamic Forward", "DYN_FWD"],
+    ["Dynamic Reverse", "DYN_REV"],
+  ];
+  const current = normalizeSysIdPhase(currentPhase);
+  const last = normalizeSysIdPhase(lastCompletedPhase);
+  const lines = options.map(([label, phase]) => {
+    let status = "PENDING";
+    if (phase === "FULL") {
+      if (active && current !== "IDLE" && current !== "DONE" && current !== "UNKNOWN") {
+        status = "RUNNING";
+      } else if (last === "DYN_REV" || last === "SINGLE_DYN_REV") {
+        status = "LAST COMPLETED";
+      }
+    } else if (active && current === phase) {
+      status = "RUNNING";
+    } else if (last === phase || last === `SINGLE_${phase}`) {
+      status = "LAST COMPLETED";
+    }
+    return `${label}: ${status}`;
+  });
+  return lines.join("\n");
+}
+
+function formatTimestampSeconds(value) {
+  if (!Number.isFinite(value)) return "--";
+  return `t=${round(value, 1)}s`;
+}
+
+function normalizeSysIdPhase(phase) {
+  if (!phase) return "UNKNOWN";
+  const token = String(phase).toUpperCase().trim();
+  if (token === "") return "UNKNOWN";
+  return token;
+}
+
+function decodeSysIdPhase(phase) {
+  const token = normalizeSysIdPhase(phase);
+  switch (token) {
+    case "QS_FWD":
+      return "Full QS Forward";
+    case "QS_REV":
+      return "Full QS Reverse";
+    case "DYN_FWD":
+      return "Full Dynamic Forward";
+    case "DYN_REV":
+      return "Full Dynamic Reverse";
+    case "SINGLE_QS_FWD":
+      return "Single QS Forward";
+    case "SINGLE_QS_REV":
+      return "Single QS Reverse";
+    case "SINGLE_DYN_FWD":
+      return "Single Dynamic Forward";
+    case "SINGLE_DYN_REV":
+      return "Single Dynamic Reverse";
+    case "DONE":
+      return "Done";
+    case "IDLE":
+      return "Idle";
+    case "UNAVAILABLE":
+      return "Unavailable";
+    default:
+      return token;
+  }
 }
 
 function renderField() {

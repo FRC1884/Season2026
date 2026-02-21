@@ -40,7 +40,7 @@ import lombok.Setter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
-import org.Griffins1884.frc2026.subsystems.vision.Vision;
+import org.Griffins1884.frc2026.util.RobotLogging;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
@@ -182,72 +182,6 @@ public class DriveCommands {
     return new ChassisSpeeds(vx, vy, omega);
   }
 
-  public static Command alignToClimbCommand(SwerveSubsystem drive, Vision vision) {
-    return Commands.defer(
-        () -> {
-          // Prefer alliance (when known). If the DS has not provided alliance yet (sim/offline),
-          // fall back to picking the nearer tower in the blue-origin field coordinate system.
-          boolean isBlue =
-              DriverStation.getAlliance().isPresent()
-                  ? DriverStation.getAlliance().get() == Alliance.Blue
-                  : drive.getPose().getX() < GlobalConstants.FieldConstants.fieldLength / 2.0;
-
-          Translation2d target =
-              isBlue
-                  ? GlobalConstants.FieldConstants.Tower.centerPoint
-                  : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
-          int tagId = isBlue ? 31 : 15;
-
-          Rotation2d rotation =
-              GlobalConstants.FieldConstants.defaultAprilTagType
-                  .getLayout()
-                  .getTagPose(tagId)
-                  .map(tagPose -> tagPose.getRotation().toRotation2d())
-                  // Sensible fallback: point toward the tower along +/-X.
-                  .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
-
-          Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
-          return new AutoAlignToPoseCommand(drive, new Pose2d(target, rotation))
-              .beforeStarting(() -> vision.setExclusiveTagId(tagId))
-              .finallyDo(vision::clearExclusiveTagId);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToClimbHolonomicCommand(SwerveSubsystem drive, Vision vision) {
-    return Commands.defer(
-        () -> {
-          // Prefer alliance (when known). If the DS has not provided alliance yet (sim/offline),
-          // fall back to picking the nearer tower in the blue-origin field coordinate system.
-          boolean isBlue =
-              DriverStation.getAlliance().isPresent()
-                  ? DriverStation.getAlliance().get() == Alliance.Blue
-                  : drive.getPose().getX() < GlobalConstants.FieldConstants.fieldLength / 2.0;
-
-          Translation2d target =
-              isBlue
-                  ? GlobalConstants.FieldConstants.Tower.centerPoint
-                  : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
-
-          // Tower wall tags: use the same end-of-field tags that define the tower centerpoint Y.
-          int tagId = isBlue ? 31 : 15;
-
-          Rotation2d rotation =
-              GlobalConstants.FieldConstants.defaultAprilTagType
-                  .getLayout()
-                  .getTagPose(tagId)
-                  .map(tagPose -> tagPose.getRotation().toRotation2d())
-                  // Sensible fallback: point toward the tower along +/-X.
-                  .orElse(isBlue ? new Rotation2d() : new Rotation2d(Math.PI));
-
-          Logger.recordOutput("Autonomy/AlignTargetClimb", new Pose2d(target, rotation));
-          return new AutoAlignToPoseHolonomicCommand(drive, new Pose2d(target, rotation))
-              .beforeStarting(() -> vision.setExclusiveTagId(tagId))
-              .finallyDo(vision::clearExclusiveTagId);
-        },
-        Set.of(drive));
-  }
-
   public static Command alignToAfterCollectStartCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
@@ -345,9 +279,9 @@ public class DriveCommands {
                   double kV = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
 
                   NumberFormat formatter = new DecimalFormat("#0.00000");
-                  System.out.println("********** Drive FF Characterization Results **********");
-                  System.out.println("\tkS: " + formatter.format(kS));
-                  System.out.println("\tkV: " + formatter.format(kV));
+                  RobotLogging.debug("********** Drive FF Characterization Results **********");
+                  RobotLogging.debug("\tkS: " + formatter.format(kS));
+                  RobotLogging.debug("\tkV: " + formatter.format(kV));
                 }));
   }
 
@@ -406,13 +340,13 @@ public class DriveCommands {
                           (state.gyroDelta * SwerveConstants.DRIVE_BASE_RADIUS) / wheelDelta;
 
                       NumberFormat formatter = new DecimalFormat("#0.000");
-                      System.out.println(
+                      RobotLogging.debug(
                           "********** Wheel Radius Characterization Results **********");
-                      System.out.println(
+                      RobotLogging.debug(
                           "\tWheel Delta: " + formatter.format(wheelDelta) + " radians");
-                      System.out.println(
+                      RobotLogging.debug(
                           "\tGyro Delta: " + formatter.format(state.gyroDelta) + " radians");
-                      System.out.println(
+                      RobotLogging.debug(
                           "\tWheel Radius: "
                               + formatter.format(wheelRadius)
                               + " meters, "

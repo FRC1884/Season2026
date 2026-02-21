@@ -138,7 +138,14 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       boolean rolled = LogRollover.roll();
       lastRequestedState = "ROLL_LOGS";
       lastRequestAccepted = rolled;
-      lastRequestReason = rolled ? "" : "Log rollover unavailable";
+      lastRequestReason = rolled ? "" : "Log rollover " + LogRollover.getStatus().toLowerCase();
+    }
+    if (inputs.cleanLogsRequested) {
+      boolean cleaned = LogRollover.cleanLogsFolder();
+      lastRequestedState = "CLEAN_LOGS";
+      lastRequestAccepted = cleaned;
+      lastRequestReason =
+          cleaned ? "" : "Log cleanup " + LogRollover.getCleanStatus().toLowerCase();
     }
     if (inputs.autoStateEnableRequested) {
       if (superstructure == null) {
@@ -209,9 +216,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setRequestAccepted(lastRequestAccepted);
     io.setRequestReason(lastRequestReason);
 
-    io.setClimbPhase(superstructure != null ? superstructure.getClimbPhaseName() : "UNKNOWN");
-    io.setClimbLevel(superstructure != null ? superstructure.getClimbLevel() : 0);
-
     TargetSnapshot target = computeTargetSnapshot();
     io.setTargetType(target.type());
     io.setTargetPose(target.pose());
@@ -244,10 +248,21 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setSysIdDrivePhase(drive != null ? drive.getDriveSysIdPhase() : "UNAVAILABLE");
     io.setSysIdDriveActive(drive != null && drive.isDriveSysIdActive());
     io.setSysIdDriveLastCompleted(drive != null ? drive.getDriveSysIdLastCompleted() : Double.NaN);
+    io.setSysIdDriveLastCompletedPhase(
+        drive != null ? drive.getDriveSysIdLastCompletedPhase() : "UNAVAILABLE");
     io.setSysIdTurnPhase(drive != null ? drive.getTurnSysIdPhase() : "UNAVAILABLE");
     io.setSysIdTurnActive(drive != null && drive.isTurnSysIdActive());
     io.setSysIdTurnLastCompleted(drive != null ? drive.getTurnSysIdLastCompleted() : Double.NaN);
+    io.setSysIdTurnLastCompletedPhase(
+        drive != null ? drive.getTurnSysIdLastCompletedPhase() : "UNAVAILABLE");
     io.setVisionStatus(Config.Subsystems.VISION_ENABLED ? "ENABLED" : "DISABLED");
+    io.setLogRollStatus(LogRollover.getStatus());
+    io.setLogRollLastTimestamp(LogRollover.getLastRollTimestampSec());
+    io.setLogRollCount(LogRollover.getRollCount());
+    io.setLogCleanStatus(LogRollover.getCleanStatus());
+    io.setLogCleanLastTimestamp(LogRollover.getLastCleanTimestampSec());
+    io.setLogCleanCount(LogRollover.getCleanCount());
+    io.setLogCleanDeletedEntries(LogRollover.getLastCleanDeletedEntries());
   }
 
   private boolean shouldPublishTelemetry() {
@@ -286,14 +301,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         if (pose != null) {
           target = new Translation2d(0.0, 0.0); // TODO: find Ferry Target
         }
-      }
-      case ENDGAME_CLIMB, AUTO_CLIMB, CLIMB_DETACH -> {
-        targetType = "CLIMB";
-        target =
-            (DriverStation.getAlliance().isPresent()
-                    && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
-                ? GlobalConstants.FieldConstants.Tower.centerPoint
-                : GlobalConstants.FieldConstants.Tower.oppCenterPoint;
       }
       default -> targetType = "NONE";
     }

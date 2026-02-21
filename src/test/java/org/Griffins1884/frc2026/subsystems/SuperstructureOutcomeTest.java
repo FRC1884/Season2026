@@ -41,9 +41,6 @@
 //           new RoutineStep(SuperState.INTAKING, 3),
 //           new RoutineStep(SuperState.SHOOTING, 3),
 //           new RoutineStep(SuperState.FERRYING, 3),
-//           new RoutineStep(SuperState.ENDGAME_CLIMB, 25),
-//           new RoutineStep(SuperState.AUTO_CLIMB, 30),
-//           new RoutineStep(SuperState.CLIMB_DETACH, 30),
 //           new RoutineStep(SuperState.TESTING, 3),
 //           new RoutineStep(SuperState.IDLING, 3)
 //         };

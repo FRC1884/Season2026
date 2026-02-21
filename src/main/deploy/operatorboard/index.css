@@ -46,6 +46,32 @@ body {
   z-index: 10;
 }
 
+.tabbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 0;
+}
+
+.tabbar__button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  padding: 8px 14px;
+  border-radius: 12px 12px 0 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tabbar__button.is-active {
+  color: var(--text);
+  border-color: rgba(57, 217, 138, 0.65);
+  background: rgba(57, 217, 138, 0.16);
+}
+
 .brand__title {
   font-size: 18px;
   font-weight: 800;
@@ -97,6 +123,18 @@ body {
   grid-template-columns: 360px 1fr 420px;
   gap: 14px;
   padding: 14px;
+}
+
+.layout--debug {
+  grid-template-columns: 360px minmax(0, 1fr);
+}
+
+.tab-page {
+  display: none;
+}
+
+.tab-page.is-active {
+  display: block;
 }
 
 .panel {
@@ -241,6 +279,18 @@ body {
   color: var(--muted);
 }
 
+.kv__v--ok {
+  color: var(--ok);
+}
+
+.kv__v--bad {
+  color: var(--bad);
+}
+
+.kv__v--warn {
+  color: var(--warn);
+}
+
 .panel--field {
   background: rgba(14, 17, 22, 0.72);
 }
@@ -317,6 +367,10 @@ body {
   font-size: 12px;
   font-weight: 700;
   color: var(--text);
+}
+
+.tile__v--lines {
+  white-space: pre-line;
 }
 
 .toast {

@@ -40,16 +40,6 @@ public class XboxOperatorMap extends CommandXboxController implements OperatorMa
   }
 
   @Override
-  public Trigger endgameClimb() {
-    return new Trigger(() -> false);
-  }
-
-  @Override
-  public Trigger detachClimb() {
-    return new Trigger(() -> false);
-  }
-
-  @Override
   public Trigger idling() {
     return new Trigger(() -> false);
   }
