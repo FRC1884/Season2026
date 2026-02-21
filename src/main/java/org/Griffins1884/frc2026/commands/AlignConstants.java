@@ -59,18 +59,18 @@ public final class AlignConstants {
           new LoggedTunableNumber("Align/AfterBumpStart/HeadingDeg",140);
 
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_X_METERS =
-          new LoggedTunableNumber("Align/AfterSecondBump/XMeters", 3);
+          new LoggedTunableNumber("Align/AfterSecondBump/XMeters", 2);
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_Y_METERS =
-          new LoggedTunableNumber("Align/AfterSecondBump/YMeters", 5.6);
+          new LoggedTunableNumber("Align/AfterSecondBump/YMeters", 4);
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_HEADING_DEG =
-    new LoggedTunableNumber ("Align/AfterSecondBump/HeadingDeg", 140);
+    new LoggedTunableNumber ("Align/AfterSecondBump/HeadingDeg", 180);
 
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_X_METERS =
-          new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6);
+          new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6.5);
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_Y_METERS =
           new LoggedTunableNumber ("Align/AfterBumpToNeutral/YMeters", 5.6);
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG =
-          new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 140);
+          new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 180);
 
 
   public static AlignGains getAlignGains() {
