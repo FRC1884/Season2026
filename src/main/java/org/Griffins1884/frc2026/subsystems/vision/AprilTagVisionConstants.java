@@ -16,6 +16,12 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 // rapid pose oscillation
 public final class AprilTagVisionConstants {
   public static final boolean IS_LIMELIGHT = true;
+  private static final VisionIO.CameraType LIMELIGHT_TYPE_HINT = VisionIO.CameraType.LIMELIGHT;
+
+  private static VisionIO.CameraType getPrimaryCameraType() {
+    return IS_LIMELIGHT ? LIMELIGHT_TYPE_HINT : VisionIO.CameraType.OV9281;
+  }
+
   public static final boolean LEFT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {
@@ -28,7 +34,7 @@ public final class AprilTagVisionConstants {
                     0.205,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
         case COMPBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
@@ -38,7 +44,7 @@ public final class AprilTagVisionConstants {
                     0.22454,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(15), degreesToRadians(20))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
         case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
@@ -47,7 +53,7 @@ public final class AprilTagVisionConstants {
                     0.3056,
                     0.245,
                     new Rotation3d(0, degreesToRadians(-5), degreesToRadians(-20))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
       };
 
   public static final boolean RIGHT_CAM_ENABLED = true;
@@ -62,7 +68,7 @@ public final class AprilTagVisionConstants {
                     0.205,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
         case COMPBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
@@ -72,7 +78,7 @@ public final class AprilTagVisionConstants {
                     0.22454,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(15), degreesToRadians(-20))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
         case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
@@ -81,7 +87,7 @@ public final class AprilTagVisionConstants {
                     -0.3056,
                     0.245,
                     new Rotation3d(0, degreesToRadians(-5), degreesToRadians(20))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
       };
 
   public static final boolean BACK_CAM_ENABLED = false;
@@ -96,16 +102,16 @@ public final class AprilTagVisionConstants {
                     0.205,
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(5), degreesToRadians(180))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
         case COMPBOT, SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(
-                "backtagcam",
+                (IS_LIMELIGHT) ? "limelight-back" : "backtagcam",
                 new Transform3d(
                     -0.3006,
                     0.3056,
                     0.245,
                     new Rotation3d(0, degreesToRadians(-20), degreesToRadians(180))),
-                VisionIO.CameraType.OV9281);
+                getPrimaryCameraType());
       };
 
   private static final LoggedTunableNumber VISION_STDDEV_X =
@@ -119,8 +125,12 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/LargeVariance", 1e6);
   private static final LoggedTunableNumber LIMELIGHT_IGNORE_MEGATAG2_ROTATION =
       new LoggedTunableNumber("AprilTagVision/Limelight/IgnoreMegaTag2Rotation", 1.0);
+  private static final LoggedTunableNumber LIMELIGHT_PROFILE_OVERRIDE =
+      new LoggedTunableNumber("AprilTagVision/Limelight/ProfileOverride", 0.0);
   private static final LoggedTunableNumber MEGATAG2_SINGLE_TAG_QUALITY_CUTOFF =
       new LoggedTunableNumber("AprilTagVision/Limelight/SingleTagQualityCutoff", 0.3);
+  private static final LoggedTunableNumber MEGATAG2_SINGLE_TAG_QUALITY_CUTOFF_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/SingleTagQualityCutoffLL3", 0.45);
   private static final LoggedTunableNumber LIMELIGHT_MAX_YAW_RATE_DEG_PER_SEC =
       new LoggedTunableNumber("AprilTagVision/Limelight/MaxYawRateDegPerSec", 180.0);
   private static final LoggedTunableNumber FIELD_BORDER_MARGIN_METERS =
@@ -140,19 +150,29 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/StdDev/MT2/Y", 0.7);
   private static final LoggedTunableNumber LIMELIGHT_MT2_STDDEV_YAW =
       new LoggedTunableNumber("AprilTagVision/Limelight/StdDev/MT2/YawDeg", 4.0);
+  private static final LoggedTunableNumber LIMELIGHT_MT2_STDDEV_SCALE_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/StdDev/MT2/ScaleLL3", 1.3);
 
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_ENABLED =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/Enabled", 1.0);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_DIST_METERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxDistanceMeters", 2.5);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_DIST_METERS_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxDistanceMetersLL3", 2.0);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_YAW_RATE_DEG_PER_SEC =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxYawRateDegPerSec", 30.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_YAW_RATE_DEG_PER_SEC_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxYawRateDegPerSecLL3", 25.0);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_RESIDUAL_METERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxResidualMeters", 0.25);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_YAW_RESIDUAL_DEG =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxYawResidualDeg", 5.0);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_YAW_RESIDUAL_DEG_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxYawResidualDegLL3", 4.0);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxFrameAgeSec", 0.08);
+  private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxFrameAgeSecLL3", 0.07);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_STABLE_WINDOW =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/StableWindow", 5.0);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_STABLE_DELTA_DEG =
@@ -169,6 +189,8 @@ public final class AprilTagVisionConstants {
 
   public static final LoggedTunableNumber LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMeters", 2.5);
+  private static final LoggedTunableNumber LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMetersLL3", 1.0);
   public static final LoggedTunableNumber LIMELIGHT_REJECT_OUTLIERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/RejectOutliers", 1.0);
 
@@ -182,13 +204,19 @@ public final class AprilTagVisionConstants {
   }
 
   public static double[] getLimelightStandardDeviations() {
+    return getLimelightStandardDeviations(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double[] getLimelightStandardDeviations(VisionIO.LimelightProfile profile) {
+    double mt2Scale =
+        profile == VisionIO.LimelightProfile.LL3 ? LIMELIGHT_MT2_STDDEV_SCALE_LL3.get() : 1.0;
     return new double[] {
       LIMELIGHT_MT1_STDDEV_X.get(),
       LIMELIGHT_MT1_STDDEV_Y.get(),
       Math.toRadians(LIMELIGHT_MT1_STDDEV_YAW.get()),
-      LIMELIGHT_MT2_STDDEV_X.get(),
-      LIMELIGHT_MT2_STDDEV_Y.get(),
-      Math.toRadians(LIMELIGHT_MT2_STDDEV_YAW.get())
+      LIMELIGHT_MT2_STDDEV_X.get() * mt2Scale,
+      LIMELIGHT_MT2_STDDEV_Y.get() * mt2Scale,
+      Math.toRadians(LIMELIGHT_MT2_STDDEV_YAW.get()) * mt2Scale
     };
   }
 
@@ -197,6 +225,13 @@ public final class AprilTagVisionConstants {
   }
 
   public static double getMegatag2SingleTagQualityCutoff() {
+    return getMegatag2SingleTagQualityCutoff(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double getMegatag2SingleTagQualityCutoff(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return MEGATAG2_SINGLE_TAG_QUALITY_CUTOFF_LL3.get();
+    }
     return MEGATAG2_SINGLE_TAG_QUALITY_CUTOFF.get();
   }
 
@@ -217,10 +252,24 @@ public final class AprilTagVisionConstants {
   }
 
   public static double getLimelightYawGateMaxDistMeters() {
+    return getLimelightYawGateMaxDistMeters(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double getLimelightYawGateMaxDistMeters(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return LIMELIGHT_YAW_GATE_MAX_DIST_METERS_LL3.get();
+    }
     return LIMELIGHT_YAW_GATE_MAX_DIST_METERS.get();
   }
 
   public static double getLimelightYawGateMaxYawRateDegPerSec() {
+    return getLimelightYawGateMaxYawRateDegPerSec(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double getLimelightYawGateMaxYawRateDegPerSec(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return LIMELIGHT_YAW_GATE_MAX_YAW_RATE_DEG_PER_SEC_LL3.get();
+    }
     return LIMELIGHT_YAW_GATE_MAX_YAW_RATE_DEG_PER_SEC.get();
   }
 
@@ -229,10 +278,24 @@ public final class AprilTagVisionConstants {
   }
 
   public static double getLimelightYawGateMaxYawResidualDeg() {
+    return getLimelightYawGateMaxYawResidualDeg(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double getLimelightYawGateMaxYawResidualDeg(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return LIMELIGHT_YAW_GATE_MAX_YAW_RESIDUAL_DEG_LL3.get();
+    }
     return LIMELIGHT_YAW_GATE_MAX_YAW_RESIDUAL_DEG.get();
   }
 
   public static double getLimelightYawGateMaxFrameAgeSec() {
+    return getLimelightYawGateMaxFrameAgeSec(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double getLimelightYawGateMaxFrameAgeSec(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC_LL3.get();
+    }
     return LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC.get();
   }
 
@@ -250,5 +313,16 @@ public final class AprilTagVisionConstants {
 
   public static double getLimelightYawStdDevUnstable() {
     return LIMELIGHT_YAW_STDDEV_UNSTABLE.get();
+  }
+
+  public static double getLimelightMaxTranslationResidualMeters(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS_LL3.get();
+    }
+    return LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get();
+  }
+
+  public static VisionIO.LimelightProfile getLimelightProfileOverride() {
+    return LimelightProfileResolver.fromOverrideValue(LIMELIGHT_PROFILE_OVERRIDE.get());
   }
 }
