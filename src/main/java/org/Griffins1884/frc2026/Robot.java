@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import org.Griffins1884.frc2026.util.LogRollover;
+import org.Griffins1884.frc2026.util.RobotLogging;
 import org.Griffins1884.frc2026.util.RollingWPILOGWriter;
 import org.ironmaple.simulation.SimulatedArena;
 import org.littletonrobotics.junction.LogFileUtil;
@@ -60,6 +61,7 @@ public class Robot extends LoggedRobot {
     Logger.recordMetadata("GitSHA", BuildConstants.GIT_SHA);
     Logger.recordMetadata("GitDate", BuildConstants.GIT_DATE);
     Logger.recordMetadata("GitBranch", BuildConstants.GIT_BRANCH);
+    Logger.recordMetadata("LoggingMode", GlobalConstants.LOGGING_MODE.name());
     switch (BuildConstants.DIRTY) {
       case 0:
         Logger.recordMetadata("GitDirty", "All changes committed");
@@ -191,10 +193,9 @@ public class Robot extends LoggedRobot {
     characterizationCommand = robotContainer.getCharacterizationCommand();
     if (characterizationCommand != null) {
       CommandScheduler.getInstance().schedule(characterizationCommand);
-      System.out.println(
-          "Characterization command scheduled: " + characterizationCommand.getName());
+      RobotLogging.info("Characterization command scheduled: " + characterizationCommand.getName());
     } else {
-      System.out.println("Characterization chooser set to None; nothing scheduled.");
+      RobotLogging.info("Characterization chooser set to None; nothing scheduled.");
     }
   }
 
@@ -233,14 +234,16 @@ public class Robot extends LoggedRobot {
         sessionDirCreated = true;
       } catch (IOException e) {
         createAttempts++;
-        Logger.recordOutput("NTLog/DirCreateAttempts", createAttempts);
+        if (RobotLogging.isDebugMode()) {
+          Logger.recordOutput("NTLog/DirCreateAttempts", createAttempts);
+        }
         Logger.recordOutput("NTLog/SessionDirCreated", false);
-        System.err.println(
+        RobotLogging.warn(
             "[NT Log] Failed to create log directory "
                 + sessionDir
                 + ": "
                 + e.getMessage()
-                + " — retrying.");
+                + " - retrying.");
         try {
           Thread.sleep(100);
         } catch (InterruptedException interrupted) {
@@ -254,7 +257,7 @@ public class Robot extends LoggedRobot {
       if (sessionDirCreated) {
         DataLogManager.start(sessionDir.toString());
         dataLogStarted = true;
-        System.out.println("[NT Log] Writing to " + sessionDir);
+        RobotLogging.debug("[NT Log] Writing to " + sessionDir);
       }
     } catch (IllegalStateException alreadyStarted) {
       dataLogStarted = true;
