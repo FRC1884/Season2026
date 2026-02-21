@@ -32,6 +32,12 @@ public interface VisionIO {
     }
   }
 
+  enum LimelightProfile {
+    AUTO,
+    LL3,
+    LL4
+  }
+
   public static enum RejectReason {
     VISION_DISABLED,
     DISCONNECTED,
@@ -63,6 +69,8 @@ public interface VisionIO {
     public int[] tagIds = new int[0];
     public double residualTranslationMeters = 0.0;
     public RejectReason rejectReason = RejectReason.UNKNOWN;
+    public String limelightProfile = LimelightProfile.LL4.name();
+    public String limelightProfileSource = "DEFAULT";
   }
 
   public default void updateInputs(VisionIOInputs inputs) {}

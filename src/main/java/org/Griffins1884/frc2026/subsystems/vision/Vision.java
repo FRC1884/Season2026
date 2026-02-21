@@ -919,7 +919,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   }
 
   public void clearExclusiveTagId() {
-    exclusiveTagId = -1;
+    exclusiveTagId = null;
   }
 
   public void resetPoseHistory() {
