@@ -39,6 +39,7 @@ import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.Vision;
+import org.Griffins1884.frc2026.util.RobotLogging;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
@@ -332,9 +333,9 @@ public class DriveCommands {
                   double kV = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
 
                   NumberFormat formatter = new DecimalFormat("#0.00000");
-                  System.out.println("********** Drive FF Characterization Results **********");
-                  System.out.println("\tkS: " + formatter.format(kS));
-                  System.out.println("\tkV: " + formatter.format(kV));
+                  RobotLogging.debug("********** Drive FF Characterization Results **********");
+                  RobotLogging.debug("\tkS: " + formatter.format(kS));
+                  RobotLogging.debug("\tkV: " + formatter.format(kV));
                 }));
   }
 
@@ -393,13 +394,13 @@ public class DriveCommands {
                           (state.gyroDelta * SwerveConstants.DRIVE_BASE_RADIUS) / wheelDelta;
 
                       NumberFormat formatter = new DecimalFormat("#0.000");
-                      System.out.println(
+                      RobotLogging.debug(
                           "********** Wheel Radius Characterization Results **********");
-                      System.out.println(
+                      RobotLogging.debug(
                           "\tWheel Delta: " + formatter.format(wheelDelta) + " radians");
-                      System.out.println(
+                      RobotLogging.debug(
                           "\tGyro Delta: " + formatter.format(state.gyroDelta) + " radians");
-                      System.out.println(
+                      RobotLogging.debug(
                           "\tWheel Radius: "
                               + formatter.format(wheelRadius)
                               + " meters, "
