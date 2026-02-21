@@ -25,7 +25,7 @@ public class AutoAlignToPoseCommand extends Command {
   private final double toleranceOverride;
 
   public AutoAlignToPoseCommand(SwerveSubsystem drive, Pose2d target) {
-    this(drive, target, 1.0, 0.0, Double.NaN);
+    this(drive, target, 1.0, 0.0, 0.1);
   }
 
   public AutoAlignToPoseCommand(
@@ -93,6 +93,12 @@ public class AutoAlignToPoseCommand extends Command {
 
     // Seed the profiled controllers with current state
     driveController.reset(distance, distanceRate);
+    double toleranceMeters =
+        Double.isNaN(toleranceOverride)
+            ? AlignConstants.ALIGN_TRANSLATION_TOLERANCE_METERS.get()
+            : toleranceOverride;
+    driveController.setTolerance(toleranceMeters);
+
     thetaController.reset(
         currentPose.getRotation().getRadians(), fieldSpeeds.omegaRadiansPerSecond);
 

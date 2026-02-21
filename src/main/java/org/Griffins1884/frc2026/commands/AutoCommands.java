@@ -28,7 +28,7 @@ public class AutoCommands {
         "OverBumpAndShoot",
         Commands.sequence(
             superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterBumpStartCommand(drive),
+            DriveCommands.alignToAfterSecondBumpCommand(drive),
             superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
 
     NamedCommands.registerCommand(

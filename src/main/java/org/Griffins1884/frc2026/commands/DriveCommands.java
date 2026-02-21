@@ -240,7 +240,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterCollectStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterCollectStart", target);
-          return new AutoAlignToPoseHolonomicCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target);
         },
         Set.of(drive));
   }
@@ -250,7 +250,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterOverBumpStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterBumpStart", target);
-          return new AutoAlignToPoseHolonomicCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target);
         },
         Set.of(drive));
   }
@@ -260,7 +260,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterSecondBumpStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterSecondBumpStart", target);
-          return new AutoAlignToPoseHolonomicCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target);
         },
         Set.of(drive));
   }
@@ -270,7 +270,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterBumpToNeutralStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterBumpToNeutralStart", target);
-          return new AutoAlignToPoseHolonomicCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target);
         },
         Set.of(drive));
   }

@@ -486,6 +486,12 @@ public class Superstructure extends SubsystemBase {
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
     if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
+      if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
+        final Translation2d oldTarget = target;
+        target =
+            TurretCommands.shootingWhileMoving(
+                drive::getPose, () -> oldTarget, drive::getRobotRelativeSpeeds);
+      }
       setIntakeGoal(IntakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.FORWARD);
       setShooterGoal(ShooterGoal.FORWARD);
@@ -687,11 +693,7 @@ public class Superstructure extends SubsystemBase {
       holdTurret();
       return;
     }
-    if (SuperstructureConstants.SHOOTING_WHILE_MOVING)
-      turret.setGoalRad(
-          TurretCommands.shootingWhileMoving(
-              drive::getPose, () -> target, drive::getRobotRelativeSpeeds));
-    else turret.setGoalRad(TurretUtil.turretAngleToTarget(drive.getPose(), target));
+    turret.setGoalRad(TurretUtil.turretAngleToTarget(drive.getPose(), target));
     lastTurretAction = "AIM_TARGET";
     lastTurretTarget = target;
   }
