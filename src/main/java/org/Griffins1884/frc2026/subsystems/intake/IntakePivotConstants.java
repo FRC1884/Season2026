@@ -20,15 +20,15 @@ public final class IntakePivotConstants {
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
 
-  public static final double FORWARD_LIMIT = 0.0; // TODO: set limits
-  public static final double REVERSE_LIMIT = -9.0; // TODO: set limits
+  public static final double FORWARD_LIMIT = 10.0; // TODO: set limits
+  public static final double REVERSE_LIMIT = -10.0; // TODO: set limits
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversion
   public static final LoggedTunableNumber MOTION_MAGIC_CRUISE_VEL =
-      new LoggedTunableNumber("IntakePivot/MotionMagic/CruiseVel", 2.0);
+      new LoggedTunableNumber("IntakePivot/MotionMagic/CruiseVel", 4.0);
   public static final LoggedTunableNumber MOTION_MAGIC_ACCEL =
-      new LoggedTunableNumber("IntakePivot/MotionMagic/Accel", 2.0);
+      new LoggedTunableNumber("IntakePivot/MotionMagic/Accel", 4.0);
   public static final LoggedTunableNumber MOTION_MAGIC_JERK =
-      new LoggedTunableNumber("IntakePivot/MotionMagic/Jerk", 0.0);
+      new LoggedTunableNumber("IntakePivot/MotionMagic/Jerk", 10.0);
 
   public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains("IntakePivot/Gains", 450.0, 55.0, 60.0, 0.0, 0., 0.0, 3);

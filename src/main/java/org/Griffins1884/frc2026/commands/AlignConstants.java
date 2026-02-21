@@ -1,6 +1,5 @@
 package org.Griffins1884.frc2026.commands;
 
-import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -21,7 +20,7 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/MaxAngularAcceleration", 6.0);
   public static final LoggedTunableNumber ALIGN_CONTROLLER_LOOP_PERIOD_SEC =
       // The command scheduler runs at 20ms; treat this as the effective control loop period.
-      new LoggedTunableNumber("Align/ControllerLoopPeriodSec", 0.02);
+      new LoggedTunableNumber( "Align/ControllerLoopPeriodSec", 0.02);
   public static final LoggedTunableNumber FF_START_DELAY =
       new LoggedTunableNumber("Align/FFStartDelaySec", 0.3);
   public static final LoggedTunableNumber FF_RAMP_RATE =
@@ -32,6 +31,8 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/TranslationToleranceMeters", 0.03);
   public static final LoggedTunableNumber ALIGN_ROTATION_TOLERANCE_DEG =
       new LoggedTunableNumber("Align/RotationToleranceDeg", 2.0);
+  public static final LoggedTunableNumber ALIGN_TOF_TOLERANCE_FRACTION =
+          new LoggedTunableNumber("Align/TofToeranceFraction");
   public static final LoggedTunableNumber WHEEL_RADIUS_MAX_VELOCITY =
       new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.5);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
@@ -50,28 +51,29 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.5);
   public static final LoggedTunableNumber AFTER_COLLECT_START_HEADING_DEG =
       new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 220.0);
+  public static final LoggedTunableNumber TURRET_KV = new LoggedTunableNumber("Turret/AutoAim/kV");
+  public static final LoggedTunableNumber TURRET_KS = new LoggedTunableNumber("Turret/AutoAim/kS");
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 5.9);
+      new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 7.7);
   public static final LoggedTunableNumber AFTER_BUMP_START_Y_METERS =
-          new LoggedTunableNumber("Align/AfterBumpStart/YMeters", 2.5);
+      new LoggedTunableNumber("Align/AfterBumpStart/YMeters", 0.9);
   public static final LoggedTunableNumber AFTER_BUMP_START_HEADING_DEG =
-          new LoggedTunableNumber("Align/AfterBumpStart/HeadingDeg",140);
+      new LoggedTunableNumber("Align/AfterBumpStart/HeadingDeg", -90);
 
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_X_METERS =
-          new LoggedTunableNumber("Align/AfterSecondBump/XMeters", 2);
+      new LoggedTunableNumber("Align/AfterSecondBump/XMeters", 2);
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_Y_METERS =
-          new LoggedTunableNumber("Align/AfterSecondBump/YMeters", 4);
+      new LoggedTunableNumber("Align/AfterSecondBump/YMeters", 4);
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_HEADING_DEG =
-    new LoggedTunableNumber ("Align/AfterSecondBump/HeadingDeg", 180);
+      new LoggedTunableNumber("Align/AfterSecondBump/HeadingDeg", 180);
 
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_X_METERS =
-          new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6.5);
+      new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6.5);
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_Y_METERS =
-          new LoggedTunableNumber ("Align/AfterBumpToNeutral/YMeters", 5.6);
+      new LoggedTunableNumber("Align/AfterBumpToNeutral/YMeters", 5.6);
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG =
-          new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 180);
-
+      new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 180);
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
@@ -89,23 +91,25 @@ public final class AlignConstants {
         Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get()));
   }
 
-    public static Pose2d getAfterOverBumpStartPose() {
-      return new Pose2d(
-              new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
-              Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get()));
-    }
-
-      public static Pose2d getAfterSecondBumpStartPose(){
-        return new Pose2d(
-                new Translation2d(AFTER_SECOND_BUMP_START_X_METERS.get(), AFTER_SECOND_BUMP_START_Y_METERS.get()),
-                Rotation2d.fromDegrees(AFTER_SECOND_BUMP_START_HEADING_DEG.get()));
-      }
-
-      public static Pose2d getAfterBumpToNeutralStartPose(){
+  public static Pose2d getAfterOverBumpStartPose() {
     return new Pose2d(
-            new Translation2d(AFTER_BUMP_TO_NEUTRAL_START_X_METERS.get(), AFTER_BUMP_TO_NEUTRAL_START_Y_METERS.get()),
-            Rotation2d.fromDegrees(AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG.get()));
-      }
+        new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
+        Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get()));
+  }
+
+  public static Pose2d getAfterSecondBumpStartPose() {
+    return new Pose2d(
+        new Translation2d(
+            AFTER_SECOND_BUMP_START_X_METERS.get(), AFTER_SECOND_BUMP_START_Y_METERS.get()),
+        Rotation2d.fromDegrees(AFTER_SECOND_BUMP_START_HEADING_DEG.get()));
+  }
+
+  public static Pose2d getAfterBumpToNeutralStartPose() {
+    return new Pose2d(
+        new Translation2d(
+            AFTER_BUMP_TO_NEUTRAL_START_X_METERS.get(), AFTER_BUMP_TO_NEUTRAL_START_Y_METERS.get()),
+        Rotation2d.fromDegrees(AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG.get()));
+  }
 
   /** Feedforward definition for translation alignment. */
   public static record FeedforwardGains(

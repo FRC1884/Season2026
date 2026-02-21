@@ -63,6 +63,7 @@ public abstract class GenericVelocityRollerSystem<
   private double manualGoalVelocity = 0.0;
   private double lastGoalVelocityRadPerSec = 0.0;
   private double lastTimestampSec = 0.0;
+  private GlobalConstants.Gains lastActiveGains = null;
 
   public GenericVelocityRollerSystem(
       String name, GenericRollerSystemIO io, GlobalConstants.Gains gains) {
@@ -131,25 +132,37 @@ public abstract class GenericVelocityRollerSystem<
         manualGoalActive ? manualGoalVelocity : getGoal().getVelocitySupplier().getAsDouble();
     goalVelocity = requestedVelocity;
 
-    logOutputs(measuredVelocity);
+    GlobalConstants.Gains activeGains = getActiveGains(requestedVelocity);
+    if (activeGains == null) {
+      activeGains = config.gains();
+    }
+    String gainsLabel = getActiveGainsLabel(requestedVelocity);
+
+    logOutputs(measuredVelocity, activeGains, gainsLabel);
 
     if (DriverStation.isDisabled()) {
       io.runVolts(0.0);
       return;
     }
 
+    if (activeGains != lastActiveGains) {
+      pidController.setPID(activeGains.kP().get(), activeGains.kI().get(), 0.0);
+      feedforward = new SimpleMotorFeedforward(activeGains.kS().get(), activeGains.kV().get());
+      feedforwardKa = activeGains.kA().get();
+      lastActiveGains = activeGains;
+    }
+
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> pidController.setPID(values[0], values[1], 0.0),
-        config.gains().kP(),
-        config.gains().kI());
+        activeGains.kP(),
+        activeGains.kI());
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> feedforward = new SimpleMotorFeedforward(values[0], values[1]),
-        config.gains().kS(),
-        config.gains().kV());
-    LoggedTunableNumber.ifChanged(
-        tuningId, values -> feedforwardKa = values[0], config.gains().kA());
+        activeGains.kS(),
+        activeGains.kV());
+    LoggedTunableNumber.ifChanged(tuningId, values -> feedforwardKa = values[0], activeGains.kA());
 
     double nowSec = Timer.getFPGATimestamp();
     double dtSec = nowSec - lastTimestampSec;
@@ -211,7 +224,16 @@ public abstract class GenericVelocityRollerSystem<
     io.setBrakeMode(enabled);
   }
 
-  private void logOutputs(double measuredVelocity) {
+  protected GlobalConstants.Gains getActiveGains(double requestedVelocityRpm) {
+    return config.gains();
+  }
+
+  protected String getActiveGainsLabel(double requestedVelocityRpm) {
+    return "DEFAULT";
+  }
+
+  private void logOutputs(
+      double measuredVelocity, GlobalConstants.Gains activeGains, String gainsLabel) {
     Logger.recordOutput("Rollers/" + name + "/VelocityRpm", measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/GoalVelocity", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/Error", goalVelocity - measuredVelocity);
@@ -222,11 +244,12 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
     Logger.recordOutput(
         "Rollers/" + name + "/VelocityCommandRadPerSec", goalVelocity * RPM_TO_RAD_PER_SEC);
-    Logger.recordOutput("Rollers/" + name + "/Gains/kP", config.gains().kP().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kI", config.gains().kI().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kD", config.gains().kD().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kS", config.gains().kS().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kV", config.gains().kV().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/Profile", gainsLabel);
+    Logger.recordOutput("Rollers/" + name + "/Gains/kP", activeGains.kP().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kI", activeGains.kI().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kD", activeGains.kD().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kS", activeGains.kS().get());
+    Logger.recordOutput("Rollers/" + name + "/Gains/kV", activeGains.kV().get());
     Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", false);
   }
 }
