@@ -19,152 +19,223 @@
       </div>
     </header>
 
-    <main class="layout">
-      <section class="panel panel--states">
-        <div class="panel__title">State</div>
-        <div id="state-buttons" class="state-buttons"></div>
-        <div class="state-actions">
-          <button id="auto-state-button" class="state-button state-button--auto" type="button">
-            Return To Auto
-          </button>
-        </div>
-        <div class="state-actions">
-          <button id="music-button" class="state-button state-button--music" type="button">
-            Play Swerve Song
-          </button>
-        </div>
-        <div class="state-actions">
-          <button id="music-stop-button" class="state-button state-button--music" type="button">
-            Stop Swerve Song
-          </button>
-        </div>
-        <div class="music-upload">
-          <label class="music-upload__label" for="music-file">
-            Upload .chrp
-          </label>
-          <input id="music-file" class="music-upload__input" type="file" accept=".chrp" />
-          <button id="music-upload-button" class="state-button state-button--auto" type="button">
-            Upload File
-          </button>
-          <div id="music-upload-status" class="music-upload__status">--</div>
-        </div>
-        <div class="music-volume">
-          <label class="music-volume__label" for="music-volume">Volume</label>
-          <input
-            id="music-volume"
-            class="music-volume__slider"
-            type="range"
-            min="0"
-            max="100"
-            value="70"
-          />
-          <div id="music-volume-value" class="music-volume__value">70%</div>
-        </div>
-        <div class="state-actions">
-          <button id="roll-logs-button" class="state-button state-button--auto" type="button">
-            Roll Logs
-          </button>
-        </div>
-        <div class="kv">
-          <div class="kv__row">
-            <div class="kv__k">Requested</div>
-            <div id="requested-state" class="kv__v">--</div>
-          </div>
-          <div class="kv__row">
-            <div class="kv__k">Current</div>
-            <div id="current-state" class="kv__v">--</div>
-          </div>
-          <div class="kv__row">
-            <div class="kv__k">Request</div>
-            <div id="request-status" class="kv__v">--</div>
-          </div>
-          <div class="kv__row">
-            <div class="kv__k">Reason</div>
-            <div id="request-reason" class="kv__v kv__v--muted">--</div>
-          </div>
+    <nav class="tabbar" aria-label="Operator board tabs">
+      <button
+        id="tab-game"
+        class="tabbar__button is-active"
+        type="button"
+        data-tab-target="game"
+      >
+        Game
+      </button>
+      <button id="tab-debugging" class="tabbar__button" type="button" data-tab-target="debugging">
+        Debugging
+      </button>
+    </nav>
+
+    <main>
+      <section class="tab-page is-active" data-tab-page="game">
+        <div class="layout">
+          <section class="panel panel--states">
+            <div class="panel__title">Game State</div>
+            <div id="state-buttons" class="state-buttons"></div>
+            <div class="state-actions">
+              <button id="auto-state-button" class="state-button state-button--auto" type="button">
+                Return To Auto
+              </button>
+            </div>
+            <div class="kv">
+              <div class="kv__row">
+                <div class="kv__k">Requested</div>
+                <div id="requested-state" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Current</div>
+                <div id="current-state" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Request</div>
+                <div id="request-status" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Reason</div>
+                <div id="request-reason" class="kv__v kv__v--muted">--</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel--field">
+            <div class="panel__title">Field</div>
+            <div class="field">
+              <img
+                id="field-image"
+                class="field__image"
+                src="./field-2026.png"
+                alt="FRC field"
+              />
+              <canvas id="field-canvas" class="field__canvas"></canvas>
+            </div>
+          </section>
+
+          <section class="panel panel--telemetry">
+            <div class="panel__title">Match Telemetry</div>
+            <div class="grid">
+              <div class="tile">
+                <div class="tile__k">Alliance</div>
+                <div id="alliance" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Match Time</div>
+                <div id="match-time" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Hub Shift</div>
+                <div id="hub-timeframe" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Our Hub</div>
+                <div id="our-hub" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Has Fuel</div>
+                <div id="has-ball" class="tile__v">--</div>
+              </div>
+              <div class="tile tile--wide">
+                <div class="tile__k">Recommendation</div>
+                <div id="hub-recommendation" class="tile__v">--</div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
 
-      <section class="panel panel--field">
-        <div class="panel__title">Field</div>
-        <div class="field">
-          <img
-            id="field-image"
-            class="field__image"
-            src="./field-2026.png"
-            alt="FRC field"
-          />
-          <canvas id="field-canvas" class="field__canvas"></canvas>
-        </div>
-      </section>
+      <section class="tab-page" data-tab-page="debugging">
+        <div class="layout layout--debug">
+          <section class="panel panel--states">
+            <div class="panel__title">Debug Controls</div>
+            <div class="state-actions">
+              <button id="music-button" class="state-button state-button--music" type="button">
+                Play Swerve Song
+              </button>
+            </div>
+            <div class="state-actions">
+              <button id="music-stop-button" class="state-button state-button--music" type="button">
+                Stop Swerve Song
+              </button>
+            </div>
+            <div class="music-upload">
+              <label class="music-upload__label" for="music-file">
+                Upload .chrp
+              </label>
+              <input id="music-file" class="music-upload__input" type="file" accept=".chrp" />
+              <button id="music-upload-button" class="state-button state-button--auto" type="button">
+                Upload File
+              </button>
+              <div id="music-upload-status" class="music-upload__status">--</div>
+            </div>
+            <div class="music-volume">
+              <label class="music-volume__label" for="music-volume">Volume</label>
+              <input
+                id="music-volume"
+                class="music-volume__slider"
+                type="range"
+                min="0"
+                max="100"
+                value="70"
+              />
+              <div id="music-volume-value" class="music-volume__value">70%</div>
+            </div>
+            <div class="state-actions">
+              <button id="roll-logs-button" class="state-button state-button--auto" type="button">
+                Roll Logs
+              </button>
+            </div>
+            <div class="state-actions">
+              <button id="clean-logs-button" class="state-button state-button--auto" type="button">
+                Clean Logs Folder
+              </button>
+            </div>
+            <div class="kv">
+              <div class="kv__row">
+                <div class="kv__k">Log Roll</div>
+                <div id="log-roll-status" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Last Roll</div>
+                <div id="log-roll-last" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Roll Count</div>
+                <div id="log-roll-count" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Log Clean</div>
+                <div id="log-clean-status" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Last Clean</div>
+                <div id="log-clean-last" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Clean Count</div>
+                <div id="log-clean-count" class="kv__v">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Deleted</div>
+                <div id="log-clean-deleted" class="kv__v">--</div>
+              </div>
+            </div>
+          </section>
 
-      <section class="panel panel--telemetry">
-        <div class="panel__title">Telemetry</div>
-        <div class="grid">
-          <div class="tile">
-            <div class="tile__k">Alliance</div>
-            <div id="alliance" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Match Time</div>
-            <div id="match-time" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Hub Shift</div>
-            <div id="hub-timeframe" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Our Hub</div>
-            <div id="our-hub" class="tile__v">--</div>
-          </div>
-          <div class="tile tile--wide">
-            <div class="tile__k">Recommendation</div>
-            <div id="hub-recommendation" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Battery</div>
-            <div id="battery" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Brownout</div>
-            <div id="brownout" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Has Fuel</div>
-            <div id="has-ball" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Vision</div>
-            <div id="vision-status" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Turret</div>
-            <div id="turret-status" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Climb</div>
-            <div id="climb" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Drive SysId</div>
-            <div id="sysid-drive" class="tile__v">--</div>
-          </div>
-          <div class="tile">
-            <div class="tile__k">Turn SysId</div>
-            <div id="sysid-turn" class="tile__v">--</div>
-          </div>
-          <div class="tile tile--wide">
-            <div class="tile__k">Robot Pose</div>
-            <div id="robot-pose" class="tile__v tile__v--mono">--</div>
-          </div>
-          <div class="tile tile--wide">
-            <div class="tile__k">Target</div>
-            <div id="target" class="tile__v tile__v--mono">--</div>
-          </div>
-          <div class="tile tile--wide">
-            <div class="tile__k">FMS Hub Data</div>
-            <div id="hub-fms" class="tile__v tile__v--mono">--</div>
-          </div>
+          <section class="panel panel--telemetry">
+            <div class="panel__title">Diagnostics</div>
+            <div class="grid">
+              <div class="tile">
+                <div class="tile__k">Battery</div>
+                <div id="battery" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Brownout</div>
+                <div id="brownout" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Vision</div>
+                <div id="vision-status" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Turret</div>
+                <div id="turret-status" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Drive SysId</div>
+                <div id="sysid-drive" class="tile__v">--</div>
+              </div>
+              <div class="tile">
+                <div class="tile__k">Turn SysId</div>
+                <div id="sysid-turn" class="tile__v">--</div>
+              </div>
+              <div class="tile tile--wide">
+                <div class="tile__k">Drive SysId Options</div>
+                <div id="sysid-drive-options" class="tile__v tile__v--mono tile__v--lines">--</div>
+              </div>
+              <div class="tile tile--wide">
+                <div class="tile__k">Turn SysId Options</div>
+                <div id="sysid-turn-options" class="tile__v tile__v--mono tile__v--lines">--</div>
+              </div>
+              <div class="tile tile--wide">
+                <div class="tile__k">Robot Pose</div>
+                <div id="robot-pose" class="tile__v tile__v--mono">--</div>
+              </div>
+              <div class="tile tile--wide">
+                <div class="tile__k">Target</div>
+                <div id="target" class="tile__v tile__v--mono">--</div>
+              </div>
+              <div class="tile tile--wide">
+                <div class="tile__k">FMS Hub Data</div>
+                <div id="hub-fms" class="tile__v tile__v--mono">--</div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
     </main>

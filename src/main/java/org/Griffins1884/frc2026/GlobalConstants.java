@@ -39,11 +39,10 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 public final class GlobalConstants {
   public static final RobotMode MODE = RobotMode.REAL;
   public static final RobotType ROBOT = RobotType.COMPBOT;
-  public static final LoggingMode LOGGING_MODE = resolveLoggingMode();
   public static final double ODOMETRY_FREQUENCY = 250.0;
   public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
-  public static boolean TUNING_MODE = LOGGING_MODE == LoggingMode.DEBUG;
+  public static boolean TUNING_MODE = true;
 
   public static enum RobotMode {
     /** Running on a real robot. */
@@ -65,38 +64,6 @@ public final class GlobalConstants {
     FULLSPARK,
     HALFSPARK,
     FULLKRACKENS
-  }
-
-  public static enum LoggingMode {
-    DEBUG,
-    COMP
-  }
-
-  public static boolean isDebugMode() {
-    return LOGGING_MODE == LoggingMode.DEBUG;
-  }
-
-  public static boolean isCompMode() {
-    return LOGGING_MODE == LoggingMode.COMP;
-  }
-
-  private static LoggingMode resolveLoggingMode() {
-    String override = System.getProperty("frc.logMode");
-    if (override == null || override.isBlank()) {
-      override = System.getenv("FRC_LOG_MODE");
-    }
-
-    if (override != null) {
-      String normalized = override.trim().toUpperCase();
-      if ("DEBUG".equals(normalized)) {
-        return LoggingMode.DEBUG;
-      }
-      if ("COMP".equals(normalized)) {
-        return LoggingMode.COMP;
-      }
-    }
-
-    return MODE == RobotMode.REAL ? LoggingMode.COMP : LoggingMode.DEBUG;
   }
 
   /**

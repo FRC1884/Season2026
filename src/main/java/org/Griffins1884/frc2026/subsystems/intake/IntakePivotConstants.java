@@ -20,8 +20,8 @@ public final class IntakePivotConstants {
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
 
-  public static final double FORWARD_LIMIT = 10.0; // TODO: set limits
-  public static final double REVERSE_LIMIT = -10.0; // TODO: set limits
+  public static final double FORWARD_LIMIT = 5.0; // TODO: set limits
+  public static final double REVERSE_LIMIT = -12.0; // TODO: set limits
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversion
   public static final LoggedTunableNumber MOTION_MAGIC_CRUISE_VEL =
       new LoggedTunableNumber("IntakePivot/MotionMagic/CruiseVel", 4.0);
@@ -40,6 +40,18 @@ public final class IntakePivotConstants {
 
   public static final double IDLE_ANGLE_RAD = 0.0; // TODO: set idle angle
   public static final double PICKUP_RAD = -7.8; // TODO: set idle angle
+  public static final LoggedTunableNumber HARDSTOP_STOW_SEEK_POSITION =
+      new LoggedTunableNumber("IntakePivot/HardStop/StowSeekPosition", 1.0);
+  public static final LoggedTunableNumber HARDSTOP_PICKUP_SEEK_POSITION =
+      new LoggedTunableNumber("IntakePivot/HardStop/PickupSeekPosition", -12.0);
+  public static final LoggedTunableNumber HARDSTOP_STOW_CURRENT_AMPS =
+      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 30.0);
+  public static final LoggedTunableNumber HARDSTOP_PICKUP_CURRENT_AMPS =
+      new LoggedTunableNumber("IntakePivot/HardStop/PickupCurrentAmps", 30.0);
+  public static final LoggedTunableNumber HARDSTOP_MAX_VELOCITY_RAD_PER_SEC =
+      new LoggedTunableNumber("IntakePivot/HardStop/MaxVelocityRadPerSec", 0.35);
+  public static final LoggedTunableNumber HARDSTOP_SPIKE_DEBOUNCE_SEC =
+      new LoggedTunableNumber("IntakePivot/HardStop/SpikeDebounceSec", 0.08);
   public static final int SIM_MOTOR_COUNT = 1;
   public static final double SIM_START_ANGLE_RAD = 0.0;
 

@@ -14,7 +14,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.function.DoubleSupplier;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -69,11 +68,7 @@ public abstract class GenericVoltageRollerSystem<G extends GenericVoltageRollerS
                 null,
                 null,
                 Seconds.of(4),
-                state -> {
-                  if (GlobalConstants.isDebugMode()) {
-                    Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString());
-                  }
-                }),
+                state -> Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
                 voltage -> io.runVolts(voltage.in(Volts)),
                 (log) ->
@@ -98,9 +93,7 @@ public abstract class GenericVoltageRollerSystem<G extends GenericVoltageRollerS
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    if (GlobalConstants.isDebugMode()) {
-      Logger.processInputs(name, inputs);
-    }
+    Logger.processInputs(name, inputs);
     boolean anyDisconnected = false;
     for (boolean isConnected : inputs.connected) {
       if (!isConnected) {

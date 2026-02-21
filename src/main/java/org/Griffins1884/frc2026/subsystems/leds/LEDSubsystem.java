@@ -73,8 +73,7 @@ public class LEDSubsystem extends SubsystemBase {
       Supplier<Pose2d> robotPoseSupplier,
       Supplier<Optional<Pose2d>> autoStartPoseSupplier,
       Supplier<SuperState> currentStateSupplier,
-      BooleanSupplier hasBallSupplier,
-      Supplier<String> climbPhaseSupplier) {
+      BooleanSupplier hasBallSupplier) {
     return this.run(
             () -> {
               if (!isEnabled.getAsBoolean()) {
@@ -89,19 +88,17 @@ public class LEDSubsystem extends SubsystemBase {
                   Logger.recordOutput(
                       "LED/DisabledReason",
                       realPose == null ? "DrivePoseMissing" : "AutoStartMissing");
-                  recordDebugOutput("LED/SegmentMask", 0b0111);
+                  Logger.recordOutput("LED/SegmentMask", 0b0111);
                   setPattern(LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR)));
                 }
                 return;
               }
               SuperState state = currentStateSupplier.get();
               boolean hasBall = hasBallSupplier.getAsBoolean();
-              String climbPhase = climbPhaseSupplier.get();
               Logger.recordOutput("LED/Mode", "Enabled");
               Logger.recordOutput("LED/SuperState", state == null ? "UNKNOWN" : state.name());
               Logger.recordOutput("LED/HasBall", hasBall);
-              Logger.recordOutput("LED/ClimbPhase", climbPhase == null ? "" : climbPhase);
-              setPattern(getTeleopPattern(state, hasBall, climbPhase));
+              setPattern(getTeleopPattern(state, hasBall));
             })
         .ignoringDisable(true);
   }
@@ -119,11 +116,11 @@ public class LEDSubsystem extends SubsystemBase {
     double yError = robotDelta.getY();
 
     if (Math.abs(xError) <= TRANSLATION_TOLERANCE && Math.abs(yError) <= TRANSLATION_TOLERANCE) {
-      recordDebugOutput("LED/Align/XError", xError);
-      recordDebugOutput("LED/Align/YError", yError);
-      recordDebugOutput("LED/Align/Aligned", true);
-      recordDebugOutput("LED/SegmentMask", 0b0111);
-      recordDebugOutput("LED/Pattern", "Align/Ok");
+      Logger.recordOutput("LED/Align/XError", xError);
+      Logger.recordOutput("LED/Align/YError", yError);
+      Logger.recordOutput("LED/Align/Aligned", true);
+      Logger.recordOutput("LED/SegmentMask", 0b0111);
+      Logger.recordOutput("LED/Pattern", "Align/Ok");
       return LEDOutputValue.all(LEDPattern.solid(ALIGN_OK_COLOR));
     }
 
@@ -154,11 +151,11 @@ public class LEDSubsystem extends SubsystemBase {
     if (yError < -TRANSLATION_TOLERANCE) {
       segmentMask |= 0b0100;
     }
-    recordDebugOutput("LED/Align/XError", xError);
-    recordDebugOutput("LED/Align/YError", yError);
-    recordDebugOutput("LED/Align/Aligned", false);
-    recordDebugOutput("LED/SegmentMask", segmentMask);
-    recordDebugOutput("LED/Pattern", "Align/Directional");
+    Logger.recordOutput("LED/Align/XError", xError);
+    Logger.recordOutput("LED/Align/YError", yError);
+    Logger.recordOutput("LED/Align/Aligned", false);
+    Logger.recordOutput("LED/SegmentMask", segmentMask);
+    Logger.recordOutput("LED/Pattern", "Align/Directional");
 
     return new LEDOutputValue[] {
       new LEDOutputValue(left, LEFT),
@@ -167,35 +164,22 @@ public class LEDSubsystem extends SubsystemBase {
     };
   }
 
-  private LEDOutputValue[] getTeleopPattern(SuperState state, boolean hasBall, String climbPhase) {
+  private LEDOutputValue[] getTeleopPattern(SuperState state, boolean hasBall) {
     if (state == null) {
-      recordDebugOutput("LED/SegmentMask", 0b0111);
-      recordDebugOutput("LED/Pattern", "Enabled/Unknown");
+      Logger.recordOutput("LED/SegmentMask", 0b0111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Unknown");
       return LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR));
     }
 
     if (state == SuperState.FERRYING) {
-      recordDebugOutput("LED/SegmentMask", 0b0111);
-      recordDebugOutput("LED/Pattern", "Enabled/Ferrying");
+      Logger.recordOutput("LED/SegmentMask", 0b0111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Ferrying");
       return LEDOutputValue.all(LEDPattern.solid(FERRY_COLOR));
     }
 
-    boolean climbState =
-        state == SuperState.ENDGAME_CLIMB
-            || state == SuperState.AUTO_CLIMB
-            || state == SuperState.CLIMB_DETACH;
-    boolean climbDone = isClimbDonePhase(climbPhase);
-    Logger.recordOutput("LED/ClimbState", climbState);
-    Logger.recordOutput("LED/ClimbDone", climbDone);
-    if (climbState && !climbDone) {
-      recordDebugOutput("LED/SegmentMask", 0b0111);
-      recordDebugOutput("LED/Pattern", "Enabled/Climb");
-      return LEDOutputValue.all(getClimbPattern(climbPhase));
-    }
-
     if (state == SuperState.IDLING) {
-      recordDebugOutput("LED/SegmentMask", 0b0111);
-      recordDebugOutput("LED/Pattern", "Enabled/Idle");
+      Logger.recordOutput("LED/SegmentMask", 0b0111);
+      Logger.recordOutput("LED/Pattern", "Enabled/Idle");
       return LEDOutputValue.all(LEDPattern.solid(IDLE_COLOR));
     }
 
@@ -204,8 +188,8 @@ public class LEDSubsystem extends SubsystemBase {
       if (!HAS_BALL_SOLID) {
         pattern = pattern.breathe(BREATHE_SPEED);
       }
-      recordDebugOutput("LED/SegmentMask", 0b0111);
-      recordDebugOutput("LED/Pattern", "Enabled/HasBall");
+      Logger.recordOutput("LED/SegmentMask", 0b0111);
+      Logger.recordOutput("LED/Pattern", "Enabled/HasBall");
       return LEDOutputValue.all(pattern);
     }
 
@@ -213,25 +197,9 @@ public class LEDSubsystem extends SubsystemBase {
     if (NO_BALL_BREATHE) {
       pattern = pattern.breathe(BREATHE_SPEED);
     }
-    recordDebugOutput("LED/SegmentMask", 0b0111);
-    recordDebugOutput("LED/Pattern", "Enabled/NoBall");
+    Logger.recordOutput("LED/SegmentMask", 0b0111);
+    Logger.recordOutput("LED/Pattern", "Enabled/NoBall");
     return LEDOutputValue.all(pattern);
-  }
-
-  private boolean isClimbDonePhase(String climbPhase) {
-    String phase = climbPhase == null ? "" : climbPhase.toUpperCase();
-    return "DONE".equals(phase);
-  }
-
-  private LEDPattern getClimbPattern(String climbPhase) {
-    String phase = climbPhase == null ? "" : climbPhase.toUpperCase();
-    if (phase.startsWith("DETACH")) {
-      return LEDPattern.solid(CLIMB_DETACH_COLOR).blink(CLIMB_BLINK_SPEED);
-    }
-    if ("DONE".equals(phase)) {
-      return LEDPattern.solid(CLIMB_DONE_COLOR);
-    }
-    return LEDPattern.solid(CLIMB_PULL_COLOR).blink(CLIMB_BLINK_SPEED);
   }
 
   private Pose2d toAllianceFramePose(Pose2d pose) {
@@ -250,29 +218,5 @@ public class LEDSubsystem extends SubsystemBase {
 
   public void close() {
     io.close();
-  }
-
-  private static void recordDebugOutput(String key, double value) {
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput(key, value);
-    }
-  }
-
-  private static void recordDebugOutput(String key, boolean value) {
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput(key, value);
-    }
-  }
-
-  private static void recordDebugOutput(String key, int value) {
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput(key, value);
-    }
-  }
-
-  private static void recordDebugOutput(String key, String value) {
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput(key, value);
-    }
   }
 }

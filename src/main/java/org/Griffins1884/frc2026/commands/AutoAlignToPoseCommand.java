@@ -8,7 +8,6 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.littletonrobotics.junction.Logger;
 
@@ -117,36 +116,28 @@ public class AutoAlignToPoseCommand extends Command {
 
     Pose2d currentPose = drive.getPose();
 
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("DriveToPose/currentPose", currentPose);
-      Logger.recordOutput("DriveToPose/targetLocation", target.toString());
-      Logger.recordOutput("DriveToPose/targetPose", target);
-    }
+    Logger.recordOutput("DriveToPose/currentPose", currentPose);
+    Logger.recordOutput("DriveToPose/targetLocation", target.toString());
+    Logger.recordOutput("DriveToPose/targetPose", target);
 
     double currentDistance = currentPose.getTranslation().getDistance(target.getTranslation());
     double ffScaler =
         MathUtil.clamp((currentDistance - ffMinRadius) / (ffMaxRadius - ffMinRadius), 0.0, 1.0);
     driveErrorAbs = currentDistance;
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("DriveToPose/ffScaler", ffScaler);
-    }
+    Logger.recordOutput("DriveToPose/ffScaler", ffScaler);
 
     double driveFFVelocity =
         currentDistance > gains.feedforwardGains().deadbandMeters()
             ? gains.feedforwardGains().kV() * driveController.getSetpoint().velocity
             : 0.0;
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("DriveToPose/DriveFFVelocity", driveFFVelocity);
-    }
+    Logger.recordOutput("DriveToPose/DriveFFVelocity", driveFFVelocity);
 
     double driveVelocityScalar =
         driveFFVelocity * ffScaler
             + driveController.calculate(
                 driveErrorAbs, new TrapezoidProfile.State(0.0, endVelocity));
     if (currentDistance < driveController.getPositionTolerance()) driveVelocityScalar = 0.0;
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("DriveToPose/DrivePoseError", driveErrorAbs);
-    }
+    Logger.recordOutput("DriveToPose/DrivePoseError", driveErrorAbs);
 
     // Calculate theta speed
     double thetaVelocity =
@@ -169,10 +160,8 @@ public class AutoAlignToPoseCommand extends Command {
             thetaVelocity,
             -AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
             AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get());
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("DriveToPose/DriveVelocitySetpoint", driveVelocity);
-      Logger.recordOutput("DriveToPose/ThetaVelocitySetpointRadPerSec", thetaVelocity);
-    }
+    Logger.recordOutput("DriveToPose/DriveVelocitySetpoint", driveVelocity);
+    Logger.recordOutput("DriveToPose/ThetaVelocitySetpointRadPerSec", thetaVelocity);
     drive.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             driveVelocity.getX(), driveVelocity.getY(), thetaVelocity, currentPose.getRotation()));

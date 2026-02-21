@@ -13,7 +13,6 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.TurretUtil;
@@ -34,22 +33,16 @@ public final class TurretCommands {
         () -> {
           Pose2d robotPose = robotPoseSupplier.get();
           Optional<Translation2d> target = targetSupplier.apply(robotPose);
-          if (GlobalConstants.isDebugMode()) {
-            Logger.recordOutput("Turret/AutoAim/HasTarget", target.isPresent());
-          }
+          Logger.recordOutput("Turret/AutoAim/HasTarget", target.isPresent());
           if (target.isEmpty()) {
             turret.setGoalRad(turret.getPositionRad());
-            if (GlobalConstants.isDebugMode()) {
-              Logger.recordOutput("Turret/AutoAim/GoalRad", turret.getGoalRad());
-            }
+            Logger.recordOutput("Turret/AutoAim/GoalRad", turret.getGoalRad());
             return;
           }
           double goalRad = TurretUtil.turretAngleToTarget(robotPose, target.get());
           turret.setGoalRad(goalRad);
-          if (GlobalConstants.isDebugMode()) {
-            Logger.recordOutput("Turret/AutoAim/Target", target.get());
-            Logger.recordOutput("Turret/AutoAim/GoalRad", goalRad);
-          }
+          Logger.recordOutput("Turret/AutoAim/Target", target.get());
+          Logger.recordOutput("Turret/AutoAim/GoalRad", goalRad);
         },
         turret);
   }
@@ -100,12 +93,10 @@ public final class TurretCommands {
     }
 
     Translation2d aimPoint = currentPose.getTranslation().plus(aimVector);
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
-      Logger.recordOutput("Turret/AutoAim/Distance", dist);
-      Logger.recordOutput("Turret/AutoAim/FutureTarget", aimPoint);
-      Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
-    }
+    Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
+    Logger.recordOutput("Turret/AutoAim/Distance", dist);
+    Logger.recordOutput("Turret/AutoAim/FutureTarget", aimPoint);
+    Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     return aimPoint;
   }
 

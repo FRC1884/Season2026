@@ -15,10 +15,6 @@ public interface OperatorMap {
 
   Trigger shooter();
 
-  Trigger endgameClimb();
-
-  Trigger detachClimb();
-
   Trigger autoManualToggle();
 
   Trigger idling();

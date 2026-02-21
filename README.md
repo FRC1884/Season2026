@@ -9,20 +9,6 @@
 - **State-first subsystems** – Everything from the superstructure down uses AdvantageKit logging, hardware abstraction, and command-based “verbs” instead of long procedural scripts.
 - **Simulation readiness** – maple-sim powered physics plus PathPlanner let us vet changes before the robot is wired.
 
-## Software Highlights
-
-Our 2026 software is built around “drive well, know where we are, and prove it in the logs.” The codebase is subsystem-centered (`swerve`, `vision`, `superstructure`, and the Operator Board) with command factories for repeatable behaviors, so new features don’t turn teleop/autos into one-off scripts.
-
-We treat observability as a core feature. AdvantageKit logging is used throughout, and we record key state, setpoints, and acceptance diagnostics so we can debug quickly and validate improvements in sim/replay. We also support rolling log files on the robot (start a fresh `.wpilog` without rebooting) and embed build metadata (Git SHA/branch/date) so every practice run is attributable.
-
-Concrete examples of what this codebase does well:
-- **High-rate, timestamp-aware pose**: odometry runs at a high frequency (configured at 250Hz) into a `SwerveDrivePoseEstimator`, and AprilTag vision measurements are fused with timestamps and tunable measurement uncertainty.
-- **Pragmatic vision safeguards**: AprilTag observations are gated (e.g., spinning too fast), checked for field bounds, and can be rejected as outliers based on residual error, with per-camera diagnostics logged for tuning.
-- **Multi-camera support**: multiple AprilTag cameras can contribute estimates, and we can fuse them into a single pose update while time-aligning using a pose-history buffer.
-- **Alliance-friendly setup**: a single call can zero gyro and odometry to the alliance wall (blue vs red field conventions) to reduce driver confusion and auto setup mistakes.
-- **Data-driven autos**: PathPlanner/Choreo trajectories live in deploy assets, and named auto actions (e.g., “Shoot”, “Collect”, “Climb”) are registered in code so autos stay readable and easy to remix.
-- **Operator-focused UI layer**: the Operator Board is served by the robot and keeps match-critical controls and telemetry separate from robot logic, enabling rapid iteration without destabilizing drivetrain/estimation code.
-
 ## Repository Layout
 
 | Path | Purpose |

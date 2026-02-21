@@ -29,7 +29,6 @@
     `PivotIOFlex`/`PivotIOMax`/`PivotIOSim`,
     `ShooterIOFlex`/`ShooterIOMax`/`ShooterIOSim`,
     `IntakeIOFlex`/`IntakeIOMax`/`IntakeIOSim`,
-    `ClimberIOFlex`/`ClimberIOMax`/`ClimberIOSim`,
     `LEDIOPWM`/`LEDIOSim`.
   - Template implementations live under `src/main/java/frc/robot/subsystems/exampleClasses`.
 - Subsystems extend `SubsystemBase` or generic base classes:
@@ -48,7 +47,7 @@
 ## Constants
 - Global/config: `src/main/java/frc/robot/GlobalConstants.java`, `src/main/java/frc/robot/Config.java`.
 - Subsystem constants: `frc.robot.subsystems.*.*Constants`
-  (e.g., `SwerveConstants`, `PivotConstants`, `ShooterConstants`, `ClimberConstants`, `LEDConstants`).
+  (e.g., `SwerveConstants`, `PivotConstants`, `ShooterConstants`, `LEDConstants`).
 - Alignment constants: `src/main/java/frc/robot/commands/AlignConstants.java`.
 
 ## Superstructure / State Machine
@@ -81,7 +80,6 @@ org.Griffins1884.frc2026.Main
                 -> intake.subsystems.org.Griffins1884.frc2026.IntakeSubsystem
                 -> shooter.subsystems.org.Griffins1884.frc2026.ShooterSubsystem
             -> elevators.generic.org.Griffins1884.frc2026.Elevators
-                -> climber.subsystems.org.Griffins1884.frc2026.ClimberSubsystem
             -> arms.generic.org.Griffins1884.frc2026.Arms
                 -> frc.robot.subsystems.pivot.PivotSubsystem
         -> objectivetracker.subsystems.org.Griffins1884.frc2026.TabletInterfaceTracker (optional)

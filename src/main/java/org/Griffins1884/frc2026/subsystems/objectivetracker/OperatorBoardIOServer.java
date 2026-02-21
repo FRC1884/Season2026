@@ -26,13 +26,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final BooleanSubscriber stopSwerveMusicIn;
   private final DoubleSubscriber swerveMusicVolumeIn;
   private final BooleanSubscriber rollLogsIn;
+  private final BooleanSubscriber cleanLogsIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
   private final BooleanPublisher requestAcceptedOut;
   private final StringPublisher requestReasonOut;
-  private final StringPublisher climbPhaseOut;
-  private final IntegerPublisher climbLevelOut;
   private final StringPublisher targetTypeOut;
   private final DoubleArrayPublisher targetPoseOut;
   private final BooleanPublisher targetPoseValidOut;
@@ -57,10 +56,19 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final StringPublisher sysIdDrivePhaseOut;
   private final BooleanPublisher sysIdDriveActiveOut;
   private final DoublePublisher sysIdDriveLastCompletedOut;
+  private final StringPublisher sysIdDriveLastCompletedPhaseOut;
   private final StringPublisher sysIdTurnPhaseOut;
   private final BooleanPublisher sysIdTurnActiveOut;
   private final DoublePublisher sysIdTurnLastCompletedOut;
+  private final StringPublisher sysIdTurnLastCompletedPhaseOut;
   private final StringPublisher visionStatusOut;
+  private final StringPublisher logRollStatusOut;
+  private final DoublePublisher logRollLastTimestampOut;
+  private final IntegerPublisher logRollCountOut;
+  private final StringPublisher logCleanStatusOut;
+  private final DoublePublisher logCleanLastTimestampOut;
+  private final IntegerPublisher logCleanCountOut;
+  private final IntegerPublisher logCleanDeletedEntriesOut;
 
   public OperatorBoardIOServer() {
     var inputTable = NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_ROBOT);
@@ -88,6 +96,10 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         inputTable
             .getBooleanTopic(OperatorBoardContract.ROLL_LOGS)
             .subscribe(false, PubSubOption.keepDuplicates(true));
+    cleanLogsIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.CLEAN_LOGS)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
         NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_DASHBOARD);
@@ -96,8 +108,6 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     requestAcceptedOut =
         outputTable.getBooleanTopic(OperatorBoardContract.REQUEST_ACCEPTED).publish();
     requestReasonOut = outputTable.getStringTopic(OperatorBoardContract.REQUEST_REASON).publish();
-    climbPhaseOut = outputTable.getStringTopic(OperatorBoardContract.CLIMB_PHASE).publish();
-    climbLevelOut = outputTable.getIntegerTopic(OperatorBoardContract.CLIMB_LEVEL).publish();
     targetTypeOut = outputTable.getStringTopic(OperatorBoardContract.TARGET_TYPE).publish();
     targetPoseOut = outputTable.getDoubleArrayTopic(OperatorBoardContract.TARGET_POSE).publish();
     targetPoseValidOut =
@@ -130,13 +140,30 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         outputTable.getBooleanTopic(OperatorBoardContract.SYSID_DRIVE_ACTIVE).publish();
     sysIdDriveLastCompletedOut =
         outputTable.getDoubleTopic(OperatorBoardContract.SYSID_DRIVE_LAST_COMPLETED).publish();
+    sysIdDriveLastCompletedPhaseOut =
+        outputTable
+            .getStringTopic(OperatorBoardContract.SYSID_DRIVE_LAST_COMPLETED_PHASE)
+            .publish();
     sysIdTurnPhaseOut =
         outputTable.getStringTopic(OperatorBoardContract.SYSID_TURN_PHASE).publish();
     sysIdTurnActiveOut =
         outputTable.getBooleanTopic(OperatorBoardContract.SYSID_TURN_ACTIVE).publish();
     sysIdTurnLastCompletedOut =
         outputTable.getDoubleTopic(OperatorBoardContract.SYSID_TURN_LAST_COMPLETED).publish();
+    sysIdTurnLastCompletedPhaseOut =
+        outputTable.getStringTopic(OperatorBoardContract.SYSID_TURN_LAST_COMPLETED_PHASE).publish();
     visionStatusOut = outputTable.getStringTopic(OperatorBoardContract.VISION_STATUS).publish();
+    logRollStatusOut = outputTable.getStringTopic(OperatorBoardContract.LOG_ROLL_STATUS).publish();
+    logRollLastTimestampOut =
+        outputTable.getDoubleTopic(OperatorBoardContract.LOG_ROLL_LAST_TIMESTAMP).publish();
+    logRollCountOut = outputTable.getIntegerTopic(OperatorBoardContract.LOG_ROLL_COUNT).publish();
+    logCleanStatusOut =
+        outputTable.getStringTopic(OperatorBoardContract.LOG_CLEAN_STATUS).publish();
+    logCleanLastTimestampOut =
+        outputTable.getDoubleTopic(OperatorBoardContract.LOG_CLEAN_LAST_TIMESTAMP).publish();
+    logCleanCountOut = outputTable.getIntegerTopic(OperatorBoardContract.LOG_CLEAN_COUNT).publish();
+    logCleanDeletedEntriesOut =
+        outputTable.getIntegerTopic(OperatorBoardContract.LOG_CLEAN_DELETED_ENTRIES).publish();
   }
 
   @Override
@@ -175,6 +202,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     } else {
       inputs.rollLogsRequested = false;
     }
+    TimestampedBoolean[] cleanQueue = cleanLogsIn.readQueue();
+    if (cleanQueue.length > 0) {
+      inputs.cleanLogsRequested = cleanQueue[cleanQueue.length - 1].value;
+    } else {
+      inputs.cleanLogsRequested = false;
+    }
   }
 
   @Override
@@ -195,16 +228,6 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setRequestReason(String value) {
     requestReasonOut.set(value == null ? "" : value);
-  }
-
-  @Override
-  public void setClimbPhase(String value) {
-    climbPhaseOut.set(value == null ? "" : value);
-  }
-
-  @Override
-  public void setClimbLevel(int value) {
-    climbLevelOut.set(value);
   }
 
   @Override
@@ -328,6 +351,11 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   }
 
   @Override
+  public void setSysIdDriveLastCompletedPhase(String value) {
+    sysIdDriveLastCompletedPhaseOut.set(value == null ? "" : value);
+  }
+
+  @Override
   public void setSysIdTurnPhase(String value) {
     sysIdTurnPhaseOut.set(value == null ? "" : value);
   }
@@ -343,7 +371,47 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   }
 
   @Override
+  public void setSysIdTurnLastCompletedPhase(String value) {
+    sysIdTurnLastCompletedPhaseOut.set(value == null ? "" : value);
+  }
+
+  @Override
   public void setVisionStatus(String value) {
     visionStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setLogRollStatus(String value) {
+    logRollStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setLogRollLastTimestamp(double value) {
+    logRollLastTimestampOut.set(value);
+  }
+
+  @Override
+  public void setLogRollCount(int value) {
+    logRollCountOut.set(value);
+  }
+
+  @Override
+  public void setLogCleanStatus(String value) {
+    logCleanStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setLogCleanLastTimestamp(double value) {
+    logCleanLastTimestampOut.set(value);
+  }
+
+  @Override
+  public void setLogCleanCount(int value) {
+    logCleanCountOut.set(value);
+  }
+
+  @Override
+  public void setLogCleanDeletedEntries(int value) {
+    logCleanDeletedEntriesOut.set(value);
   }
 }

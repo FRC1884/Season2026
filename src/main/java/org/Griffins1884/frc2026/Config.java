@@ -24,7 +24,6 @@ public final class Config {
     public static final boolean INTAKE_PIVOT_ENABLED = true;
     public static final boolean INTAKE_ENABLED = true;
     public static final boolean INDEXER_ENABLED = true;
-    public static final boolean CLIMBER_ENABLED = false;
   }
 
   public static final class WebUIConfig {

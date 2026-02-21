@@ -51,36 +51,36 @@ public class AutoStartPoseProvider {
   private Optional<Pose2d> loadStartPose(String autoName) {
     Path autoPath = autoDir.resolve(autoName + ".auto");
     if (!Files.exists(autoPath)) {
-      logDebugOutput("AutoStartPose/AutoFileExists", false);
+      Logger.recordOutput("AutoStartPose/AutoFileExists", false);
       Logger.recordOutput("AutoStartPose/Reason", "MissingAutoFile");
       return Optional.empty();
     }
-    logDebugOutput("AutoStartPose/AutoFileExists", true);
+    Logger.recordOutput("AutoStartPose/AutoFileExists", true);
     JSONObject root = readJson(autoPath);
     if (root == null) {
       Logger.recordOutput("AutoStartPose/Reason", "AutoParseFailed");
       return Optional.empty();
     }
     boolean choreoAuto = Boolean.TRUE.equals(root.get("choreoAuto"));
-    logDebugOutput("AutoStartPose/IsChoreoAuto", choreoAuto);
+    Logger.recordOutput("AutoStartPose/IsChoreoAuto", choreoAuto);
     JSONObject command = asObject(root.get("command"));
     String pathName = findFirstPathName(command);
     if (pathName == null || pathName.isBlank()) {
       Logger.recordOutput("AutoStartPose/Reason", "NoPathInAuto");
       return Optional.empty();
     }
-    logDebugOutput("AutoStartPose/PathName", pathName);
+    Logger.recordOutput("AutoStartPose/PathName", pathName);
     return choreoAuto ? loadChoreoStartPose(pathName) : loadPathPlannerStartPose(pathName);
   }
 
   private Optional<Pose2d> loadChoreoStartPose(String pathName) {
     Path trajPath = choreoDir.resolve(pathName + ".traj");
     if (!Files.exists(trajPath)) {
-      logDebugOutput("AutoStartPose/TrajFileExists", false);
+      Logger.recordOutput("AutoStartPose/TrajFileExists", false);
       Logger.recordOutput("AutoStartPose/Reason", "MissingTrajFile");
       return Optional.empty();
     }
-    logDebugOutput("AutoStartPose/TrajFileExists", true);
+    Logger.recordOutput("AutoStartPose/TrajFileExists", true);
     JSONObject root = readJson(trajPath);
     if (root == null) {
       Logger.recordOutput("AutoStartPose/Reason", "TrajParseFailed");
@@ -122,11 +122,11 @@ public class AutoStartPoseProvider {
   private Optional<Pose2d> loadPathPlannerStartPose(String pathName) {
     Path pathPath = pathDir.resolve(pathName + ".path");
     if (!Files.exists(pathPath)) {
-      logDebugOutput("AutoStartPose/PathFileExists", false);
+      Logger.recordOutput("AutoStartPose/PathFileExists", false);
       Logger.recordOutput("AutoStartPose/Reason", "MissingPathFile");
       return Optional.empty();
     }
-    logDebugOutput("AutoStartPose/PathFileExists", true);
+    Logger.recordOutput("AutoStartPose/PathFileExists", true);
     JSONObject root = readJson(pathPath);
     if (root == null) {
       Logger.recordOutput("AutoStartPose/Reason", "PathParseFailed");
@@ -211,17 +211,5 @@ public class AutoStartPoseProvider {
       }
     }
     return fallback;
-  }
-
-  private static void logDebugOutput(String key, boolean value) {
-    if (RobotLogging.isDebugMode()) {
-      Logger.recordOutput(key, value);
-    }
-  }
-
-  private static void logDebugOutput(String key, String value) {
-    if (RobotLogging.isDebugMode()) {
-      Logger.recordOutput(key, value);
-    }
   }
 }

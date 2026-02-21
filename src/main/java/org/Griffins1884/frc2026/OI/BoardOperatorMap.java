@@ -26,16 +26,6 @@ public class BoardOperatorMap extends CommandGenericHID implements OperatorMap {
   }
 
   @Override
-  public Trigger endgameClimb() {
-    return safeButton(4);
-  }
-
-  @Override
-  public Trigger detachClimb() {
-    return safeButton(5);
-  }
-
-  @Override
   public Trigger idling() {
     return safeButton(2);
   }

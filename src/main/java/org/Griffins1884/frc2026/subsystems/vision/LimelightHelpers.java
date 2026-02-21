@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.Griffins1884.frc2026.subsystems.vision.LimelightHelpers.LimelightResults;
 import org.Griffins1884.frc2026.subsystems.vision.LimelightHelpers.PoseEstimate;
-import org.Griffins1884.frc2026.util.RobotLogging;
 
 /**
  * LimelightHelpers provides static methods and classes for interfacing with Limelight vision
@@ -811,6 +810,7 @@ public class LimelightHelpers {
    */
   public static Pose3d toPose3D(double[] inData) {
     if (inData.length < 6) {
+      // System.err.println("Bad LL 3D Pose Data!");
       return new Pose3d();
     }
     return new Pose3d(
@@ -831,6 +831,7 @@ public class LimelightHelpers {
    */
   public static Pose2d toPose2D(double[] inData) {
     if (inData.length < 6) {
+      // System.err.println("Bad LL 2D Pose Data!");
       return new Pose2d();
     }
     Translation2d tran2d = new Translation2d(inData[0], inData[1]);
@@ -1068,39 +1069,38 @@ public class LimelightHelpers {
    */
   public static void printPoseEstimate(PoseEstimate pose) {
     if (pose == null) {
-      RobotLogging.debug("No PoseEstimate available.");
+      System.out.println("No PoseEstimate available.");
       return;
     }
 
-    StringBuilder message = new StringBuilder();
-    message.append("Pose Estimate Information:\n");
-    message.append(String.format("Timestamp (Seconds): %.3f%n", pose.timestampSeconds));
-    message.append(String.format("Latency: %.3f ms%n", pose.latency));
-    message.append(String.format("Tag Count: %d%n", pose.tagCount));
-    message.append(String.format("Tag Span: %.2f meters%n", pose.tagSpan));
-    message.append(String.format("Average Tag Distance: %.2f meters%n", pose.avgTagDist));
-    message.append(String.format("Average Tag Area: %.2f%% of image%n", pose.avgTagArea));
-    message.append(String.format("Is MegaTag2: %b%n%n", pose.isMegaTag2));
+    System.out.printf("Pose Estimate Information:%n");
+    System.out.printf("Timestamp (Seconds): %.3f%n", pose.timestampSeconds);
+    System.out.printf("Latency: %.3f ms%n", pose.latency);
+    System.out.printf("Tag Count: %d%n", pose.tagCount);
+    System.out.printf("Tag Span: %.2f meters%n", pose.tagSpan);
+    System.out.printf("Average Tag Distance: %.2f meters%n", pose.avgTagDist);
+    System.out.printf("Average Tag Area: %.2f%% of image%n", pose.avgTagArea);
+    System.out.printf("Is MegaTag2: %b%n", pose.isMegaTag2);
+    System.out.println();
 
     if (pose.rawFiducials == null || pose.rawFiducials.length == 0) {
-      message.append("No RawFiducials data available.");
-      RobotLogging.debug(message.toString());
+      System.out.println("No RawFiducials data available.");
       return;
     }
 
-    message.append("Raw Fiducials Details:\n");
+    System.out.println("Raw Fiducials Details:");
     for (int i = 0; i < pose.rawFiducials.length; i++) {
       RawFiducial fiducial = pose.rawFiducials[i];
-      message.append(String.format(" Fiducial #%d:%n", i + 1));
-      message.append(String.format("  ID: %d%n", fiducial.id));
-      message.append(String.format("  TXNC: %.2f%n", fiducial.txnc));
-      message.append(String.format("  TYNC: %.2f%n", fiducial.tync));
-      message.append(String.format("  TA: %.2f%n", fiducial.ta));
-      message.append(String.format("  Distance to Camera: %.2f meters%n", fiducial.distToCamera));
-      message.append(String.format("  Distance to Robot: %.2f meters%n", fiducial.distToRobot));
-      message.append(String.format("  Ambiguity: %.2f%n%n", fiducial.ambiguity));
+      System.out.printf(" Fiducial #%d:%n", i + 1);
+      System.out.printf("  ID: %d%n", fiducial.id);
+      System.out.printf("  TXNC: %.2f%n", fiducial.txnc);
+      System.out.printf("  TYNC: %.2f%n", fiducial.tync);
+      System.out.printf("  TA: %.2f%n", fiducial.ta);
+      System.out.printf("  Distance to Camera: %.2f meters%n", fiducial.distToCamera);
+      System.out.printf("  Distance to Robot: %.2f meters%n", fiducial.distToRobot);
+      System.out.printf("  Ambiguity: %.2f%n", fiducial.ambiguity);
+      System.out.println();
     }
-    RobotLogging.debug(message.toString());
   }
 
   public static Boolean validPoseEstimate(PoseEstimate pose) {

@@ -16,9 +16,6 @@ public class GyroIOSim implements GyroIO {
   @Override
   public void updateInputs(GyroIOInputs inputs) {
     inputs.connected = true;
-    inputs.primaryConnected = true;
-    inputs.secondaryConnected = false;
-    inputs.usingSecondary = false;
     inputs.yawPosition = gyroSimulation.getGyroReading();
     inputs.yawVelocityRadPerSec =
         Units.degreesToRadians(gyroSimulation.getMeasuredAngularVelocity().in(RadiansPerSecond));

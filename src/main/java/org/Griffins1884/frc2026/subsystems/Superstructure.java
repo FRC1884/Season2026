@@ -8,7 +8,6 @@ import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -27,7 +26,6 @@ import org.Griffins1884.frc2026.generic.arms.Arms;
 import org.Griffins1884.frc2026.generic.elevators.Elevators;
 import org.Griffins1884.frc2026.generic.rollers.Rollers;
 import org.Griffins1884.frc2026.generic.turrets.GenericPositionTurretSystem.ControlMode;
-import org.Griffins1884.frc2026.subsystems.climber.ClimberSubsystem.ClimberGoal;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem.IndexerGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakePivotSubsystem.IntakePivotGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.IntakeGoal;
@@ -49,28 +47,7 @@ public class Superstructure extends SubsystemBase {
     SHOOTING,
     SHOOT_INTAKE,
     FERRYING,
-    ENDGAME_CLIMB,
-    AUTO_CLIMB,
-    CLIMB_DETACH,
     TESTING
-  }
-
-  private enum ClimbMode {
-    ENDGAME,
-    AUTO,
-    DETACH
-  }
-
-  private enum ClimbPhase {
-    IDLE,
-    EXTEND,
-    LATCH,
-    PULL,
-    DYNAMIC,
-    DONE,
-    DETACH_EXTEND,
-    DETACH_DRIVE,
-    DETACH_RETRACT
   }
 
   public record SuperstructureOutcome(
@@ -84,10 +61,7 @@ public class Superstructure extends SubsystemBase {
       boolean shooterPivotManual,
       double shooterPivotPosition,
       String turretAction,
-      Translation2d turretTarget,
-      String climbMode,
-      String climbPhase,
-      double climberGoalPosition) {}
+      Translation2d turretTarget) {}
 
   public record StateRequestResult(boolean accepted, String reason) {}
 
@@ -111,12 +85,6 @@ public class Superstructure extends SubsystemBase {
 
   private final Debouncer ballPresentDebouncer =
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
-  private final Timer climbTimer = new Timer();
-  private ClimbPhase climbPhase = ClimbPhase.IDLE;
-  @Getter private int climbLevel = 0;
-  private ClimbMode activeClimbMode = null;
-  @Setter private boolean climbShootEnabled = false;
-  private double climbHoldPosition = Double.NaN;
   @Setter private boolean turretExternalControl = false;
   private final LEDSubsystem leds =
       Config.Subsystems.LEDS_ENABLED
@@ -134,7 +102,6 @@ public class Superstructure extends SubsystemBase {
   private double lastShooterPivotPosition = 0.0;
   private String lastTurretAction = "HOLD";
   private Translation2d lastTurretTarget = null;
-  private double lastClimberGoalPosition = Double.NaN;
   private final Rollers rollers = new Rollers();
   @Getter private final Elevators elevators = new Elevators();
   @Getter private final Arms arms = new Arms();
@@ -143,7 +110,6 @@ public class Superstructure extends SubsystemBase {
   public Superstructure(SwerveSubsystem drive) {
     this.drive = drive;
     configureStateChooser();
-    climbTimer.start();
     if (LEDS_ENABLED) {
       leds.setDefaultCommand(
           leds.ledCommand(
@@ -151,8 +117,7 @@ public class Superstructure extends SubsystemBase {
               () -> drive != null ? drive.getPose() : null,
               this::getAutoStartPose,
               this::getCurrentState,
-              this::hasBall,
-              this::getClimbPhaseName));
+              this::hasBall));
     }
   }
 
@@ -192,10 +157,6 @@ public class Superstructure extends SubsystemBase {
     return new StateRequestResult(true, "");
   }
 
-  public String getClimbPhaseName() {
-    return climbPhase.toString();
-  }
-
   public boolean hasBall() {
     return isBallPresent();
   }
@@ -232,7 +193,6 @@ public class Superstructure extends SubsystemBase {
     }
     Logger.recordOutput("Superstructure/State", currentState.toString());
     Logger.recordOutput("Superstructure/RequestedState", requestedState.toString());
-    Logger.recordOutput("Superstructure/ClimbPhase", climbPhase.toString());
     Logger.recordOutput("Superstructure/turretTarget", lastTurretTarget);
     Logger.recordOutput("Superstructure/AutoStateEnabled", autoStateEnabled);
   }
@@ -288,15 +248,6 @@ public class Superstructure extends SubsystemBase {
           rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kForward),
           rollers.shooter.sysIdDynamic(SysIdRoutine.Direction.kReverse));
     }
-    if (CLIMBER_ENABLED) {
-      addSysIdOptions(
-          chooser,
-          "Climber",
-          elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kForward),
-          elevators.climber.sysIdQuasistatic(SysIdRoutine.Direction.kReverse),
-          elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kForward),
-          elevators.climber.sysIdDynamic(SysIdRoutine.Direction.kReverse));
-    }
   }
 
   private void configureStateChooser() {
@@ -305,9 +256,6 @@ public class Superstructure extends SubsystemBase {
     stateChooser.addOption("Shooting", SuperState.SHOOTING);
     stateChooser.addOption("Shoot+Intake", SuperState.SHOOT_INTAKE);
     stateChooser.addOption("Ferrying", SuperState.FERRYING);
-    stateChooser.addOption("Endgame Climb", SuperState.ENDGAME_CLIMB);
-    stateChooser.addOption("Auto Climb", SuperState.AUTO_CLIMB);
-    stateChooser.addOption("Climb Detach", SuperState.CLIMB_DETACH);
     stateChooser.addOption("Testing", SuperState.TESTING);
   }
 
@@ -342,9 +290,7 @@ public class Superstructure extends SubsystemBase {
         alliance.get() == DriverStation.Alliance.Red
             ? GlobalConstants.FieldConstants.fieldLength - pose.getX()
             : pose.getX();
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Superstructure/AutoXBlue", xBlue);
-    }
+    Logger.recordOutput("Superstructure/AutoXBlue", xBlue);
 
     if (xBlue < SuperstructureConstants.AUTO_STATE_SHOOTING_X_MAX_METERS) {
       return SuperState.SHOOTING;
@@ -377,9 +323,7 @@ public class Superstructure extends SubsystemBase {
       double percent = (SuperstructureConstants.MANUAL_JOG_VOLTAGE) * pivotAxis;
       arms.shooterPivot.setOpenLoop(percent);
     }
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
-    }
+    Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
   }
 
   private void stopManualJog() {
@@ -403,23 +347,7 @@ public class Superstructure extends SubsystemBase {
     return null;
   }
 
-  private void enterState(SuperState state) {
-    if (state == SuperState.ENDGAME_CLIMB) {
-      startClimb(ClimbMode.ENDGAME);
-    } else if (state == SuperState.AUTO_CLIMB) {
-      startClimb(ClimbMode.AUTO);
-    } else if (state == SuperState.CLIMB_DETACH) {
-      startClimb(ClimbMode.DETACH);
-    } else if (isClimbState(currentState)) {
-      resetClimb();
-    }
-  }
-
-  private boolean isClimbState(SuperState state) {
-    return state == SuperState.ENDGAME_CLIMB
-        || state == SuperState.AUTO_CLIMB
-        || state == SuperState.CLIMB_DETACH;
-  }
+  private void enterState(SuperState state) {}
 
   private void applyState(SuperState state) {
     switch (state) {
@@ -439,9 +367,6 @@ public class Superstructure extends SubsystemBase {
                   ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
                   : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d());
       case FERRYING -> applyFerrying();
-      case ENDGAME_CLIMB -> applyClimb(ClimbMode.ENDGAME);
-      case AUTO_CLIMB -> applyClimb(ClimbMode.AUTO);
-      case CLIMB_DETACH -> applyClimb(ClimbMode.DETACH);
       case TESTING -> applyTesting();
     }
   }
@@ -454,7 +379,6 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.IDLING);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
-    stopClimber();
   }
 
   private void clearIdleOverrides() {
@@ -466,9 +390,6 @@ public class Superstructure extends SubsystemBase {
     }
     if (rollers.shooter != null) {
       rollers.shooter.clearGoalOverride();
-    }
-    if (arms.intakePivot != null) {
-      arms.intakePivot.clearGoalOverride();
     }
     if (arms.shooterPivot != null) {
       if (!isShooterPivotExternallyControlled()) {
@@ -485,7 +406,6 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
-    stopClimber();
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
@@ -502,7 +422,6 @@ public class Superstructure extends SubsystemBase {
       setIntakePivotGoal(IntakePivotGoal.IDLING);
       aimTurretAt(target);
       aimShooterPivotAt(target);
-      stopClimber();
 
       if (autoStopOnEmpty && SuperstructureConstants.AUTO_STOP_ON_EMPTY && isBallSenseAvailable()) {
         if (!isBallPresent()) {
@@ -516,7 +435,6 @@ public class Superstructure extends SubsystemBase {
       setIntakePivotGoal(IntakePivotGoal.IDLING);
       aimTurretAt(target);
       aimShooterPivotAt(target);
-      stopClimber();
     }
   }
 
@@ -528,7 +446,6 @@ public class Superstructure extends SubsystemBase {
       setIntakePivotGoal(IntakePivotGoal.PICKUP);
       aimTurretAt(target);
       aimShooterPivotAt(target);
-      stopClimber();
     } else {
       setIntakeGoal(IntakeGoal.FORWARD);
       setIndexerGoal(IndexerGoal.IDLING);
@@ -536,7 +453,6 @@ public class Superstructure extends SubsystemBase {
       setIntakePivotGoal(IntakePivotGoal.PICKUP);
       aimTurretAt(target);
       aimShooterPivotAt(target);
-      stopClimber();
     }
   }
 
@@ -550,26 +466,6 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     aimTurretAt(target);
     aimShooterPivotAt(target);
-    stopClimber();
-  }
-
-  private void applyClimb(ClimbMode mode) {
-    if (climbShootEnabled) {
-      applyShooting(
-          (DriverStation.getAlliance().isPresent()
-                  && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
-              ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
-              : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
-          false);
-    } else {
-      setIntakeGoal(IntakeGoal.IDLING);
-      setIndexerGoal(IndexerGoal.IDLING);
-      setShooterGoal(ShooterGoal.IDLING);
-      setIntakePivotGoal(IntakePivotGoal.IDLING);
-      setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
-      holdTurret();
-    }
-    updateClimb(mode);
   }
 
   private void applyTesting() {
@@ -591,7 +487,6 @@ public class Superstructure extends SubsystemBase {
     // } else {
     //   holdTurret();
     // }
-    stopClimber();
   }
 
   private void setIntakeGoal(IntakeGoal goal) {
@@ -656,35 +551,6 @@ public class Superstructure extends SubsystemBase {
       return;
     }
     lastTurretAction = "HOLD";
-  }
-
-  private void stopClimber() {
-    lastClimberGoalPosition = Double.NaN;
-    if (elevators.climber != null) {
-      elevators.climber.stopOpenLoop();
-      elevators.climber.clearGoalOverride();
-      elevators.climber.setGoal(ClimberGoal.IDLING);
-    }
-  }
-
-  private void setClimberGoalPosition(double positionMeters) {
-    lastClimberGoalPosition = positionMeters;
-    if (elevators.climber == null) {
-      return;
-    }
-    elevators.climber.setGoalPosition(positionMeters);
-    elevators.climber.setGoal(ClimberGoal.IDLING);
-  }
-
-  private boolean isClimberAtGoal() {
-    return elevators.climber != null && elevators.climber.isAtGoal();
-  }
-
-  private void transitionClimbToDone() {
-    if (elevators.climber != null) {
-      climbHoldPosition = elevators.climber.getPositionMeters();
-    }
-    climbPhase = ClimbPhase.DONE;
   }
 
   private void aimTurretAt(Translation2d target) {
@@ -755,95 +621,6 @@ public class Superstructure extends SubsystemBase {
     return Math.max(ind, Math.max(shoot, intake));
   }
 
-  private void startClimb(ClimbMode mode) {
-    activeClimbMode = mode;
-    climbLevel = 0;
-    climbHoldPosition = Double.NaN;
-    lastClimberGoalPosition = Double.NaN;
-    climbTimer.reset();
-    climbPhase = mode == ClimbMode.DETACH ? ClimbPhase.DETACH_EXTEND : ClimbPhase.EXTEND;
-  }
-
-  private void resetClimb() {
-    activeClimbMode = null;
-    climbLevel = 0;
-    climbHoldPosition = Double.NaN;
-    lastClimberGoalPosition = Double.NaN;
-    climbTimer.reset();
-    climbPhase = ClimbPhase.IDLE;
-  }
-
-  private void updateClimb(ClimbMode mode) {
-    if (activeClimbMode != mode || climbPhase == ClimbPhase.IDLE) {
-      startClimb(mode);
-    }
-    if (elevators.climber == null) {
-      return;
-    }
-
-    switch (climbPhase) {
-      case EXTEND -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_EXTEND_HEIGHT_METERS.get());
-        if (isClimberAtGoal()) {
-          climbPhase = ClimbPhase.LATCH;
-        }
-      }
-      case LATCH -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_LATCH_HEIGHT_METERS.get());
-        if (isClimberAtGoal()) {
-          climbPhase = ClimbPhase.PULL;
-        }
-      }
-      case PULL -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_PULL_HEIGHT_METERS.get());
-        if (isClimberAtGoal()) {
-          climbLevel++;
-          if (activeClimbMode == ClimbMode.AUTO
-              && climbLevel >= SuperstructureConstants.AUTO_CLIMB_LEVELS) {
-            transitionClimbToDone();
-          } else if (activeClimbMode == ClimbMode.ENDGAME
-              && climbLevel >= SuperstructureConstants.ENDGAME_CLIMB_LEVELS) {
-            transitionClimbToDone();
-          } else {
-            climbPhase = ClimbPhase.DYNAMIC;
-          }
-        }
-      }
-      case DYNAMIC -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_DYNAMIC_HEIGHT_METERS.get());
-        if (isClimberAtGoal()) {
-          climbPhase = ClimbPhase.LATCH;
-        }
-      }
-      case DETACH_EXTEND -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_DETACH_EXTEND_HEIGHT_METERS.get());
-        if (isClimberAtGoal()) {
-          climbPhase = ClimbPhase.DETACH_DRIVE;
-          climbTimer.reset();
-        }
-      }
-      case DETACH_DRIVE -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_DETACH_EXTEND_HEIGHT_METERS.get());
-        if (climbTimer.hasElapsed(SuperstructureConstants.CLIMB_DETACH_DRIVE_SECONDS.get())) {
-          climbPhase = ClimbPhase.DETACH_RETRACT;
-        }
-      }
-      case DETACH_RETRACT -> {
-        setClimberGoalPosition(SuperstructureConstants.CLIMB_DETACH_RETRACT_HEIGHT_METERS.get());
-        if (isClimberAtGoal()) {
-          transitionClimbToDone();
-        }
-      }
-      case DONE -> {
-        if (Double.isNaN(climbHoldPosition)) {
-          climbHoldPosition = elevators.climber.getPositionMeters();
-        }
-        setClimberGoalPosition(climbHoldPosition);
-      }
-      case IDLE -> stopClimber();
-    }
-  }
-
   private void addSysIdOptions(
       LoggedDashboardChooser<Command> chooser,
       String name,
@@ -873,11 +650,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void logSysIdStatus(boolean active, String name, String phase) {
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Superstructure/SysId/Active", active);
-      Logger.recordOutput("Superstructure/SysId/Name", name);
-      Logger.recordOutput("Superstructure/SysId/Phase", phase);
-    }
+    Logger.recordOutput("Superstructure/SysId/Active", active);
+    Logger.recordOutput("Superstructure/SysId/Name", name);
+    Logger.recordOutput("Superstructure/SysId/Phase", phase);
   }
 
   private Command sysIdPhase(String name, String phase) {
@@ -920,7 +695,6 @@ public class Superstructure extends SubsystemBase {
   }
 
   public SuperstructureOutcome getOutcomeSnapshot() {
-    String climbModeName = activeClimbMode == null ? "NONE" : activeClimbMode.toString();
     return new SuperstructureOutcome(
         currentState,
         requestedState,
@@ -932,9 +706,6 @@ public class Superstructure extends SubsystemBase {
         lastShooterPivotManual,
         lastShooterPivotPosition,
         lastTurretAction,
-        lastTurretTarget,
-        climbModeName,
-        climbPhase.toString(),
-        lastClimberGoalPosition);
+        lastTurretTarget);
   }
 }

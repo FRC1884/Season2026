@@ -120,11 +120,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
                 null,
                 null,
                 Seconds.of(4),
-                state -> {
-                  if (GlobalConstants.isDebugMode()) {
-                    Logger.recordOutput("Arms/" + name + "/SysIdState", state.toString());
-                  }
-                }),
+                state -> Logger.recordOutput("Arms/" + name + "/SysIdState", state.toString())),
             new SysIdRoutine.Mechanism(
                 voltage -> io.setVoltage(voltage.in(Volts)), sysIdLog, this));
 
@@ -143,9 +139,7 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    if (GlobalConstants.isDebugMode()) {
-      Logger.processInputs(name, inputs);
-    }
+    Logger.processInputs(name, inputs);
 
     boolean anyDisconnected = false;
     for (boolean isConnected : inputs.connected) {
@@ -209,10 +203,8 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
     if (io.usesInternalPositionControl()) {
       double kG = config.kG() != null ? config.kG().get() : 0.0;
       io.setPositionSetpoint(goalPosition, kP, kI, kD, kG);
-      if (GlobalConstants.isDebugMode()) {
-        Logger.recordOutput("Arms/" + name + "/Feedforward", 0.0);
-        Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
-      }
+      Logger.recordOutput("Arms/" + name + "/Feedforward", 0.0);
+      Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
       return;
     }
     LoggedTunableNumber.ifChanged(
@@ -230,10 +222,8 @@ public abstract class GenericPositionArmSystem<G extends GenericPositionArmSyste
 
     io.setVoltage(outputVoltage);
 
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Arms/" + name + "/Feedforward", feedforwardOutput);
-      Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
-    }
+    Logger.recordOutput("Arms/" + name + "/Feedforward", feedforwardOutput);
+    Logger.recordOutput("Arms/" + name + "/Goal", getGoal().toString());
   }
 
   public void setGoalPosition(double position) {

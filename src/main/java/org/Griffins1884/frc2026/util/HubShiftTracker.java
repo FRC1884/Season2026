@@ -189,7 +189,7 @@ public final class HubShiftTracker {
       return "UNKNOWN";
     }
     if (timeframe == MatchTimeframe.ENDGAME) {
-      return "SCORE OR CLIMB";
+      return "SCORE";
     }
     if (!hubStatusValid) {
       return "CHECK FMS";

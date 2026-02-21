@@ -48,7 +48,7 @@ public class RollingWPILOGWriter implements LogDataReceiver {
     }
   }
 
-  public void roll() {
+  public boolean roll() {
     synchronized (lock) {
       if (writer != null && started) {
         try {
@@ -63,8 +63,10 @@ public class RollingWPILOGWriter implements LogDataReceiver {
       try {
         writer.start();
         started = true;
+        return true;
       } catch (RuntimeException ex) {
         started = false;
+        return false;
       }
     }
   }
