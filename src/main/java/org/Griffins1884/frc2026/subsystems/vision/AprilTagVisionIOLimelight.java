@@ -14,7 +14,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.Getter;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.util.RobotLogging;
 import org.littletonrobotics.junction.Logger;
 
 /** Hardware implementation of VisionIO using Limelight cameras. */
@@ -117,32 +119,42 @@ public class AprilTagVisionIOLimelight implements VisionIO {
           inputs.fiducialObservations = fiducialObservation;
         }
         inputs.megatagCount = megatag != null ? megatag.tagCount : 0;
-        Logger.recordOutput("AprilTagVision/TagPose", robotPose3d);
+        if (GlobalConstants.isDebugMode()) {
+          Logger.recordOutput("AprilTagVision/TagPose", robotPose3d);
+        }
         String debugPrefix = "AprilTagVision/" + limelightName + "/MTCompare";
-        if (megatag1 != null) {
-          Logger.recordOutput(debugPrefix + "/MT1Pose", megatag1.pose);
-          Logger.recordOutput(debugPrefix + "/MT1YawDeg", megatag1.pose.getRotation().getDegrees());
-          Logger.recordOutput(debugPrefix + "/MT1TagCount", megatag1.tagCount);
-        }
-        if (megatag != null) {
-          Logger.recordOutput(debugPrefix + "/MT2Pose", megatag.pose);
-          Logger.recordOutput(debugPrefix + "/MT2YawDeg", megatag.pose.getRotation().getDegrees());
-          Logger.recordOutput(debugPrefix + "/MT2TagCount", megatag.tagCount);
-        }
-        if (megatag1 != null && megatag != null) {
-          Logger.recordOutput(debugPrefix + "/DeltaX", megatag.pose.getX() - megatag1.pose.getX());
-          Logger.recordOutput(debugPrefix + "/DeltaY", megatag.pose.getY() - megatag1.pose.getY());
-          Logger.recordOutput(
-              debugPrefix + "/DeltaYawDeg",
-              megatag.pose.getRotation().minus(megatag1.pose.getRotation()).getDegrees());
+        if (GlobalConstants.isDebugMode()) {
+          if (megatag1 != null) {
+            Logger.recordOutput(debugPrefix + "/MT1Pose", megatag1.pose);
+            Logger.recordOutput(
+                debugPrefix + "/MT1YawDeg", megatag1.pose.getRotation().getDegrees());
+            Logger.recordOutput(debugPrefix + "/MT1TagCount", megatag1.tagCount);
+          }
+          if (megatag != null) {
+            Logger.recordOutput(debugPrefix + "/MT2Pose", megatag.pose);
+            Logger.recordOutput(
+                debugPrefix + "/MT2YawDeg", megatag.pose.getRotation().getDegrees());
+            Logger.recordOutput(debugPrefix + "/MT2TagCount", megatag.tagCount);
+          }
+          if (megatag1 != null && megatag != null) {
+            Logger.recordOutput(
+                debugPrefix + "/DeltaX", megatag.pose.getX() - megatag1.pose.getX());
+            Logger.recordOutput(
+                debugPrefix + "/DeltaY", megatag.pose.getY() - megatag1.pose.getY());
+            Logger.recordOutput(
+                debugPrefix + "/DeltaYawDeg",
+                megatag.pose.getRotation().minus(megatag1.pose.getRotation()).getDegrees());
+          }
         }
         // Track tag IDs and pose observations for the rest of the robot code to consume.
         Set<Short> tagIds = new HashSet<>();
         List<PoseObservation> poseObservations = new ArrayList<>();
 
-        Logger.recordOutput(
-            debugPrefix + "/spinLimit",
-            Math.abs(drive.getYawRateDegreesPerSec()) <= cameraConstants.cameraType().noisySpeed);
+        if (GlobalConstants.isDebugMode()) {
+          Logger.recordOutput(
+              debugPrefix + "/spinLimit",
+              Math.abs(drive.getYawRateDegreesPerSec()) <= cameraConstants.cameraType().noisySpeed);
+        }
 
         // Only add a pose observation when we have a valid estimate and pose data.
         if (megatagPoseEstimate != null
@@ -175,7 +187,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
         inputs.poseObservations = poseObservations.toArray(new PoseObservation[0]);
         inputs.tagIds = tagIds.stream().mapToInt(Short::intValue).toArray();
       } catch (Exception e) {
-        System.err.println("Error processing Limelight data: " + e.getMessage());
+        RobotLogging.error("Error processing Limelight data", e);
       }
     }
   }

@@ -93,7 +93,11 @@ public abstract class GenericVelocityRollerSystem<
                 null,
                 null,
                 Seconds.of(4),
-                state -> Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString())),
+                state -> {
+                  if (GlobalConstants.isDebugMode()) {
+                    Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString());
+                  }
+                }),
             new SysIdRoutine.Mechanism(voltage -> io.runVolts(voltage.in(Volts)), sysIdLog, this));
 
     disconnected = new Alert(name + " motor disconnected!", AlertType.kWarning);
@@ -111,7 +115,9 @@ public abstract class GenericVelocityRollerSystem<
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs(name, inputs);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.processInputs(name, inputs);
+    }
 
     boolean anyDisconnected = false;
     for (boolean isConnected : inputs.connected) {
@@ -183,7 +189,9 @@ public abstract class GenericVelocityRollerSystem<
 
     io.runVolts(outputVoltage);
 
-    Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardVolts);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardVolts);
+    }
     Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
   }
 
@@ -239,17 +247,20 @@ public abstract class GenericVelocityRollerSystem<
     Logger.recordOutput("Rollers/" + name + "/Error", goalVelocity - measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/AtGoal", isAtGoal());
     Logger.recordOutput("Rollers/" + name + "/ControlMode", "EXTERNAL_PID");
-    Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
-    Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
-    Logger.recordOutput("Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
-    Logger.recordOutput(
-        "Rollers/" + name + "/VelocityCommandRadPerSec", goalVelocity * RPM_TO_RAD_PER_SEC);
-    Logger.recordOutput("Rollers/" + name + "/Gains/Profile", gainsLabel);
-    Logger.recordOutput("Rollers/" + name + "/Gains/kP", activeGains.kP().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kI", activeGains.kI().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kD", activeGains.kD().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kS", activeGains.kS().get());
-    Logger.recordOutput("Rollers/" + name + "/Gains/kV", activeGains.kV().get());
-    Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", false);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
+      Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
+      Logger.recordOutput(
+          "Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
+      Logger.recordOutput(
+          "Rollers/" + name + "/VelocityCommandRadPerSec", goalVelocity * RPM_TO_RAD_PER_SEC);
+      Logger.recordOutput("Rollers/" + name + "/Gains/Profile", gainsLabel);
+      Logger.recordOutput("Rollers/" + name + "/Gains/kP", activeGains.kP().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kI", activeGains.kI().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kD", activeGains.kD().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kS", activeGains.kS().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kV", activeGains.kV().get());
+      Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", false);
+    }
   }
 }

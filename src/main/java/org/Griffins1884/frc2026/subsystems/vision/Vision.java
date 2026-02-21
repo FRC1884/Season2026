@@ -31,14 +31,19 @@ import org.littletonrobotics.junction.Logger;
 
 public class Vision extends SubsystemBase implements VisionTargetProvider {
   private static final double HISTORY_WINDOW_SEC = 1.5;
+  private static final double NO_ACCEPTED_MEASUREMENT_ALERT_SEC = 1.0;
 
   private final VisionConsumer consumer;
   private final VisionIO[] io;
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
   private final Alert[] outlierAlerts;
+  private final Alert[] noAcceptedMeasurementAlerts;
   private final Deque<YawSample>[] yawHistory;
   private final double[] lastAcceptedTimestampsSec;
+  private final double[] lastAcceptedWallClockSec;
+  private final double[] connectedSinceWallClockSec;
+  private final boolean[] wasConnected;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
@@ -94,6 +99,11 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     lastAcceptedTimestampsSec = new double[io.length];
     Arrays.fill(lastAcceptedTimestampsSec, Double.NEGATIVE_INFINITY);
+    lastAcceptedWallClockSec = new double[io.length];
+    Arrays.fill(lastAcceptedWallClockSec, Double.NEGATIVE_INFINITY);
+    connectedSinceWallClockSec = new double[io.length];
+    Arrays.fill(connectedSinceWallClockSec, Double.NEGATIVE_INFINITY);
+    wasConnected = new boolean[io.length];
 
     this.disconnectedAlerts = new Alert[io.length];
     for (int i = 0; i < inputs.length; i++) {
@@ -109,6 +119,15 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
               "Vision Outlier detected on camera \""
                   + io[i].getCameraConstants().cameraName()
                   + "\".",
+              Alert.AlertType.kWarning);
+    }
+    this.noAcceptedMeasurementAlerts = new Alert[io.length];
+    for (int i = 0; i < io.length; i++) {
+      noAcceptedMeasurementAlerts[i] =
+          new Alert(
+              "Vision camera \""
+                  + io[i].getCameraConstants().cameraName()
+                  + "\" is connected but has no accepted measurements.",
               Alert.AlertType.kWarning);
     }
   }
@@ -195,7 +214,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     List<Pose3d> allRobotPosesAccepted = new LinkedList<>();
 
     for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
-      disconnectedAlerts[cameraIndex].set(!inputs[cameraIndex].connected);
+      String cameraLabel = io[cameraIndex].getCameraConstants().cameraName();
+      boolean connected = inputs[cameraIndex].connected;
+      disconnectedAlerts[cameraIndex].set(!connected);
+      handleConnectionTransition(cameraIndex, cameraLabel, connected);
 
       List<Pose3d> tagPoses = new LinkedList<>();
       List<Pose3d> robotPoses = new LinkedList<>();
@@ -214,8 +236,18 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         if (!isObservationValid(observation)) {
           continue;
         }
+        if (!isTimestampInOrder(cameraIndex, observation.timestamp())) {
+          if (GlobalConstants.isDebugMode()) {
+            String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+            Logger.recordOutput(prefix + "/OutOfOrder", true);
+            Logger.recordOutput(prefix + "/LastAccepted", lastAcceptedTimestampsSec[cameraIndex]);
+            Logger.recordOutput(prefix + "/Current", observation.timestamp());
+          }
+          continue;
+        }
 
         robotPosesAccepted.add(observation.pose());
+        markTimestampAccepted(cameraIndex, observation.timestamp());
 
         consumer.accept(
             observation.pose().toPose2d(),
@@ -223,33 +255,38 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             generateDynamicStdDevs(observation, io[cameraIndex].getCameraConstants().cameraType()));
       }
 
-      Logger.recordOutput(
-          "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/TagPoses",
-          tagPoses.toArray(new Pose3d[tagPoses.size()]));
-      Logger.recordOutput(
-          "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/RobotPoses",
-          robotPoses.toArray(new Pose3d[robotPoses.size()]));
-      Logger.recordOutput(
-          "AprilTagVision/"
-              + io[cameraIndex].getCameraConstants().cameraName()
-              + "/RobotPosesAccepted",
-          robotPosesAccepted.toArray(new Pose3d[robotPosesAccepted.size()]));
-      Logger.recordOutput(
-          "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/CameraPose",
-          io[cameraIndex].getCameraConstants().robotToCamera());
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput(
+            "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/TagPoses",
+            tagPoses.toArray(new Pose3d[tagPoses.size()]));
+        Logger.recordOutput(
+            "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/RobotPoses",
+            robotPoses.toArray(new Pose3d[robotPoses.size()]));
+        Logger.recordOutput(
+            "AprilTagVision/"
+                + io[cameraIndex].getCameraConstants().cameraName()
+                + "/RobotPosesAccepted",
+            robotPosesAccepted.toArray(new Pose3d[robotPosesAccepted.size()]));
+        Logger.recordOutput(
+            "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/CameraPose",
+            io[cameraIndex].getCameraConstants().robotToCamera());
+      }
       allTagPoses.addAll(tagPoses);
       allRobotPoses.addAll(robotPoses);
       allRobotPosesAccepted.addAll(robotPosesAccepted);
+      updateNoAcceptedMeasurementAlert(cameraIndex, cameraLabel, connected);
     }
 
-    Logger.recordOutput(
-        "AprilTagVision/Summary/TagPoses", allTagPoses.toArray(new Pose3d[allTagPoses.size()]));
-    Logger.recordOutput(
-        "AprilTagVision/Summary/RobotPoses",
-        allRobotPoses.toArray(new Pose3d[allRobotPoses.size()]));
-    Logger.recordOutput(
-        "AprilTagVision/Summary/RobotPosesAccepted",
-        allRobotPosesAccepted.toArray(new Pose3d[allRobotPosesAccepted.size()]));
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput(
+          "AprilTagVision/Summary/TagPoses", allTagPoses.toArray(new Pose3d[allTagPoses.size()]));
+      Logger.recordOutput(
+          "AprilTagVision/Summary/RobotPoses",
+          allRobotPoses.toArray(new Pose3d[allRobotPoses.size()]));
+      Logger.recordOutput(
+          "AprilTagVision/Summary/RobotPosesAccepted",
+          allRobotPosesAccepted.toArray(new Pose3d[allRobotPosesAccepted.size()]));
+    }
   }
 
   private boolean isObservationValid(VisionIO.PoseObservation observation) {
@@ -318,17 +355,23 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     for (int i = 0; i < io.length; i++) {
       io[i].updateInputs(inputs[i]);
       Logger.processInputs("LimelightVision/" + io[i].getCameraConstants().cameraName(), inputs[i]);
-      disconnectedAlerts[i].set(!inputs[i].connected);
+      boolean connected = inputs[i].connected;
+      disconnectedAlerts[i].set(!connected);
 
       String cameraLabel = io[i].getCameraConstants().cameraName();
+      handleConnectionTransition(i, cameraLabel, connected);
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
-      logLimelightDiagnostics(cameraLabel, inputs[i]);
+      if (GlobalConstants.isDebugMode()) {
+        logLimelightDiagnostics(cameraLabel, inputs[i]);
+      }
       estimates.add(buildLimelightEstimate(i, cameraLabel, inputs[i]));
 
       boolean isOutlier =
           inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
-              || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
+              || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL
+              || inputs[i].rejectReason == VisionIO.RejectReason.RESIDUAL_OUTLIER;
       outlierAlerts[i].set(isOutlier);
+      updateNoAcceptedMeasurementAlert(i, cameraLabel, connected);
     }
 
     if (!useVision) {
@@ -405,7 +448,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     double timestampSeconds = cam.megatagPoseEstimate.timestampSeconds();
     if (!isTimestampInOrder(cameraIndex, timestampSeconds)) {
-      if (cameraLabel != null) {
+      if (cameraLabel != null && GlobalConstants.isDebugMode()) {
         String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
         Logger.recordOutput(prefix + "/OutOfOrder", true);
         Logger.recordOutput(prefix + "/LastAccepted", lastAcceptedTimestampsSec[cameraIndex]);
@@ -419,6 +462,21 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         allowYawGate ? stdDevs.theta() : AprilTagVisionConstants.getLimelightLargeVariance();
 
     double frameAgeSec = Math.max(0.0, Timer.getFPGATimestamp() - timestampSeconds);
+    double staleFrameLimitSec = AprilTagVisionConstants.getLimelightYawGateMaxFrameAgeSec();
+    if (cameraLabel != null && GlobalConstants.isDebugMode()) {
+      String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+      Logger.recordOutput(prefix + "/StaleRejected", false);
+      Logger.recordOutput(prefix + "/FrameAgeSec", frameAgeSec);
+      Logger.recordOutput(prefix + "/StaleLimitSec", staleFrameLimitSec);
+    }
+    if (frameAgeSec > staleFrameLimitSec) {
+      if (cameraLabel != null && GlobalConstants.isDebugMode()) {
+        String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+        Logger.recordOutput(prefix + "/StaleRejected", true);
+      }
+      return Optional.empty();
+    }
+
     double gyroYawDeg =
         getReferencePose(timestampSeconds)
             .map(pose -> Math.toDegrees(pose.getRotation().getRadians()))
@@ -447,7 +505,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         thetaStd = AprilTagVisionConstants.getLimelightYawStdDevUnstable();
       }
     }
-    if (cameraLabel != null) {
+    if (cameraLabel != null && GlobalConstants.isDebugMode()) {
       String prefix = "AprilTagVision/" + cameraLabel + "/YawGate";
       Logger.recordOutput(prefix + "/Pass", yawGate);
       Logger.recordOutput(prefix + "/ResidualDeg", yawGateResult.residualDeg());
@@ -627,6 +685,53 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return;
     }
     lastAcceptedTimestampsSec[cameraIndex] = timestampSeconds;
+    lastAcceptedWallClockSec[cameraIndex] = Timer.getFPGATimestamp();
+  }
+
+  private void handleConnectionTransition(int cameraIndex, String cameraLabel, boolean connected) {
+    if (cameraIndex < 0 || cameraIndex >= wasConnected.length) {
+      return;
+    }
+
+    boolean reconnected = connected && !wasConnected[cameraIndex];
+    if (reconnected) {
+      lastAcceptedTimestampsSec[cameraIndex] = Double.NEGATIVE_INFINITY;
+      lastAcceptedWallClockSec[cameraIndex] = Double.NEGATIVE_INFINITY;
+      connectedSinceWallClockSec[cameraIndex] = Timer.getFPGATimestamp();
+      yawHistory[cameraIndex].clear();
+    } else if (!connected && wasConnected[cameraIndex]) {
+      connectedSinceWallClockSec[cameraIndex] = Double.NEGATIVE_INFINITY;
+    }
+
+    if (cameraLabel != null && GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("AprilTagVision/" + cameraLabel + "/ReconnectReset", reconnected);
+    }
+
+    wasConnected[cameraIndex] = connected;
+  }
+
+  private void updateNoAcceptedMeasurementAlert(
+      int cameraIndex, String cameraLabel, boolean connected) {
+    if (cameraIndex < 0 || cameraIndex >= noAcceptedMeasurementAlerts.length) {
+      return;
+    }
+    double now = Timer.getFPGATimestamp();
+    double baselineSec =
+        Math.max(connectedSinceWallClockSec[cameraIndex], lastAcceptedWallClockSec[cameraIndex]);
+    boolean noRecentAccepted =
+        connected
+            && isFinite(baselineSec)
+            && (now - baselineSec) > NO_ACCEPTED_MEASUREMENT_ALERT_SEC;
+    noAcceptedMeasurementAlerts[cameraIndex].set(noRecentAccepted);
+    if (cameraLabel != null) {
+      Logger.recordOutput(
+          "AprilTagVision/" + cameraLabel + "/NoAcceptedMeasurement", noRecentAccepted);
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput(
+            "AprilTagVision/" + cameraLabel + "/NoAcceptedMeasurementAgeSec",
+            isFinite(baselineSec) ? now - baselineSec : Double.NaN);
+      }
+    }
   }
 
   private void logCameraInputs(String prefix, VisionIO.VisionIOInputs cam) {
@@ -639,17 +744,24 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (cam.pose3d != null) {
-      Logger.recordOutput(prefix + "/Pose3d", cam.pose3d);
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput(prefix + "/Pose3d", cam.pose3d);
+      }
     }
 
     if (cam.megatagPoseEstimate != null) {
-      Logger.recordOutput(prefix + "/MegatagPoseEstimate", cam.megatagPoseEstimate.fieldToRobot());
-      Logger.recordOutput(prefix + "/Quality", cam.megatagPoseEstimate.quality());
-      Logger.recordOutput(prefix + "/AvgTagArea", cam.megatagPoseEstimate.avgTagArea());
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput(
+            prefix + "/MegatagPoseEstimate", cam.megatagPoseEstimate.fieldToRobot());
+        Logger.recordOutput(prefix + "/Quality", cam.megatagPoseEstimate.quality());
+        Logger.recordOutput(prefix + "/AvgTagArea", cam.megatagPoseEstimate.avgTagArea());
+      }
     }
 
     if (cam.fiducialObservations != null) {
-      Logger.recordOutput(prefix + "/FiducialCount", cam.fiducialObservations.length);
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput(prefix + "/FiducialCount", cam.fiducialObservations.length);
+      }
     }
   }
 
@@ -689,6 +801,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   }
 
   private void logLimelightDiagnostics(String cameraLabel, VisionIO.VisionIOInputs cam) {
+    if (!GlobalConstants.isDebugMode()) {
+      return;
+    }
     String prefix = "AprilTagVision/" + cameraLabel + "/LimelightDiagnostics";
     boolean connected = cam.connected;
     boolean seesTarget = cam.seesTarget;
