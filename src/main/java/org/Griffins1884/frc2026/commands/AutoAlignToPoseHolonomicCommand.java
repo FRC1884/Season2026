@@ -7,6 +7,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.littletonrobotics.junction.Logger;
 
@@ -116,15 +117,19 @@ public class AutoAlignToPoseHolonomicCommand extends Command {
     Pose2d currentPose = drive.getPose();
     AlignConstants.AlignGains gains = AlignConstants.getAlignGains();
 
-    Logger.recordOutput("DriveToPoseHolonomic/currentPose", currentPose);
-    Logger.recordOutput("DriveToPoseHolonomic/targetPose", target);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("DriveToPoseHolonomic/currentPose", currentPose);
+      Logger.recordOutput("DriveToPoseHolonomic/targetPose", target);
+    }
 
     double xError = target.getX() - currentPose.getX();
     double yError = target.getY() - currentPose.getY();
     double dist = Math.hypot(xError, yError);
-    Logger.recordOutput("DriveToPoseHolonomic/xErrorMeters", xError);
-    Logger.recordOutput("DriveToPoseHolonomic/yErrorMeters", yError);
-    Logger.recordOutput("DriveToPoseHolonomic/distanceMeters", dist);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("DriveToPoseHolonomic/xErrorMeters", xError);
+      Logger.recordOutput("DriveToPoseHolonomic/yErrorMeters", yError);
+      Logger.recordOutput("DriveToPoseHolonomic/distanceMeters", dist);
+    }
 
     // Translation feedforward, scaled down near the target.
     double ffScaler = MathUtil.clamp(dist / 0.10, 0.0, 1.0);
@@ -170,9 +175,11 @@ public class AutoAlignToPoseHolonomicCommand extends Command {
             -AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
             AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get());
 
-    Logger.recordOutput("DriveToPoseHolonomic/xVelocityMps", xVelocity);
-    Logger.recordOutput("DriveToPoseHolonomic/yVelocityMps", yVelocity);
-    Logger.recordOutput("DriveToPoseHolonomic/thetaVelocityRadPerSec", thetaVelocity);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("DriveToPoseHolonomic/xVelocityMps", xVelocity);
+      Logger.recordOutput("DriveToPoseHolonomic/yVelocityMps", yVelocity);
+      Logger.recordOutput("DriveToPoseHolonomic/thetaVelocityRadPerSec", thetaVelocity);
+    }
 
     drive.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(

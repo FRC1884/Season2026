@@ -61,6 +61,7 @@ import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.subsystems.vision.Vision;
 import org.Griffins1884.frc2026.util.LocalADStarAK;
 import org.Griffins1884.frc2026.util.LogRollover;
+import org.Griffins1884.frc2026.util.RobotLogging;
 import org.Griffins1884.frc2026.util.swerve.SwerveSetpoint;
 import org.Griffins1884.frc2026.util.swerve.SwerveSetpointGenerator;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -113,6 +114,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private boolean turnSysIdActive = false;
   private double turnSysIdLastCompleted = Double.NaN;
   private String turnSysIdLastCompletedPhase = "NONE";
+  private Runnable odometryResetListener = () -> {};
 
   public SwerveSubsystem(
       GyroIO gyroIO,
@@ -193,7 +195,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
                 null,
                 null,
                 Seconds.of(2.5),
-                (state) -> Logger.recordOutput("Drive/SysIdState", state.toString())),
+                (state) -> {
+                  if (GlobalConstants.isDebugMode()) {
+                    Logger.recordOutput("Drive/SysIdState", state.toString());
+                  }
+                }),
             new SysIdRoutine.Mechanism(
                 (voltage) -> runDriveSysIdVoltage(voltage.in(Volts)), sysIdLogCallbackDrive, this));
 
@@ -204,7 +210,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
                 null,
                 null,
                 Seconds.of(2.5),
-                (state) -> Logger.recordOutput("Drive/TurnSysIdState", state.toString())),
+                (state) -> {
+                  if (GlobalConstants.isDebugMode()) {
+                    Logger.recordOutput("Drive/TurnSysIdState", state.toString());
+                  }
+                }),
             new SysIdRoutine.Mechanism(
                 (voltage) -> runTurnSysIdVoltage(voltage.in(Volts)), sysIdLogCallbackTurn, this));
   }
@@ -212,20 +222,25 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   @Override
   public void periodic() {
     odometryLock.lock(); // Prevents odometry updates while reading data
-    gyroIO.updateInputs(gyroInputs);
-    Logger.processInputs("Swerve/Gyro", gyroInputs);
-    for (var module : modules) {
-      module.periodic();
+    try {
+      gyroIO.updateInputs(gyroInputs);
+      Logger.processInputs("Swerve/Gyro", gyroInputs);
+      for (var module : modules) {
+        module.periodic();
+      }
+      if (GlobalConstants.isDebugMode()) {
+        Logger.recordOutput("Swerve/SysId/DrivePhase", driveSysIdPhase);
+        Logger.recordOutput("Swerve/SysId/DriveActive", driveSysIdActive);
+        Logger.recordOutput("Swerve/SysId/DriveLastCompleted", driveSysIdLastCompleted);
+        Logger.recordOutput("Swerve/SysId/DriveLastCompletedPhase", driveSysIdLastCompletedPhase);
+        Logger.recordOutput("Swerve/SysId/TurnPhase", turnSysIdPhase);
+        Logger.recordOutput("Swerve/SysId/TurnActive", turnSysIdActive);
+        Logger.recordOutput("Swerve/SysId/TurnLastCompleted", turnSysIdLastCompleted);
+        Logger.recordOutput("Swerve/SysId/TurnLastCompletedPhase", turnSysIdLastCompletedPhase);
+      }
+    } finally {
+      odometryLock.unlock();
     }
-    Logger.recordOutput("Swerve/SysId/DrivePhase", driveSysIdPhase);
-    Logger.recordOutput("Swerve/SysId/DriveActive", driveSysIdActive);
-    Logger.recordOutput("Swerve/SysId/DriveLastCompleted", driveSysIdLastCompleted);
-    Logger.recordOutput("Swerve/SysId/DriveLastCompletedPhase", driveSysIdLastCompletedPhase);
-    Logger.recordOutput("Swerve/SysId/TurnPhase", turnSysIdPhase);
-    Logger.recordOutput("Swerve/SysId/TurnActive", turnSysIdActive);
-    Logger.recordOutput("Swerve/SysId/TurnLastCompleted", turnSysIdLastCompleted);
-    Logger.recordOutput("Swerve/SysId/TurnLastCompletedPhase", turnSysIdLastCompletedPhase);
-    odometryLock.unlock();
 
     // Stop moving when disabled
     if (DriverStation.isDisabled()) {
@@ -509,7 +524,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
         Commands.sequence(
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Drive Subsystem - Quasistatic (Forward) starting.");
+                  RobotLogging.debug("[SysId] Drive Subsystem - Quasistatic (Forward) starting.");
                   setDriveSysIdPhase("QS_FWD", true);
                 },
                 this),
@@ -517,7 +532,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Drive Subsystem - Quasistatic (Reverse) starting.");
+                  RobotLogging.debug("[SysId] Drive Subsystem - Quasistatic (Reverse) starting.");
                   setDriveSysIdPhase("QS_REV", true);
                 },
                 this),
@@ -525,7 +540,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Drive Subsystem - Dynamic (Forward) starting.");
+                  RobotLogging.debug("[SysId] Drive Subsystem - Dynamic (Forward) starting.");
                   setDriveSysIdPhase("DYN_FWD", true);
                 },
                 this),
@@ -533,7 +548,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Drive Subsystem - Dynamic (Reverse) starting.");
+                  RobotLogging.debug("[SysId] Drive Subsystem - Dynamic (Reverse) starting.");
                   setDriveSysIdPhase("DYN_REV", true);
                 },
                 this),
@@ -596,7 +611,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
         Commands.sequence(
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Turn Subsystem - Quasistatic (Forward) starting.");
+                  RobotLogging.debug("[SysId] Turn Subsystem - Quasistatic (Forward) starting.");
                   setTurnSysIdPhase("QS_FWD", true);
                 },
                 this),
@@ -604,7 +619,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Turn Subsystem - Quasistatic (Reverse) starting.");
+                  RobotLogging.debug("[SysId] Turn Subsystem - Quasistatic (Reverse) starting.");
                   setTurnSysIdPhase("QS_REV", true);
                 },
                 this),
@@ -612,7 +627,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Turn Subsystem - Dynamic (Forward) starting.");
+                  RobotLogging.debug("[SysId] Turn Subsystem - Dynamic (Forward) starting.");
                   setTurnSysIdPhase("DYN_FWD", true);
                 },
                 this),
@@ -620,7 +635,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
             Commands.waitSeconds(SYS_ID_IDLE_WAIT_SECONDS),
             Commands.runOnce(
                 () -> {
-                  System.out.println("[SysId] Turn Subsystem - Dynamic (Reverse) starting.");
+                  RobotLogging.debug("[SysId] Turn Subsystem - Dynamic (Reverse) starting.");
                   setTurnSysIdPhase("DYN_REV", true);
                 },
                 this),
@@ -756,6 +771,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     resetOdometry(pose, false);
   }
 
+  /** Registers a callback to run after any odometry reset. */
+  public void setOdometryResetListener(Runnable odometryResetListener) {
+    this.odometryResetListener = odometryResetListener != null ? odometryResetListener : () -> {};
+  }
+
   /**
    * Resets the current odometry pose and optionally aligns the gyro to the provided field heading.
    *
@@ -768,6 +788,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       rawGyroRotation = pose.getRotation();
     }
     poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
+    odometryResetListener.run();
   }
 
   /** Adds a new timestamped vision measurement. */
@@ -785,9 +806,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
     Pose2d currentPose = poseEstimator.getEstimatedPosition();
     if (!isFinitePose(currentPose)) {
-      if (!isValidRotation(rawGyroRotation)) {
-        // rawGyroRotation = visionRobotPoseMeters.getRotation();
-      }
+      rawGyroRotation = visionRobotPoseMeters.getRotation();
       poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), visionRobotPoseMeters);
       return;
     }

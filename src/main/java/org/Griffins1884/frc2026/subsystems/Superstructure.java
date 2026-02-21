@@ -290,7 +290,9 @@ public class Superstructure extends SubsystemBase {
         alliance.get() == DriverStation.Alliance.Red
             ? GlobalConstants.FieldConstants.fieldLength - pose.getX()
             : pose.getX();
-    Logger.recordOutput("Superstructure/AutoXBlue", xBlue);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("Superstructure/AutoXBlue", xBlue);
+    }
 
     if (xBlue < SuperstructureConstants.AUTO_STATE_SHOOTING_X_MAX_METERS) {
       return SuperState.SHOOTING;
@@ -323,7 +325,9 @@ public class Superstructure extends SubsystemBase {
       double percent = (SuperstructureConstants.MANUAL_JOG_VOLTAGE) * pivotAxis;
       arms.shooterPivot.setOpenLoop(percent);
     }
-    Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("Superstructure/ManualPivotAxis", pivotAxis);
+    }
   }
 
   private void stopManualJog() {
@@ -650,9 +654,11 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void logSysIdStatus(boolean active, String name, String phase) {
-    Logger.recordOutput("Superstructure/SysId/Active", active);
-    Logger.recordOutput("Superstructure/SysId/Name", name);
-    Logger.recordOutput("Superstructure/SysId/Phase", phase);
+    if (GlobalConstants.isDebugMode()) {
+      Logger.recordOutput("Superstructure/SysId/Active", active);
+      Logger.recordOutput("Superstructure/SysId/Name", name);
+      Logger.recordOutput("Superstructure/SysId/Phase", phase);
+    }
   }
 
   private Command sysIdPhase(String name, String phase) {
