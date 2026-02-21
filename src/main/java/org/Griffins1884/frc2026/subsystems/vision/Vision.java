@@ -31,14 +31,19 @@ import org.littletonrobotics.junction.Logger;
 
 public class Vision extends SubsystemBase implements VisionTargetProvider {
   private static final double HISTORY_WINDOW_SEC = 1.5;
+  private static final double NO_ACCEPTED_MEASUREMENT_ALERT_SEC = 1.0;
 
   private final VisionConsumer consumer;
   private final VisionIO[] io;
   private final VisionIOInputsAutoLogged[] inputs;
   private final Alert[] disconnectedAlerts;
   private final Alert[] outlierAlerts;
+  private final Alert[] noAcceptedMeasurementAlerts;
   private final Deque<YawSample>[] yawHistory;
   private final double[] lastAcceptedTimestampsSec;
+  private final double[] lastAcceptedWallClockSec;
+  private final double[] connectedSinceWallClockSec;
+  private final boolean[] wasConnected;
   private final boolean useLimelightFusion;
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
@@ -94,6 +99,11 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
     lastAcceptedTimestampsSec = new double[io.length];
     Arrays.fill(lastAcceptedTimestampsSec, Double.NEGATIVE_INFINITY);
+    lastAcceptedWallClockSec = new double[io.length];
+    Arrays.fill(lastAcceptedWallClockSec, Double.NEGATIVE_INFINITY);
+    connectedSinceWallClockSec = new double[io.length];
+    Arrays.fill(connectedSinceWallClockSec, Double.NEGATIVE_INFINITY);
+    wasConnected = new boolean[io.length];
 
     this.disconnectedAlerts = new Alert[io.length];
     for (int i = 0; i < inputs.length; i++) {
@@ -109,6 +119,15 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
               "Vision Outlier detected on camera \""
                   + io[i].getCameraConstants().cameraName()
                   + "\".",
+              Alert.AlertType.kWarning);
+    }
+    this.noAcceptedMeasurementAlerts = new Alert[io.length];
+    for (int i = 0; i < io.length; i++) {
+      noAcceptedMeasurementAlerts[i] =
+          new Alert(
+              "Vision camera \""
+                  + io[i].getCameraConstants().cameraName()
+                  + "\" is connected but has no accepted measurements.",
               Alert.AlertType.kWarning);
     }
   }
@@ -195,7 +214,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     List<Pose3d> allRobotPosesAccepted = new LinkedList<>();
 
     for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
-      disconnectedAlerts[cameraIndex].set(!inputs[cameraIndex].connected);
+      String cameraLabel = io[cameraIndex].getCameraConstants().cameraName();
+      boolean connected = inputs[cameraIndex].connected;
+      disconnectedAlerts[cameraIndex].set(!connected);
+      handleConnectionTransition(cameraIndex, cameraLabel, connected);
 
       List<Pose3d> tagPoses = new LinkedList<>();
       List<Pose3d> robotPoses = new LinkedList<>();
@@ -214,8 +236,16 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         if (!isObservationValid(observation)) {
           continue;
         }
+        if (!isTimestampInOrder(cameraIndex, observation.timestamp())) {
+          String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+          Logger.recordOutput(prefix + "/OutOfOrder", true);
+          Logger.recordOutput(prefix + "/LastAccepted", lastAcceptedTimestampsSec[cameraIndex]);
+          Logger.recordOutput(prefix + "/Current", observation.timestamp());
+          continue;
+        }
 
         robotPosesAccepted.add(observation.pose());
+        markTimestampAccepted(cameraIndex, observation.timestamp());
 
         consumer.accept(
             observation.pose().toPose2d(),
@@ -240,6 +270,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       allTagPoses.addAll(tagPoses);
       allRobotPoses.addAll(robotPoses);
       allRobotPosesAccepted.addAll(robotPosesAccepted);
+      updateNoAcceptedMeasurementAlert(cameraIndex, cameraLabel, connected, true);
     }
 
     Logger.recordOutput(
@@ -294,13 +325,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     if (poseHistory != null) {
       poseHistory.update(startTime);
     }
-
-    if (startTime < ignoreVisionUntilTimestamp) {
-      Logger.recordOutput("Vision/usingVision", false);
-      Logger.recordOutput("Vision/rejectReason", "RESET_SUPPRESS");
-      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
-      return;
-    }
+    boolean suppressed = startTime < ignoreVisionUntilTimestamp;
 
     double yawRateDegPerSec =
         yawRateRadPerSecSupplier != null
@@ -312,24 +337,39 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
                 <= AprilTagVisionConstants.getLimelightMaxYawRateDegPerSec();
     Logger.recordOutput("Vision/yawRateDegPerSec", yawRateDegPerSec);
     Logger.recordOutput("Vision/yawRateAccept", yawRateOk);
+    boolean visionPipelineEnabled = !suppressed && useVision && yawRateOk;
 
     List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
 
     for (int i = 0; i < io.length; i++) {
       io[i].updateInputs(inputs[i]);
       Logger.processInputs("LimelightVision/" + io[i].getCameraConstants().cameraName(), inputs[i]);
-      disconnectedAlerts[i].set(!inputs[i].connected);
+      boolean connected = inputs[i].connected;
+      disconnectedAlerts[i].set(!connected);
 
       String cameraLabel = io[i].getCameraConstants().cameraName();
+      handleConnectionTransition(i, cameraLabel, connected);
       logCameraInputs("Vision/" + cameraLabel, inputs[i]);
       updateResiduals(inputs[i]);
       logLimelightDiagnostics(cameraLabel, inputs[i]);
-      estimates.add(buildLimelightEstimate(i, cameraLabel, inputs[i]));
+      estimates.add(
+          visionPipelineEnabled
+              ? buildLimelightEstimate(i, cameraLabel, inputs[i])
+              : Optional.empty());
 
       boolean isOutlier =
           inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
-              || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL;
+              || inputs[i].rejectReason == VisionIO.RejectReason.LARGE_ROTATION_RESIDUAL
+              || inputs[i].rejectReason == VisionIO.RejectReason.RESIDUAL_OUTLIER;
       outlierAlerts[i].set(isOutlier);
+      updateNoAcceptedMeasurementAlert(i, cameraLabel, connected, visionPipelineEnabled);
+    }
+
+    if (suppressed) {
+      Logger.recordOutput("Vision/usingVision", false);
+      Logger.recordOutput("Vision/rejectReason", "RESET_SUPPRESS");
+      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+      return;
     }
 
     if (!useVision) {
@@ -421,6 +461,21 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         allowYawGate ? stdDevs.theta() : AprilTagVisionConstants.getLimelightLargeVariance();
 
     double frameAgeSec = Math.max(0.0, Timer.getFPGATimestamp() - timestampSeconds);
+    double staleFrameLimitSec = AprilTagVisionConstants.getLimelightMaxAcceptableFrameAgeSec();
+    if (cameraLabel != null) {
+      String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+      Logger.recordOutput(prefix + "/StaleRejected", false);
+      Logger.recordOutput(prefix + "/FrameAgeSec", frameAgeSec);
+      Logger.recordOutput(prefix + "/StaleLimitSec", staleFrameLimitSec);
+    }
+    if (frameAgeSec > staleFrameLimitSec) {
+      if (cameraLabel != null) {
+        String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
+        Logger.recordOutput(prefix + "/StaleRejected", true);
+      }
+      return Optional.empty();
+    }
+
     double gyroYawDeg =
         getReferencePose(timestampSeconds)
             .map(pose -> Math.toDegrees(pose.getRotation().getRadians()))
@@ -630,6 +685,57 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return;
     }
     lastAcceptedTimestampsSec[cameraIndex] = timestampSeconds;
+    lastAcceptedWallClockSec[cameraIndex] = Timer.getFPGATimestamp();
+  }
+
+  private void handleConnectionTransition(int cameraIndex, String cameraLabel, boolean connected) {
+    if (cameraIndex < 0 || cameraIndex >= wasConnected.length) {
+      return;
+    }
+
+    boolean reconnected = connected && !wasConnected[cameraIndex];
+    if (reconnected) {
+      lastAcceptedTimestampsSec[cameraIndex] = Double.NEGATIVE_INFINITY;
+      lastAcceptedWallClockSec[cameraIndex] = Double.NEGATIVE_INFINITY;
+      connectedSinceWallClockSec[cameraIndex] = Timer.getFPGATimestamp();
+      yawHistory[cameraIndex].clear();
+    } else if (!connected && wasConnected[cameraIndex]) {
+      connectedSinceWallClockSec[cameraIndex] = Double.NEGATIVE_INFINITY;
+    }
+
+    if (cameraLabel != null) {
+      Logger.recordOutput("AprilTagVision/" + cameraLabel + "/ReconnectReset", reconnected);
+    }
+
+    wasConnected[cameraIndex] = connected;
+  }
+
+  private void updateNoAcceptedMeasurementAlert(
+      int cameraIndex, String cameraLabel, boolean connected, boolean monitoringEnabled) {
+    if (cameraIndex < 0 || cameraIndex >= noAcceptedMeasurementAlerts.length) {
+      return;
+    }
+    if (!monitoringEnabled || !connected) {
+      noAcceptedMeasurementAlerts[cameraIndex].set(false);
+      if (cameraLabel != null) {
+        Logger.recordOutput("AprilTagVision/" + cameraLabel + "/NoAcceptedMeasurement", false);
+      }
+      return;
+    }
+
+    double now = Timer.getFPGATimestamp();
+    double baselineSec =
+        Math.max(connectedSinceWallClockSec[cameraIndex], lastAcceptedWallClockSec[cameraIndex]);
+    boolean noRecentAccepted =
+        isFinite(baselineSec) && (now - baselineSec) > NO_ACCEPTED_MEASUREMENT_ALERT_SEC;
+    noAcceptedMeasurementAlerts[cameraIndex].set(noRecentAccepted);
+    if (cameraLabel != null) {
+      Logger.recordOutput(
+          "AprilTagVision/" + cameraLabel + "/NoAcceptedMeasurement", noRecentAccepted);
+      Logger.recordOutput(
+          "AprilTagVision/" + cameraLabel + "/NoAcceptedMeasurementAgeSec",
+          isFinite(baselineSec) ? now - baselineSec : Double.NaN);
+    }
   }
 
   private void logCameraInputs(String prefix, VisionIO.VisionIOInputs cam) {

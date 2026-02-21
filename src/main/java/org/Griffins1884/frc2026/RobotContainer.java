@@ -115,7 +115,7 @@ public class RobotContainer {
               // Real robot, instantiate hardware IO implementations
               yield new SwerveSubsystem(
                   switch (GYRO_TYPE) {
-                    case PIGEON -> new GyroIOPigeon2();
+                    case PIGEON -> new GyroIOPrimaryFallback(new GyroIOPigeon2(), new GyroIONavX());
                     case NAVX -> new GyroIONavX();
                     case ADIS -> new GyroIO() {};
                   },

@@ -173,6 +173,10 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxFrameAgeSec", 0.08);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC_LL3 =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/MaxFrameAgeSecLL3", 0.07);
+  private static final LoggedTunableNumber LIMELIGHT_MAX_ACCEPTABLE_FRAME_AGE_SEC =
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxAcceptableFrameAgeSec", 0.2);
+  private static final LoggedTunableNumber LIMELIGHT_MAX_ACCEPTABLE_FRAME_AGE_SEC_LL3 =
+      new LoggedTunableNumber("AprilTagVision/Limelight/MaxAcceptableFrameAgeSecLL3", 0.18);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_STABLE_WINDOW =
       new LoggedTunableNumber("AprilTagVision/Limelight/YawGate/StableWindow", 5.0);
   private static final LoggedTunableNumber LIMELIGHT_YAW_GATE_STABLE_DELTA_DEG =
@@ -297,6 +301,17 @@ public final class AprilTagVisionConstants {
       return LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC_LL3.get();
     }
     return LIMELIGHT_YAW_GATE_MAX_FRAME_AGE_SEC.get();
+  }
+
+  public static double getLimelightMaxAcceptableFrameAgeSec() {
+    return getLimelightMaxAcceptableFrameAgeSec(VisionIO.LimelightProfile.LL4);
+  }
+
+  public static double getLimelightMaxAcceptableFrameAgeSec(VisionIO.LimelightProfile profile) {
+    if (profile == VisionIO.LimelightProfile.LL3) {
+      return LIMELIGHT_MAX_ACCEPTABLE_FRAME_AGE_SEC_LL3.get();
+    }
+    return LIMELIGHT_MAX_ACCEPTABLE_FRAME_AGE_SEC.get();
   }
 
   public static int getLimelightYawGateStableWindow() {

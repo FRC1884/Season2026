@@ -78,6 +78,8 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private final SysIdRoutine turnSysId;
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
+  private final Alert gyroFallbackAlert =
+      new Alert("Primary gyro unavailable, using NavX fallback.", AlertType.kWarning);
   private final SwerveMusicPlayer musicPlayer;
 
   private SwerveDriveKinematics kinematics =
@@ -209,18 +211,21 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   @Override
   public void periodic() {
     odometryLock.lock(); // Prevents odometry updates while reading data
-    gyroIO.updateInputs(gyroInputs);
-    Logger.processInputs("Swerve/Gyro", gyroInputs);
-    for (var module : modules) {
-      module.periodic();
+    try {
+      gyroIO.updateInputs(gyroInputs);
+      Logger.processInputs("Swerve/Gyro", gyroInputs);
+      for (var module : modules) {
+        module.periodic();
+      }
+      Logger.recordOutput("Swerve/SysId/DrivePhase", driveSysIdPhase);
+      Logger.recordOutput("Swerve/SysId/DriveActive", driveSysIdActive);
+      Logger.recordOutput("Swerve/SysId/DriveLastCompleted", driveSysIdLastCompleted);
+      Logger.recordOutput("Swerve/SysId/TurnPhase", turnSysIdPhase);
+      Logger.recordOutput("Swerve/SysId/TurnActive", turnSysIdActive);
+      Logger.recordOutput("Swerve/SysId/TurnLastCompleted", turnSysIdLastCompleted);
+    } finally {
+      odometryLock.unlock();
     }
-    Logger.recordOutput("Swerve/SysId/DrivePhase", driveSysIdPhase);
-    Logger.recordOutput("Swerve/SysId/DriveActive", driveSysIdActive);
-    Logger.recordOutput("Swerve/SysId/DriveLastCompleted", driveSysIdLastCompleted);
-    Logger.recordOutput("Swerve/SysId/TurnPhase", turnSysIdPhase);
-    Logger.recordOutput("Swerve/SysId/TurnActive", turnSysIdActive);
-    Logger.recordOutput("Swerve/SysId/TurnLastCompleted", turnSysIdLastCompleted);
-    odometryLock.unlock();
 
     // Stop moving when disabled
     if (DriverStation.isDisabled()) {
@@ -283,6 +288,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && GlobalConstants.MODE != SIM);
+    gyroFallbackAlert.set(gyroInputs.usingSecondary && GlobalConstants.MODE != SIM);
   }
 
   /**
