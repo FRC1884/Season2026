@@ -20,7 +20,7 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/MaxAngularAcceleration", 6.0);
   public static final LoggedTunableNumber ALIGN_CONTROLLER_LOOP_PERIOD_SEC =
       // The command scheduler runs at 20ms; treat this as the effective control loop period.
-      new LoggedTunableNumber( "Align/ControllerLoopPeriodSec", 0.02);
+      new LoggedTunableNumber("Align/ControllerLoopPeriodSec", 0.02);
   public static final LoggedTunableNumber FF_START_DELAY =
       new LoggedTunableNumber("Align/FFStartDelaySec", 0.3);
   public static final LoggedTunableNumber FF_RAMP_RATE =
@@ -32,7 +32,7 @@ public final class AlignConstants {
   public static final LoggedTunableNumber ALIGN_ROTATION_TOLERANCE_DEG =
       new LoggedTunableNumber("Align/RotationToleranceDeg", 2.0);
   public static final LoggedTunableNumber ALIGN_TOF_TOLERANCE_FRACTION =
-          new LoggedTunableNumber("Align/TofToeranceFraction");
+      new LoggedTunableNumber("Align/TofToeranceFraction");
   public static final LoggedTunableNumber WHEEL_RADIUS_MAX_VELOCITY =
       new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.5);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
@@ -51,8 +51,10 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.5);
   public static final LoggedTunableNumber AFTER_COLLECT_START_HEADING_DEG =
       new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 220.0);
-  public static final LoggedTunableNumber TURRET_KV = new LoggedTunableNumber("Turret/AutoAim/kV");
-  public static final LoggedTunableNumber TURRET_KS = new LoggedTunableNumber("Turret/AutoAim/kS");
+  public static final LoggedTunableNumber TURRET_KV =
+      new LoggedTunableNumber("Turret/AutoAim/kV", 1);
+  public static final LoggedTunableNumber TURRET_KS =
+      new LoggedTunableNumber("Turret/AutoAim/kS", 0);
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
       new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 7.7);
@@ -66,7 +68,7 @@ public final class AlignConstants {
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_Y_METERS =
       new LoggedTunableNumber("Align/AfterSecondBump/YMeters", 4);
   public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterSecondBump/HeadingDeg", 180);
+      new LoggedTunableNumber("Align/AfterSecondBump/HeadingDeg", 0);
 
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_X_METERS =
       new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6.5);

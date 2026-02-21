@@ -26,7 +26,7 @@ public class AutoAlignToFuelCommand extends Command {
   private static final double MAX_ROTATION_RAD_PER_SEC = 45.0;
 
   private static final double FORWARD_SPEED_MPS = 3.5;
-  private static final double MAX_RUNTIME_SEC = 6.0;
+  private static final double MAX_RUNTIME_SEC = 1.0;
 
   // ---------------- Internal state ----------------
 
