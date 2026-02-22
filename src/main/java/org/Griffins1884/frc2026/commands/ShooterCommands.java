@@ -58,16 +58,12 @@ public class ShooterCommands {
   }
 
   public static double getPivotAngleDegrees(double distanceMeters) {
-    return lookupInterpolated(angleByDistanceDeg, distanceMeters);
-  }
-
-  /** Placeholder conversion from degrees to pivot units (0.1 to 1.6 scale). */
-  public static double pivotUnitsFromDegrees(double degrees) {
-    return degrees;
+    double pivotAngleDeg = (11.875 * lookupInterpolated(angleByDistanceDeg, distanceMeters)) + 18;
+    return (pivotAngleDeg > 37 || pivotAngleDeg < 18) ? 0 : pivotAngleDeg;
   }
 
   public static double getPivotAngleOutput(double distanceMeters) {
-    return pivotUnitsFromDegrees(getPivotAngleDegrees(distanceMeters));
+    return lookupInterpolated(angleByDistanceDeg, distanceMeters);
   }
 
   public static double getPivotAngleRad(double distanceMeters) {

@@ -24,9 +24,9 @@ public final class IntakePivotConstants {
   public static final double REVERSE_LIMIT = -12.0; // TODO: set limits
   public static final double POSITION_COEFFICIENT = 1.0; // TODO: set gear ratio conversion
   public static final LoggedTunableNumber MOTION_MAGIC_CRUISE_VEL =
-      new LoggedTunableNumber("IntakePivot/MotionMagic/CruiseVel", 4.0);
+      new LoggedTunableNumber("IntakePivot/MotionMagic/CruiseVel", 10.0);
   public static final LoggedTunableNumber MOTION_MAGIC_ACCEL =
-      new LoggedTunableNumber("IntakePivot/MotionMagic/Accel", 4.0);
+      new LoggedTunableNumber("IntakePivot/MotionMagic/Accel", 10.0);
   public static final LoggedTunableNumber MOTION_MAGIC_JERK =
       new LoggedTunableNumber("IntakePivot/MotionMagic/Jerk", 10.0);
 
@@ -38,16 +38,16 @@ public final class IntakePivotConstants {
   public static final double SOFT_LIMIT_MAX = FORWARD_LIMIT;
   public static final double MAX_VOLTAGE = 12.0;
 
-  public static final double IDLE_ANGLE_RAD = 0.0; // TODO: set idle angle
-  public static final double PICKUP_RAD = -7.8; // TODO: set idle angle
+  public static final double IDLE_ANGLE_RAD = -1.0; // TODO: set idle angle
+  public static final double PICKUP_RAD = -10; // TODO: set idle angle
   public static final LoggedTunableNumber HARDSTOP_STOW_SEEK_POSITION =
       new LoggedTunableNumber("IntakePivot/HardStop/StowSeekPosition", 1.0);
   public static final LoggedTunableNumber HARDSTOP_PICKUP_SEEK_POSITION =
-      new LoggedTunableNumber("IntakePivot/HardStop/PickupSeekPosition", -12.0);
+      new LoggedTunableNumber("IntakePivot/HardStop/PickupSeekPosition", -10.0);
   public static final LoggedTunableNumber HARDSTOP_STOW_CURRENT_AMPS =
-      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 30.0);
+      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 3.0);
   public static final LoggedTunableNumber HARDSTOP_PICKUP_CURRENT_AMPS =
-      new LoggedTunableNumber("IntakePivot/HardStop/PickupCurrentAmps", 30.0);
+      new LoggedTunableNumber("IntakePivot/HardStop/PickupCurrentAmps", 3.0);
   public static final LoggedTunableNumber HARDSTOP_MAX_VELOCITY_RAD_PER_SEC =
       new LoggedTunableNumber("IntakePivot/HardStop/MaxVelocityRadPerSec", 0.35);
   public static final LoggedTunableNumber HARDSTOP_SPIKE_DEBOUNCE_SEC =

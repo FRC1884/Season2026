@@ -314,7 +314,7 @@ public class RobotContainer {
       }
     }
 
-    SmartDashboard.putBoolean("test", DriveCommands.getTest().get());
+    SmartDashboard.putBoolean("drive/test", DriveCommands.getTest().get());
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
     if (turret != null) {

@@ -93,10 +93,14 @@ public final class TurretCommands {
       double newTOF = estimateShotTimeSeconds(newDist);
       if (!Double.isFinite(newTOF) || newTOF <= 1e-4) break;
 
-      double check = Math.abs(newTOF - tof) / Math.max(tof, 1e-6);
+      double oldTEff = tEff;
+      double newTEff = newTOF + TURRET_BASE_LATENCY_SEC.getAsDouble();
+
+      double check = Math.abs(newTEff - oldTEff) / Math.max(oldTEff, 1e-6);
       dist = newDist;
       tof = newTOF;
       angle = new Rotation2d(aimVector.getX(), aimVector.getY());
+      tof = newTOF;
 
       if (check <= AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.getAsDouble()) {
         break;
@@ -148,7 +152,7 @@ public final class TurretCommands {
     ShooterCommands.ShotTimeEstimate estimate =
         estimateShotTimeDetailed(
             distanceMeters,
-            ShooterCommands.getPivotAngleRad(distanceMeters),
+            (Math.PI / 2) - ShooterCommands.getPivotAngleRad(distanceMeters),
             ShooterConstants.EXIT_HEIGHT_METERS,
             ShooterConstants.TARGET_HEIGHT_METERS,
             getShooterRpm(distanceMeters),

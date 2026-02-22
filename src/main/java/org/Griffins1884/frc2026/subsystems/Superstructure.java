@@ -413,7 +413,10 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
-    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
+    if (rollers.shooter != null
+        && turret != null
+        && turret.isAtGoal()
+        && rollers.shooter.isAtGoal()) {
       if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
         final Translation2d oldTarget = target;
         target =

@@ -157,19 +157,19 @@ public final class SwerveConstants {
   // Zeroed rotation values for each module, see setup instructions
   private static final Rotation2d FLR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.481201171875 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.482666015625 * (2 * PI))
           : Rotation2d.fromRadians(-PI / 2);
   private static final Rotation2d FRR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.1123046875 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.111328125 * (2 * PI))
           : Rotation2d.fromRadians(0);
   private static final Rotation2d BLR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.001220703125 * (2 * PI))
+          ? Rotation2d.fromRadians(0.00390625 * (2 * PI))
           : Rotation2d.fromRadians(PI);
   private static final Rotation2d BRR_ZERO =
       (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.291259765625 * (2 * PI))
+          ? Rotation2d.fromRadians(-0.290283203125 * (2 * PI))
           : Rotation2d.fromRadians(PI / 2);
 
   // Inverted encoders or turn motors

@@ -45,6 +45,9 @@ public class AutoCommands {
             Commands.runOnce(() -> DriveCommands.setTest(false))));
 
     NamedCommands.registerCommand(
+        "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+
+    NamedCommands.registerCommand(
         "DepotCollect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
   }
 }
