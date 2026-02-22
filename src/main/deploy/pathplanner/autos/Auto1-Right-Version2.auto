@@ -7,25 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightPos_PreShoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "RightPos_OverBump"
+            "pathName": "RightOverBump"
           }
         },
         {
           "type": "named",
           "data": {
             "name": "OverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
           }
         },
         {
@@ -61,7 +55,19 @@
         {
           "type": "named",
           "data": {
-            "name": "OverBumpAndShoot"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignAfterBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Shoot"
           }
         },
         {
@@ -77,6 +83,12 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "Collect"
@@ -95,12 +107,6 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "Intake"
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "BackBump"
@@ -109,19 +115,7 @@
         {
           "type": "named",
           "data": {
-            "name": "OverBumpAndShoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "ToNeutral"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "BumpToNeutral"
+            "name": "Shoot"
           }
         }
       ]
