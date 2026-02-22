@@ -465,8 +465,16 @@ public class Superstructure extends SubsystemBase {
 
   private void applyFerrying() {
     Translation2d target;
-    if (drive != null) target = new Translation2d(0, 0); // TODO: find a way to get the ferry target
-    else target = new Translation2d(0.0, 0.0);
+    if (drive!=null){
+      if (DriverStation.getAlliance().isPresent() && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue){
+        target = new Translation2d(2.3, 4.05);
+      } else {
+        target = new Translation2d(14, 4.05);
+      }
+    }
+    else{
+      target = new Translation2d(0, 0);
+    }
     setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -487,7 +495,7 @@ public class Superstructure extends SubsystemBase {
             ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
             : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
     aimTurretAt(target);
-    ShooterCommands.calc(drive.getPose(), target);
+    ShooterCommands.calc(drive.getPose(), target, currentState);
     // if (turret != null) {
     //   turret.setGoalRad(TurretConstants.TEST_GOAL_RAD.get());
     //   lastTurretAction = "TEST_GOAL";
@@ -587,7 +595,7 @@ public class Superstructure extends SubsystemBase {
       return;
     }
 
-    Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target);
+    Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target, currentState);
 
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
