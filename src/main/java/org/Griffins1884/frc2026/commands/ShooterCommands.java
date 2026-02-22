@@ -87,7 +87,9 @@ public class ShooterCommands {
   }
 
   public static double calcFerrying(double distance) {
-    return Math.max(Math.sqrt((distance/ShooterConstants.MAX_DISTANCE)) * ShooterConstants.TARGET_RPM, ShooterConstants.TARGET_RPM);
+    return Math.max(
+        Math.sqrt((distance / ShooterConstants.MAX_DISTANCE)) * ShooterConstants.TARGET_RPM,
+        ShooterConstants.TARGET_RPM);
   }
 
   private static double lookupInterpolated(
