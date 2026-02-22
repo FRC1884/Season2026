@@ -18,7 +18,7 @@ public final class IntakeConstants {
   public static final double VELOCITY_TOLERANCE = 0.0; // TODO: tune for intake
   public static final double MAX_VOLTAGE = 12.0; // TODO: tune for intake
   public static final LoggedTunableNumber FORWARD_RPM =
-      new LoggedTunableNumber("Intake/ForwardRpm", 8.0);
+      new LoggedTunableNumber("Intake/ForwardRpm", 12.0);
   public static final LoggedTunableNumber REVERSE_RPM =
       new LoggedTunableNumber("Intake/ReverseRpm", -8.0);
 

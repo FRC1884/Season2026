@@ -94,8 +94,9 @@ public final class TurretCommands {
 
     Translation2d robotTranslateExit =
         fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
+    Translation2d robotFuturePose = currentTranslation.plus(robotTranslateExit);
     Translation2d robotVelocityExit = fieldVelocity.plus(fieldAcceleration.times(latency));
-    Translation2d baseVectorFromExit = target.minus(currentTranslation.plus(robotTranslateExit));
+    Translation2d baseVectorFromExit = target.minus(robotFuturePose);
 
     Translation2d aimVector = baseVectorFromExit;
     double dist = baseVectorFromExit.getNorm();
@@ -144,7 +145,10 @@ public final class TurretCommands {
     Logger.recordOutput(
         "Turret/ShootingWhileMoving/LeadOffsetMeters", target.minus(aimPoint).getNorm());
     if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Turret/AutoAim/FutureTarget", aimPoint);
+      Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
+      Logger.recordOutput("Turret/AutoAim/Distance", dist);
+      Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
+      Logger.recordOutput("Turret/AutoAim/FutureTarget", new Pose2d(aimPoint, new Rotation2d()));
       Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     }
     return aimPoint;

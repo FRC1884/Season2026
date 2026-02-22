@@ -212,6 +212,9 @@ public class RobotContainer {
                       RIGHT_CAM_ENABLED
                           ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
                           : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
+                          : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
                           : new VisionIO() {});
@@ -225,6 +228,11 @@ public class RobotContainer {
                       RIGHT_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(
                               RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              MIDDLE_RIGHT_CAM_CONSTANTS,
+                              driveSimulation::getSimulatedDriveTrainPose)
                           : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(
@@ -248,6 +256,11 @@ public class RobotContainer {
                               RIGHT_CAM_CONSTANTS,
                               drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new AprilTagVisionIOPhotonVision(
+                              MIDDLE_RIGHT_CAM_CONSTANTS,
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
+                          : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new AprilTagVisionIOPhotonVision(
                               BACK_CAM_CONSTANTS,
@@ -263,6 +276,11 @@ public class RobotContainer {
                       RIGHT_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(
                               RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              MIDDLE_RIGHT_CAM_CONSTANTS,
+                              driveSimulation::getSimulatedDriveTrainPose)
                           : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(

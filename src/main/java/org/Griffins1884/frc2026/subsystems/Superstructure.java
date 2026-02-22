@@ -488,27 +488,16 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShootingAndIntaking(Translation2d target) {
-    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
-      setIntakeGoal(IntakeGoal.FORWARD);
-      setIndexerGoal(IndexerGoal.FORWARD);
-      setShooterGoal(ShooterGoal.FORWARD);
-      setIntakePivotGoal(IntakePivotGoal.PICKUP);
-      aimTurretAt(target);
-      aimShooterPivotAt(target);
-    } else {
-      setIntakeGoal(IntakeGoal.FORWARD);
-      setIndexerGoal(IndexerGoal.IDLING);
-      setShooterGoal(ShooterGoal.FORWARD);
-      setIntakePivotGoal(IntakePivotGoal.PICKUP);
-      aimTurretAt(target);
-      aimShooterPivotAt(target);
-    }
+    setIntakeGoal(IntakeGoal.FORWARD);
+    setIndexerGoal(IndexerGoal.FORWARD);
+    setShooterGoal(ShooterGoal.FORWARD);
+    setIntakePivotGoal(IntakePivotGoal.PICKUP);
+    aimTurretAt(target);
+    aimShooterPivotAt(target);
   }
 
   private void applyFerrying() {
-    Translation2d target;
-    if (drive != null) target = new Translation2d(0, 0); // TODO: find a way to get the ferry target
-    else target = new Translation2d(0.0, 0.0);
+    Translation2d target = getFerryingTarget();
     setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -529,7 +518,7 @@ public class Superstructure extends SubsystemBase {
             ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
             : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
     aimTurretAt(target);
-    ShooterCommands.calc(drive.getPose(), target);
+    ShooterCommands.calc(drive.getPose(), target, currentState);
     // if (turret != null) {
     //   turret.setGoalRad(TurretConstants.TEST_GOAL_RAD.get());
     //   lastTurretAction = "TEST_GOAL";
@@ -629,7 +618,7 @@ public class Superstructure extends SubsystemBase {
       return;
     }
 
-    Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target);
+    Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target, currentState);
 
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
@@ -640,6 +629,23 @@ public class Superstructure extends SubsystemBase {
 
     rollers.shooter.setGoal(ShooterGoal.IDLING);
     rollers.shooter.setGoalVelocity((double) data.get(ShooterCommands.Vals.RPM));
+  }
+
+  public Translation2d getFerryingTarget() {
+    boolean isBlue =
+        DriverStation.getAlliance().isEmpty()
+            || DriverStation.getAlliance().get() == DriverStation.Alliance.Blue;
+    boolean yChange = false;
+    if (drive != null) {
+      yChange = drive.getPose().getY() > 4.0;
+    }
+    Translation2d target;
+    if (isBlue) {
+      target = new Translation2d(3, yChange ? 7.0 : 1.0);
+    } else {
+      target = new Translation2d(13.5, yChange ? 7.0 : 1.0);
+    }
+    return target;
   }
 
   private boolean isBallSenseAvailable() {

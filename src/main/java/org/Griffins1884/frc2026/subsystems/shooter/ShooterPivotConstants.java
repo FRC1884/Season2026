@@ -40,6 +40,7 @@ public final class ShooterPivotConstants {
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final double IDLE_ANGLE_RAD = 0.0; // TODO: set idle angle
+  public static final double FERRYING_ANGLE_RAD = 1.6;
   public static final int SIM_MOTOR_COUNT = 1;
   public static final double SIM_START_ANGLE_RAD = 0.0;
 
