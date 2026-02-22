@@ -58,6 +58,20 @@ Pass criteria
 - [ ] `Swerve/Gyro/usingSecondary` toggles correctly for failover and recovery
 - [ ] No immediate vision snap for ~0.35s after any odometry reset path
 
+## 3B) Shooting While Moving
+
+- [ ] Enable moving-shot mode and confirm `Superstructure/ShootingWhileMoving/Enabled=true`
+- [ ] At low speed, confirm `Superstructure/ShootingWhileMoving/MotionSampleValid=true` before shots are released
+- [ ] Run constant-speed strafe shots left and right and compare hit rate vs stationary baseline
+- [ ] Run forward/backward shots and confirm no obvious over-lead or under-lead pattern
+- [ ] Verify `Turret/ShootingWhileMoving/LatencySec`, `ShotTimeSec`, and `LeadOffsetMeters` are populated in logs
+- [ ] Force a stale/invalid motion sample (disable/enable or intentional pause) and verify fallback to normal (non-moving) targeting
+
+Pass criteria
+- [ ] Hit rate while moving is materially better than non-compensated baseline
+- [ ] No NaN/invalid telemetry in moving-shot channels
+- [ ] No shot release when moving-shot is enabled but motion sample is invalid
+
 ## 4) Autos
 
 - [ ] Run each priority auto at least 3 times

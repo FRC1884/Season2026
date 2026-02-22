@@ -121,6 +121,8 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private Translation2d fieldAcceleration = new Translation2d();
   private Translation2d lastFieldVelocity = new Translation2d();
   private double lastFieldVelTimestamp = Double.NaN;
+  private boolean fieldMotionSampleValid = false;
+  private double fieldMotionSampleDtSec = Double.NaN;
 
   private static final double LOOP_DT_SEC = 0.02;
   private final LinearFilter axFilter = LinearFilter.singlePoleIIR(0.2, LOOP_DT_SEC);
@@ -310,22 +312,30 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Pose2d pose = getPose();
     ChassisSpeeds speeds = getRobotRelativeSpeeds();
 
-    Translation2d currentVelocity = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).rotateBy(pose.getRotation());
+    Translation2d currentVelocity =
+        new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+            .rotateBy(pose.getRotation());
 
     if (!Double.isFinite(lastFieldVelTimestamp)) {
       lastFieldVelTimestamp = now;
       fieldAcceleration = new Translation2d();
       lastFieldVelocity = currentVelocity;
+      fieldMotionSampleValid = false;
+      fieldMotionSampleDtSec = Double.NaN;
     } else {
       double dt = now - lastFieldVelTimestamp;
+      fieldMotionSampleDtSec = dt;
       if (dt > 1e-4 && dt < 0.25) {
-        Translation2d acceleration = currentVelocity
-                .minus(lastFieldVelocity)
-                .times(1 / dt);
+        Translation2d acceleration = currentVelocity.minus(lastFieldVelocity).times(1 / dt);
 
-        fieldAcceleration = new Translation2d(axFilter.calculate(acceleration.getX()), ayFilter.calculate(acceleration.getY()));
+        fieldAcceleration =
+            new Translation2d(
+                axFilter.calculate(acceleration.getX()), ayFilter.calculate(acceleration.getY()));
+        fieldMotionSampleValid =
+            isFiniteTranslation(currentVelocity) && isFiniteTranslation(fieldAcceleration);
       } else {
         fieldAcceleration = new Translation2d();
+        fieldMotionSampleValid = false;
       }
 
       lastFieldVelocity = currentVelocity;
@@ -336,7 +346,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/FieldAcceleration", fieldAcceleration);
     Logger.recordOutput("Swerve/FieldVelocityMps", currentVelocity.getNorm());
     Logger.recordOutput("Swerve/FieldAccelerationMps2", fieldAcceleration.getNorm());
-
+    Logger.recordOutput("Swerve/FieldMotionSampleValid", fieldMotionSampleValid);
+    Logger.recordOutput("Swerve/FieldMotionSampleDtSec", fieldMotionSampleDtSec);
+    Logger.recordOutput("Swerve/FieldMotionSampleAgeSec", getFieldMotionSampleAgeSec());
 
     if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
         && !krakenVelocityMode) {
@@ -759,6 +771,17 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return lastFieldVelocity;
   }
 
+  public boolean isFieldMotionSampleValid() {
+    return fieldMotionSampleValid;
+  }
+
+  public double getFieldMotionSampleAgeSec() {
+    if (!Double.isFinite(lastFieldVelTimestamp)) {
+      return Double.POSITIVE_INFINITY;
+    }
+    return Math.max(0.0, Timer.getFPGATimestamp() - lastFieldVelTimestamp);
+  }
+
   /** Returns the position of each module in radians. */
   public double[] getWheelRadiusCharacterizationPositions() {
     double[] values = new double[4];
@@ -901,6 +924,10 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
   private static boolean isFinite(double value) {
     return Double.isFinite(value);
+  }
+
+  private static boolean isFiniteTranslation(Translation2d value) {
+    return value != null && isFinite(value.getX()) && isFinite(value.getY());
   }
 
   /** Returns the maximum linear speed in meters per sec. */

@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.Griffins1884.frc2026.Config;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.commands.ShooterCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.generic.arms.Arms;
@@ -413,15 +414,34 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
+    boolean movingShotEnabled = SuperstructureConstants.SHOOTING_WHILE_MOVING;
+    boolean driveAvailable = drive != null;
+    boolean motionSampleValid =
+        driveAvailable
+            && drive.isFieldMotionSampleValid()
+            && drive.getFieldMotionSampleAgeSec()
+                <= AlignConstants.TURRET_MAX_MOTION_SAMPLE_AGE_SECONDS.get();
+    Logger.recordOutput("Superstructure/ShootingWhileMoving/Enabled", movingShotEnabled);
+    Logger.recordOutput("Superstructure/ShootingWhileMoving/DriveAvailable", driveAvailable);
+    Logger.recordOutput("Superstructure/ShootingWhileMoving/MotionSampleValid", motionSampleValid);
+
     if (rollers.shooter != null
         && turret != null
         && turret.isAtGoal()
         && rollers.shooter.isAtGoal()) {
-      if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
+      if (movingShotEnabled && motionSampleValid) {
         final Translation2d oldTarget = target;
         target =
             TurretCommands.shootingWhileMoving(
-                drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
+                drive::getPose,
+                () -> oldTarget,
+                drive::getFieldVelocity,
+                drive::getFieldAcceleration);
+        Logger.recordOutput(
+            "Superstructure/ShootingWhileMoving/LeadOffsetMeters",
+            oldTarget.minus(target).getNorm());
+      } else {
+        Logger.recordOutput("Superstructure/ShootingWhileMoving/LeadOffsetMeters", 0.0);
       }
       setIntakeGoal(IntakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.FORWARD);

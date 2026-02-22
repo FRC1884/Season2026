@@ -1,6 +1,7 @@
 package org.Griffins1884.frc2026.subsystems.swerve;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.VecBuilder;
@@ -55,6 +56,20 @@ class SwerveSubsystemResetAndRecoveryTest {
     assertEquals(3.0, subsystem.getPose().getX(), EPSILON);
     assertEquals(4.0, subsystem.getPose().getY(), EPSILON);
     assertEquals(37.0, subsystem.getPose().getRotation().getDegrees(), EPSILON);
+  }
+
+  @Test
+  void fieldMotionSampleValidityRequiresSettledTiming() throws InterruptedException {
+    subsystem.periodic();
+    assertFalse(subsystem.isFieldMotionSampleValid());
+
+    for (int i = 0; i < 10 && !subsystem.isFieldMotionSampleValid(); i++) {
+      Thread.sleep(2);
+      subsystem.periodic();
+    }
+
+    assertTrue(subsystem.isFieldMotionSampleValid());
+    assertTrue(subsystem.getFieldMotionSampleAgeSec() >= 0.0);
   }
 
   private static SwerveSubsystem newSubsystem(FakeGyro gyro) {
