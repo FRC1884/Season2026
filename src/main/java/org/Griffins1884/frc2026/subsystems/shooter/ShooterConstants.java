@@ -2,6 +2,7 @@ package org.Griffins1884.frc2026.subsystems.shooter;
 
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.generic.rollers.GenericRollerSystemIOKraken;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterConstants {
@@ -15,6 +16,9 @@ public final class ShooterConstants {
   public static final int[] SHOOTER_IDS = {22, 23};
   public static final boolean[] SHOOTER_INVERTED = {false, true};
   public static final int CURRENT_LIMIT_AMPS = 40;
+  public static final double CLOSED_LOOP_RAMP_SECONDS = 0.01;
+  public static final GenericRollerSystemIOKraken.VelocityControlRequest VELOCITY_CONTROL_REQUEST =
+      GenericRollerSystemIOKraken.VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC;
   public static final boolean BRAKE_MODE = false;
   public static final double REDUCTION = 1.0; // TODO: set gear ratio
 
@@ -29,6 +33,14 @@ public final class ShooterConstants {
       new LoggedTunableNumber("Shooter/GainsSwitchRpm", 3000.0);
   public static final LoggedTunableNumber GAINS_SWITCH_HYSTERESIS_RPM =
       new LoggedTunableNumber("Shooter/GainsSwitchHysteresisRpm", 100.0);
+  public static final LoggedTunableNumber RECOVERY_ERROR_GAIN_VOLTS_PER_RPM =
+      new LoggedTunableNumber("Shooter/RecoveryErrorGainVoltsPerRpm", 0.0035);
+  public static final LoggedTunableNumber RECOVERY_CURRENT_THRESHOLD_AMPS =
+      new LoggedTunableNumber("Shooter/RecoveryCurrentThresholdAmps", 30.0);
+  public static final LoggedTunableNumber RECOVERY_CURRENT_GAIN_VOLTS_PER_AMP =
+      new LoggedTunableNumber("Shooter/RecoveryCurrentGainVoltsPerAmp", 0.03);
+  public static final LoggedTunableNumber RECOVERY_MAX_BOOST_VOLTS =
+      new LoggedTunableNumber("Shooter/RecoveryMaxBoostVolts", 5.0);
   public static final double VELOCITY_TOLERANCE = 100; // TODO: tune for shooter
   public static final double MAX_VOLTAGE = 12.0; // TODO: tune for shooter
 

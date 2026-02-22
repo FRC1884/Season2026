@@ -1,5 +1,6 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.Debouncer;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
@@ -62,5 +63,34 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
   @Override
   protected String getActiveGainsLabel(double requestedVelocityRpm) {
     return highGainsActive ? "HIGH" : "LOW";
+  }
+
+  @Override
+  protected double getAdditionalCompensationVolts(
+      double goalVelocityRpm, double measuredVelocityRpm) {
+    double goalSign = Math.signum(goalVelocityRpm);
+    if (goalSign == 0.0) {
+      return 0.0;
+    }
+
+    double velocityDeficitRpm =
+        Math.max(0.0, Math.abs(goalVelocityRpm) - Math.abs(measuredVelocityRpm));
+    if (velocityDeficitRpm <= 0.0) {
+      return 0.0;
+    }
+
+    double errorCompensationVolts =
+        velocityDeficitRpm * ShooterConstants.RECOVERY_ERROR_GAIN_VOLTS_PER_RPM.get();
+    double currentOverThresholdAmps =
+        Math.max(
+            0.0, getSupplyCurrentAmps() - ShooterConstants.RECOVERY_CURRENT_THRESHOLD_AMPS.get());
+    double currentCompensationVolts =
+        currentOverThresholdAmps * ShooterConstants.RECOVERY_CURRENT_GAIN_VOLTS_PER_AMP.get();
+    double totalBoostVolts =
+        MathUtil.clamp(
+            errorCompensationVolts + currentCompensationVolts,
+            0.0,
+            ShooterConstants.RECOVERY_MAX_BOOST_VOLTS.get());
+    return goalSign * totalBoostVolts;
   }
 }

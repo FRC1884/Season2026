@@ -57,6 +57,7 @@ public abstract class GenericVelocityRollerSystem<
   private final int tuningId = System.identityHashCode(this);
 
   private static final double RPM_TO_RAD_PER_SEC = 2.0 * Math.PI / 60.0;
+  private static final double RPM_TO_ROTATIONS_PER_SEC = 1.0 / 60.0;
 
   private double goalVelocity = 0.0;
   private boolean manualGoalActive = false;
@@ -143,11 +144,19 @@ public abstract class GenericVelocityRollerSystem<
       activeGains = config.gains();
     }
     String gainsLabel = getActiveGainsLabel(requestedVelocity);
+    boolean onboardVelocityControl = io.supportsVelocityControl();
 
-    logOutputs(measuredVelocity, activeGains, gainsLabel);
+    logOutputs(
+        measuredVelocity,
+        activeGains,
+        gainsLabel,
+        onboardVelocityControl ? "ONBOARD_VELOCITY" : "EXTERNAL_PID");
 
     if (DriverStation.isDisabled()) {
       io.runVolts(0.0);
+      pidController.reset();
+      lastGoalVelocityRadPerSec = 0.0;
+      lastTimestampSec = Timer.getFPGATimestamp();
       return;
     }
 
@@ -155,14 +164,29 @@ public abstract class GenericVelocityRollerSystem<
       pidController.setPID(activeGains.kP().get(), activeGains.kI().get(), 0.0);
       feedforward = new SimpleMotorFeedforward(activeGains.kS().get(), activeGains.kV().get());
       feedforwardKa = activeGains.kA().get();
+      if (onboardVelocityControl) {
+        io.setVelocityPID(
+            rpmGainToRpsGain(activeGains.kP().get()),
+            rpmGainToRpsGain(activeGains.kI().get()),
+            rpmGainToRpsGain(activeGains.kD().get()));
+      }
       lastActiveGains = activeGains;
     }
 
     LoggedTunableNumber.ifChanged(
         tuningId,
-        values -> pidController.setPID(values[0], values[1], 0.0),
+        values -> {
+          pidController.setPID(values[0], values[1], 0.0);
+          if (onboardVelocityControl) {
+            io.setVelocityPID(
+                rpmGainToRpsGain(values[0]),
+                rpmGainToRpsGain(values[1]),
+                rpmGainToRpsGain(values[2]));
+          }
+        },
         activeGains.kP(),
-        activeGains.kI());
+        activeGains.kI(),
+        activeGains.kD());
     LoggedTunableNumber.ifChanged(
         tuningId,
         values -> feedforward = new SimpleMotorFeedforward(values[0], values[1]),
@@ -183,14 +207,26 @@ public abstract class GenericVelocityRollerSystem<
 
     double feedforwardVolts =
         feedforward.calculate(goalVelocityRadPerSec) + feedforwardKa * goalAccelRadPerSec2;
-    double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
-    double outputVoltage =
-        MathUtil.clamp(pidOutput + feedforwardVolts, -config.maxVoltage(), config.maxVoltage());
+    double additionalCompensationVolts =
+        getAdditionalCompensationVolts(goalVelocity, measuredVelocity);
+    double totalFeedforwardVolts = feedforwardVolts + additionalCompensationVolts;
+    double clampedFeedforwardVolts =
+        MathUtil.clamp(totalFeedforwardVolts, -config.maxVoltage(), config.maxVoltage());
 
-    io.runVolts(outputVoltage);
+    if (onboardVelocityControl) {
+      io.runVelocity(goalVelocity, clampedFeedforwardVolts);
+    } else {
+      double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
+      double outputVoltage =
+          MathUtil.clamp(
+              pidOutput + totalFeedforwardVolts, -config.maxVoltage(), config.maxVoltage());
+      io.runVolts(outputVoltage);
+    }
 
     if (GlobalConstants.isDebugMode()) {
       Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardVolts);
+      Logger.recordOutput(
+          "Rollers/" + name + "/AdditionalCompensationVolts", additionalCompensationVolts);
     }
     Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
   }
@@ -240,13 +276,21 @@ public abstract class GenericVelocityRollerSystem<
     return "DEFAULT";
   }
 
+  protected double getAdditionalCompensationVolts(
+      double goalVelocityRpm, double measuredVelocityRpm) {
+    return 0.0;
+  }
+
   private void logOutputs(
-      double measuredVelocity, GlobalConstants.Gains activeGains, String gainsLabel) {
+      double measuredVelocity,
+      GlobalConstants.Gains activeGains,
+      String gainsLabel,
+      String controlMode) {
     Logger.recordOutput("Rollers/" + name + "/VelocityRpm", measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/GoalVelocity", goalVelocity);
     Logger.recordOutput("Rollers/" + name + "/Error", goalVelocity - measuredVelocity);
     Logger.recordOutput("Rollers/" + name + "/AtGoal", isAtGoal());
-    Logger.recordOutput("Rollers/" + name + "/ControlMode", "EXTERNAL_PID");
+    Logger.recordOutput("Rollers/" + name + "/ControlMode", controlMode);
     if (GlobalConstants.isDebugMode()) {
       Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
       Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
@@ -262,5 +306,9 @@ public abstract class GenericVelocityRollerSystem<
       Logger.recordOutput("Rollers/" + name + "/Gains/kV", activeGains.kV().get());
       Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", false);
     }
+  }
+
+  private static double rpmGainToRpsGain(double gainPerRpm) {
+    return gainPerRpm / RPM_TO_ROTATIONS_PER_SEC;
   }
 }
