@@ -461,6 +461,16 @@ public class RobotContainer {
     operator
         .ferrying()
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.FERRYING));
+    operator
+        .intakePivotZero()
+        .onTrue(
+            Commands.runOnce(
+                    () -> {
+                      if (superstructure.getArms().intakePivot != null) {
+                        superstructure.getArms().intakePivot.requestZeroCalibration();
+                      }
+                    })
+                .ignoringDisable(true));
 
     if (turret == null) {
       return;

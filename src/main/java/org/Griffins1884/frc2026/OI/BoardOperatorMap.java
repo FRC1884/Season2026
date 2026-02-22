@@ -8,6 +8,7 @@ import java.util.function.DoubleSupplier;
 public class BoardOperatorMap extends CommandGenericHID implements OperatorMap {
   // TODO: Update these placeholders to match the board wiring.
   private static final int AUTO_MANUAL_TOGGLE_BUTTON = 6;
+  private static final int INTAKE_PIVOT_ZERO_BUTTON = 4;
   private static final int MANUAL_TURRET_AXIS = 0;
   private static final int MANUAL_PIVOT_AXIS = 1;
 
@@ -33,6 +34,11 @@ public class BoardOperatorMap extends CommandGenericHID implements OperatorMap {
   @Override
   public Trigger ferrying() {
     return safeButton(1);
+  }
+
+  @Override
+  public Trigger intakePivotZero() {
+    return safeButton(INTAKE_PIVOT_ZERO_BUTTON);
   }
 
   @Override

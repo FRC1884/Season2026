@@ -1,5 +1,6 @@
 package org.Griffins1884.frc2026.subsystems.intake;
 
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIO;
 import org.Griffins1884.frc2026.generic.arms.GenericPositionArmSystem;
+import org.Griffins1884.frc2026.generic.arms.GenericPositionArmSystem.ControlMode;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -33,15 +35,21 @@ public class IntakePivotSubsystem extends SubsystemBase {
   @Setter @Getter private IntakePivotGoal goal = IntakePivotGoal.IDLING;
   private final IntakePivotArm primary;
   private final IntakePivotArm secondary;
-  private IntakePivotGoal previousGoal = IntakePivotGoal.IDLING;
-  private boolean hardStopLatched = false;
-  private String hardStopAction = "NONE";
-  private int hardStopSpikeSamples = 0;
+  private final DigitalInput primaryZeroLimitSwitch;
+  private final DigitalInput secondaryZeroLimitSwitch;
+  private boolean zeroingRequested = false;
+  private boolean zeroingLatched = false;
+  private String zeroingAction = "IDLE";
+  private int zeroingDetectSamples = 0;
   private static final double LOOP_PERIOD_SEC = 0.02;
 
   public IntakePivotSubsystem(String name, IntakePivotIO primaryIO, IntakePivotIO secondaryIO) {
     primary = new IntakePivotArm(name, primaryIO, () -> goal);
     secondary = new IntakePivotArm(name + "Follower", secondaryIO, () -> goal);
+    primaryZeroLimitSwitch =
+        createLimitSwitch(IntakePivotConstants.PRIMARY_ZERO_LIMIT_SWITCH_DIO_CHANNEL);
+    secondaryZeroLimitSwitch =
+        createLimitSwitch(IntakePivotConstants.SECONDARY_ZERO_LIMIT_SWITCH_DIO_CHANNEL);
   }
 
   public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
@@ -61,6 +69,22 @@ public class IntakePivotSubsystem extends SubsystemBase {
     setGoalPositionInternal(position);
   }
 
+  public void requestZeroCalibration() {
+    zeroingRequested = true;
+    zeroingLatched = false;
+    zeroingAction = "REQUESTED";
+    zeroingDetectSamples = 0;
+    stopOpenLoopInternal();
+    clearGoalOverrideInternal();
+  }
+
+  public void cancelZeroCalibration() {
+    zeroingRequested = false;
+    zeroingLatched = false;
+    zeroingAction = "CANCELLED";
+    zeroingDetectSamples = 0;
+  }
+
   public void setOpenLoop(double percent) {
     primary.setOpenLoop(percent);
     secondary.setOpenLoop(percent);
@@ -76,7 +100,7 @@ public class IntakePivotSubsystem extends SubsystemBase {
   }
 
   public double getPosition() {
-    return primary.getPosition();
+    return (primary.getPosition() + secondary.getPosition()) * 0.5;
   }
 
   public void setBrakeMode(boolean enabled) {
@@ -87,22 +111,17 @@ public class IntakePivotSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     IntakePivotGoal activeGoal = goal;
-    if (activeGoal != previousGoal) {
-      resetHardStopState();
-      previousGoal = activeGoal;
+    boolean openLoopActive = isOpenLoopControlActive();
+    if (!openLoopActive) {
+      setGoalPositionInternal(activeGoal.getAngle().getAsDouble());
     }
 
-    if (!isHardStopGoal(activeGoal)) {
-      logHardStop(activeGoal, false, 0.0, false);
-      return;
-    }
-
-    double seekPosition = getSeekPosition(activeGoal);
-    boolean spikeDetected = false;
-    if (!hardStopLatched) {
+    double seekPosition = IntakePivotConstants.HARDSTOP_STOW_SEEK_POSITION.get();
+    boolean zeroConditionDetected = false;
+    if (zeroingRequested) {
       setGoalPositionInternal(seekPosition);
-      spikeDetected = isHardStopSpike(activeGoal);
-      hardStopSpikeSamples = spikeDetected ? hardStopSpikeSamples + 1 : 0;
+      zeroConditionDetected = isZeroingConditionMet();
+      zeroingDetectSamples = zeroConditionDetected ? zeroingDetectSamples + 1 : 0;
 
       int requiredSamples =
           Math.max(
@@ -110,28 +129,29 @@ public class IntakePivotSubsystem extends SubsystemBase {
               (int)
                   Math.ceil(
                       IntakePivotConstants.HARDSTOP_SPIKE_DEBOUNCE_SEC.get() / LOOP_PERIOD_SEC));
-      if (hardStopSpikeSamples >= requiredSamples) {
-        hardStopLatched = true;
+      if (zeroingDetectSamples >= requiredSamples) {
+        zeroingLatched = true;
+        zeroingRequested = false;
         zeroPositionInternal();
         stopOpenLoopInternal();
         clearGoalOverrideInternal();
-        hardStopAction = "STOW_ZERO";
+        zeroingAction = "ZEROED";
+      } else {
+        zeroingAction = "SEEKING";
       }
     }
 
-    if (hardStopLatched) {
-      stopOpenLoopInternal();
-      clearGoalOverrideInternal();
+    if (!zeroingRequested && !zeroingLatched && !"CANCELLED".equals(zeroingAction)) {
+      zeroingAction = "IDLE";
     }
-    logHardStop(activeGoal, true, seekPosition, spikeDetected);
+    logZeroingStatus(activeGoal, seekPosition, zeroConditionDetected);
   }
 
-  private void resetHardStopState() {
-    hardStopLatched = false;
-    hardStopAction = "NONE";
-    hardStopSpikeSamples = 0;
-    stopOpenLoopInternal();
-    clearGoalOverrideInternal();
+  private static DigitalInput createLimitSwitch(int channel) {
+    if (channel < 0) {
+      return null;
+    }
+    return new DigitalInput(channel);
   }
 
   private void clearGoalOverrideInternal() {
@@ -140,8 +160,36 @@ public class IntakePivotSubsystem extends SubsystemBase {
   }
 
   private void setGoalPositionInternal(double position) {
-    primary.setGoalPosition(position);
-    secondary.setGoalPosition(position);
+    double primaryPosition = primary.getPosition();
+    double secondaryPosition = secondary.getPosition();
+    double averagePosition = (primaryPosition + secondaryPosition) * 0.5;
+    double safePosition = Double.isFinite(position) ? position : averagePosition;
+    double syncError = primaryPosition - secondaryPosition;
+    if (!Double.isFinite(syncError)) {
+      syncError = 0.0;
+    }
+
+    double deadband = Math.max(0.0, IntakePivotConstants.SYNC_DEADBAND_RAD.get());
+    if (Math.abs(syncError) < deadband) {
+      syncError = 0.0;
+    }
+
+    double maxTrim = Math.max(0.0, IntakePivotConstants.SYNC_MAX_TRIM_RAD.get());
+    double correction =
+        clamp(syncError * IntakePivotConstants.SYNC_CORRECTION_KP.get(), -maxTrim, maxTrim);
+
+    double primaryGoal = safePosition - (correction * 0.5);
+    double secondaryGoal = safePosition + (correction * 0.5);
+
+    primary.setGoalPosition(primaryGoal);
+    secondary.setGoalPosition(secondaryGoal);
+
+    Logger.recordOutput("IntakePivot/Sync/PrimaryPositionRad", primaryPosition);
+    Logger.recordOutput("IntakePivot/Sync/SecondaryPositionRad", secondaryPosition);
+    Logger.recordOutput("IntakePivot/Sync/ErrorRad", syncError);
+    Logger.recordOutput("IntakePivot/Sync/CorrectionRad", correction);
+    Logger.recordOutput("IntakePivot/Sync/PrimaryGoalRad", primaryGoal);
+    Logger.recordOutput("IntakePivot/Sync/SecondaryGoalRad", secondaryGoal);
   }
 
   private void setOpenLoopInternal(double percent) {
@@ -159,15 +207,58 @@ public class IntakePivotSubsystem extends SubsystemBase {
     secondary.zeroPosition();
   }
 
-  private static boolean isHardStopGoal(IntakePivotGoal activeGoal) {
-    return activeGoal == IntakePivotGoal.IDLING;
+  private boolean isZeroingConditionMet() {
+    Logger.recordOutput(
+        "IntakePivot/Zeroing/DetectionMode", IntakePivotConstants.ZEROING_DETECTION_MODE.name());
+    return switch (IntakePivotConstants.ZEROING_DETECTION_MODE) {
+      case LIMIT_SWITCH -> isLimitSwitchZeroDetected();
+      case CURRENT_SPIKE -> isCurrentSpikeZeroDetected();
+    };
   }
 
-  private static double getSeekPosition(IntakePivotGoal activeGoal) {
-    return IntakePivotConstants.HARDSTOP_STOW_SEEK_POSITION.get();
+  private boolean isLimitSwitchZeroDetected() {
+    boolean primaryConfigured = primaryZeroLimitSwitch != null;
+    boolean secondaryConfigured = secondaryZeroLimitSwitch != null;
+    boolean primaryPressed = readLimitSwitch(primaryZeroLimitSwitch);
+    boolean secondaryPressed = readLimitSwitch(secondaryZeroLimitSwitch);
+
+    boolean detected;
+    if (!primaryConfigured && !secondaryConfigured) {
+      detected = false;
+    } else if (IntakePivotConstants.ZERO_LIMIT_SWITCH_REQUIRE_BOTH
+        && primaryConfigured
+        && secondaryConfigured) {
+      detected = primaryPressed && secondaryPressed;
+    } else {
+      detected = primaryPressed || secondaryPressed;
+    }
+
+    Logger.recordOutput("IntakePivot/Zeroing/LimitSwitchPrimaryConfigured", primaryConfigured);
+    Logger.recordOutput("IntakePivot/Zeroing/LimitSwitchSecondaryConfigured", secondaryConfigured);
+    Logger.recordOutput("IntakePivot/Zeroing/LimitSwitchPrimaryPressed", primaryPressed);
+    Logger.recordOutput("IntakePivot/Zeroing/LimitSwitchSecondaryPressed", secondaryPressed);
+    Logger.recordOutput("IntakePivot/Zeroing/LimitSwitchDetected", detected);
+    return detected;
   }
 
-  private boolean isHardStopSpike(IntakePivotGoal activeGoal) {
+  private boolean readLimitSwitch(DigitalInput limitSwitch) {
+    if (limitSwitch == null) {
+      return false;
+    }
+    boolean rawState = limitSwitch.get();
+    return IntakePivotConstants.ZERO_LIMIT_SWITCH_ACTIVE_LOW ? !rawState : rawState;
+  }
+
+  private boolean isOpenLoopControlActive() {
+    return primary.getControlMode() == ControlMode.OPEN_LOOP
+        || secondary.getControlMode() == ControlMode.OPEN_LOOP;
+  }
+
+  private static double clamp(double value, double min, double max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private boolean isCurrentSpikeZeroDetected() {
     double maxCurrentAmps =
         Math.max(
             Math.abs(primary.getSupplyCurrentAmps()), Math.abs(secondary.getSupplyCurrentAmps()));
@@ -182,15 +273,15 @@ public class IntakePivotSubsystem extends SubsystemBase {
         && maxVelocityRadPerSec <= IntakePivotConstants.HARDSTOP_MAX_VELOCITY_RAD_PER_SEC.get();
   }
 
-  private void logHardStop(
-      IntakePivotGoal activeGoal, boolean enabled, double seekPosition, boolean spikeDetected) {
-    Logger.recordOutput("IntakePivot/HardStop/Enabled", enabled);
-    Logger.recordOutput("IntakePivot/HardStop/Goal", activeGoal.toString());
-    Logger.recordOutput("IntakePivot/HardStop/SeekPosition", seekPosition);
-    Logger.recordOutput("IntakePivot/HardStop/Latched", hardStopLatched);
-    Logger.recordOutput("IntakePivot/HardStop/Action", hardStopAction);
-    Logger.recordOutput("IntakePivot/HardStop/SpikeSamples", hardStopSpikeSamples);
-    Logger.recordOutput("IntakePivot/HardStop/SpikeDetected", spikeDetected);
+  private void logZeroingStatus(
+      IntakePivotGoal activeGoal, double seekPosition, boolean zeroConditionDetected) {
+    Logger.recordOutput("IntakePivot/Zeroing/Requested", zeroingRequested);
+    Logger.recordOutput("IntakePivot/Zeroing/Goal", activeGoal.toString());
+    Logger.recordOutput("IntakePivot/Zeroing/SeekPosition", seekPosition);
+    Logger.recordOutput("IntakePivot/Zeroing/Latched", zeroingLatched);
+    Logger.recordOutput("IntakePivot/Zeroing/Action", zeroingAction);
+    Logger.recordOutput("IntakePivot/Zeroing/DetectSamples", zeroingDetectSamples);
+    Logger.recordOutput("IntakePivot/Zeroing/ConditionDetected", zeroConditionDetected);
   }
 
   private static final class IntakePivotArm extends GenericPositionArmSystem<IntakePivotGoal> {

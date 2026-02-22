@@ -79,6 +79,11 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap, Ope
   }
 
   @Override
+  public Trigger intakePivotZero() {
+    return new Trigger(() -> false);
+  }
+
+  @Override
   public DoubleSupplier manualTurretAxis() {
     return null;
   }
