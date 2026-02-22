@@ -41,6 +41,10 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
             ShooterConstants.GAINS_LOW,
             ShooterConstants.VELOCITY_TOLERANCE,
             ShooterConstants.MAX_VOLTAGE));
+    if (supportsOnboardVelocityControl()) {
+      configureOnboardVelocitySlot(0, ShooterConstants.GAINS_LOW);
+      configureOnboardVelocitySlot(1, ShooterConstants.GAINS_HIGH);
+    }
   }
 
   @Override
