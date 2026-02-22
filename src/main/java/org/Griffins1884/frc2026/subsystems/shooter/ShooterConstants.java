@@ -5,6 +5,11 @@ import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterConstants {
+  public enum ShotLookupMode {
+    LOOKUP_TABLE,
+    BALLISTIC_MODEL
+  }
+
   public static final CANBus CAN_BUS = new CANBus("rio");
 
   public static final int[] SHOOTER_IDS = {22, 23};
@@ -33,4 +38,5 @@ public final class ShooterConstants {
       new LoggedTunableNumber("Shooter/SlipFactor", 0.64); // TODO: tune for real exit speed
   public static final double EXIT_HEIGHT_METERS = 0.587;
   public static final double TARGET_HEIGHT_METERS = GlobalConstants.FieldConstants.Hub.innerHeight;
+  public static final ShotLookupMode SHOT_LOOKUP_MODE = ShotLookupMode.LOOKUP_TABLE;
 }
