@@ -9,11 +9,15 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
+
+import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
   private static final double shooterDistanceCenter = 0.02; // TODO: Tune
+  private static final double WHEEL_RADIUS_INCHES = 4;
+  private static final double THETA_DEGREES = 0;
 
   public enum Vals {
     RPM,
@@ -23,7 +27,7 @@ public class ShooterCommands {
   private static final NavigableMap<Double, Double> angleByDistanceDeg = buildAngleTable();
   private static final NavigableMap<Double, Double> rpmByDistance = buildRpmTable();
 
-  public static Map<Vals, Double> calc(Pose2d robot, Translation2d target) {
+  public static Map<Vals, Double> calc(Pose2d robot, Translation2d target, Superstructure.SuperState state) {
     // Distance Vector Calculation
     Translation2d distance2d;
 
@@ -50,7 +54,7 @@ public class ShooterCommands {
     distance =
         (double) Math.round(Math.hypot(Math.abs(distanceX), Math.abs(distanceY)) * 100) / 100;
 
-    return dataPack(distance);
+    return dataPack(distance, state);
   }
 
   public static double getShooterRpm(double distanceMeters) {
@@ -70,11 +74,26 @@ public class ShooterCommands {
     return Math.toRadians(getPivotAngleDegrees(distanceMeters));
   }
 
-  public static Map<Vals, Double> dataPack(double distanceMeters) {
+  public static Map<Vals, Double> dataPack(double distanceMeters, Superstructure.SuperState state) {
     Map<Vals, Double> data = new HashMap<>();
-    data.put(Vals.RPM, getShooterRpm(distanceMeters));
-    data.put(Vals.ANGLE, getPivotAngleOutput(distanceMeters));
+    if (state == Superstructure.SuperState.FERRYING){
+      data.put(Vals.RPM, calcFerrying(distanceMeters));
+    }
+    else{
+      data.put(Vals.RPM, getShooterRpm(distanceMeters));
+      data.put(Vals.ANGLE, getPivotAngleOutput(distanceMeters));
+    }
     return data;
+  }
+
+  public static double linearToAngular(double linearVelocity, double radius){
+    double angularVelocity = (linearVelocity / radius)/2;
+    return angularVelocity * (60/(2*Math.PI));
+  }
+
+  public static double calcFerrying(double distance) {
+    double linearVelocity = Math.sqrt((distance*GRAVITY)/Math.sin(Math.toRadians(THETA_DEGREES)));
+    return linearToAngular(linearVelocity, WHEEL_RADIUS_INCHES);
   }
 
   private static double lookupInterpolated(
