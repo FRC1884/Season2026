@@ -418,7 +418,7 @@ public class Superstructure extends SubsystemBase {
         final Translation2d oldTarget = target;
         target =
             TurretCommands.shootingWhileMoving(
-                drive::getPose, () -> oldTarget, drive::getRobotRelativeSpeeds);
+                drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
       }
       setIntakeGoal(IntakeGoal.IDLING);
       setIndexerGoal(IndexerGoal.FORWARD);

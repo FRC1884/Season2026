@@ -33,8 +33,10 @@ import edu.wpi.first.hal.HAL;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
@@ -115,6 +117,14 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private double turnSysIdLastCompleted = Double.NaN;
   private String turnSysIdLastCompletedPhase = "NONE";
   private Runnable odometryResetListener = () -> {};
+
+  private Translation2d fieldAcceleration = new Translation2d();
+  private Translation2d lastFieldVelocity = new Translation2d();
+  private double lastFieldVelTimestamp = Double.NaN;
+
+  private static final double LOOP_DT_SEC = 0.02;
+  private final LinearFilter axFilter = LinearFilter.singlePoleIIR(0.2, LOOP_DT_SEC);
+  private final LinearFilter ayFilter = LinearFilter.singlePoleIIR(0.2, LOOP_DT_SEC);
 
   public SwerveSubsystem(
       GyroIO gyroIO,
@@ -295,6 +305,38 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
           isValidRotation(rawGyroRotation) ? rawGyroRotation : new Rotation2d();
       poseEstimator.resetPosition(safeRotation, getModulePositions(), new Pose2d());
     }
+
+    double now = Timer.getFPGATimestamp();
+    Pose2d pose = getPose();
+    ChassisSpeeds speeds = getRobotRelativeSpeeds();
+
+    Translation2d currentVelocity = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).rotateBy(pose.getRotation());
+
+    if (!Double.isFinite(lastFieldVelTimestamp)) {
+      lastFieldVelTimestamp = now;
+      fieldAcceleration = new Translation2d();
+      lastFieldVelocity = currentVelocity;
+    } else {
+      double dt = now - lastFieldVelTimestamp;
+      if (dt > 1e-4 && dt < 0.25) {
+        Translation2d acceleration = currentVelocity
+                .minus(lastFieldVelocity)
+                .times(1 / dt);
+
+        fieldAcceleration = new Translation2d(axFilter.calculate(acceleration.getX()), ayFilter.calculate(acceleration.getY()));
+      } else {
+        fieldAcceleration = new Translation2d();
+      }
+
+      lastFieldVelocity = currentVelocity;
+      lastFieldVelTimestamp = now;
+    }
+
+    Logger.recordOutput("Swerve/FieldVelocity", currentVelocity);
+    Logger.recordOutput("Swerve/FieldAcceleration", fieldAcceleration);
+    Logger.recordOutput("Swerve/FieldVelocityMps", currentVelocity.getNorm());
+    Logger.recordOutput("Swerve/FieldAccelerationMps2", fieldAcceleration.getNorm());
+
 
     if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
         && !krakenVelocityMode) {
@@ -707,6 +749,14 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   @AutoLogOutput(key = "SwerveChassisSpeeds/Measured")
   private ChassisSpeeds getChassisSpeeds() {
     return kinematics.toChassisSpeeds(getModuleStates());
+  }
+
+  public Translation2d getFieldAcceleration() {
+    return fieldAcceleration;
+  }
+
+  public Translation2d getFieldVelocity() {
+    return lastFieldVelocity;
   }
 
   /** Returns the position of each module in radians. */
