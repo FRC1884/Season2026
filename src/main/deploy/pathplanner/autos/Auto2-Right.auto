@@ -17,15 +17,9 @@
           }
         },
         {
-          "type": "path",
-          "data": {
-            "pathName": "RightPos_OverBump"
-          }
-        },
-        {
           "type": "named",
           "data": {
-            "name": "OverBump"
+            "name": "Intake"
           }
         },
         {
@@ -41,6 +35,12 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "OverSecondBump"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "BackOverBumpShoot"
@@ -49,7 +49,19 @@
         {
           "type": "named",
           "data": {
-            "name": "OverBumpAndShoot"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignAfterBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Shoot"
           }
         },
         {

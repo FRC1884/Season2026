@@ -17,6 +17,12 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "Collect"
@@ -29,6 +35,12 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "OverSecondBump"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "BackOverBumpShoot"
@@ -37,7 +49,19 @@
         {
           "type": "named",
           "data": {
-            "name": "OverBumpAndShoot"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignAfterBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Shoot"
           }
         },
         {
@@ -53,6 +77,12 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "Collect"
@@ -73,7 +103,25 @@
         {
           "type": "named",
           "data": {
-            "name": "OverBumpAndShoot"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignAfterBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Shoot"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
           }
         },
         {
