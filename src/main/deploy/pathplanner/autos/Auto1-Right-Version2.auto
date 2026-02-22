@@ -7,13 +7,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightOverBump"
+            "pathName": "RightPos_PreShoot"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "FirstOverBump"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RightPos_OverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBump"
           }
         },
         {
@@ -31,7 +43,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "BackOverBumpShoot"
+            "pathName": "Back"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BackBump"
           }
         },
         {
@@ -67,7 +91,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "BackOverBumpShoot"
+            "pathName": "Back"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "BackBump"
           }
         },
         {
