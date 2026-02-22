@@ -57,32 +57,37 @@ public final class TurretCommands {
   public static Translation2d shootingWhileMoving(
       Supplier<Pose2d> robotPoseSupplier,
       Supplier<Translation2d> targetSupplier,
-      Supplier<ChassisSpeeds> robotVelocitySupplier) {
+      Supplier<Translation2d> fieldVelocitySupplier,
+      Supplier<Translation2d> fieldAccelerationSupplier) {
     Pose2d currentPose = robotPoseSupplier.get();
     Translation2d target = targetSupplier.get();
     if (currentPose == null || target == null) {
       return new Translation2d();
     }
-    ChassisSpeeds speeds = robotVelocitySupplier.get();
     Translation2d currentTranslation = currentPose.getTranslation();
-    Translation2d baseVector = target.minus(currentTranslation);
-    Translation2d aimVector = baseVector;
-    double dist = baseVector.getNorm();
+    Rotation2d angle = new Rotation2d(0);
+
+    Translation2d fieldVelocity = fieldVelocitySupplier.get();
+    Translation2d fieldAcceleration = fieldAccelerationSupplier.get();
+    double latency  = TURRET_BASE_LATENCY_SECONDS.getAsDouble();
+
+    Translation2d robotTranslateExit = fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
+    Translation2d robotVelocityExit = fieldVelocity.plus(fieldAcceleration.times(latency));
+    Translation2d baseVectorFromExit = target.minus(currentTranslation.plus(robotTranslateExit));
+
+    Translation2d aimVector = baseVectorFromExit;
+    double dist = baseVectorFromExit.getNorm();
     double tof = estimateShotTimeSeconds(dist);
     if (!Double.isFinite(tof) || tof <= 1e-4) {
       return target;
     }
-    Rotation2d angle = new Rotation2d(0);
-    Translation2d fieldVelocity =
-        new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
-            .rotateBy(currentPose.getRotation());
+
     double kV = TURRET_KV.getAsDouble();
     double kS = TURRET_KS.getAsDouble();
 
     for (int i = 0; i < 8; i++) {
-      Translation2d lead = fieldVelocity.times(tof);
-      Translation2d leadAdjusted = lead.times(kV + kS * dist);
-      aimVector = baseVector.minus(leadAdjusted);
+      Translation2d lead = robotVelocityExit.times(tof);
+      aimVector = baseVectorFromExit.minus(lead);
 
       double newDist = aimVector.getNorm();
       double newTOF = estimateShotTimeSeconds(newDist);
@@ -90,13 +95,12 @@ public final class TurretCommands {
 
       double check = Math.abs(newTOF - tof) / Math.max(tof, 1e-6);
       dist = newDist;
+      tof = newTOF;
       angle = new Rotation2d(aimVector.getX(), aimVector.getY());
 
       if (check <= AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.getAsDouble()) {
         break;
       }
-
-      tof = newTOF;
     }
 
     Translation2d aimPoint = currentPose.getTranslation().plus(aimVector);
