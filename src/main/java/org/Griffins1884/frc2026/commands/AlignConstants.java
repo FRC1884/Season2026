@@ -80,11 +80,11 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/AfterSecondBump/HeadingDeg", 0);
 
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6.5);
+      new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6);
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_Y_METERS =
       new LoggedTunableNumber("Align/AfterBumpToNeutral/YMeters", 5.6);
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 180);
+      new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 320);
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
