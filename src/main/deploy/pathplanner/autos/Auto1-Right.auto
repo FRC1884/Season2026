@@ -7,13 +7,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "RightOverBump"
+            "pathName": "RightPos_PreShoot"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "FirstOverBump"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RightPos_OverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "OverBump"
           }
         },
         {
