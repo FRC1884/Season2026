@@ -50,6 +50,11 @@ public class XboxOperatorMap extends CommandXboxController implements OperatorMa
   }
 
   @Override
+  public Trigger intakePivotZero() {
+    return new Trigger(() -> false);
+  }
+
+  @Override
   public Trigger autoManualToggle() {
     return new Trigger(() -> false);
   }

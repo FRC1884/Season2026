@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.Griffins1884.frc2026.Config;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.commands.ShooterCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.generic.arms.Arms;
@@ -413,21 +414,77 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
-    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
+    boolean movingShotEnabled = SuperstructureConstants.SHOOTING_WHILE_MOVING;
+    boolean driveAvailable = drive != null;
+    boolean motionSampleValid =
+        driveAvailable
+            && drive.isFieldMotionSampleValid()
+            && drive.getFieldMotionSampleAgeSec()
+                <= AlignConstants.TURRET_MAX_MOTION_SAMPLE_AGE_SECONDS.get();
+    boolean movingShotCompensationActive =
+        shouldUseMovingShotCompensation(movingShotEnabled, motionSampleValid);
+    Logger.recordOutput("Superstructure/ShootingWhileMoving/Enabled", movingShotEnabled);
+    Logger.recordOutput("Superstructure/ShootingWhileMoving/DriveAvailable", driveAvailable);
+    Logger.recordOutput("Superstructure/ShootingWhileMoving/MotionSampleValid", motionSampleValid);
+    Logger.recordOutput(
+        "Superstructure/ShootingWhileMoving/CompensationActive", movingShotCompensationActive);
+    Logger.recordOutput(
+        "Superstructure/ShootingWhileMoving/FeedBlockedByInvalidMotion",
+        movingShotEnabled && !motionSampleValid);
+
+    Translation2d commandedTarget = target;
+    if (movingShotCompensationActive) {
       final Translation2d oldTarget = target;
-      target =
+      commandedTarget =
           TurretCommands.shootingWhileMoving(
               drive::getPose,
               () -> oldTarget,
               drive::getFieldVelocity,
               drive::getFieldAcceleration);
+      Logger.recordOutput(
+          "Superstructure/ShootingWhileMoving/LeadOffsetMeters",
+          oldTarget.minus(commandedTarget).getNorm());
+    } else {
+      Logger.recordOutput("Superstructure/ShootingWhileMoving/LeadOffsetMeters", 0.0);
     }
+
     setIntakeGoal(IntakeGoal.IDLING);
-    setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
-    aimTurretAt(target);
-    aimShooterPivotAt(target);
+    aimTurretAt(commandedTarget);
+    aimShooterPivotAt(commandedTarget);
+
+    boolean shooterReady = rollers.shooter != null && rollers.shooter.isAtGoal();
+    boolean turretReady = turret != null && turret.isAtGoal();
+    boolean shouldFeed =
+        shouldFeedInShooting(shooterReady, turretReady, movingShotEnabled, motionSampleValid);
+    Logger.recordOutput("Superstructure/Shooting/CanFeed", shouldFeed);
+    setIndexerGoal(shouldFeed ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
+
+    if (shouldFeed
+        && autoStopOnEmpty
+        && SuperstructureConstants.AUTO_STOP_ON_EMPTY
+        && isBallSenseAvailable()) {
+      if (!isBallPresent()) {
+        requestState(SuperState.IDLING, false);
+      }
+    }
+  }
+
+  static boolean shouldUseMovingShotCompensation(
+      boolean movingShotEnabled, boolean motionSampleValid) {
+    return movingShotEnabled && motionSampleValid;
+  }
+
+  static boolean shouldFeedInShooting(
+      boolean shooterReady,
+      boolean turretReady,
+      boolean movingShotEnabled,
+      boolean motionSampleValid) {
+    if (!shooterReady || !turretReady) {
+      return false;
+    }
+    return !movingShotEnabled || motionSampleValid;
   }
 
   private void applyShootingAndIntaking(Translation2d target) {
@@ -440,17 +497,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyFerrying() {
-    Translation2d target;
-    if (drive != null) {
-      if (DriverStation.getAlliance().isPresent()
-          && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
-        target = new Translation2d(2.3, 4.05);
-      } else {
-        target = new Translation2d(14, 4.05);
-      }
-    } else {
-      target = new Translation2d(0, 0);
-    }
+    Translation2d target = getFerryingTarget();
     setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -582,6 +629,23 @@ public class Superstructure extends SubsystemBase {
 
     rollers.shooter.setGoal(ShooterGoal.IDLING);
     rollers.shooter.setGoalVelocity((double) data.get(ShooterCommands.Vals.RPM));
+  }
+
+  public Translation2d getFerryingTarget() {
+    boolean isBlue =
+        DriverStation.getAlliance().isEmpty()
+            || DriverStation.getAlliance().get() == DriverStation.Alliance.Blue;
+    boolean yChange = false;
+    if (drive != null) {
+      yChange = drive.getPose().getY() > 4.0;
+    }
+    Translation2d target;
+    if (isBlue) {
+      target = new Translation2d(3, yChange ? 7.0 : 1.0);
+    } else {
+      target = new Translation2d(13.5, yChange ? 7.0 : 1.0);
+    }
+    return target;
   }
 
   private boolean isBallSenseAvailable() {

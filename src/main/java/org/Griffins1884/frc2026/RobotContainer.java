@@ -76,6 +76,8 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
+  private static final double ODOMETRY_RESET_VISION_SUPPRESS_SECONDS = 0.35;
+
   // Subsystems
   private final SwerveSubsystem drive;
   private SwerveDriveSimulation driveSimulation;
@@ -210,6 +212,9 @@ public class RobotContainer {
                       RIGHT_CAM_ENABLED
                           ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
                           : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
+                          : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
                           : new VisionIO() {});
@@ -223,6 +228,11 @@ public class RobotContainer {
                       RIGHT_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(
                               RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              MIDDLE_RIGHT_CAM_CONSTANTS,
+                              driveSimulation::getSimulatedDriveTrainPose)
                           : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(
@@ -246,6 +256,11 @@ public class RobotContainer {
                               RIGHT_CAM_CONSTANTS,
                               drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
                           : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new AprilTagVisionIOPhotonVision(
+                              MIDDLE_RIGHT_CAM_CONSTANTS,
+                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
+                          : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new AprilTagVisionIOPhotonVision(
                               BACK_CAM_CONSTANTS,
@@ -262,6 +277,11 @@ public class RobotContainer {
                           ? new VisionIOPhotonVisionSim(
                               RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
                           : new VisionIO() {},
+                      MIDDLE_RIGHT_CAM_ENABLED
+                          ? new VisionIOPhotonVisionSim(
+                              MIDDLE_RIGHT_CAM_CONSTANTS,
+                              driveSimulation::getSimulatedDriveTrainPose)
+                          : new VisionIO() {},
                       BACK_CAM_ENABLED
                           ? new VisionIOPhotonVisionSim(
                               BACK_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
@@ -270,6 +290,10 @@ public class RobotContainer {
             };
       }
     } else vision = null;
+
+    if (drive != null) {
+      drive.setOdometryResetListener(this::handleOdometryReset);
+    }
 
     if (DRIVETRAIN_ENABLED && drive != null) {
       characterizationChooser.addOption(
@@ -437,6 +461,16 @@ public class RobotContainer {
     operator
         .ferrying()
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.FERRYING));
+    operator
+        .intakePivotZero()
+        .onTrue(
+            Commands.runOnce(
+                    () -> {
+                      if (superstructure.getArms().intakePivot != null) {
+                        superstructure.getArms().intakePivot.requestZeroCalibration();
+                      }
+                    })
+                .ignoringDisable(true));
 
     if (turret == null) {
       return;
@@ -516,12 +550,16 @@ public class RobotContainer {
       return;
     }
     drive.zeroGyroAndOdometryToAllianceWall(alliance.get());
-    if (vision != null) {
-      vision.resetPoseHistory();
-      vision.suppressVisionForSeconds(0.35);
-    }
     autoAllianceZeroed = true;
     Logger.recordOutput("Odometry/AutoAllianceZeroed", true);
+  }
+
+  private void handleOdometryReset() {
+    if (vision == null) {
+      return;
+    }
+    vision.resetPoseHistory();
+    vision.suppressVisionForSeconds(ODOMETRY_RESET_VISION_SUPPRESS_SECONDS);
   }
 
   public void displaySimFieldToAdvantageScope() {

@@ -21,6 +21,8 @@ public interface OperatorMap {
 
   Trigger ferrying();
 
+  Trigger intakePivotZero();
+
   DoubleSupplier manualTurretAxis();
 
   DoubleSupplier manualPivotAxis();

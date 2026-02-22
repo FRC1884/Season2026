@@ -10,6 +10,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.Optional;
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import org.Griffins1884.frc2026.GlobalConstants;
@@ -58,16 +59,32 @@ public final class TurretCommands {
       Supplier<Translation2d> targetSupplier,
       Supplier<Translation2d> fieldVelocitySupplier,
       Supplier<Translation2d> fieldAccelerationSupplier) {
+    return shootingWhileMoving(
+        robotPoseSupplier,
+        targetSupplier,
+        fieldVelocitySupplier,
+        fieldAccelerationSupplier,
+        TurretCommands::estimateShotTimeSeconds);
+  }
+
+  static Translation2d shootingWhileMoving(
+      Supplier<Pose2d> robotPoseSupplier,
+      Supplier<Translation2d> targetSupplier,
+      Supplier<Translation2d> fieldVelocitySupplier,
+      Supplier<Translation2d> fieldAccelerationSupplier,
+      DoubleUnaryOperator shotTimeEstimator) {
     Pose2d currentPose = robotPoseSupplier.get();
     Translation2d target = targetSupplier.get();
-    if (currentPose == null || target == null) {
+    if (currentPose == null || target == null || shotTimeEstimator == null) {
       return new Translation2d();
     }
     Translation2d currentTranslation = currentPose.getTranslation();
     Rotation2d angle = new Rotation2d(0);
 
-    Translation2d fieldVelocity = fieldVelocitySupplier.get();
-    Translation2d fieldAcceleration = fieldAccelerationSupplier.get();
+    Translation2d fieldVelocity =
+        sanitizeVector(fieldVelocitySupplier != null ? fieldVelocitySupplier.get() : null);
+    Translation2d fieldAcceleration =
+        sanitizeVector(fieldAccelerationSupplier != null ? fieldAccelerationSupplier.get() : null);
     double latency = TURRET_BASE_LATENCY_SECONDS.getAsDouble();
 
     Translation2d robotTranslateExit =
@@ -78,33 +95,36 @@ public final class TurretCommands {
 
     Translation2d aimVector = baseVectorFromExit;
     double dist = baseVectorFromExit.getNorm();
-    double tof = estimateShotTimeSeconds(dist);
+    double tof = shotTimeEstimator.applyAsDouble(dist);
     if (!Double.isFinite(tof) || tof <= 1e-4) {
       return target;
     }
-
-    double kV = TURRET_KV.getAsDouble();
-    double kS = TURRET_KS.getAsDouble();
+    double tEff = tof + latency;
+    double tofToleranceFraction =
+        Math.max(1e-4, Math.max(0.0, AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.get()));
 
     for (int i = 0; i < 8; i++) {
-      Translation2d lead = robotVelocityExit.times(tof * (kV + dist * kS));
+      Translation2d lead = robotVelocityExit.times(tof);
       aimVector = baseVectorFromExit.minus(lead);
 
       double newDist = aimVector.getNorm();
-      double newTOF = estimateShotTimeSeconds(newDist);
+      double newTOF = shotTimeEstimator.applyAsDouble(newDist);
       if (!Double.isFinite(newTOF) || newTOF <= 1e-4) break;
 
-      double check = Math.abs(newTOF - tof) / Math.max(tof, 1e-6);
+      double oldTEff = tEff;
+      double newTEff = newTOF + latency;
+      double check = Math.abs(newTEff - oldTEff) / Math.max(oldTEff, 1e-6);
       dist = newDist;
       tof = newTOF;
+      tEff = newTEff;
       angle = new Rotation2d(aimVector.getX(), aimVector.getY());
 
-      if (check <= AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.getAsDouble()) {
+      if (check <= tofToleranceFraction) {
         break;
       }
     }
 
-    Translation2d aimPoint = currentPose.getTranslation().plus(aimVector);
+    Translation2d aimPoint = currentTranslation.plus(robotTranslateExit).plus(aimVector);
     if (GlobalConstants.isDebugMode()) {
       Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
       Logger.recordOutput("Turret/AutoAim/Distance", dist);
@@ -115,6 +135,18 @@ public final class TurretCommands {
       Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     }
     return aimPoint;
+  }
+
+  private static Translation2d sanitizeVector(Translation2d vector) {
+    if (vector == null) {
+      return new Translation2d();
+    }
+    double x = vector.getX();
+    double y = vector.getY();
+    if (!Double.isFinite(x) || !Double.isFinite(y)) {
+      return new Translation2d();
+    }
+    return vector;
   }
 
   public static ShooterCommands.ShotTimeEstimate estimateShotTimeDetailed(

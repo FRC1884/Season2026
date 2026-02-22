@@ -10,39 +10,57 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
   private static final double shooterDistanceCenter = 0.02; // TODO: Tune
-  private static final double WHEEL_RADIUS_INCHES = 4;
-  private static final double THETA_DEGREES = 0;
+  private static final double LEGACY_PIVOT_DEGREES_SLOPE = 11.875;
+  private static final double LEGACY_PIVOT_DEGREES_OFFSET = 18.0;
+  private static final double LEGACY_PIVOT_DEGREES_MIN = 18.0;
+  private static final double LEGACY_PIVOT_DEGREES_MAX = 37.0;
+
+  private static final double TABLE_MIN_DISTANCE_METERS = 2.2;
+  private static final double TABLE_MAX_DISTANCE_METERS = 5.9;
+  private static final double TABLE_STEP_METERS = 0.1;
+
+  private static final double PIVOT_OUTPUT_MIN = 0.0;
+  private static final double PIVOT_OUTPUT_MAX = 1.6;
+  private static final double PIVOT_ANGLE_FROM_VERTICAL_DOWN_MIN_DEG = 30.0;
+  private static final double PIVOT_ANGLE_FROM_VERTICAL_DOWN_MAX_DEG = 63.0;
+  private static final double PIVOT_OUTPUT_SEARCH_STEP = 0.002;
+
+  private static final double SOLVER_MIN_RPM = 0.0;
+  private static final double SOLVER_MAX_RPM = 5500.0;
+  private static final double BALANCED_WEIGHT_RPM = 0.5;
+  private static final double BALANCED_WEIGHT_TOF = 0.5;
+  private static final double TOF_NORMALIZATION_SECONDS = 2.0;
 
   public enum Vals {
     RPM,
     ANGLE
   }
 
-  private static final NavigableMap<Double, Double> angleByDistanceDeg = buildAngleTable();
-  private static final NavigableMap<Double, Double> rpmByDistance = buildRpmTable();
+  private record LookupPoint(double pivotOutput, double rpm) {}
+
+  private static final NavigableMap<Double, Double> legacyAngleByDistance = buildLegacyAngleTable();
+  private static final NavigableMap<Double, Double> legacyRpmByDistance = buildLegacyRpmTable();
+  private static final NavigableMap<Double, LookupPoint> ballisticLookupByDistance =
+      buildBallisticLookupTable();
+  private static final NavigableMap<Double, Double> ballisticAngleByDistance =
+      buildBallisticAngleTable();
+  private static final NavigableMap<Double, Double> ballisticRpmByDistance =
+      buildBallisticRpmTable();
 
   public static Map<Vals, Double> calc(
       Pose2d robot, Translation2d target, Superstructure.SuperState state) {
-    // Distance Vector Calculation
-    Translation2d distance2d;
-
     // Distances
     double distanceX;
     double distanceY;
     double distance;
     double yawAngle;
-
-    // Angle/RPM
-    double value;
-
-    distance2d =
-        new Translation2d(
-            Math.abs(robot.getX() - target.getX()), Math.abs(robot.getY() - target.getY()));
 
     // Calculate the Straight line distance in (m) to the hub
     distanceX = robot.getX() - target.getX();
@@ -58,16 +76,22 @@ public class ShooterCommands {
   }
 
   public static double getShooterRpm(double distanceMeters) {
-    return lookupInterpolated(rpmByDistance, distanceMeters);
+    return lookupInterpolated(getActiveRpmTable(), distanceMeters);
   }
 
   public static double getPivotAngleDegrees(double distanceMeters) {
-    double pivotAngleDeg = (11.875 * lookupInterpolated(angleByDistanceDeg, distanceMeters)) + 18;
-    return (pivotAngleDeg > 37 || pivotAngleDeg < 18) ? 0 : pivotAngleDeg;
+    double pivotOutput = getPivotAngleOutput(distanceMeters);
+    if (ShooterConstants.SHOT_LOOKUP_MODE == ShooterConstants.ShotLookupMode.BALLISTIC_MODEL) {
+      return pivotOutputToVerticalDownDegrees(pivotOutput);
+    }
+    double pivotAngleDeg = (LEGACY_PIVOT_DEGREES_SLOPE * pivotOutput) + LEGACY_PIVOT_DEGREES_OFFSET;
+    return (pivotAngleDeg > LEGACY_PIVOT_DEGREES_MAX || pivotAngleDeg < LEGACY_PIVOT_DEGREES_MIN)
+        ? 0
+        : pivotAngleDeg;
   }
 
   public static double getPivotAngleOutput(double distanceMeters) {
-    return lookupInterpolated(angleByDistanceDeg, distanceMeters);
+    return lookupInterpolated(getActiveAngleTable(), distanceMeters);
   }
 
   public static double getPivotAngleRad(double distanceMeters) {
@@ -78,7 +102,7 @@ public class ShooterCommands {
     Map<Vals, Double> data = new HashMap<>();
     if (state == Superstructure.SuperState.FERRYING) {
       data.put(Vals.RPM, calcFerrying(distanceMeters));
-      data.put(Vals.ANGLE, 1.3);
+      data.put(Vals.ANGLE, ShooterPivotConstants.FERRYING_ANGLE_RAD);
     } else {
       data.put(Vals.RPM, getShooterRpm(distanceMeters));
       data.put(Vals.ANGLE, getPivotAngleOutput(distanceMeters));
@@ -86,15 +110,10 @@ public class ShooterCommands {
     return data;
   }
 
-  public static double linearToAngular(double linearVelocity, double radius) {
-    double angularVelocity = (linearVelocity / radius) / 2;
-    return angularVelocity * (60 / (2 * Math.PI));
-  }
-
   public static double calcFerrying(double distance) {
-    double linearVelocity =
-        Math.sqrt((distance * GRAVITY) / Math.sin(Math.toRadians(THETA_DEGREES)));
-    return linearToAngular(linearVelocity, WHEEL_RADIUS_INCHES);
+    return Math.max(
+        Math.sqrt((distance / ShooterConstants.MAX_DISTANCE)) * ShooterConstants.TARGET_RPM,
+        ShooterConstants.TARGET_RPM);
   }
 
   private static double lookupInterpolated(
@@ -117,9 +136,8 @@ public class ShooterCommands {
     return floor.getValue() + (ceil.getValue() - floor.getValue()) * t;
   }
 
-  private static NavigableMap<Double, Double> buildAngleTable() {
+  private static NavigableMap<Double, Double> buildLegacyAngleTable() {
     NavigableMap<Double, Double> table = new TreeMap<>();
-    // Distance meters -> pivot angle setpoint.
     table.put(2.2, 0.1);
     table.put(2.3, 0.1);
     table.put(2.4, 0.18);
@@ -161,9 +179,8 @@ public class ShooterCommands {
     return table;
   }
 
-  private static NavigableMap<Double, Double> buildRpmTable() {
+  private static NavigableMap<Double, Double> buildLegacyRpmTable() {
     NavigableMap<Double, Double> table = new TreeMap<>();
-    // Distance meters -> shooter RPM.
     table.put(2.2, 2800.0);
     table.put(2.3, 2800.0);
     table.put(2.4, 2830.0);
@@ -203,6 +220,132 @@ public class ShooterCommands {
     table.put(5.8, 4080.0);
     table.put(5.9, 4140.0);
     return table;
+  }
+
+  private static NavigableMap<Double, Double> buildBallisticAngleTable() {
+    NavigableMap<Double, Double> table = new TreeMap<>();
+    for (var entry : ballisticLookupByDistance.entrySet()) {
+      table.put(entry.getKey(), entry.getValue().pivotOutput());
+    }
+    return table;
+  }
+
+  private static NavigableMap<Double, Double> buildBallisticRpmTable() {
+    NavigableMap<Double, Double> table = new TreeMap<>();
+    for (var entry : ballisticLookupByDistance.entrySet()) {
+      table.put(entry.getKey(), entry.getValue().rpm());
+    }
+    return table;
+  }
+
+  private static NavigableMap<Double, LookupPoint> buildBallisticLookupTable() {
+    NavigableMap<Double, LookupPoint> table = new TreeMap<>();
+
+    int steps =
+        (int)
+            Math.round((TABLE_MAX_DISTANCE_METERS - TABLE_MIN_DISTANCE_METERS) / TABLE_STEP_METERS);
+    for (int i = 0; i <= steps; i++) {
+      double distanceMeters = roundToTenth(TABLE_MIN_DISTANCE_METERS + (i * TABLE_STEP_METERS));
+      LookupPoint point = solveBalancedLookup(distanceMeters);
+      if (point == null) {
+        point =
+            table.isEmpty()
+                ? new LookupPoint(PIVOT_OUTPUT_MIN, SOLVER_MAX_RPM)
+                : table.lastEntry().getValue();
+      }
+      table.put(distanceMeters, point);
+    }
+    return table;
+  }
+
+  private static NavigableMap<Double, Double> getActiveAngleTable() {
+    return ShooterConstants.SHOT_LOOKUP_MODE == ShooterConstants.ShotLookupMode.BALLISTIC_MODEL
+        ? ballisticAngleByDistance
+        : legacyAngleByDistance;
+  }
+
+  private static NavigableMap<Double, Double> getActiveRpmTable() {
+    return ShooterConstants.SHOT_LOOKUP_MODE == ShooterConstants.ShotLookupMode.BALLISTIC_MODEL
+        ? ballisticRpmByDistance
+        : legacyRpmByDistance;
+  }
+
+  private static LookupPoint solveBalancedLookup(double distanceMeters) {
+    double bestScore = Double.POSITIVE_INFINITY;
+    LookupPoint bestPoint = null;
+
+    for (double output = PIVOT_OUTPUT_MIN;
+        output <= PIVOT_OUTPUT_MAX + 1e-9;
+        output += PIVOT_OUTPUT_SEARCH_STEP) {
+      double pivotDeg = pivotOutputToVerticalDownDegrees(output);
+      double launchElevationDeg = 90.0 - pivotDeg;
+      double launchElevationRad = Math.toRadians(launchElevationDeg);
+      double cos = Math.cos(launchElevationRad);
+      if (Math.abs(cos) < 1e-9) {
+        continue;
+      }
+
+      Double exitVelocityOpt = solveRequiredExitVelocity(distanceMeters, launchElevationRad);
+      if (exitVelocityOpt == null) {
+        continue;
+      }
+      double exitVelocity = exitVelocityOpt;
+      double rpm = velocityToRpm(exitVelocity);
+      if (!Double.isFinite(rpm) || rpm < SOLVER_MIN_RPM || rpm > SOLVER_MAX_RPM) {
+        continue;
+      }
+
+      double tof = distanceMeters / (exitVelocity * cos);
+      if (!Double.isFinite(tof) || tof <= 0.0) {
+        continue;
+      }
+
+      double score =
+          (BALANCED_WEIGHT_RPM * (rpm / SOLVER_MAX_RPM))
+              + (BALANCED_WEIGHT_TOF * (tof / TOF_NORMALIZATION_SECONDS));
+      if (score < bestScore) {
+        bestScore = score;
+        bestPoint = new LookupPoint(output, rpm);
+      }
+    }
+    return bestPoint;
+  }
+
+  private static Double solveRequiredExitVelocity(
+      double distanceMeters, double launchElevationRad) {
+    double deltaH = ShooterConstants.TARGET_HEIGHT_METERS - ShooterConstants.EXIT_HEIGHT_METERS;
+    double cos = Math.cos(launchElevationRad);
+    double tan = Math.tan(launchElevationRad);
+    double denominator = 2.0 * cos * cos * ((distanceMeters * tan) - deltaH);
+    if (denominator <= 1e-9) {
+      return null;
+    }
+    double vSquared = (GRAVITY * distanceMeters * distanceMeters) / denominator;
+    if (vSquared <= 0.0 || !Double.isFinite(vSquared)) {
+      return null;
+    }
+    double exitVelocity = Math.sqrt(vSquared);
+    return Double.isFinite(exitVelocity) ? exitVelocity : null;
+  }
+
+  private static double velocityToRpm(double exitVelocityMetersPerSec) {
+    return (exitVelocityMetersPerSec * 60.0)
+        / (2.0
+            * Math.PI
+            * ShooterConstants.FLYWHEEL_RADIUS_METERS
+            * ShooterConstants.FLYWHEEL_GEAR_RATIO
+            * ShooterConstants.SLIP_FACTOR.get());
+  }
+
+  private static double pivotOutputToVerticalDownDegrees(double pivotOutput) {
+    double clampedOutput = Math.max(PIVOT_OUTPUT_MIN, Math.min(PIVOT_OUTPUT_MAX, pivotOutput));
+    double ratio = (clampedOutput - PIVOT_OUTPUT_MIN) / (PIVOT_OUTPUT_MAX - PIVOT_OUTPUT_MIN);
+    return PIVOT_ANGLE_FROM_VERTICAL_DOWN_MIN_DEG
+        + ratio * (PIVOT_ANGLE_FROM_VERTICAL_DOWN_MAX_DEG - PIVOT_ANGLE_FROM_VERTICAL_DOWN_MIN_DEG);
+  }
+
+  private static double roundToTenth(double value) {
+    return Math.round(value * 10.0) / 10.0;
   }
 
   public record ShotTimeEstimate(
