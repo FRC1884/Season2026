@@ -60,6 +60,10 @@ public final class AlignConstants {
       new LoggedTunableNumber("Turret/AutoAim/BaseLatencySeconds", 0.2);
   public static final LoggedTunableNumber TURRET_MAX_MOTION_SAMPLE_AGE_SECONDS =
       new LoggedTunableNumber("Turret/AutoAim/MaxMotionSampleAgeSeconds", 0.15);
+  public static final LoggedTunableNumber TURRET_MAX_MOTION_SPEED_MPS =
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSpeedMps", 6.0);
+  public static final LoggedTunableNumber TURRET_MAX_MOTION_ACCEL_MPS2 =
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionAccelMps2", 18.0);
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
       new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 7.7);
