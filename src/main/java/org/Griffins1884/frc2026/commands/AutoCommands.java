@@ -13,21 +13,16 @@ public class AutoCommands {
     NamedCommands.registerCommand(
         "OverSecondBump",
         Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterSecondBumpCommand(drive)));
+            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING)));
+
+    NamedCommands.registerCommand(
+            "AlignAfterBump", DriveCommands.alignToAfterSecondBumpCommand(drive));
 
     NamedCommands.registerCommand(
         "FirstOverBump",
         Commands.sequence(
             superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
             DriveCommands.alignToAfterBumpStartCommand(drive)));
-
-    NamedCommands.registerCommand(
-        "OverBumpAndShoot",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterSecondBumpCommand(drive),
-            superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
 
     NamedCommands.registerCommand(
         "BumpToNeutral",
