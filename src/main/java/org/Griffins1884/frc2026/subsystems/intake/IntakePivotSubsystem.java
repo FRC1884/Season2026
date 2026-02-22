@@ -18,8 +18,8 @@ public class IntakePivotSubsystem extends SubsystemBase {
   @RequiredArgsConstructor
   @Getter
   public enum IntakePivotGoal implements GenericPositionArmSystem.PivotGoal {
-    IDLING(() -> IntakePivotConstants.IDLE_ANGLE_RAD),
-    PICKUP(() -> IntakePivotConstants.PICKUP_RAD),
+    IDLING(IntakePivotConstants.IDLE_ANGLE_RAD),
+    PICKUP(IntakePivotConstants.PICKUP_RAD),
     TESTING(new LoggedTunableNumber("IntakePivot/Test", 0.0));
 
     private final DoubleSupplier angleSupplier;
@@ -112,25 +112,16 @@ public class IntakePivotSubsystem extends SubsystemBase {
                       IntakePivotConstants.HARDSTOP_SPIKE_DEBOUNCE_SEC.get() / LOOP_PERIOD_SEC));
       if (hardStopSpikeSamples >= requiredSamples) {
         hardStopLatched = true;
-        if (activeGoal == IntakePivotGoal.IDLING) {
-          zeroPositionInternal();
-          stopOpenLoopInternal();
-          clearGoalOverrideInternal();
-          hardStopAction = "STOW_ZERO";
-        } else {
-          setOpenLoopInternal(0.0);
-          hardStopAction = "PICKUP_STOP";
-        }
+        zeroPositionInternal();
+        stopOpenLoopInternal();
+        clearGoalOverrideInternal();
+        hardStopAction = "STOW_ZERO";
       }
     }
 
     if (hardStopLatched) {
-      if (activeGoal == IntakePivotGoal.PICKUP) {
-        setOpenLoopInternal(0.0);
-      } else {
-        stopOpenLoopInternal();
-        clearGoalOverrideInternal();
-      }
+      stopOpenLoopInternal();
+      clearGoalOverrideInternal();
     }
     logHardStop(activeGoal, true, seekPosition, spikeDetected);
   }
@@ -169,13 +160,11 @@ public class IntakePivotSubsystem extends SubsystemBase {
   }
 
   private static boolean isHardStopGoal(IntakePivotGoal activeGoal) {
-    return activeGoal == IntakePivotGoal.IDLING || activeGoal == IntakePivotGoal.PICKUP;
+    return activeGoal == IntakePivotGoal.IDLING;
   }
 
   private static double getSeekPosition(IntakePivotGoal activeGoal) {
-    return activeGoal == IntakePivotGoal.IDLING
-        ? IntakePivotConstants.HARDSTOP_STOW_SEEK_POSITION.get()
-        : IntakePivotConstants.HARDSTOP_PICKUP_SEEK_POSITION.get();
+    return IntakePivotConstants.HARDSTOP_STOW_SEEK_POSITION.get();
   }
 
   private boolean isHardStopSpike(IntakePivotGoal activeGoal) {
@@ -184,10 +173,7 @@ public class IntakePivotSubsystem extends SubsystemBase {
             Math.abs(primary.getSupplyCurrentAmps()), Math.abs(secondary.getSupplyCurrentAmps()));
     double maxVelocityRadPerSec =
         Math.max(Math.abs(primary.getVelocity()), Math.abs(secondary.getVelocity()));
-    double currentThresholdAmps =
-        activeGoal == IntakePivotGoal.IDLING
-            ? IntakePivotConstants.HARDSTOP_STOW_CURRENT_AMPS.get()
-            : IntakePivotConstants.HARDSTOP_PICKUP_CURRENT_AMPS.get();
+    double currentThresholdAmps = IntakePivotConstants.HARDSTOP_STOW_CURRENT_AMPS.get();
 
     Logger.recordOutput("IntakePivot/HardStop/CurrentAmps", maxCurrentAmps);
     Logger.recordOutput("IntakePivot/HardStop/VelocityRadPerSec", maxVelocityRadPerSec);
