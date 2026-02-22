@@ -440,17 +440,7 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyFerrying() {
-    Translation2d target;
-    if (drive != null) {
-      if (DriverStation.getAlliance().isPresent()
-          && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
-        target = new Translation2d(2.3, 4.05);
-      } else {
-        target = new Translation2d(14, 4.05);
-      }
-    } else {
-      target = new Translation2d(0, 0);
-    }
+    Translation2d target = getFerryingTarget();
     setIntakeGoal(IntakeGoal.FORWARD);
     setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -582,6 +572,21 @@ public class Superstructure extends SubsystemBase {
 
     rollers.shooter.setGoal(ShooterGoal.IDLING);
     rollers.shooter.setGoalVelocity((double) data.get(ShooterCommands.Vals.RPM));
+  }
+
+  public Translation2d getFerryingTarget(){
+    boolean isBlue = DriverStation.getAlliance().isEmpty() || DriverStation.getAlliance().get() == DriverStation.Alliance.Blue;
+    boolean yChange = false;
+    if (drive != null){
+      yChange = drive.getPose().getY()> 4.0;
+    }
+    Translation2d target;
+    if (isBlue) {
+      target = new Translation2d(3, yChange ? 7.0 : 1.0);
+    } else {
+      target = new Translation2d(13.5, yChange ? 7.0 : 1.0);
+    }
+    return target;
   }
 
   private boolean isBallSenseAvailable() {

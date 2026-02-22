@@ -10,13 +10,13 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
+import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
   private static final double shooterDistanceCenter = 0.02; // TODO: Tune
-  private static final double WHEEL_RADIUS_INCHES = 4;
-  private static final double THETA_DEGREES = 0;
 
   public enum Vals {
     RPM,
@@ -78,7 +78,7 @@ public class ShooterCommands {
     Map<Vals, Double> data = new HashMap<>();
     if (state == Superstructure.SuperState.FERRYING) {
       data.put(Vals.RPM, calcFerrying(distanceMeters));
-      data.put(Vals.ANGLE, 1.3);
+      data.put(Vals.ANGLE, ShooterPivotConstants.FERRYING_ANGLE_RAD);
     } else {
       data.put(Vals.RPM, getShooterRpm(distanceMeters));
       data.put(Vals.ANGLE, getPivotAngleOutput(distanceMeters));
@@ -86,15 +86,8 @@ public class ShooterCommands {
     return data;
   }
 
-  public static double linearToAngular(double linearVelocity, double radius) {
-    double angularVelocity = (linearVelocity / radius) / 2;
-    return angularVelocity * (60 / (2 * Math.PI));
-  }
-
   public static double calcFerrying(double distance) {
-    double linearVelocity =
-        Math.sqrt((distance * GRAVITY) / Math.sin(Math.toRadians(THETA_DEGREES)));
-    return linearToAngular(linearVelocity, WHEEL_RADIUS_INCHES);
+    return Math.max(Math.sqrt((distance/ShooterConstants.MAX_DISTANCE)) * ShooterConstants.TARGET_RPM, ShooterConstants.TARGET_RPM);
   }
 
   private static double lookupInterpolated(

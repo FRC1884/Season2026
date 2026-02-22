@@ -13,7 +13,8 @@ public final class ShooterConstants {
   public static final boolean BRAKE_MODE = false;
   public static final double REDUCTION = 1.0; // TODO: set gear ratio
 
-  public static final double TARGET_RPM = 4500.0;
+  public static final double TARGET_RPM = 5000.0;
+  public static final double MAX_DISTANCE = 8.83;
 
   public static final GlobalConstants.Gains GAINS_LOW =
       new GlobalConstants.Gains("Shooter/GainsLow", 0.001, 0.01, 1, 1.4621, 0.016, 0.010901);
