@@ -574,11 +574,13 @@ public class Superstructure extends SubsystemBase {
     rollers.shooter.setGoalVelocity((double) data.get(ShooterCommands.Vals.RPM));
   }
 
-  public Translation2d getFerryingTarget(){
-    boolean isBlue = DriverStation.getAlliance().isEmpty() || DriverStation.getAlliance().get() == DriverStation.Alliance.Blue;
+  public Translation2d getFerryingTarget() {
+    boolean isBlue =
+        DriverStation.getAlliance().isEmpty()
+            || DriverStation.getAlliance().get() == DriverStation.Alliance.Blue;
     boolean yChange = false;
-    if (drive != null){
-      yChange = drive.getPose().getY()> 4.0;
+    if (drive != null) {
+      yChange = drive.getPose().getY() > 4.0;
     }
     Translation2d target;
     if (isBlue) {

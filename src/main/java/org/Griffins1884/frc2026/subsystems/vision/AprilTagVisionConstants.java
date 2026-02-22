@@ -90,6 +90,40 @@ public final class AprilTagVisionConstants {
                 getPrimaryCameraType());
       };
 
+  public static final boolean MIDDLE_RIGHT_CAM_ENABLED = true;
+  public static final VisionIO.CameraConstants MIDDLE_RIGHT_CAM_CONSTANTS =
+      switch (ROBOT) {
+        case DEVBOT ->
+            new VisionIO.CameraConstants(
+                (IS_LIMELIGHT) ? "limelight-middle-right" : "middlerighttagcam",
+                new Transform3d(
+                    0.290868,
+                    0.288922,
+                    0.205,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
+                getPrimaryCameraType());
+        case COMPBOT ->
+            new VisionIO.CameraConstants(
+                (IS_LIMELIGHT) ? "limelight-middle-right" : "middlerighttagcam",
+                new Transform3d(
+                    -0.0083312,
+                    0.324028,
+                    0.490118,
+                    new Rotation3d(
+                        degreesToRadians(180), degreesToRadians(0), degreesToRadians(-90))),
+                getPrimaryCameraType());
+        case SIMBOT, CRESCENDO ->
+            new VisionIO.CameraConstants(
+                (IS_LIMELIGHT) ? "limelight-middle-right" : "middlerighttagcam",
+                new Transform3d(
+                    0.3006,
+                    -0.3056,
+                    0.245,
+                    new Rotation3d(0, degreesToRadians(-5), degreesToRadians(20))),
+                getPrimaryCameraType());
+      };
+
   public static final boolean BACK_CAM_ENABLED = false;
   public static final VisionIO.CameraConstants BACK_CAM_CONSTANTS =
       switch (ROBOT) {
