@@ -7,25 +7,25 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftOverBump"
+            "pathName": "LeftStraightOverBump"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "FirstOverBump"
+            "name": "LeftStraightBumpAlign"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "Collect"
+            "pathName": "Back.0"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "Collect"
+            "name": "Intake"
           }
         }
       ]

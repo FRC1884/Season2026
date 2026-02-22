@@ -86,6 +86,13 @@ public final class AlignConstants {
   public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG =
       new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 320);
 
+  public static final LoggedTunableNumber AFTER_BUMP_RIGHT_TO_NEUTRAL_START_X_METERS =
+          new LoggedTunableNumber("Align/AfterBumpRightToNeutral/XMeters", 6.4);
+  public static final LoggedTunableNumber AFTER_BUMP_RIGHT_TO_NEUTRAL_START_Y_METERS =
+          new LoggedTunableNumber("Align/AfterBumpRightToNeutral/YMeters", 2.4);
+  public static final LoggedTunableNumber AFTER_BUMP_RIGHT_TO_NEUTRAL_START_HEADING_DEG =
+          new LoggedTunableNumber("Align/AfterBumpRightToNeutral/HeadingDeg", 140);
+
   public static AlignGains getAlignGains() {
     return new AlignGains(
         ALIGN_TRANSLATION_GAINS,
@@ -100,6 +107,12 @@ public final class AlignConstants {
     return new Pose2d(
         new Translation2d(AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
         Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get()));
+  }
+
+  public static Pose2d getAfterBumpRightToNeutralStartPose() {
+    return new Pose2d(
+            new Translation2d(AFTER_BUMP_RIGHT_TO_NEUTRAL_START_X_METERS.get(), AFTER_BUMP_RIGHT_TO_NEUTRAL_START_Y_METERS.get()),
+            Rotation2d.fromDegrees(AFTER_BUMP_RIGHT_TO_NEUTRAL_START_HEADING_DEG.get()));
   }
 
   public static Pose2d getAfterOverBumpStartPose() {
