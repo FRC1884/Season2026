@@ -33,7 +33,7 @@ public final class IntakePivotConstants {
   public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains("IntakePivot/Gains", 450.0, 55.0, 60.0, 0.0, 0., 0.0, 3);
   public static final double POSITION_TOLERANCE = 0.0; // TODO: tune
-  public static final boolean SOFT_LIMITS_ENABLED = true;
+  public static final boolean SOFT_LIMITS_ENABLED = false;
   public static final double SOFT_LIMIT_MIN = REVERSE_LIMIT;
   public static final double SOFT_LIMIT_MAX = FORWARD_LIMIT;
   public static final double MAX_VOLTAGE = 12.0;
@@ -41,15 +41,15 @@ public final class IntakePivotConstants {
   public static final LoggedTunableNumber IDLE_ANGLE_RAD =
       new LoggedTunableNumber("IntakePivot/IDLE_RAD", -2); // TODO: set idle angle
   public static final LoggedTunableNumber PICKUP_RAD =
-      new LoggedTunableNumber("IntakePivot/PICKUP_RAD", -7); // TODO: set idle angle
+      new LoggedTunableNumber("IntakePivot/PICKUP_RAD", -11); // TODO: set idle angle
   public static final LoggedTunableNumber HARDSTOP_STOW_SEEK_POSITION =
-      new LoggedTunableNumber("IntakePivot/HardStop/StowSeekPosition", 10.0);
+      new LoggedTunableNumber("IntakePivot/HardStop/StowSeekPosition", 100.0);
   public static final LoggedTunableNumber HARDSTOP_STOW_CURRENT_AMPS =
-      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 2.0);
+      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 1.0);
   public static final LoggedTunableNumber HARDSTOP_MAX_VELOCITY_RAD_PER_SEC =
       new LoggedTunableNumber("IntakePivot/HardStop/MaxVelocityRadPerSec", 0.35);
   public static final LoggedTunableNumber HARDSTOP_SPIKE_DEBOUNCE_SEC =
-      new LoggedTunableNumber("IntakePivot/HardStop/SpikeDebounceSec", 0.08);
+      new LoggedTunableNumber("IntakePivot/HardStop/SpikeDebounceSec", 0.02);
   public static final int SIM_MOTOR_COUNT = 1;
   public static final double SIM_START_ANGLE_RAD = 0.0;
 

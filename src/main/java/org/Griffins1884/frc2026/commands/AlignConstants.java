@@ -56,7 +56,7 @@ public final class AlignConstants {
   public static final LoggedTunableNumber TURRET_KS =
       new LoggedTunableNumber("Turret/AutoAim/kS", 0);
   public static final LoggedTunableNumber TURRET_BASE_LATENCY_SECONDS =
-          new LoggedTunableNumber("Turret/AutoAim/BaseLatencySeconds", 0.2);
+      new LoggedTunableNumber("Turret/AutoAim/BaseLatencySeconds", 0.2);
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
       new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 7.7);

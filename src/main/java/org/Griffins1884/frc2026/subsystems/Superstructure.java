@@ -413,66 +413,42 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
-    if (rollers.shooter != null
-        && turret != null
-        && turret.isAtGoal()
-        && rollers.shooter.isAtGoal()) {
-      if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
-        final Translation2d oldTarget = target;
-        target =
-            TurretCommands.shootingWhileMoving(
-                drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
-      }
-      setIntakeGoal(IntakeGoal.IDLING);
-      setIndexerGoal(IndexerGoal.FORWARD);
-      setShooterGoal(ShooterGoal.FORWARD);
-      setIntakePivotGoal(IntakePivotGoal.IDLING);
-      aimTurretAt(target);
-      aimShooterPivotAt(target);
-
-      if (autoStopOnEmpty && SuperstructureConstants.AUTO_STOP_ON_EMPTY && isBallSenseAvailable()) {
-        if (!isBallPresent()) {
-          requestState(SuperState.IDLING, false);
-        }
-      }
-    } else {
-      setIntakeGoal(IntakeGoal.IDLING);
-      setIndexerGoal(IndexerGoal.IDLING);
-      setShooterGoal(ShooterGoal.FORWARD);
-      setIntakePivotGoal(IntakePivotGoal.IDLING);
-      aimTurretAt(target);
-      aimShooterPivotAt(target);
+    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
+      final Translation2d oldTarget = target;
+      target =
+          TurretCommands.shootingWhileMoving(
+              drive::getPose,
+              () -> oldTarget,
+              drive::getFieldVelocity,
+              drive::getFieldAcceleration);
     }
+    setIntakeGoal(IntakeGoal.IDLING);
+    setIndexerGoal(IndexerGoal.FORWARD);
+    setShooterGoal(ShooterGoal.FORWARD);
+    setIntakePivotGoal(IntakePivotGoal.IDLING);
+    aimTurretAt(target);
+    aimShooterPivotAt(target);
   }
 
   private void applyShootingAndIntaking(Translation2d target) {
-    if (rollers.shooter != null && rollers.shooter.isAtGoal()) {
-      setIntakeGoal(IntakeGoal.FORWARD);
-      setIndexerGoal(IndexerGoal.FORWARD);
-      setShooterGoal(ShooterGoal.FORWARD);
-      setIntakePivotGoal(IntakePivotGoal.PICKUP);
-      aimTurretAt(target);
-      aimShooterPivotAt(target);
-    } else {
-      setIntakeGoal(IntakeGoal.FORWARD);
-      setIndexerGoal(IndexerGoal.IDLING);
-      setShooterGoal(ShooterGoal.FORWARD);
-      setIntakePivotGoal(IntakePivotGoal.PICKUP);
-      aimTurretAt(target);
-      aimShooterPivotAt(target);
-    }
+    setIntakeGoal(IntakeGoal.FORWARD);
+    setIndexerGoal(IndexerGoal.FORWARD);
+    setShooterGoal(ShooterGoal.FORWARD);
+    setIntakePivotGoal(IntakePivotGoal.PICKUP);
+    aimTurretAt(target);
+    aimShooterPivotAt(target);
   }
 
   private void applyFerrying() {
     Translation2d target;
-    if (drive!=null){
-      if (DriverStation.getAlliance().isPresent() && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue){
+    if (drive != null) {
+      if (DriverStation.getAlliance().isPresent()
+          && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue) {
         target = new Translation2d(2.3, 4.05);
       } else {
         target = new Translation2d(14, 4.05);
       }
-    }
-    else{
+    } else {
       target = new Translation2d(0, 0);
     }
     setIntakeGoal(IntakeGoal.FORWARD);

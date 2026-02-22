@@ -40,8 +40,8 @@ public final class TurretConstants {
 
   public static final double MAX_VOLTAGE = 12.0;
 
-  public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 10.0);
-  public static final LoggedTunableNumber KI = new LoggedTunableNumber("Turret/PID/kI", 4.0);
+  public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 14.0);
+  public static final LoggedTunableNumber KI = new LoggedTunableNumber("Turret/PID/kI", 7.0);
   public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 1.5);
 
   // Offset from robot center to turret mount (X forward, Y left).

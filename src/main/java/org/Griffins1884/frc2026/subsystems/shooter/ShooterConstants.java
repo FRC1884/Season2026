@@ -23,13 +23,13 @@ public final class ShooterConstants {
       new LoggedTunableNumber("Shooter/GainsSwitchRpm", 3000.0);
   public static final LoggedTunableNumber GAINS_SWITCH_HYSTERESIS_RPM =
       new LoggedTunableNumber("Shooter/GainsSwitchHysteresisRpm", 100.0);
-  public static final double VELOCITY_TOLERANCE = 50; // TODO: tune for shooter
+  public static final double VELOCITY_TOLERANCE = 100; // TODO: tune for shooter
   public static final double MAX_VOLTAGE = 12.0; // TODO: tune for shooter
 
   public static final double FLYWHEEL_RADIUS_METERS = 0.05;
   public static final double FLYWHEEL_GEAR_RATIO = 1.0;
   public static final LoggedTunableNumber SLIP_FACTOR =
-      new LoggedTunableNumber("Shooter/SlipFactor", 1.0); // TODO: tune for real exit speed
+      new LoggedTunableNumber("Shooter/SlipFactor", 0.64); // TODO: tune for real exit speed
   public static final double EXIT_HEIGHT_METERS = 0.587;
   public static final double TARGET_HEIGHT_METERS = GlobalConstants.FieldConstants.Hub.innerHeight;
 }

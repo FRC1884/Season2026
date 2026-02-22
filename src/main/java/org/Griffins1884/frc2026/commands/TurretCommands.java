@@ -7,7 +7,6 @@ import static org.ironmaple.simulation.gamepieces.GamePieceProjectile.GRAVITY;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.Optional;
@@ -69,11 +68,13 @@ public final class TurretCommands {
 
     Translation2d fieldVelocity = fieldVelocitySupplier.get();
     Translation2d fieldAcceleration = fieldAccelerationSupplier.get();
-    double latency  = TURRET_BASE_LATENCY_SECONDS.getAsDouble();
+    double latency = TURRET_BASE_LATENCY_SECONDS.getAsDouble();
 
-    Translation2d robotTranslateExit = fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
+    Translation2d robotTranslateExit =
+        fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
+    Translation2d robotFuturePose = currentTranslation.plus(robotTranslateExit);
     Translation2d robotVelocityExit = fieldVelocity.plus(fieldAcceleration.times(latency));
-    Translation2d baseVectorFromExit = target.minus(currentTranslation.plus(robotTranslateExit));
+    Translation2d baseVectorFromExit = target.minus(robotFuturePose);
 
     Translation2d aimVector = baseVectorFromExit;
     double dist = baseVectorFromExit.getNorm();
@@ -86,21 +87,17 @@ public final class TurretCommands {
     double kS = TURRET_KS.getAsDouble();
 
     for (int i = 0; i < 8; i++) {
-      Translation2d lead = robotVelocityExit.times(tof);
+      Translation2d lead = robotVelocityExit.times(tof * (kV + dist * kS));
       aimVector = baseVectorFromExit.minus(lead);
 
       double newDist = aimVector.getNorm();
       double newTOF = estimateShotTimeSeconds(newDist);
       if (!Double.isFinite(newTOF) || newTOF <= 1e-4) break;
 
-      double oldTEff = tEff;
-      double newTEff = newTOF + TURRET_BASE_LATENCY_SEC.getAsDouble();
-
-      double check = Math.abs(newTEff - oldTEff) / Math.max(oldTEff, 1e-6);
+      double check = Math.abs(newTOF - tof) / Math.max(tof, 1e-6);
       dist = newDist;
       tof = newTOF;
       angle = new Rotation2d(aimVector.getX(), aimVector.getY());
-      tof = newTOF;
 
       if (check <= AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.getAsDouble()) {
         break;
@@ -111,7 +108,10 @@ public final class TurretCommands {
     if (GlobalConstants.isDebugMode()) {
       Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
       Logger.recordOutput("Turret/AutoAim/Distance", dist);
-      Logger.recordOutput("Turret/AutoAim/FutureTarget", aimPoint);
+      Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
+      Logger.recordOutput(
+          "Turret/AutoAim/FutureTarget",
+          new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
       Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     }
     return aimPoint;

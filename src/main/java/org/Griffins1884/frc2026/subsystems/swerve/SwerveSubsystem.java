@@ -310,7 +310,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Pose2d pose = getPose();
     ChassisSpeeds speeds = getRobotRelativeSpeeds();
 
-    Translation2d currentVelocity = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond).rotateBy(pose.getRotation());
+    Translation2d currentVelocity =
+        new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+            .rotateBy(pose.getRotation());
 
     if (!Double.isFinite(lastFieldVelTimestamp)) {
       lastFieldVelTimestamp = now;
@@ -319,11 +321,11 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     } else {
       double dt = now - lastFieldVelTimestamp;
       if (dt > 1e-4 && dt < 0.25) {
-        Translation2d acceleration = currentVelocity
-                .minus(lastFieldVelocity)
-                .times(1 / dt);
+        Translation2d acceleration = currentVelocity.minus(lastFieldVelocity).times(1 / dt);
 
-        fieldAcceleration = new Translation2d(axFilter.calculate(acceleration.getX()), ayFilter.calculate(acceleration.getY()));
+        fieldAcceleration =
+            new Translation2d(
+                axFilter.calculate(acceleration.getX()), ayFilter.calculate(acceleration.getY()));
       } else {
         fieldAcceleration = new Translation2d();
       }
@@ -336,7 +338,6 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/FieldAcceleration", fieldAcceleration);
     Logger.recordOutput("Swerve/FieldVelocityMps", currentVelocity.getNorm());
     Logger.recordOutput("Swerve/FieldAccelerationMps2", fieldAcceleration.getNorm());
-
 
     if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
         && !krakenVelocityMode) {

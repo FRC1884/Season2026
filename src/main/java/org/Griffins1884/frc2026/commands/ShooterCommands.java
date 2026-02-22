@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.function.DoubleSupplier;
-
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 
@@ -27,7 +26,8 @@ public class ShooterCommands {
   private static final NavigableMap<Double, Double> angleByDistanceDeg = buildAngleTable();
   private static final NavigableMap<Double, Double> rpmByDistance = buildRpmTable();
 
-  public static Map<Vals, Double> calc(Pose2d robot, Translation2d target, Superstructure.SuperState state) {
+  public static Map<Vals, Double> calc(
+      Pose2d robot, Translation2d target, Superstructure.SuperState state) {
     // Distance Vector Calculation
     Translation2d distance2d;
 
@@ -76,23 +76,24 @@ public class ShooterCommands {
 
   public static Map<Vals, Double> dataPack(double distanceMeters, Superstructure.SuperState state) {
     Map<Vals, Double> data = new HashMap<>();
-    if (state == Superstructure.SuperState.FERRYING){
+    if (state == Superstructure.SuperState.FERRYING) {
       data.put(Vals.RPM, calcFerrying(distanceMeters));
-    }
-    else{
+      data.put(Vals.ANGLE, 1.3);
+    } else {
       data.put(Vals.RPM, getShooterRpm(distanceMeters));
       data.put(Vals.ANGLE, getPivotAngleOutput(distanceMeters));
     }
     return data;
   }
 
-  public static double linearToAngular(double linearVelocity, double radius){
-    double angularVelocity = (linearVelocity / radius)/2;
-    return angularVelocity * (60/(2*Math.PI));
+  public static double linearToAngular(double linearVelocity, double radius) {
+    double angularVelocity = (linearVelocity / radius) / 2;
+    return angularVelocity * (60 / (2 * Math.PI));
   }
 
   public static double calcFerrying(double distance) {
-    double linearVelocity = Math.sqrt((distance*GRAVITY)/Math.sin(Math.toRadians(THETA_DEGREES)));
+    double linearVelocity =
+        Math.sqrt((distance * GRAVITY) / Math.sin(Math.toRadians(THETA_DEGREES)));
     return linearToAngular(linearVelocity, WHEEL_RADIUS_INCHES);
   }
 
@@ -176,11 +177,11 @@ public class ShooterCommands {
     table.put(3.2, 3150.0);
     table.put(3.3, 3200.0);
     table.put(3.4, 3240.0);
-    table.put(3.5, 3250.0);
-    table.put(3.6, 3270.0);
-    table.put(3.7, 3290.0);
-    table.put(3.8, 3300.0);
-    table.put(3.9, 3310.0);
+    table.put(3.5, 3300.0);
+    table.put(3.6, 3320.0);
+    table.put(3.7, 3340.0);
+    table.put(3.8, 3340.0);
+    table.put(3.9, 3360.0);
     table.put(4.0, 3380.0);
     table.put(4.1, 3400.0);
     table.put(4.2, 3430.0);
