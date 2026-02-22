@@ -86,6 +86,8 @@ public final class TurretCommands {
     Translation2d fieldAcceleration =
         sanitizeVector(fieldAccelerationSupplier != null ? fieldAccelerationSupplier.get() : null);
     double latency = TURRET_BASE_LATENCY_SECONDS.getAsDouble();
+    double kV = TURRET_KV.getAsDouble();
+    double kS = TURRET_KS.getAsDouble();
 
     Translation2d robotTranslateExit =
         fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
@@ -104,7 +106,7 @@ public final class TurretCommands {
         Math.max(1e-4, Math.max(0.0, AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.get()));
 
     for (int i = 0; i < 8; i++) {
-      Translation2d lead = robotVelocityExit.times(tof);
+      Translation2d lead = robotVelocityExit.times(tof * (kV + (dist * kS)));
       aimVector = baseVectorFromExit.minus(lead);
 
       double newDist = aimVector.getNorm();
