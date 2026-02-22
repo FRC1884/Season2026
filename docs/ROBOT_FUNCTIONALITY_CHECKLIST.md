@@ -44,6 +44,34 @@ Pass criteria
 Pass criteria
 - [ ] Driver can place robot on target repeatedly without over-correction
 
+## 3A) Gyro Failover + Odometry Reset Hardening
+
+- [ ] Start enabled with both gyros healthy (`primaryConnected=true`, `secondaryConnected=true`, `usingSecondary=false`)
+- [ ] Induce primary gyro failure (disconnect/disable Pigeon2) and verify fallback engages within a few cycles
+- [ ] Confirm heading stays continuous during failover (no large yaw step)
+- [ ] Restore primary gyro and verify smooth hand-back from NavX to Pigeon2
+- [ ] Trigger driver reset (`zeroGyroAndOdometryToAllianceWall`) and verify vision is briefly suppressed after reset
+- [ ] Trigger autonomous/resetSimulationField reset path and verify same vision suppression behavior
+
+Pass criteria
+- [ ] No yaw jump large enough to break driver control or auto tracking during failover/switch-back
+- [ ] `Swerve/Gyro/usingSecondary` toggles correctly for failover and recovery
+- [ ] No immediate vision snap for ~0.35s after any odometry reset path
+
+## 3B) Shooting While Moving
+
+- [ ] Enable moving-shot mode and confirm `Superstructure/ShootingWhileMoving/Enabled=true`
+- [ ] At low speed, confirm `Superstructure/ShootingWhileMoving/MotionSampleValid=true` before shots are released
+- [ ] Run constant-speed strafe shots left and right and compare hit rate vs stationary baseline
+- [ ] Run forward/backward shots and confirm no obvious over-lead or under-lead pattern
+- [ ] Verify `Turret/ShootingWhileMoving/LatencySec`, `ShotTimeSec`, and `LeadOffsetMeters` are populated in logs
+- [ ] Force a stale/invalid motion sample (disable/enable or intentional pause) and verify fallback to normal (non-moving) targeting
+
+Pass criteria
+- [ ] Hit rate while moving is materially better than non-compensated baseline
+- [ ] No NaN/invalid telemetry in moving-shot channels
+- [ ] No shot release when moving-shot is enabled but motion sample is invalid
+
 ## 4) Autos
 
 - [ ] Run each priority auto at least 3 times

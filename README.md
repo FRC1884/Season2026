@@ -18,6 +18,11 @@
 | `docs/` | Supplemental notes, coordinate frames, tuning logs. |
 | `vendordeps/` | Vendor libraries pinned for 2026 (Phoenix 6, REVLib, etc.). |
 
+## Operational Checklists
+
+- Match/practice verification checklist: `docs/ROBOT_FUNCTIONALITY_CHECKLIST.md`
+- Includes a dedicated gyro failover + odometry-reset hardening validation block (Pigeon2 -> NavX fallback and vision suppression after resets)
+
 ## Getting Started
 
 1. **Tools** – Install WPILib 2026 beta, JDK 17, and AdvantageScope.

@@ -76,6 +76,8 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  * subsystems, commands, and button mappings) should be declared here.
  */
 public class RobotContainer {
+  private static final double ODOMETRY_RESET_VISION_SUPPRESS_SECONDS = 0.35;
+
   // Subsystems
   private final SwerveSubsystem drive;
   private SwerveDriveSimulation driveSimulation;
@@ -288,6 +290,10 @@ public class RobotContainer {
             };
       }
     } else vision = null;
+
+    if (drive != null) {
+      drive.setOdometryResetListener(this::handleOdometryReset);
+    }
 
     if (DRIVETRAIN_ENABLED && drive != null) {
       characterizationChooser.addOption(
@@ -534,12 +540,16 @@ public class RobotContainer {
       return;
     }
     drive.zeroGyroAndOdometryToAllianceWall(alliance.get());
-    if (vision != null) {
-      vision.resetPoseHistory();
-      vision.suppressVisionForSeconds(0.35);
-    }
     autoAllianceZeroed = true;
     Logger.recordOutput("Odometry/AutoAllianceZeroed", true);
+  }
+
+  private void handleOdometryReset() {
+    if (vision == null) {
+      return;
+    }
+    vision.resetPoseHistory();
+    vision.suppressVisionForSeconds(ODOMETRY_RESET_VISION_SUPPRESS_SECONDS);
   }
 
   public void displaySimFieldToAdvantageScope() {

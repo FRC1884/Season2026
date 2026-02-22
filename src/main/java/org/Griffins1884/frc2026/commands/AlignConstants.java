@@ -31,8 +31,9 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/TranslationToleranceMeters", 0.03);
   public static final LoggedTunableNumber ALIGN_ROTATION_TOLERANCE_DEG =
       new LoggedTunableNumber("Align/RotationToleranceDeg", 2.0);
+  // Keep legacy key spelling ("Toerance") for dashboard compatibility.
   public static final LoggedTunableNumber ALIGN_TOF_TOLERANCE_FRACTION =
-      new LoggedTunableNumber("Align/TofToeranceFraction");
+      new LoggedTunableNumber("Align/TofToeranceFraction", 0.01);
   public static final LoggedTunableNumber WHEEL_RADIUS_MAX_VELOCITY =
       new LoggedTunableNumber("Align/WheelRadiusMaxVelocity", 0.5);
   public static final LoggedTunableNumber WHEEL_RADIUS_RAMP_RATE =
@@ -57,6 +58,12 @@ public final class AlignConstants {
       new LoggedTunableNumber("Turret/AutoAim/kS", -0.005);
   public static final LoggedTunableNumber TURRET_BASE_LATENCY_SECONDS =
       new LoggedTunableNumber("Turret/AutoAim/BaseLatencySeconds", 0.2);
+  public static final LoggedTunableNumber TURRET_MAX_MOTION_SAMPLE_AGE_SECONDS =
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSampleAgeSeconds", 0.15);
+  public static final LoggedTunableNumber TURRET_MAX_MOTION_SPEED_MPS =
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSpeedMps", 6.0);
+  public static final LoggedTunableNumber TURRET_MAX_MOTION_ACCEL_MPS2 =
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionAccelMps2", 18.0);
 
   public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
       new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 7.7);
