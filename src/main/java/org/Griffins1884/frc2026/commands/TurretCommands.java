@@ -20,9 +20,6 @@ import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 
 public final class TurretCommands {
-  private static final int MAX_LEAD_ITERATIONS = 10;
-  private static final double MIN_VALID_TOF_SECONDS = 1e-4;
-
   private TurretCommands() {}
 
   public static Command turretToZero(TurretSubsystem turret) {
@@ -82,15 +79,13 @@ public final class TurretCommands {
       return new Translation2d();
     }
     Translation2d currentTranslation = currentPose.getTranslation();
-    Rotation2d angle = new Rotation2d();
+    Rotation2d angle = new Rotation2d(0);
 
     Translation2d fieldVelocity =
         sanitizeVector(fieldVelocitySupplier != null ? fieldVelocitySupplier.get() : null);
     Translation2d fieldAcceleration =
         sanitizeVector(fieldAccelerationSupplier != null ? fieldAccelerationSupplier.get() : null);
-    double latency = sanitizeNonNegative(TURRET_BASE_LATENCY_SECONDS.getAsDouble());
-    double tofToleranceFraction =
-        Math.max(MIN_VALID_TOF_SECONDS, sanitizeNonNegative(ALIGN_TOF_TOLERANCE_FRACTION.get()));
+    double latency = TURRET_BASE_LATENCY_SECONDS.getAsDouble();
 
     Translation2d robotTranslateExit =
         fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
@@ -101,27 +96,23 @@ public final class TurretCommands {
     Translation2d aimVector = baseVectorFromExit;
     double dist = baseVectorFromExit.getNorm();
     double tof = shotTimeEstimator.applyAsDouble(dist);
-    if (!Double.isFinite(tof) || tof <= MIN_VALID_TOF_SECONDS) {
-      Logger.recordOutput("Turret/ShootingWhileMoving/Fallback", true);
+    if (!Double.isFinite(tof) || tof <= 1e-4) {
       return target;
     }
     double tEff = tof + latency;
-    int iterationsUsed = 0;
+    double tofToleranceFraction =
+        Math.max(1e-4, Math.max(0.0, AlignConstants.ALIGN_TOF_TOLERANCE_FRACTION.get()));
 
-    for (int i = 0; i < MAX_LEAD_ITERATIONS; i++) {
-      iterationsUsed = i + 1;
+    for (int i = 0; i < 8; i++) {
       Translation2d lead = robotVelocityExit.times(tof);
       aimVector = baseVectorFromExit.minus(lead);
 
       double newDist = aimVector.getNorm();
       double newTOF = shotTimeEstimator.applyAsDouble(newDist);
-      if (!Double.isFinite(newTOF) || newTOF <= MIN_VALID_TOF_SECONDS) {
-        break;
-      }
+      if (!Double.isFinite(newTOF) || newTOF <= 1e-4) break;
 
       double oldTEff = tEff;
       double newTEff = newTOF + latency;
-
       double check = Math.abs(newTEff - oldTEff) / Math.max(oldTEff, 1e-6);
       dist = newDist;
       tof = newTOF;
@@ -133,22 +124,14 @@ public final class TurretCommands {
       }
     }
 
-    // Convert back into field coordinates from the predicted release pose.
     Translation2d aimPoint = currentTranslation.plus(robotTranslateExit).plus(aimVector);
-    Logger.recordOutput("Turret/ShootingWhileMoving/Fallback", false);
-    Logger.recordOutput("Turret/ShootingWhileMoving/LatencySec", latency);
-    Logger.recordOutput("Turret/ShootingWhileMoving/IterationsUsed", iterationsUsed);
-    Logger.recordOutput("Turret/ShootingWhileMoving/EffectiveTimeSec", tEff);
-    Logger.recordOutput("Turret/ShootingWhileMoving/ShotTimeSec", tof);
-    Logger.recordOutput("Turret/ShootingWhileMoving/DistanceMeters", dist);
-    Logger.recordOutput("Turret/ShootingWhileMoving/AimPoint", aimPoint);
-    Logger.recordOutput(
-        "Turret/ShootingWhileMoving/LeadOffsetMeters", target.minus(aimPoint).getNorm());
     if (GlobalConstants.isDebugMode()) {
       Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
       Logger.recordOutput("Turret/AutoAim/Distance", dist);
       Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
-      Logger.recordOutput("Turret/AutoAim/FutureTarget", new Pose2d(aimPoint, new Rotation2d()));
+      Logger.recordOutput(
+          "Turret/AutoAim/FutureTarget",
+          new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
       Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     }
     return aimPoint;
@@ -164,13 +147,6 @@ public final class TurretCommands {
       return new Translation2d();
     }
     return vector;
-  }
-
-  private static double sanitizeNonNegative(double value) {
-    if (!Double.isFinite(value)) {
-      return 0.0;
-    }
-    return Math.max(0.0, value);
   }
 
   public static ShooterCommands.ShotTimeEstimate estimateShotTimeDetailed(
