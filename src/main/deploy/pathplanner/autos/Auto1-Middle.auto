@@ -7,25 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "MiddlePos_PreShoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 1.5
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "MiddlePos_OverBump"
+            "pathName": "MiddleOverBump"
           }
         },
         {
