@@ -66,6 +66,11 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
   }
 
   @Override
+  protected int getActiveVelocityControlSlot(double requestedVelocityRpm) {
+    return highGainsActive ? 1 : 0;
+  }
+
+  @Override
   protected double getAdditionalCompensationVolts(
       double goalVelocityRpm, double measuredVelocityRpm) {
     double goalSign = Math.signum(goalVelocityRpm);

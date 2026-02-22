@@ -16,6 +16,8 @@ import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
 import org.Griffins1884.frc2026.GlobalConstants;
@@ -65,6 +67,9 @@ public abstract class GenericVelocityRollerSystem<
   private double lastGoalVelocityRadPerSec = 0.0;
   private double lastTimestampSec = 0.0;
   private GlobalConstants.Gains lastActiveGains = null;
+  private int activeVelocityControlSlot = 0;
+  private int lastVelocityControlSlot = -1;
+  private final Map<Integer, double[]> onboardVelocityPidBySlot = new HashMap<>();
 
   public GenericVelocityRollerSystem(
       String name, GenericRollerSystemIO io, GlobalConstants.Gains gains) {
@@ -145,6 +150,8 @@ public abstract class GenericVelocityRollerSystem<
     }
     String gainsLabel = getActiveGainsLabel(requestedVelocity);
     boolean onboardVelocityControl = io.supportsVelocityControl();
+    activeVelocityControlSlot =
+        sanitizeVelocityControlSlot(getActiveVelocityControlSlot(requestedVelocity));
 
     logOutputs(
         measuredVelocity,
@@ -160,30 +167,21 @@ public abstract class GenericVelocityRollerSystem<
       return;
     }
 
+    if (onboardVelocityControl && activeVelocityControlSlot != lastVelocityControlSlot) {
+      io.setVelocityControlSlot(activeVelocityControlSlot);
+      lastVelocityControlSlot = activeVelocityControlSlot;
+    }
+
     if (activeGains != lastActiveGains) {
       pidController.setPID(activeGains.kP().get(), activeGains.kI().get(), 0.0);
       feedforward = new SimpleMotorFeedforward(activeGains.kS().get(), activeGains.kV().get());
       feedforwardKa = activeGains.kA().get();
-      if (onboardVelocityControl) {
-        io.setVelocityPID(
-            rpmGainToRpsGain(activeGains.kP().get()),
-            rpmGainToRpsGain(activeGains.kI().get()),
-            rpmGainToRpsGain(activeGains.kD().get()));
-      }
       lastActiveGains = activeGains;
     }
 
     LoggedTunableNumber.ifChanged(
         tuningId,
-        values -> {
-          pidController.setPID(values[0], values[1], 0.0);
-          if (onboardVelocityControl) {
-            io.setVelocityPID(
-                rpmGainToRpsGain(values[0]),
-                rpmGainToRpsGain(values[1]),
-                rpmGainToRpsGain(values[2]));
-          }
-        },
+        values -> pidController.setPID(values[0], values[1], 0.0),
         activeGains.kP(),
         activeGains.kI(),
         activeGains.kD());
@@ -193,6 +191,10 @@ public abstract class GenericVelocityRollerSystem<
         activeGains.kS(),
         activeGains.kV());
     LoggedTunableNumber.ifChanged(tuningId, values -> feedforwardKa = values[0], activeGains.kA());
+
+    if (onboardVelocityControl) {
+      syncOnboardVelocityPID(activeVelocityControlSlot, activeGains);
+    }
 
     double nowSec = Timer.getFPGATimestamp();
     double dtSec = nowSec - lastTimestampSec;
@@ -268,12 +270,24 @@ public abstract class GenericVelocityRollerSystem<
     io.setBrakeMode(enabled);
   }
 
+  protected final boolean supportsOnboardVelocityControl() {
+    return io.supportsVelocityControl();
+  }
+
+  protected final void configureOnboardVelocitySlot(int slot, GlobalConstants.Gains gains) {
+    syncOnboardVelocityPID(sanitizeVelocityControlSlot(slot), gains);
+  }
+
   protected GlobalConstants.Gains getActiveGains(double requestedVelocityRpm) {
     return config.gains();
   }
 
   protected String getActiveGainsLabel(double requestedVelocityRpm) {
     return "DEFAULT";
+  }
+
+  protected int getActiveVelocityControlSlot(double requestedVelocityRpm) {
+    return 0;
   }
 
   protected double getAdditionalCompensationVolts(
@@ -310,5 +324,27 @@ public abstract class GenericVelocityRollerSystem<
 
   private static double rpmGainToRpsGain(double gainPerRpm) {
     return gainPerRpm / RPM_TO_ROTATIONS_PER_SEC;
+  }
+
+  private void syncOnboardVelocityPID(int slot, GlobalConstants.Gains gains) {
+    double kP = rpmGainToRpsGain(gains.kP().get());
+    double kI = rpmGainToRpsGain(gains.kI().get());
+    double kD = rpmGainToRpsGain(gains.kD().get());
+    double[] existing = onboardVelocityPidBySlot.get(slot);
+    if (existing != null && existing[0] == kP && existing[1] == kI && existing[2] == kD) {
+      return;
+    }
+    io.setVelocityPID(slot, kP, kI, kD);
+    onboardVelocityPidBySlot.put(slot, new double[] {kP, kI, kD});
+  }
+
+  private static int sanitizeVelocityControlSlot(int slot) {
+    if (slot <= 0) {
+      return 0;
+    }
+    if (slot >= 2) {
+      return 2;
+    }
+    return slot;
   }
 }

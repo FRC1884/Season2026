@@ -26,6 +26,14 @@ public interface GenericRollerSystemIO {
   /** Update the onboard velocity PID gains if supported. */
   default void setVelocityPID(double kP, double kI, double kD) {}
 
+  /** Update the onboard velocity PID gains for a specific slot if supported. */
+  default void setVelocityPID(int slot, double kP, double kI, double kD) {
+    setVelocityPID(kP, kI, kD);
+  }
+
+  /** Select active onboard velocity slot if supported. */
+  default void setVelocityControlSlot(int slot) {}
+
   /** Whether this IO supports onboard velocity control. */
   default boolean supportsVelocityControl() {
     return false;

@@ -32,6 +32,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
       new VelocityTorqueCurrentFOC(0.0).withSlot(0).withUpdateFreqHz(0);
   private final VelocityControlRequest velocityControlRequest;
+  private int velocityControlSlot = 0;
   private final double reduction;
 
   private final StatusSignal<?> positionSignal;
@@ -199,6 +200,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
     if (velocityControlRequest == VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC) {
       leader.setControl(
           velocityTorqueCurrentRequest
+              .withSlot(velocityControlSlot)
               .withVelocity(velocityRotationsPerSecond)
               .withFeedForward(feedforwardVolts));
       return;
@@ -206,18 +208,40 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
 
     leader.setControl(
         velocityVoltageRequest
+            .withSlot(velocityControlSlot)
             .withVelocity(velocityRotationsPerSecond)
             .withFeedForward(feedforwardVolts));
   }
 
   @Override
   public void setVelocityPID(double kP, double kI, double kD) {
+    setVelocityPID(0, kP, kI, kD);
+  }
+
+  @Override
+  public void setVelocityPID(int slot, double kP, double kI, double kD) {
     TalonFXConfiguration updated = new TalonFXConfiguration();
     leader.getConfigurator().refresh(updated);
-    updated.Slot0.kP = kP;
-    updated.Slot0.kI = kI;
-    updated.Slot0.kD = kD;
+    int sanitizedSlot = sanitizeSlot(slot);
+    if (sanitizedSlot == 0) {
+      updated.Slot0.kP = kP;
+      updated.Slot0.kI = kI;
+      updated.Slot0.kD = kD;
+    } else if (sanitizedSlot == 1) {
+      updated.Slot1.kP = kP;
+      updated.Slot1.kI = kI;
+      updated.Slot1.kD = kD;
+    } else {
+      updated.Slot2.kP = kP;
+      updated.Slot2.kI = kI;
+      updated.Slot2.kD = kD;
+    }
     tryUntilOk(5, () -> leader.getConfigurator().apply(updated, 0.25));
+  }
+
+  @Override
+  public void setVelocityControlSlot(int slot) {
+    velocityControlSlot = sanitizeSlot(slot);
   }
 
   @Override
@@ -266,5 +290,15 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
       config.Feedback.SensorToMechanismRatio = reduction;
     }
     tryUntilOk(5, () -> motor.getConfigurator().apply(config, 0.25));
+  }
+
+  private static int sanitizeSlot(int slot) {
+    if (slot <= 0) {
+      return 0;
+    }
+    if (slot >= 2) {
+      return 2;
+    }
+    return slot;
   }
 }
