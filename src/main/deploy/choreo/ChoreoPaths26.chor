@@ -113,7 +113,7 @@
  },
  "generationFeatures":[],
  "codegen":{
-  "root":0.0,
+  "root":"0.0",
   "genVars":true,
   "genTrajData":true,
   "useChoreoLib":true

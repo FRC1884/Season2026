@@ -11,8 +11,8 @@
     {"x":6.415069580078125, "y":1.409057855606079, "heading":3.141592653589793, "intervals":35, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false},
     {"x":7.7, "y":0.9, "heading":-1.5707963267948966, "intervals":29, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false}],
   "constraints":[
-    {"from":"first", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
-    {"from":"last", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
+    {"from":"first", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
+    {"from":"last", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
     {"from":"first", "to":"last", "data":{"type":"KeepInRectangle", "props":{"x":0.0, "y":0.0, "w":16.541, "h":8.0692}}, "enabled":false}],
   "targetDt":0.05
  },
@@ -26,8 +26,8 @@
     {"x":{"exp":"6.415069580078125 m", "val":6.415069580078125}, "y":{"exp":"1.409057855606079 m", "val":1.409057855606079}, "heading":{"exp":"180 deg", "val":3.141592653589793}, "intervals":35, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false},
     {"x":{"exp":"7.7 m", "val":7.7}, "y":{"exp":"0.9 m", "val":0.9}, "heading":{"exp":"-90 deg", "val":-1.5707963267948966}, "intervals":29, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false}],
   "constraints":[
-    {"from":"first", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
-    {"from":"last", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
+    {"from":"first", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
+    {"from":"last", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":false},
     {"from":"first", "to":"last", "data":{"type":"KeepInRectangle", "props":{"x":{"exp":"0 m", "val":0.0}, "y":{"exp":"0 m", "val":0.0}, "w":{"exp":"16.541 m", "val":16.541}, "h":{"exp":"8.0692 m", "val":8.0692}}}, "enabled":false}],
   "targetDt":{
    "exp":"0.05 s",
@@ -231,6 +231,5 @@
     {"t":3.31248, "x":7.7, "y":0.9, "heading":-1.5708, "vx":3.59449, "vy":-0.24373, "omega":3.72512, "ax":0.0, "ay":0.0, "alpha":0.0, "fx":[0.0,0.0,0.0,0.0], "fy":[0.0,0.0,0.0,0.0]}],
   "splits":[0]
  },
- "events":[
-   {"name":"Marker", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0 s", "val":0.0}}, "event":{"type":"named", "data":{"name":"FirstOverBump"}}}]
+ "events":[]
 }

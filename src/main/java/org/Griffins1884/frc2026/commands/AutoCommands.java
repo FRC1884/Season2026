@@ -38,11 +38,9 @@ public class AutoCommands {
     NamedCommands.registerCommand(
         "Collect",
         Commands.sequence(
-            Commands.runOnce(() -> DriveCommands.setTest(true)),
             superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
             AutoAlignToFuelCommand.alignToFuelCommand(drive),
-            DriveCommands.alignToAfterCollectStartCommand(drive),
-            Commands.runOnce(() -> DriveCommands.setTest(false))));
+            DriveCommands.alignToAfterCollectStartCommand(drive)));
 
     NamedCommands.registerCommand(
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));

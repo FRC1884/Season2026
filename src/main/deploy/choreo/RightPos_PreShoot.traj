@@ -6,8 +6,8 @@
     {"x":3.5379035472869873, "y":2.449831247329712, "heading":3.141592653589793, "intervals":22, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false},
     {"x":2.4085187911987305, "y":3.5884804725646973, "heading":3.141592653589793, "intervals":26, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false}],
   "constraints":[
-    {"from":"first", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
-    {"from":"last", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
+    {"from":"first", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
+    {"from":"last", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
     {"from":"first", "to":"last", "data":{"type":"KeepInRectangle", "props":{"x":0.0, "y":0.0, "w":16.541, "h":8.0692}}, "enabled":false}],
   "targetDt":0.05
  },
@@ -16,8 +16,8 @@
     {"x":{"exp":"3.5379035472869873 m", "val":3.5379035472869873}, "y":{"exp":"2.449831247329712 m", "val":2.449831247329712}, "heading":{"exp":"180 deg", "val":3.141592653589793}, "intervals":22, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false},
     {"x":{"exp":"2.4085187911987305 m", "val":2.4085187911987305}, "y":{"exp":"3.5884804725646973 m", "val":3.5884804725646973}, "heading":{"exp":"180 deg", "val":3.141592653589793}, "intervals":26, "split":false, "fixTranslation":true, "fixHeading":true, "overrideIntervals":false}],
   "constraints":[
-    {"from":"first", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
-    {"from":"last", "to":null, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
+    {"from":"first", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
+    {"from":"last", "to":0.0, "data":{"type":"StopPoint", "props":{}}, "enabled":true},
     {"from":"first", "to":"last", "data":{"type":"KeepInRectangle", "props":{"x":{"exp":"0 m", "val":0.0}, "y":{"exp":"0 m", "val":0.0}, "w":{"exp":"16.541 m", "val":16.541}, "h":{"exp":"8.0692 m", "val":8.0692}}}, "enabled":false}],
   "targetDt":{
    "exp":"0.05 s",
@@ -76,6 +76,5 @@
     {"t":1.09972, "x":2.40852, "y":3.58848, "heading":3.14159, "vx":0.0, "vy":0.0, "omega":0.0, "ax":0.0, "ay":0.0, "alpha":0.0, "fx":[0.0,0.0,0.0,0.0], "fy":[0.0,0.0,0.0,0.0]}],
   "splits":[0]
  },
- "events":[
-   {"name":"Marker", "from":{"target":0, "targetTimestamp":0.0, "offset":{"exp":"0 s", "val":0.0}}, "event":{"type":"named", "data":{"name":"Shoot"}}}]
+ "events":[]
 }
