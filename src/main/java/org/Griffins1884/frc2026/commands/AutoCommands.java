@@ -55,5 +55,8 @@ public class AutoCommands {
 
     NamedCommands.registerCommand(
         "DepotCollect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+
+    NamedCommands.registerCommand(
+            "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
   }
 }

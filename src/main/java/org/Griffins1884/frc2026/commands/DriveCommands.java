@@ -208,7 +208,20 @@ public class DriveCommands {
         Set.of(drive));
   }
 
-  public static Command alignToAfterBumpToNeutralCommand(SwerveSubsystem drive) {
+    public static Command alignToStandStillShootCommand(SwerveSubsystem drive) {
+        return Commands.defer(
+                () -> {
+                    Pose2d target = AlignConstants.getStandStillShootPose();
+                    Logger.recordOutput("Autonomy/AlignTargetStandStillShoot", target);
+                    return new AutoAlignToPoseCommand(drive, target);
+                },
+                Set.of(drive));
+    }
+
+
+
+
+    public static Command alignToAfterBumpToNeutralCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
           Pose2d target = AlignConstants.getAfterBumpToNeutralStartPose();
