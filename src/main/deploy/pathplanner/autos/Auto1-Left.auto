@@ -7,13 +7,19 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftOverBump"
+            "pathName": "LeftStraightOverBump"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "FirstOverBump"
+            "name": "LeftStraightBumpAlign"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftHalfCollect"
           }
         },
         {
@@ -23,117 +29,75 @@
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "Collect"
+            "name": "AlignAfterBump"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "Collect"
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftBackOverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "LeftStraightBumpAlign"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftHalfCollect"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignAfterBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Shoot"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftToNeutral"
           }
         },
         {
           "type": "named",
           "data": {
             "name": "OverSecondBump"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "BackOverBumpShoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "AlignAfterBump"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Shoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "ToSecondCollect"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "FirstOverBump"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Intake"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Collect"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Collect"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "BackOverBumpShoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "AlignAfterBump"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Shoot"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "ToNeutral"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "BumpToNeutral"
           }
         }
       ]
