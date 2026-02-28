@@ -38,6 +38,10 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap, Ope
     return R2();
   }
 
+  public Trigger indexer() {
+    return cross();
+  }
+
   @Override
   public Trigger autoManualToggle() {
     return create();

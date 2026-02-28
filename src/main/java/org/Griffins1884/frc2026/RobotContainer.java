@@ -440,6 +440,7 @@ public class RobotContainer {
                       drive)
                   .ignoringDisable(true));
     }
+    driver.indexer().onTrue(Commands.runOnce(superstructure::toggleIndexer));
   }
 
   private void configureOperatorButtonBindings() {

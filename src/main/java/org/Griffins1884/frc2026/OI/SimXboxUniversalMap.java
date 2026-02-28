@@ -59,6 +59,11 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
   }
 
   @Override
+  public Trigger indexer() {
+    return null;
+  }
+
+  @Override
   public Command rumble() {
     return startEnd(
         () -> getHID().setRumble(kBothRumble, 1), () -> getHID().setRumble(kBothRumble, 0));

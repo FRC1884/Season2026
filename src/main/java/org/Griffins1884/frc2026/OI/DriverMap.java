@@ -23,6 +23,8 @@ public interface DriverMap {
 
   Trigger slowMode();
 
+  Trigger indexer();
+
   default Command rumble() {
     return none();
   }
