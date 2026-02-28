@@ -86,6 +86,7 @@ public class Superstructure extends SubsystemBase {
   private final Debouncer ballPresentDebouncer =
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   @Setter private boolean turretExternalControl = false;
+  private boolean runIndexer = false;
   private final LEDSubsystem leds =
       Config.Subsystems.LEDS_ENABLED
           ? (MODE == GlobalConstants.RobotMode.REAL
@@ -143,6 +144,10 @@ public class Superstructure extends SubsystemBase {
 
   public void toggleManualControl() {
     manualControlActive = !manualControlActive;
+  }
+
+  public void toggleIndexer() {
+    runIndexer = !runIndexer;
   }
 
   public StateRequestResult requestStateFromDashboard(SuperState state) {
@@ -422,8 +427,10 @@ public class Superstructure extends SubsystemBase {
               drive::getFieldVelocity,
               drive::getFieldAcceleration);
     }
+    if (runIndexer){
+      setIndexerGoal(IndexerGoal.FORWARD);
+    }
     setIntakeGoal(IntakeGoal.IDLING);
-    setIndexerGoal(IndexerGoal.FORWARD);
     setShooterGoal(ShooterGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
     aimTurretAt(target);

@@ -59,6 +59,11 @@ public class XboxDriverMap extends CommandXboxController implements DriverMap {
   }
 
   @Override
+  public Trigger indexer() {
+    return null;
+  }
+
+  @Override
   public Command rumble() {
     return startEnd(
         () -> getHID().setRumble(kBothRumble, 1), () -> getHID().setRumble(kBothRumble, 0));
