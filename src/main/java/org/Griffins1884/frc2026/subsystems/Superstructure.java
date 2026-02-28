@@ -388,6 +388,7 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.IDLING);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
+    runIndexer = false;
   }
 
   private void clearIdleOverrides() {
@@ -415,6 +416,7 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
+    runIndexer = false;
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
@@ -427,8 +429,10 @@ public class Superstructure extends SubsystemBase {
               drive::getFieldVelocity,
               drive::getFieldAcceleration);
     }
-    if (runIndexer){
+    if (runIndexer) {
       setIndexerGoal(IndexerGoal.FORWARD);
+    } else if (!runIndexer) {
+      setIndexerGoal(IndexerGoal.IDLING);
     }
     setIntakeGoal(IntakeGoal.IDLING);
     setShooterGoal(ShooterGoal.FORWARD);
@@ -448,7 +452,11 @@ public class Superstructure extends SubsystemBase {
               drive::getFieldAcceleration);
     }
     setIntakeGoal(IntakeGoal.FORWARD);
-    setIndexerGoal(IndexerGoal.FORWARD);
+    if (runIndexer) {
+      setIndexerGoal(IndexerGoal.FORWARD);
+    } else if (!runIndexer) {
+      setIndexerGoal(IndexerGoal.IDLING);
+    }
     setShooterGoal(ShooterGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     aimTurretAt(target);
@@ -458,7 +466,11 @@ public class Superstructure extends SubsystemBase {
   private void applyFerrying() {
     Translation2d target = getFerryingTarget();
     setIntakeGoal(IntakeGoal.FORWARD);
-    setIndexerGoal(IndexerGoal.FORWARD);
+    if (runIndexer) {
+      setIndexerGoal(IndexerGoal.FORWARD);
+    } else if (!runIndexer) {
+      setIndexerGoal(IndexerGoal.IDLING);
+    }
     setShooterGoal(ShooterGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     aimTurretAt(target);

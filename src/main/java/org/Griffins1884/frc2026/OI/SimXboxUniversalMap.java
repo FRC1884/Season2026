@@ -60,7 +60,12 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
 
   @Override
   public Trigger indexer() {
-    return null;
+    return x();
+  }
+
+  @Override
+  public Trigger intakePivotZero() {
+    return new Trigger(() -> false);
   }
 
   @Override

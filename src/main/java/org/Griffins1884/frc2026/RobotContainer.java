@@ -441,6 +441,16 @@ public class RobotContainer {
                   .ignoringDisable(true));
     }
     driver.indexer().onTrue(Commands.runOnce(superstructure::toggleIndexer));
+    driver
+        .intakePivotZero()
+        .onTrue(
+            Commands.runOnce(
+                    () -> {
+                      if (superstructure.getArms().intakePivot != null) {
+                        superstructure.getArms().intakePivot.requestZeroCalibration();
+                      }
+                    })
+                .ignoringDisable(true));
   }
 
   private void configureOperatorButtonBindings() {
@@ -462,16 +472,6 @@ public class RobotContainer {
     operator
         .ferrying()
         .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.FERRYING));
-    operator
-        .intakePivotZero()
-        .onTrue(
-            Commands.runOnce(
-                    () -> {
-                      if (superstructure.getArms().intakePivot != null) {
-                        superstructure.getArms().intakePivot.requestZeroCalibration();
-                      }
-                    })
-                .ignoringDisable(true));
 
     if (turret == null) {
       return;

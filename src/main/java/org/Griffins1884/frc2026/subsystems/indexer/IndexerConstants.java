@@ -15,12 +15,12 @@ public final class IndexerConstants {
   public static final double REDUCTION = 1.0;
   public static final double MAX_VOLTAGE = 12.0;
   public static final GlobalConstants.Gains gains =
-      new GlobalConstants.Gains("Indexer/Gains", 0.002, 0.02, 1.0, 0.37952, 0.017, 0.025075);
+      new GlobalConstants.Gains("Indexer/Gains", 100, 0.02, 1.0, 0.37952, 0.017, 0.025075);
   public static final double VELOCITY_TOLERANCE = 50.0;
   public static final LoggedTunableNumber FORWARD_RPM =
-      new LoggedTunableNumber("Indexer/ForwardRpm", 5000.0);
+      new LoggedTunableNumber("Indexer/ForwardRpm", 6000.0);
   public static final LoggedTunableNumber REVERSE_RPM =
-      new LoggedTunableNumber("Indexer/ReverseRpm", -5000.0);
+      new LoggedTunableNumber("Indexer/ReverseRpm", -6000.0);
 
   private IndexerConstants() {}
 }

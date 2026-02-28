@@ -231,6 +231,7 @@ public abstract class GenericVelocityRollerSystem<
           "Rollers/" + name + "/AdditionalCompensationVolts", additionalCompensationVolts);
     }
     Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
+    if (goalVelocity == 0.0) io.stop();
   }
 
   public void setGoalVelocity(double velocity) {

@@ -31,7 +31,7 @@
         {
           "type": "named",
           "data": {
-            "name": "AlignAfterBump"
+            "name": "StandStillShoot"
           }
         },
         {
@@ -43,7 +43,7 @@
         {
           "type": "wait",
           "data": {
-            "waitTime": 54.0
+            "waitTime": 5.0
           }
         },
         {
@@ -73,7 +73,7 @@
         {
           "type": "named",
           "data": {
-            "name": "AlignAfterBump"
+            "name": "StandStillShoot"
           }
         },
         {

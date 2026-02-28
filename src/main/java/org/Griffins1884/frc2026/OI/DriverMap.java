@@ -25,6 +25,8 @@ public interface DriverMap {
 
   Trigger indexer();
 
+  Trigger intakePivotZero();
+
   default Command rumble() {
     return none();
   }

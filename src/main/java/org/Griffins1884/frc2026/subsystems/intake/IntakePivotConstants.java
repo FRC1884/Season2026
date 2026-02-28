@@ -50,13 +50,13 @@ public final class IntakePivotConstants {
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final LoggedTunableNumber IDLE_ANGLE_RAD =
-      new LoggedTunableNumber("IntakePivot/IDLE_RAD", -2); // TODO: set idle angle
+      new LoggedTunableNumber("IntakePivot/IDLE_RAD", -6); // TODO: set idle angle
   public static final LoggedTunableNumber PICKUP_RAD =
       new LoggedTunableNumber("IntakePivot/PICKUP_RAD", -11); // TODO: set idle angle
   public static final LoggedTunableNumber HARDSTOP_STOW_SEEK_POSITION =
       new LoggedTunableNumber("IntakePivot/HardStop/StowSeekPosition", 100.0);
   public static final LoggedTunableNumber HARDSTOP_STOW_CURRENT_AMPS =
-      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 10.0);
+      new LoggedTunableNumber("IntakePivot/HardStop/StowCurrentAmps", 3.0);
   public static final LoggedTunableNumber HARDSTOP_MAX_VELOCITY_RAD_PER_SEC =
       new LoggedTunableNumber("IntakePivot/HardStop/MaxVelocityRadPerSec", 0.6);
   public static final LoggedTunableNumber HARDSTOP_SPIKE_DEBOUNCE_SEC =

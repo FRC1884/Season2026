@@ -107,11 +107,11 @@ public final class AprilTagVisionConstants {
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-side" : "middlerighttagcam",
                 new Transform3d(
-                    -0.0083312,
-                    0.324028,
+                    0.0083312,
+                    -0.324028,
                     0.490118,
                     new Rotation3d(
-                        degreesToRadians(180), degreesToRadians(0), degreesToRadians(-90))),
+                        degreesToRadians(180), degreesToRadians(0), degreesToRadians(90))),
                 getPrimaryCameraType());
         case SIMBOT, CRESCENDO ->
             new VisionIO.CameraConstants(

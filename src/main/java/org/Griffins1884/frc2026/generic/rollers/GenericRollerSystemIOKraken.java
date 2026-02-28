@@ -284,7 +284,7 @@ public class GenericRollerSystemIOKraken implements GenericRollerSystemIO {
     config.TorqueCurrent.PeakReverseTorqueCurrent = -currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimit = currentLimitAmps;
     config.CurrentLimits.SupplyCurrentLimitEnable = true;
-    config.CurrentLimits.StatorCurrentLimit = currentLimitAmps;
+    config.CurrentLimits.StatorCurrentLimit = currentLimitAmps * 2;
     config.CurrentLimits.StatorCurrentLimitEnable = true;
     if (reduction > 0.0) {
       config.Feedback.SensorToMechanismRatio = reduction;

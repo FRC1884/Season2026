@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
+import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem.VelocityGoal;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter
@@ -36,5 +37,12 @@ public class IndexerSubsystem extends GenericVelocityRollerSystem<IndexerSubsyst
             IndexerConstants.gains,
             IndexerConstants.VELOCITY_TOLERANCE,
             IndexerConstants.MAX_VOLTAGE));
+  }
+
+  @Override
+  protected double getAdditionalCompensationVolts(
+      double goalVelocityRpm, double measuredVelocityRpm) {
+    double run = 0.6 - Math.max(inputs.appliedVoltage / IndexerConstants.MAX_VOLTAGE, 0.6);
+    return IndexerConstants.MAX_VOLTAGE * run;
   }
 }

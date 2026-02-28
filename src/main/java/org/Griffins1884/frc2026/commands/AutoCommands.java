@@ -8,7 +8,11 @@ import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 public class AutoCommands {
   public static void registerAutoCommands(Superstructure superstructure, SwerveSubsystem drive) {
     NamedCommands.registerCommand(
-        "Shoot", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
+        "Shoot",
+        Commands.sequence(
+            superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING),
+            Commands.waitSeconds(0.2),
+            Commands.runOnce(superstructure::toggleIndexer)));
 
     NamedCommands.registerCommand(
         "OverSecondBump",
@@ -57,6 +61,6 @@ public class AutoCommands {
         "DepotCollect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
 
     NamedCommands.registerCommand(
-            "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
+        "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
   }
 }

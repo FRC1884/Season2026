@@ -6,6 +6,7 @@ src/main/java/org/Griffins1884/frc2026/commands/AutoAlignToPoseCommand.java
 src/main/java/org/Griffins1884/frc2026/commands/AutoAlignToPoseHolonomicCommand.java
 src/main/java/org/Griffins1884/frc2026/commands/DriveCommands.java
 src/main/java/org/Griffins1884/frc2026/commands/TurretCommands.java
+src/main/java/org/Griffins1884/frc2026/commands/ShooterCommands.java
 src/main/java/org/Griffins1884/frc2026/generic/arms/GenericPositionArmSystem.java
 src/main/java/org/Griffins1884/frc2026/generic/elevators/GenericPositionElevatorSystem.java
 src/main/java/org/Griffins1884/frc2026/generic/rollers/GenericVelocityRollerSystem.java
