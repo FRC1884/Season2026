@@ -11,12 +11,6 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "LeftStraightBumpAlign"
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "LeftHalfCollect"
@@ -50,12 +44,6 @@
           "type": "path",
           "data": {
             "pathName": "LeftBackOverBump"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "LeftStraightBumpAlign"
           }
         },
         {
