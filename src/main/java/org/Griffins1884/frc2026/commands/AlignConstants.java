@@ -51,7 +51,7 @@ public final class AlignConstants {
   public static final LoggedTunableNumber AFTER_COLLECT_START_Y_METERS =
       new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.5);
   public static final LoggedTunableNumber AFTER_COLLECT_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 220.0);
+      new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 100.0);
   public static final LoggedTunableNumber TURRET_KV =
       new LoggedTunableNumber("Turret/AutoAim/kV", 1.22);
   public static final LoggedTunableNumber TURRET_KS =

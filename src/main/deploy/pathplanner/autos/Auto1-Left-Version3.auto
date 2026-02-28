@@ -19,7 +19,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftToRightCollect"
+            "pathName": "LeftHalfCollect"
           }
         },
         {
@@ -29,27 +29,45 @@
           }
         },
         {
-          "type": "path",
-          "data": {
-            "pathName": "Back"
-          }
-        },
-        {
           "type": "named",
           "data": {
-            "name": "Collect"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "BackOverBumpShoot"
+            "name": "AlignAfterBump"
           }
         },
         {
           "type": "named",
           "data": {
             "name": "Shoot"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftBackOverBump"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "LeftStraightBumpAlign"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftHalfCollect"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "Intake"
           }
         },
         {
@@ -59,15 +77,15 @@
           }
         },
         {
-          "type": "path",
-          "data": {
-            "pathName": "Shoot"
-          }
-        },
-        {
           "type": "named",
           "data": {
             "name": "Shoot"
+          }
+        },
+        {
+          "type": "wait",
+          "data": {
+            "waitTime": 5.0
           }
         }
       ]
