@@ -19,7 +19,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +31,9 @@ import org.littletonrobotics.junction.Logger;
 public class Vision extends SubsystemBase implements VisionTargetProvider {
   private static final double HISTORY_WINDOW_SEC = 1.5;
   private static final double NO_ACCEPTED_MEASUREMENT_ALERT_SEC = 1.0;
+  private static final double MAX_LIMELIGHT_FRAME_AGE_SEC = 0.08;
+  private static final double HARD_REJECT_YAW_RATE_DEG_PER_SEC = 400.0;
+  private static final double TIMESTAMP_EPSILON_SEC = 1e-6;
 
   private final VisionConsumer consumer;
   private final VisionIO[] io;
@@ -39,7 +41,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final Alert[] disconnectedAlerts;
   private final Alert[] outlierAlerts;
   private final Alert[] noAcceptedMeasurementAlerts;
-  private final Deque<YawSample>[] yawHistory;
   private final double[] lastAcceptedTimestampsSec;
   private final double[] lastAcceptedWallClockSec;
   private final double[] connectedSinceWallClockSec;
@@ -89,13 +90,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     for (int i = 0; i < inputs.length; i++) {
       inputs[i] = new VisionIOInputsAutoLogged();
     }
-
-    @SuppressWarnings("unchecked")
-    Deque<YawSample>[] yawHistoryInit = new ArrayDeque[io.length];
-    for (int i = 0; i < yawHistoryInit.length; i++) {
-      yawHistoryInit[i] = new ArrayDeque<>();
-    }
-    yawHistory = yawHistoryInit;
 
     lastAcceptedTimestampsSec = new double[io.length];
     Arrays.fill(lastAcceptedTimestampsSec, Double.NEGATIVE_INFINITY);
@@ -315,17 +309,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     return Double.isFinite(value);
   }
 
-  private static double wrapDegrees(double degrees) {
-    double wrapped = degrees % 360.0;
-    if (wrapped > 180.0) {
-      wrapped -= 360.0;
-    }
-    if (wrapped < -180.0) {
-      wrapped += 360.0;
-    }
-    return wrapped;
-  }
-
   private void periodicLimelight() {
     double startTime = Timer.getFPGATimestamp();
     if (poseHistory != null) {
@@ -343,12 +326,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         yawRateRadPerSecSupplier != null
             ? Math.toDegrees(yawRateRadPerSecSupplier.getAsDouble())
             : 0.0;
-    boolean yawRateOk =
-        DriverStation.isDisabled()
-            || Math.abs(yawRateDegPerSec)
-                <= AprilTagVisionConstants.getLimelightMaxYawRateDegPerSec();
     Logger.recordOutput("Vision/yawRateDegPerSec", yawRateDegPerSec);
-    Logger.recordOutput("Vision/yawRateAccept", yawRateOk);
 
     List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
 
@@ -378,13 +356,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     if (!useVision) {
       Logger.recordOutput("Vision/usingVision", false);
       Logger.recordOutput("Vision/rejectReason", "VISION_DISABLED");
-      Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
-      return;
-    }
-
-    if (!yawRateOk) {
-      Logger.recordOutput("Vision/usingVision", false);
-      Logger.recordOutput("Vision/rejectReason", "HIGH_YAW_RATE");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
       return;
     }
@@ -459,74 +430,33 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return Optional.empty();
     }
 
-    boolean allowYawGate = !AprilTagVisionConstants.ignoreMegatag2Rotation();
-    double thetaStd =
-        allowYawGate ? stdDevs.theta() : AprilTagVisionConstants.getLimelightLargeVariance();
-
     double frameAgeSec = Math.max(0.0, Timer.getFPGATimestamp() - timestampSeconds);
-    double staleFrameLimitSec = AprilTagVisionConstants.getLimelightYawGateMaxFrameAgeSec();
-    if (cameraLabel != null && GlobalConstants.isDebugMode()) {
+    if (cameraLabel != null) {
       String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
-      Logger.recordOutput(prefix + "/StaleRejected", false);
       Logger.recordOutput(prefix + "/FrameAgeSec", frameAgeSec);
-      Logger.recordOutput(prefix + "/StaleLimitSec", staleFrameLimitSec);
+      Logger.recordOutput(prefix + "/StaleLimitSec", MAX_LIMELIGHT_FRAME_AGE_SEC);
+      Logger.recordOutput(prefix + "/StaleRejected", frameAgeSec > MAX_LIMELIGHT_FRAME_AGE_SEC);
     }
-    if (frameAgeSec > staleFrameLimitSec) {
-      if (cameraLabel != null && GlobalConstants.isDebugMode()) {
-        String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
-        Logger.recordOutput(prefix + "/StaleRejected", true);
-      }
+    if (frameAgeSec > MAX_LIMELIGHT_FRAME_AGE_SEC) {
       return Optional.empty();
     }
 
-    double gyroYawDeg =
-        getReferencePose(timestampSeconds)
-            .map(pose -> Math.toDegrees(pose.getRotation().getRadians()))
-            .orElse(0.0);
-    double visionYawDeg = Math.toDegrees(fieldToRobot.getRotation().getRadians());
     double yawRateDegPerSec =
         yawRateRadPerSecSupplier != null
             ? Math.toDegrees(yawRateRadPerSecSupplier.getAsDouble())
             : 0.0;
-    boolean yawGate = false;
-    YawGateResult yawGateResult = YawGateResult.disabled();
-    if (allowYawGate) {
-      yawGateResult =
-          evaluateYawGate(
-              cameraIndex,
-              cam,
-              visionYawDeg,
-              gyroYawDeg,
-              yawRateDegPerSec,
-              frameAgeSec,
-              cam.residualTranslationMeters);
-      yawGate = yawGateResult.passed();
-      if (yawGate) {
-        thetaStd = AprilTagVisionConstants.getLimelightYawStdDevStableRad();
-      } else {
-        thetaStd = AprilTagVisionConstants.getLimelightYawStdDevUnstable();
-      }
+    if (!DriverStation.isDisabled()
+        && Math.abs(yawRateDegPerSec) > HARD_REJECT_YAW_RATE_DEG_PER_SEC) {
+      return Optional.empty();
     }
-    if (cameraLabel != null && GlobalConstants.isDebugMode()) {
-      String prefix = "AprilTagVision/" + cameraLabel + "/YawGate";
-      Logger.recordOutput(prefix + "/Pass", yawGate);
-      Logger.recordOutput(prefix + "/ResidualDeg", yawGateResult.residualDeg());
-      Logger.recordOutput(prefix + "/FrameAgeSec", frameAgeSec);
-      Logger.recordOutput(prefix + "/TagCountOk", yawGateResult.tagCountOk());
-      Logger.recordOutput(prefix + "/DistanceOk", yawGateResult.distanceOk());
-      Logger.recordOutput(prefix + "/YawRateOk", yawGateResult.yawRateOk());
-      Logger.recordOutput(prefix + "/FrameAgeOk", yawGateResult.frameAgeOk());
-      Logger.recordOutput(prefix + "/ResidualOk", yawGateResult.residualOk());
-      Logger.recordOutput(prefix + "/YawResidualOk", yawGateResult.yawResidualOk());
-      Logger.recordOutput(prefix + "/StableWindowOk", yawGateResult.stableOk());
-      Logger.recordOutput(prefix + "/ThetaStdUsed", thetaStd);
-    }
-    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), thetaStd);
+
+    Matrix<N3, N1> visionStdDevs = VecBuilder.fill(stdDevs.x(), stdDevs.y(), stdDevs.theta());
     if (!DriverStation.isDisabled()) {
       if (AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
           && Double.isFinite(cam.residualTranslationMeters)
           && (cam.residualTranslationMeters
-              > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get())) {
+              > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get())
+          && tagCount < 2) {
         return Optional.empty();
       }
     }
@@ -560,12 +490,12 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     var varianceA = a.visionMeasurementStdDevs().elementTimes(a.visionMeasurementStdDevs());
     var varianceB = b.visionMeasurementStdDevs().elementTimes(b.visionMeasurementStdDevs());
 
-    Rotation2d fusedHeading =
-        new Rotation2d(
-            poseA.getRotation().getCos() / varianceA.get(2, 0)
-                + poseB.getRotation().getCos() / varianceB.get(2, 0),
-            poseA.getRotation().getSin() / varianceA.get(2, 0)
-                + poseB.getRotation().getSin() / varianceB.get(2, 0));
+    double thetaA = poseA.getRotation().getRadians();
+    double thetaB = poseB.getRotation().getRadians();
+    double weightA = 1.0 / varianceA.get(2, 0);
+    double weightB = 1.0 / varianceB.get(2, 0);
+    double fusedTheta = (thetaA * weightA + thetaB * weightB) / (weightA + weightB);
+    Rotation2d fusedHeading = new Rotation2d(fusedTheta);
 
     double weightAx = 1.0 / varianceA.get(0, 0);
     double weightAy = 1.0 / varianceA.get(1, 0);
@@ -587,7 +517,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         VecBuilder.fill(
             Math.sqrt(1.0 / (weightAx + weightBx)),
             Math.sqrt(1.0 / (weightAy + weightBy)),
-            Math.sqrt(1.0 / (1.0 / varianceA.get(2, 0) + 1.0 / varianceB.get(2, 0))));
+            Math.sqrt(1.0 / (weightA + weightB)));
 
     int numTags = a.numTags() + b.numTags();
     double time = b.timestampSeconds();
@@ -595,92 +525,14 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     return new VisionFieldPoseEstimate(fusedPose, time, fusedStdDev, numTags);
   }
 
-  private void recordYawResidual(int cameraIndex, double timestampSeconds, double residualDeg) {
-    if (cameraIndex < 0 || cameraIndex >= yawHistory.length) {
-      return;
-    }
-    Deque<YawSample> history = yawHistory[cameraIndex];
-    history.addLast(new YawSample(timestampSeconds, residualDeg));
-    int maxSamples = Math.max(1, AprilTagVisionConstants.getLimelightYawGateStableWindow());
-    while (history.size() > maxSamples) {
-      history.removeFirst();
-    }
-  }
-
-  private boolean isYawStable(int cameraIndex) {
-    if (cameraIndex < 0 || cameraIndex >= yawHistory.length) {
-      return false;
-    }
-    Deque<YawSample> history = yawHistory[cameraIndex];
-    int required = Math.max(1, AprilTagVisionConstants.getLimelightYawGateStableWindow());
-    if (history.size() < required) {
-      return false;
-    }
-    double maxDelta = AprilTagVisionConstants.getLimelightYawGateStableDeltaDeg();
-    Double first = null;
-    for (YawSample sample : history) {
-      if (first == null) {
-        first = sample.residualDeg;
-        continue;
-      }
-      if (Math.abs(sample.residualDeg - first) > maxDelta) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private YawGateResult evaluateYawGate(
-      int cameraIndex,
-      VisionIO.VisionIOInputs cam,
-      double visionYawDeg,
-      double gyroYawDeg,
-      double yawRateDegPerSec,
-      double frameAgeSec,
-      double residualTranslationMeters) {
-    if (!AprilTagVisionConstants.isLimelightYawGateEnabled() || cam.megatagPoseEstimate == null) {
-      return YawGateResult.disabled();
-    }
-    int tagCount = cam.megatagPoseEstimate.fiducialIds().length;
-    boolean tagCountOk = tagCount >= 2;
-    boolean distOk =
-        cam.megatagPoseEstimate.avgTagDist()
-            <= AprilTagVisionConstants.getLimelightYawGateMaxDistMeters();
-    boolean yawRateOk =
-        Math.abs(yawRateDegPerSec)
-            <= AprilTagVisionConstants.getLimelightYawGateMaxYawRateDegPerSec();
-    boolean frameAgeOk = frameAgeSec <= AprilTagVisionConstants.getLimelightYawGateMaxFrameAgeSec();
-    boolean residualOk =
-        residualTranslationMeters <= AprilTagVisionConstants.getLimelightYawGateMaxResidualMeters();
-    double yawResidual = wrapDegrees(visionYawDeg - gyroYawDeg);
-    boolean yawResidualOk =
-        Math.abs(yawResidual) <= AprilTagVisionConstants.getLimelightYawGateMaxYawResidualDeg();
-
-    boolean prereqOk =
-        tagCountOk && distOk && yawRateOk && frameAgeOk && residualOk && yawResidualOk;
-    boolean stableOk = false;
-    if (prereqOk) {
-      recordYawResidual(cameraIndex, cam.megatagPoseEstimate.timestampSeconds(), yawResidual);
-      stableOk = isYawStable(cameraIndex);
-    }
-    boolean passed = prereqOk && stableOk;
-    return new YawGateResult(
-        passed,
-        tagCountOk,
-        distOk,
-        yawRateOk,
-        frameAgeOk,
-        residualOk,
-        yawResidualOk,
-        stableOk,
-        yawResidual);
-  }
-
   private boolean isTimestampInOrder(int cameraIndex, double timestampSeconds) {
     if (cameraIndex < 0 || cameraIndex >= lastAcceptedTimestampsSec.length) {
       return true;
     }
-    return timestampSeconds > lastAcceptedTimestampsSec[cameraIndex];
+    if (!isFinite(timestampSeconds)) {
+      return false;
+    }
+    return timestampSeconds > lastAcceptedTimestampsSec[cameraIndex] + TIMESTAMP_EPSILON_SEC;
   }
 
   private void markTimestampAccepted(int cameraIndex, double timestampSeconds) {
@@ -701,7 +553,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       lastAcceptedTimestampsSec[cameraIndex] = Double.NEGATIVE_INFINITY;
       lastAcceptedWallClockSec[cameraIndex] = Double.NEGATIVE_INFINITY;
       connectedSinceWallClockSec[cameraIndex] = Timer.getFPGATimestamp();
-      yawHistory[cameraIndex].clear();
     } else if (!connected && wasConnected[cameraIndex]) {
       connectedSinceWallClockSec[cameraIndex] = Double.NEGATIVE_INFINITY;
     }
@@ -804,19 +655,22 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   }
 
   private void updateResiduals(VisionIO.VisionIOInputs cam) {
-    cam.residualTranslationMeters = Double.NaN;
     if (cam.megatagPoseEstimate == null) {
+      cam.residualTranslationMeters = Double.NaN;
       return;
     }
 
     Optional<Pose2d> referencePose = getReferencePose(cam.megatagPoseEstimate.timestampSeconds());
     if (referencePose.isEmpty()) {
+      cam.residualTranslationMeters = Double.NaN;
       return;
     }
 
-    Pose2d visionPose = cam.megatagPoseEstimate.fieldToRobot();
     cam.residualTranslationMeters =
-        referencePose.get().getTranslation().getDistance(visionPose.getTranslation());
+        referencePose
+            .get()
+            .getTranslation()
+            .getDistance(cam.megatagPoseEstimate.fieldToRobot().getTranslation());
   }
 
   private void logLimelightDiagnostics(String cameraLabel, VisionIO.VisionIOInputs cam) {
@@ -869,7 +723,8 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         !(AprilTagVisionConstants.LIMELIGHT_REJECT_OUTLIERS.get() > 0.5
             && residualFinite
             && (cam.residualTranslationMeters
-                > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get()));
+                > AprilTagVisionConstants.LIMELIGHT_MAX_TRANSLATION_RESIDUAL_METERS.get())
+            && tagCount < 2);
 
     if (!useVision) {
       rejectReason = VisionIO.RejectReason.VISION_DISABLED;
@@ -1029,23 +884,6 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         previous = sample;
       }
       return Optional.empty();
-    }
-  }
-
-  private record YawSample(double timestampSeconds, double residualDeg) {}
-
-  private record YawGateResult(
-      boolean passed,
-      boolean tagCountOk,
-      boolean distanceOk,
-      boolean yawRateOk,
-      boolean frameAgeOk,
-      boolean residualOk,
-      boolean yawResidualOk,
-      boolean stableOk,
-      double residualDeg) {
-    private static YawGateResult disabled() {
-      return new YawGateResult(false, false, false, false, false, false, false, false, 0.0);
     }
   }
 

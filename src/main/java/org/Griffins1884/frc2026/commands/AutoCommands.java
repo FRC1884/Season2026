@@ -15,10 +15,9 @@ public class AutoCommands {
             Commands.runOnce(superstructure::toggleIndexer)));
 
     NamedCommands.registerCommand(
-            "GetReady", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
+        "GetReady", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
 
-    NamedCommands.registerCommand(
-            "ShootBalls", Commands.runOnce(superstructure::toggleIndexer));
+    NamedCommands.registerCommand("ShootBalls", Commands.runOnce(superstructure::toggleIndexer));
 
     NamedCommands.registerCommand(
         "OverSecondBump",
