@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.Griffins1884.frc2026.Config;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.Superstructure.SuperState;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
@@ -147,6 +146,30 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       lastRequestReason =
           cleaned ? "" : "Log cleanup " + LogRollover.getCleanStatus().toLowerCase();
     }
+    if (inputs.requestIntakeDeployRezero) {
+      if (superstructure == null) {
+        lastRequestedState = "INTAKE_DEPLOY_REZERO_REQUEST";
+        lastRequestAccepted = false;
+        lastRequestReason = "Superstructure unavailable";
+      } else {
+        superstructure.requestIntakeDeployRezero();
+        lastRequestedState = "INTAKE_DEPLOY_REZERO_REQUEST";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      }
+    }
+    if (inputs.cancelIntakeDeployRezero) {
+      if (superstructure == null) {
+        lastRequestedState = "INTAKE_DEPLOY_REZERO_CANCEL";
+        lastRequestAccepted = false;
+        lastRequestReason = "Superstructure unavailable";
+      } else {
+        superstructure.cancelIntakeDeployRezero();
+        lastRequestedState = "INTAKE_DEPLOY_REZERO_CANCEL";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      }
+    }
     if (inputs.autoStateEnableRequested) {
       if (superstructure == null) {
         lastRequestedState = "AUTO";
@@ -256,6 +279,12 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setSysIdTurnLastCompletedPhase(
         drive != null ? drive.getTurnSysIdLastCompletedPhase() : "UNAVAILABLE");
     io.setVisionStatus(Config.Subsystems.VISION_ENABLED ? "ENABLED" : "DISABLED");
+    io.setShootEnabled(superstructure != null && superstructure.isShootEnabled());
+    io.setIntakeRollersHeld(superstructure != null && superstructure.isIntakeRollersHeld());
+    io.setIntakeDeployed(superstructure != null && superstructure.isIntakeDeployed());
+    io.setShootReadyLatched(superstructure != null && superstructure.isShootReadyLatched());
+    io.setIntakeDeployRezeroInProgress(
+        superstructure != null && superstructure.isIntakeDeployRezeroInProgress());
     io.setLogRollStatus(LogRollover.getStatus());
     io.setLogRollLastTimestamp(LogRollover.getLastRollTimestampSec());
     io.setLogRollCount(LogRollover.getRollCount());
@@ -282,28 +311,8 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     if (superstructure == null) {
       return TargetSnapshot.unknown();
     }
-    SuperState state = superstructure.getCurrentState();
-    Translation2d target = null;
-    String targetType = "NONE";
-
-    switch (state) {
-      case SHOOTING -> {
-        targetType = "HOPPER";
-        target =
-            (DriverStation.getAlliance().isPresent()
-                    && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
-                ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
-                : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
-      }
-      case FERRYING -> {
-        targetType = "FERRY";
-        Pose2d pose = drive != null ? drive.getPose() : null;
-        if (pose != null) {
-          target = new Translation2d(0.0, 0.0); // TODO: find Ferry Target
-        }
-      }
-      default -> targetType = "NONE";
-    }
+    Translation2d target = superstructure.getCurrentTurretTarget();
+    String targetType = superstructure.isInAllianceZone() ? "HUB" : "FERRY";
 
     if (target == null || !isFinite(target.getX()) || !isFinite(target.getY())) {
       return new TargetSnapshot(targetType, new double[] {}, false);

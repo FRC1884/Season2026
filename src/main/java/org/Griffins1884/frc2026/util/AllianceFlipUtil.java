@@ -11,6 +11,52 @@ import org.Griffins1884.frc2026.GlobalConstants.FieldConstants;
  * credit goes to team 5712.
  */
 public class AllianceFlipUtil {
+  private static Optional<Alliance> cachedAlliance = Optional.empty();
+
+  private AllianceFlipUtil() {}
+
+  /** Returns the current DriverStation alliance, updating the cache when available. */
+  public static Optional<Alliance> getAlliance() {
+    Optional<Alliance> liveAlliance = DriverStation.getAlliance();
+    liveAlliance.ifPresent(alliance -> cachedAlliance = Optional.of(alliance));
+    return liveAlliance;
+  }
+
+  /** Returns DriverStation alliance or the last known alliance if DS is temporarily unknown. */
+  public static Optional<Alliance> getAllianceWithFallback() {
+    Optional<Alliance> liveAlliance = getAlliance();
+    return liveAlliance.isPresent() ? liveAlliance : cachedAlliance;
+  }
+
+  /** Infers alliance from field pose when DS alliance is unavailable. */
+  public static Optional<Alliance> inferAllianceFromPose(Pose2d referencePose) {
+    if (referencePose == null || !Double.isFinite(referencePose.getX())) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        referencePose.getX() <= FieldConstants.fieldLength * 0.5 ? Alliance.Blue : Alliance.Red);
+  }
+
+  /**
+   * Resolves alliance from DS first, then from cache, then by pose hint.
+   *
+   * @param referencePose Pose hint used only if DS/cache are unavailable.
+   */
+  public static Optional<Alliance> resolveAlliance(Pose2d referencePose) {
+    Optional<Alliance> alliance = getAllianceWithFallback();
+    return alliance.isPresent() ? alliance : inferAllianceFromPose(referencePose);
+  }
+
+  /** Returns true when alliance is known from DS or cache. */
+  public static boolean isAllianceKnown() {
+    return getAllianceWithFallback().isPresent();
+  }
+
+  /** Clears cached alliance (useful in tests). */
+  public static void clearCachedAlliance() {
+    cachedAlliance = Optional.empty();
+  }
+
   /**
    * Flips an x coordinate to the correct side of the field based on the current alliance color.
    *
@@ -74,11 +120,17 @@ public class AllianceFlipUtil {
    * @return The flipped pose.
    */
   public static Pose2d apply(Pose2d pose) {
-    if (shouldFlip()) {
-      return new Pose2d(apply(pose.getTranslation()), apply(pose.getRotation()));
-    } else {
+    if (pose == null) {
+      return null;
+    }
+    if (!shouldFlip(pose)) {
       return pose;
     }
+    Translation2d flippedTranslation =
+        new Translation2d(FieldConstants.fieldLength - pose.getX(), pose.getY());
+    Rotation2d flippedRotation =
+        new Rotation2d(-pose.getRotation().getCos(), pose.getRotation().getSin());
+    return new Pose2d(flippedTranslation, flippedRotation);
   }
 
   /**
@@ -101,7 +153,13 @@ public class AllianceFlipUtil {
    * @return True if the alliance color should be flipped, false otherwise.
    */
   public static boolean shouldFlip() {
-    Optional<Alliance> optional = DriverStation.getAlliance();
-    return optional.isPresent() && optional.get() == Alliance.Red;
+    Optional<Alliance> alliance = getAllianceWithFallback();
+    return alliance.isPresent() && alliance.get() == Alliance.Red;
+  }
+
+  /** Uses a pose hint when DS alliance is unavailable. */
+  public static boolean shouldFlip(Pose2d referencePose) {
+    Optional<Alliance> alliance = resolveAlliance(referencePose);
+    return alliance.isPresent() && alliance.get() == Alliance.Red;
   }
 }

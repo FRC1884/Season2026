@@ -9,15 +9,13 @@ public class AutoCommands {
   public static void registerAutoCommands(Superstructure superstructure, SwerveSubsystem drive) {
     NamedCommands.registerCommand(
         "Shoot",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING),
-            Commands.waitSeconds(0.2),
-            Commands.runOnce(superstructure::toggleIndexer)));
+        Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
 
     NamedCommands.registerCommand(
         "GetReady", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
 
-    NamedCommands.registerCommand("ShootBalls", Commands.runOnce(superstructure::toggleIndexer));
+    NamedCommands.registerCommand(
+        "ShootBalls", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
 
     NamedCommands.registerCommand(
         "OverSecondBump",

@@ -2,13 +2,9 @@ package org.Griffins1884.frc2026;
 
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
-import org.Griffins1884.frc2026.OI.BoardOperatorMap;
 import org.Griffins1884.frc2026.OI.DriverMap;
-import org.Griffins1884.frc2026.OI.OperatorMap;
-import org.Griffins1884.frc2026.OI.PS5DriverMap;
 import org.Griffins1884.frc2026.OI.SimXboxUniversalMap;
 import org.Griffins1884.frc2026.OI.XboxDriverMap;
-import org.Griffins1884.frc2026.OI.XboxOperatorMap;
 
 public final class Config {
 
@@ -38,33 +34,10 @@ public final class Config {
   public static final class Controllers {
     public static final int DRIVER_PORT = 0;
 
-    public static final int OPERATOR_PORT = 1;
-    public static final boolean JOYSTICK_OPERATOR_ENABLED = false;
-
     public static DriverMap getDriverController() {
       return switch (ROBOT) {
         case COMPBOT -> new XboxDriverMap(DRIVER_PORT);
-        case CRESCENDO -> new PS5DriverMap(DRIVER_PORT);
-        case DEVBOT -> new XboxDriverMap(DRIVER_PORT);
         case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
-      };
-    }
-
-    public static OperatorMap getOperatorController() {
-      return switch (ROBOT) {
-        case COMPBOT ->
-            JOYSTICK_OPERATOR_ENABLED
-                ? new XboxOperatorMap(OPERATOR_PORT)
-                : new BoardOperatorMap(OPERATOR_PORT);
-        case CRESCENDO ->
-            JOYSTICK_OPERATOR_ENABLED
-                ? new XboxOperatorMap(OPERATOR_PORT)
-                : new BoardOperatorMap(OPERATOR_PORT);
-        case DEVBOT ->
-            JOYSTICK_OPERATOR_ENABLED
-                ? new XboxOperatorMap(OPERATOR_PORT)
-                : new BoardOperatorMap(OPERATOR_PORT);
-        case SIMBOT -> new BoardOperatorMap(OPERATOR_PORT);
       };
     }
   }

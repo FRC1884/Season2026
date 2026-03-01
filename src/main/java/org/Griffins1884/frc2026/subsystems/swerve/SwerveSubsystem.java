@@ -59,9 +59,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.subsystems.vision.Vision;
+import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.LocalADStarAK;
 import org.Griffins1884.frc2026.util.LogRollover;
 import org.Griffins1884.frc2026.util.RobotLogging;
@@ -140,8 +140,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     modules[1] = new Module(frModuleIO, 1);
     modules[2] = new Module(blModuleIO, 2);
     modules[3] = new Module(brModuleIO, 3);
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
-        && GlobalConstants.MODE != SIM) {
+    if (GlobalConstants.MODE != SIM) {
       musicPlayer = new SwerveMusicPlayer(modules, SwerveConstants.SWERVE_MUSIC_FILE);
     } else {
       musicPlayer = null;
@@ -151,9 +150,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
     // Start odometry thread
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-      PhoenixOdometryThread.getInstance().start();
-    else SparkOdometryThread.getInstance().start();
+    PhoenixOdometryThread.getInstance().start();
 
     // Configure AutoBuilder for PathPlanner
     AutoBuilder.configure(
@@ -164,7 +161,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
         new PPHolonomicDriveController(
             new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
         PATHPLANNER_CONFIG,
-        () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+        () -> AllianceFlipUtil.shouldFlip(getPose()),
         this);
     Pathfinding.setPathfinder(new LocalADStarAK());
     PathPlannerLogging.setLogActivePathCallback(
@@ -368,8 +365,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/FieldMotionSampleDtSec", fieldMotionSampleDtSec);
     Logger.recordOutput("Swerve/FieldMotionSampleAgeSec", getFieldMotionSampleAgeSec());
 
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
-        && !krakenVelocityMode) {
+    if (!krakenVelocityMode) {
       krakenCurrentSetpoint = new SwerveSetpoint(getChassisSpeeds(), getModuleStates());
     }
 
@@ -383,54 +379,28 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
    * @param speeds Speeds in meters/sec
    */
   public void runVelocity(ChassisSpeeds speeds) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      krakenVelocityMode = true;
-      ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
-      SwerveModuleState[] setpointStatesUnoptimized =
-          kinematics.toSwerveModuleStates(discreteSpeeds);
-      krakenCurrentSetpoint =
-          krakenSetpointGenerator.generateSetpoint(
-              SwerveConstants.KRAKEN_MODULE_LIMITS_FREE,
-              krakenCurrentSetpoint,
-              discreteSpeeds,
-              0.02);
-      SwerveModuleState[] setpointStates = krakenCurrentSetpoint.moduleStates();
+    krakenVelocityMode = true;
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+    SwerveModuleState[] setpointStatesUnoptimized = kinematics.toSwerveModuleStates(discreteSpeeds);
+    krakenCurrentSetpoint =
+        krakenSetpointGenerator.generateSetpoint(
+            SwerveConstants.KRAKEN_MODULE_LIMITS_FREE, krakenCurrentSetpoint, discreteSpeeds, 0.02);
+    SwerveModuleState[] setpointStates = krakenCurrentSetpoint.moduleStates();
 
-      Logger.recordOutput("SwerveStates/SetpointsUnoptimized", setpointStatesUnoptimized);
-      Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
-      Logger.recordOutput("SwerveChassisSpeeds/Setpoints", krakenCurrentSetpoint.chassisSpeeds());
-
-      for (int i = 0; i < 4; i++) {
-        modules[i].runSetpoint(setpointStates[i]);
-      }
-
-      Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
-      return;
-    }
-
-    // Calculate module setpoints
-    speeds = ChassisSpeeds.discretize(speeds, 0.02);
-    SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(speeds);
-    SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, SwerveConstants.MAX_LINEAR_SPEED);
-
-    // Log unoptimized setpoints
+    Logger.recordOutput("SwerveStates/SetpointsUnoptimized", setpointStatesUnoptimized);
     Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
-    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", speeds);
+    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", krakenCurrentSetpoint.chassisSpeeds());
 
-    // Send setpoints to modules
     for (int i = 0; i < 4; i++) {
       modules[i].runSetpoint(setpointStates[i]);
     }
 
-    // Log optimized setpoints (runSetpoint mutates each state)
     Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
   }
 
   /** Runs the drive in a straight line with the specified drive output. */
   public void runCharacterization(double output) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      krakenVelocityMode = false;
-    }
+    krakenVelocityMode = false;
     for (int i = 0; i < 4; i++) {
       modules[i].runCharacterization(output);
     }
@@ -438,9 +408,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
   /** Runs the turn motors open-loop for SysId and tuning. */
   public void runTurnCharacterization(double output) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      krakenVelocityMode = false;
-    }
+    krakenVelocityMode = false;
     for (int i = 0; i < 4; i++) {
       modules[i].runTurnCharacterization(output);
     }

@@ -12,8 +12,6 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
-// TODO tune all of these!! Make sure that the robot-relative coords are correct - this will cause
-// rapid pose oscillation
 public final class AprilTagVisionConstants {
   public static final boolean IS_LIMELIGHT = true;
   private static final VisionIO.CameraType LIMELIGHT_TYPE_HINT = VisionIO.CameraType.LIMELIGHT;
@@ -25,16 +23,6 @@ public final class AprilTagVisionConstants {
   public static final boolean LEFT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case DEVBOT ->
-            new VisionIO.CameraConstants(
-                (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
-                new Transform3d(
-                    0.290868,
-                    -0.288925,
-                    0.205,
-                    new Rotation3d(
-                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
-                getPrimaryCameraType());
         case COMPBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
@@ -45,7 +33,7 @@ public final class AprilTagVisionConstants {
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(15), degreesToRadians(20))),
                 getPrimaryCameraType());
-        case SIMBOT, CRESCENDO ->
+        case SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
@@ -59,16 +47,6 @@ public final class AprilTagVisionConstants {
   public static final boolean RIGHT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case DEVBOT ->
-            new VisionIO.CameraConstants(
-                (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
-                new Transform3d(
-                    0.290868,
-                    0.288922,
-                    0.205,
-                    new Rotation3d(
-                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
-                getPrimaryCameraType());
         case COMPBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
@@ -79,7 +57,7 @@ public final class AprilTagVisionConstants {
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(15), degreesToRadians(-20))),
                 getPrimaryCameraType());
-        case SIMBOT, CRESCENDO ->
+        case SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
                 new Transform3d(
@@ -93,16 +71,6 @@ public final class AprilTagVisionConstants {
   public static final boolean MIDDLE_RIGHT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants MIDDLE_RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case DEVBOT ->
-            new VisionIO.CameraConstants(
-                (IS_LIMELIGHT) ? "limelight-side" : "middlerighttagcam",
-                new Transform3d(
-                    0.290868,
-                    0.288922,
-                    0.205,
-                    new Rotation3d(
-                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(0))),
-                getPrimaryCameraType());
         case COMPBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-side" : "middlerighttagcam",
@@ -113,7 +81,7 @@ public final class AprilTagVisionConstants {
                     new Rotation3d(
                         degreesToRadians(180), degreesToRadians(0), degreesToRadians(90))),
                 getPrimaryCameraType());
-        case SIMBOT, CRESCENDO ->
+        case SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-middle-right" : "middlerighttagcam",
                 new Transform3d(
@@ -127,17 +95,7 @@ public final class AprilTagVisionConstants {
   public static final boolean BACK_CAM_ENABLED = false;
   public static final VisionIO.CameraConstants BACK_CAM_CONSTANTS =
       switch (ROBOT) {
-        case DEVBOT ->
-            new VisionIO.CameraConstants(
-                (IS_LIMELIGHT) ? "limelight-back" : "backtagcam",
-                new Transform3d(
-                    -0.29176,
-                    0.289464,
-                    0.205,
-                    new Rotation3d(
-                        degreesToRadians(180), degreesToRadians(5), degreesToRadians(180))),
-                getPrimaryCameraType());
-        case COMPBOT, SIMBOT, CRESCENDO ->
+        case COMPBOT, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-back" : "backtagcam",
                 new Transform3d(

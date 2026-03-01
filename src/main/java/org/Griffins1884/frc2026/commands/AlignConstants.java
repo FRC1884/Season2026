@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
+import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 /** Shared constants and gain containers for drive alignment routines. */
@@ -111,43 +112,51 @@ public final class AlignConstants {
   }
 
   public static Pose2d getAfterCollectStartPose() {
-    return new Pose2d(
-        new Translation2d(AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
-        Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get()));
+    return AllianceFlipUtil.apply(
+        new Pose2d(
+            new Translation2d(
+                AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
+            Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get())));
   }
 
   public static Pose2d getStandStillShootPose() {
-    return new Pose2d(
-        new Translation2d(STAND_STILL_SHOOT_X_METERS.get(), STAND_STILL_SHOOT_Y_METERS.get()),
-        Rotation2d.fromDegrees(STAND_STILL_SHOOT_HEADING_DEG.get()));
+    return AllianceFlipUtil.apply(
+        new Pose2d(
+            new Translation2d(STAND_STILL_SHOOT_X_METERS.get(), STAND_STILL_SHOOT_Y_METERS.get()),
+            Rotation2d.fromDegrees(STAND_STILL_SHOOT_HEADING_DEG.get())));
   }
 
   public static Pose2d getAfterBumpRightToNeutralStartPose() {
-    return new Pose2d(
-        new Translation2d(
-            AFTER_BUMP_RIGHT_TO_NEUTRAL_START_X_METERS.get(),
-            AFTER_BUMP_RIGHT_TO_NEUTRAL_START_Y_METERS.get()),
-        Rotation2d.fromDegrees(AFTER_BUMP_RIGHT_TO_NEUTRAL_START_HEADING_DEG.get()));
+    return AllianceFlipUtil.apply(
+        new Pose2d(
+            new Translation2d(
+                AFTER_BUMP_RIGHT_TO_NEUTRAL_START_X_METERS.get(),
+                AFTER_BUMP_RIGHT_TO_NEUTRAL_START_Y_METERS.get()),
+            Rotation2d.fromDegrees(AFTER_BUMP_RIGHT_TO_NEUTRAL_START_HEADING_DEG.get())));
   }
 
   public static Pose2d getAfterOverBumpStartPose() {
-    return new Pose2d(
-        new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
-        Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get()));
+    return AllianceFlipUtil.apply(
+        new Pose2d(
+            new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
+            Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get())));
   }
 
   public static Pose2d getAfterSecondBumpStartPose() {
-    return new Pose2d(
-        new Translation2d(
-            AFTER_SECOND_BUMP_START_X_METERS.get(), AFTER_SECOND_BUMP_START_Y_METERS.get()),
-        Rotation2d.fromDegrees(AFTER_SECOND_BUMP_START_HEADING_DEG.get()));
+    return AllianceFlipUtil.apply(
+        new Pose2d(
+            new Translation2d(
+                AFTER_SECOND_BUMP_START_X_METERS.get(), AFTER_SECOND_BUMP_START_Y_METERS.get()),
+            Rotation2d.fromDegrees(AFTER_SECOND_BUMP_START_HEADING_DEG.get())));
   }
 
   public static Pose2d getAfterBumpToNeutralStartPose() {
-    return new Pose2d(
-        new Translation2d(
-            AFTER_BUMP_TO_NEUTRAL_START_X_METERS.get(), AFTER_BUMP_TO_NEUTRAL_START_Y_METERS.get()),
-        Rotation2d.fromDegrees(AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG.get()));
+    return AllianceFlipUtil.apply(
+        new Pose2d(
+            new Translation2d(
+                AFTER_BUMP_TO_NEUTRAL_START_X_METERS.get(),
+                AFTER_BUMP_TO_NEUTRAL_START_Y_METERS.get()),
+            Rotation2d.fromDegrees(AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG.get())));
   }
 
   /** Feedforward definition for translation alignment. */

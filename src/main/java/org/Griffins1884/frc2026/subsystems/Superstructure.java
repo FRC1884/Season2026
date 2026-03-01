@@ -36,6 +36,7 @@ import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.Shooter
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterSubsystem.ShooterGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
+import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
@@ -86,7 +87,10 @@ public class Superstructure extends SubsystemBase {
   private final Debouncer ballPresentDebouncer =
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   @Setter private boolean turretExternalControl = false;
-  private boolean runIndexer = false;
+  @Getter private boolean shootEnabled = false;
+  @Getter private boolean intakeRollersHeld = false;
+  @Getter private boolean intakeDeployed = false;
+  @Getter private boolean shootReadyLatched = false;
   private final LEDSubsystem leds =
       Config.Subsystems.LEDS_ENABLED
           ? (MODE == GlobalConstants.RobotMode.REAL
@@ -146,8 +150,39 @@ public class Superstructure extends SubsystemBase {
     manualControlActive = !manualControlActive;
   }
 
-  public void toggleIndexer() {
-    runIndexer = !runIndexer;
+  public void toggleShootEnabled() {
+    setShootEnabled(!shootEnabled);
+  }
+
+  public void setShootEnabled(boolean enabled) {
+    shootEnabled = enabled;
+    if (!enabled) {
+      shootReadyLatched = false;
+    }
+  }
+
+  public void setIntakeRollersHeld(boolean held) {
+    intakeRollersHeld = held;
+  }
+
+  public void toggleIntakeDeploy() {
+    intakeDeployed = !intakeDeployed;
+  }
+
+  public void requestIntakeDeployRezero() {
+    if (arms.intakePivot != null) {
+      arms.intakePivot.requestZeroCalibration();
+    }
+  }
+
+  public void cancelIntakeDeployRezero() {
+    if (arms.intakePivot != null) {
+      arms.intakePivot.cancelZeroCalibration();
+    }
+  }
+
+  public boolean isIntakeDeployRezeroInProgress() {
+    return arms.intakePivot != null && arms.intakePivot.isZeroCalibrationInProgress();
   }
 
   public StateRequestResult requestStateFromDashboard(SuperState state) {
@@ -176,21 +211,28 @@ public class Superstructure extends SubsystemBase {
 
   @Override
   public void periodic() {
-    updateRequestedStateFromChooser();
-    if (autoStateEnabled && !stateOverrideActive) {
-      SuperState autoState = computeAutoState();
-      if (autoState != null) {
-        requestState(autoState, false);
+    if (DriverStation.isTeleopEnabled()) {
+      currentState = computeTeleopState();
+      requestedState = currentState;
+      applyTeleopControl();
+      Logger.recordOutput("Superstructure/AutoState", "TELEOP_DRIVER_CONTROL");
+    } else {
+      updateRequestedStateFromChooser();
+      if (autoStateEnabled && !stateOverrideActive) {
+        SuperState autoState = computeAutoState();
+        if (autoState != null) {
+          requestState(autoState, false);
+        }
+        Logger.recordOutput(
+            "Superstructure/AutoState", autoState != null ? autoState.toString() : "UNKNOWN");
       }
-      Logger.recordOutput(
-          "Superstructure/AutoState", autoState != null ? autoState.toString() : "UNKNOWN");
-    }
-    if (requestedState != currentState) {
-      enterState(requestedState);
-      currentState = requestedState;
+      if (requestedState != currentState) {
+        enterState(requestedState);
+        currentState = requestedState;
+      }
+      applyState(currentState);
     }
 
-    applyState(currentState);
     if (manualControlActive) {
       applyManualJog();
     } else {
@@ -200,6 +242,11 @@ public class Superstructure extends SubsystemBase {
     Logger.recordOutput("Superstructure/RequestedState", requestedState.toString());
     Logger.recordOutput("Superstructure/turretTarget", lastTurretTarget);
     Logger.recordOutput("Superstructure/AutoStateEnabled", autoStateEnabled);
+    Logger.recordOutput("Superstructure/ShootEnabled", shootEnabled);
+    Logger.recordOutput("Superstructure/ShootReadyLatched", shootReadyLatched);
+    Logger.recordOutput("Superstructure/IntakeRollersHeld", intakeRollersHeld);
+    Logger.recordOutput("Superstructure/IntakeDeployed", intakeDeployed);
+    Logger.recordOutput("Superstructure/InAllianceZone", isInAllianceZone());
   }
 
   public void registerSuperstructureCharacterization(
@@ -311,6 +358,51 @@ public class Superstructure extends SubsystemBase {
     return SuperState.IDLING;
   }
 
+  private SuperState computeTeleopState() {
+    if (shootEnabled && intakeRollersHeld) {
+      return SuperState.SHOOT_INTAKE;
+    }
+    if (shootEnabled) {
+      return SuperState.SHOOTING;
+    }
+    if (intakeRollersHeld || intakeDeployed) {
+      return SuperState.INTAKING;
+    }
+    if (!isInAllianceZone()) {
+      return SuperState.FERRYING;
+    }
+    return SuperState.IDLING;
+  }
+
+  private void applyTeleopControl() {
+    boolean inAllianceZone = isInAllianceZone();
+    Translation2d target = inAllianceZone ? getHubTarget() : getFerryingTarget();
+
+    boolean shooterShouldSpin = inAllianceZone || shootEnabled;
+    updateShootReadyLatch(shooterShouldSpin);
+
+    setIntakePivotGoal(intakeDeployed ? IntakePivotGoal.PICKUP : IntakePivotGoal.IDLING);
+    setIntakeGoal(intakeRollersHeld ? IntakeGoal.FORWARD : IntakeGoal.IDLING);
+    setIndexerGoal(shootEnabled && shootReadyLatched ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
+
+    applyAimingAndShooterSolution(target, shooterShouldSpin);
+  }
+
+  private void updateShootReadyLatch(boolean shooterShouldSpin) {
+    if (!shootEnabled || !shooterShouldSpin) {
+      shootReadyLatched = false;
+      return;
+    }
+    if (shootReadyLatched) {
+      return;
+    }
+    if (rollers.shooter == null) {
+      shootReadyLatched = true;
+      return;
+    }
+    shootReadyLatched = rollers.shooter.isAtGoal();
+  }
+
   private boolean isTurretExternallyControlled() {
     return turretExternalControl || manualControlActive;
   }
@@ -362,19 +454,8 @@ public class Superstructure extends SubsystemBase {
     switch (state) {
       case IDLING -> applyIdle();
       case INTAKING -> applyIntaking();
-      case SHOOTING ->
-          applyShooting(
-              (DriverStation.getAlliance().isPresent()
-                      && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
-                  ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
-                  : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d(),
-              false);
-      case SHOOT_INTAKE ->
-          applyShootingAndIntaking(
-              (DriverStation.getAlliance().isPresent()
-                      && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
-                  ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
-                  : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d());
+      case SHOOTING -> applyShooting(getHubTarget(), false);
+      case SHOOT_INTAKE -> applyShootingAndIntaking(getHubTarget());
       case FERRYING -> applyFerrying();
       case TESTING -> applyTesting();
     }
@@ -388,7 +469,6 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.IDLING);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
-    runIndexer = false;
   }
 
   private void clearIdleOverrides() {
@@ -416,7 +496,6 @@ public class Superstructure extends SubsystemBase {
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
     holdTurret();
-    runIndexer = false;
   }
 
   private void applyShooting(Translation2d target, boolean autoStopOnEmpty) {
@@ -429,16 +508,10 @@ public class Superstructure extends SubsystemBase {
               drive::getFieldVelocity,
               drive::getFieldAcceleration);
     }
-    if (runIndexer) {
-      setIndexerGoal(IndexerGoal.FORWARD);
-    } else if (!runIndexer) {
-      setIndexerGoal(IndexerGoal.IDLING);
-    }
+    setIndexerGoal(IndexerGoal.FORWARD);
     setIntakeGoal(IntakeGoal.IDLING);
-    setShooterGoal(ShooterGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
-    aimTurretAt(target);
-    aimShooterPivotAt(target);
+    applyAimingAndShooterSolution(target, true);
   }
 
   private void applyShootingAndIntaking(Translation2d target) {
@@ -452,29 +525,17 @@ public class Superstructure extends SubsystemBase {
               drive::getFieldAcceleration);
     }
     setIntakeGoal(IntakeGoal.FORWARD);
-    if (runIndexer) {
-      setIndexerGoal(IndexerGoal.FORWARD);
-    } else if (!runIndexer) {
-      setIndexerGoal(IndexerGoal.IDLING);
-    }
-    setShooterGoal(ShooterGoal.FORWARD);
+    setIndexerGoal(IndexerGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
-    aimTurretAt(target);
-    aimShooterPivotAt(target);
+    applyAimingAndShooterSolution(target, true);
   }
 
   private void applyFerrying() {
     Translation2d target = getFerryingTarget();
     setIntakeGoal(IntakeGoal.FORWARD);
-    if (runIndexer) {
-      setIndexerGoal(IndexerGoal.FORWARD);
-    } else if (!runIndexer) {
-      setIndexerGoal(IndexerGoal.IDLING);
-    }
-    setShooterGoal(ShooterGoal.FORWARD);
+    setIndexerGoal(IndexerGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
-    aimTurretAt(target);
-    aimShooterPivotAt(target);
+    applyAimingAndShooterSolution(target, true);
   }
 
   private void applyTesting() {
@@ -483,11 +544,7 @@ public class Superstructure extends SubsystemBase {
     setShooterGoal(ShooterGoal.TESTING);
     setIntakePivotGoal(IntakePivotGoal.TESTING);
     setShooterPivotGoal(ShooterPivotGoal.TESTING, false, 0.0);
-    Translation2d target =
-        (DriverStation.getAlliance().isPresent()
-                && DriverStation.getAlliance().get() == DriverStation.Alliance.Blue)
-            ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
-            : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
+    Translation2d target = getHubTarget();
     aimTurretAt(target);
     ShooterCommands.calc(drive.getPose(), target, currentState);
     // if (turret != null) {
@@ -577,35 +634,91 @@ public class Superstructure extends SubsystemBase {
     lastTurretTarget = target;
   }
 
-  private void aimShooterPivotAt(Translation2d target) {
-    if (isShooterPivotExternallyControlled()) {
+  private void applyAimingAndShooterSolution(
+      Translation2d target, boolean shooterEnabledForTarget) {
+    aimTurretAt(target);
+
+    if (rollers.shooter == null) {
       return;
     }
+
+    if (!shooterEnabledForTarget) {
+      rollers.shooter.clearGoalOverride();
+      setShooterGoal(ShooterGoal.IDLING);
+      setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
+      return;
+    }
+
     if (arms.shooterPivot == null || drive == null || target == null) {
+      setShooterGoal(ShooterGoal.FORWARD);
       return;
     }
+    if (isShooterPivotExternallyControlled()) {
+      setShooterGoal(ShooterGoal.FORWARD);
+      return;
+    }
+
     Pose2d pose = drive.getPose();
     if (pose == null) {
+      setShooterGoal(ShooterGoal.FORWARD);
       return;
     }
 
     Map<ShooterCommands.Vals, Double> data = ShooterCommands.calc(pose, target, currentState);
+    double targetAngle = data.getOrDefault(ShooterCommands.Vals.ANGLE, 0.0);
+    double targetRpm = data.getOrDefault(ShooterCommands.Vals.RPM, 0.0);
 
     lastShooterPivotGoal = ShooterPivotGoal.IDLING;
     lastShooterPivotManual = true;
-    lastShooterPivotPosition = data.get(ShooterCommands.Vals.ANGLE);
+    lastShooterPivotPosition = targetAngle;
 
     arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
-    arms.shooterPivot.setGoalPosition((double) data.get(ShooterCommands.Vals.ANGLE));
+    arms.shooterPivot.setGoalPosition(targetAngle);
 
-    rollers.shooter.setGoal(ShooterGoal.IDLING);
-    rollers.shooter.setGoalVelocity((double) data.get(ShooterCommands.Vals.RPM));
+    setShooterGoal(ShooterGoal.FORWARD);
+    rollers.shooter.setGoalVelocity(targetRpm);
+  }
+
+  public boolean isInAllianceZone() {
+    if (drive == null) {
+      return false;
+    }
+    Pose2d pose = drive.getPose();
+    if (pose == null || !Double.isFinite(pose.getX())) {
+      return false;
+    }
+    Optional<DriverStation.Alliance> alliance = AllianceFlipUtil.resolveAlliance(pose);
+    double xBlue;
+    if (alliance.isPresent()) {
+      xBlue =
+          alliance.get() == DriverStation.Alliance.Red
+              ? GlobalConstants.FieldConstants.fieldLength - pose.getX()
+              : pose.getX();
+    } else {
+      xBlue = Math.min(pose.getX(), GlobalConstants.FieldConstants.fieldLength - pose.getX());
+    }
+    return xBlue <= SuperstructureConstants.ALLIANCE_ZONE_MAX_X_METERS.get();
+  }
+
+  public Translation2d getHubTarget() {
+    Pose2d pose = drive != null ? drive.getPose() : null;
+    boolean isBlue =
+        AllianceFlipUtil.resolveAlliance(pose).orElseGet(() -> inferAllianceFromPose(pose))
+            == DriverStation.Alliance.Blue;
+    return isBlue
+        ? GlobalConstants.FieldConstants.Hub.topCenterPoint.toTranslation2d()
+        : GlobalConstants.FieldConstants.Hub.oppTopCenterPoint.toTranslation2d();
+  }
+
+  public Translation2d getCurrentTurretTarget() {
+    return isInAllianceZone() ? getHubTarget() : getFerryingTarget();
   }
 
   public Translation2d getFerryingTarget() {
+    Pose2d pose = drive != null ? drive.getPose() : null;
     boolean isBlue =
-        DriverStation.getAlliance().isEmpty()
-            || DriverStation.getAlliance().get() == DriverStation.Alliance.Blue;
+        AllianceFlipUtil.resolveAlliance(pose).orElseGet(() -> inferAllianceFromPose(pose))
+            == DriverStation.Alliance.Blue;
     boolean yChange = false;
     if (drive != null) {
       yChange = drive.getPose().getY() > 4.0;
@@ -617,6 +730,20 @@ public class Superstructure extends SubsystemBase {
       target = new Translation2d(13.5, yChange ? 7.0 : 1.0);
     }
     return target;
+  }
+
+  private DriverStation.Alliance inferAllianceFromPose(Pose2d pose) {
+    if (pose == null || !Double.isFinite(pose.getX())) {
+      if (lastTurretTarget != null) {
+        return lastTurretTarget.getX() <= GlobalConstants.FieldConstants.fieldLength * 0.5
+            ? DriverStation.Alliance.Blue
+            : DriverStation.Alliance.Red;
+      }
+      return DriverStation.Alliance.Red;
+    }
+    return pose.getX() <= GlobalConstants.FieldConstants.fieldLength * 0.5
+        ? DriverStation.Alliance.Blue
+        : DriverStation.Alliance.Red;
   }
 
   private boolean isBallSenseAvailable() {

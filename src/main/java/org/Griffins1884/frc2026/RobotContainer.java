@@ -14,14 +14,11 @@
 package org.Griffins1884.frc2026;
 
 import static org.Griffins1884.frc2026.Config.Controllers.getDriverController;
-import static org.Griffins1884.frc2026.Config.Controllers.getOperatorController;
 import static org.Griffins1884.frc2026.Config.Subsystems.AUTONOMOUS_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.DRIVETRAIN_ENABLED;
-import static org.Griffins1884.frc2026.Config.Subsystems.SHOOTER_PIVOT_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.TURRET_ENABLED;
 import static org.Griffins1884.frc2026.Config.Subsystems.VISION_ENABLED;
 import static org.Griffins1884.frc2026.GlobalConstants.MODE;
-import static org.Griffins1884.frc2026.GlobalConstants.robotSwerveMotors;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.BACK_LEFT;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.BACK_RIGHT;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.FRONT_LEFT;
@@ -44,18 +41,14 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
-import org.Griffins1884.frc2026.OI.OperatorMap;
 import org.Griffins1884.frc2026.commands.AutoAlignToFuelCommand;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
-import org.Griffins1884.frc2026.commands.ShooterCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardIOServer;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardTracker;
 import org.Griffins1884.frc2026.subsystems.shooter.*;
-import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
-import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
 import org.Griffins1884.frc2026.subsystems.swerve.*;
 import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIO;
@@ -82,13 +75,10 @@ public class RobotContainer {
   private final SwerveSubsystem drive;
   private SwerveDriveSimulation driveSimulation;
   private final TurretSubsystem turret;
-  private final ShooterPivotSubsystem pivot;
   private final OperatorBoardTracker operatorBoard;
 
   // Controller
   private final DriverMap driver = getDriverController();
-
-  private final OperatorMap operator = getOperatorController();
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
@@ -118,26 +108,10 @@ public class RobotContainer {
                     case NAVX -> new GyroIONavX();
                     case ADIS -> new GyroIO() {};
                   },
-                  switch (robotSwerveMotors) {
-                    case FULLSPARK -> new ModuleIOSpark(FRONT_LEFT);
-                    case HALFSPARK -> new ModuleIOHalfSpark(FRONT_LEFT);
-                    case FULLKRACKENS -> new ModuleIOFullKraken(FRONT_LEFT);
-                  },
-                  switch (robotSwerveMotors) {
-                    case FULLSPARK -> new ModuleIOSpark(FRONT_RIGHT);
-                    case HALFSPARK -> new ModuleIOHalfSpark(FRONT_RIGHT);
-                    case FULLKRACKENS -> new ModuleIOFullKraken(FRONT_RIGHT);
-                  },
-                  switch (robotSwerveMotors) {
-                    case FULLSPARK -> new ModuleIOSpark(BACK_LEFT);
-                    case HALFSPARK -> new ModuleIOHalfSpark(BACK_LEFT);
-                    case FULLKRACKENS -> new ModuleIOFullKraken(BACK_LEFT);
-                  },
-                  switch (robotSwerveMotors) {
-                    case FULLSPARK -> new ModuleIOSpark(BACK_RIGHT);
-                    case HALFSPARK -> new ModuleIOHalfSpark(BACK_RIGHT);
-                    case FULLKRACKENS -> new ModuleIOFullKraken(BACK_RIGHT);
-                  });
+                  new ModuleIOFullKraken(FRONT_LEFT),
+                  new ModuleIOFullKraken(FRONT_RIGHT),
+                  new ModuleIOFullKraken(BACK_LEFT),
+                  new ModuleIOFullKraken(BACK_RIGHT));
             case SIM:
               // Create a maple-sim swerve drive simulation instance
               this.driveSimulation =
@@ -198,97 +172,27 @@ public class RobotContainer {
     }
 
     if (VISION_ENABLED) {
-      if (IS_LIMELIGHT) {
-        vision =
-            switch (MODE) {
-              case REAL ->
-                  new Vision(
-                      drive,
-                      drive::getPose,
-                      () -> Math.toRadians(drive.getYawRateDegreesPerSec()),
-                      LEFT_CAM_ENABLED
-                          ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
-                          : new VisionIO() {},
-                      RIGHT_CAM_ENABLED
-                          ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
-                          : new VisionIO() {},
-                      MIDDLE_RIGHT_CAM_ENABLED
-                          ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
-                          : new VisionIO() {},
-                      BACK_CAM_ENABLED
-                          ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
-                          : new VisionIO() {});
-              case SIM ->
-                  new Vision(
-                      drive,
-                      LEFT_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              LEFT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {},
-                      RIGHT_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {},
-                      MIDDLE_RIGHT_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              MIDDLE_RIGHT_CAM_CONSTANTS,
-                              driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {},
-                      BACK_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              BACK_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {});
-              default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
-            };
-      } else {
-        vision =
-            switch (MODE) {
-              case REAL ->
-                  new Vision(
-                      drive,
-                      LEFT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(
-                              LEFT_CAM_CONSTANTS,
-                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
-                          : new VisionIO() {},
-                      RIGHT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(
-                              RIGHT_CAM_CONSTANTS,
-                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
-                          : new VisionIO() {},
-                      MIDDLE_RIGHT_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(
-                              MIDDLE_RIGHT_CAM_CONSTANTS,
-                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
-                          : new VisionIO() {},
-                      BACK_CAM_ENABLED
-                          ? new AprilTagVisionIOPhotonVision(
-                              BACK_CAM_CONSTANTS,
-                              drive != null ? drive::getYawRateDegreesPerSec : () -> 0.0)
-                          : new VisionIO() {});
-              case SIM ->
-                  new Vision(
-                      drive,
-                      LEFT_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              LEFT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {},
-                      RIGHT_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              RIGHT_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {},
-                      MIDDLE_RIGHT_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              MIDDLE_RIGHT_CAM_CONSTANTS,
-                              driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {},
-                      BACK_CAM_ENABLED
-                          ? new VisionIOPhotonVisionSim(
-                              BACK_CAM_CONSTANTS, driveSimulation::getSimulatedDriveTrainPose)
-                          : new VisionIO() {});
-              default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
-            };
-      }
+      vision =
+          switch (MODE) {
+            case REAL, SIM ->
+                new Vision(
+                    drive,
+                    drive::getPose,
+                    () -> Math.toRadians(drive.getYawRateDegreesPerSec()),
+                    LEFT_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
+                        : new VisionIO() {},
+                    RIGHT_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
+                        : new VisionIO() {},
+                    MIDDLE_RIGHT_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
+                        : new VisionIO() {},
+                    BACK_CAM_ENABLED
+                        ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
+                        : new VisionIO() {});
+            default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
+          };
     } else vision = null;
 
     if (drive != null) {
@@ -369,7 +273,6 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureDriverButtonBindings();
-    configureOperatorButtonBindings();
 
     // Register the auto commands
     autoIdleCommand = Commands.none();
@@ -380,12 +283,6 @@ public class RobotContainer {
     } else {
       autoChooser = new LoggedDashboardChooser<>("Auto Choices");
       autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-    }
-
-    if (SHOOTER_PIVOT_ENABLED) {
-      pivot = superstructure.getArms().shooterPivot;
-    } else {
-      pivot = null;
     }
   }
 
@@ -440,59 +337,12 @@ public class RobotContainer {
                       drive)
                   .ignoringDisable(true));
     }
-    driver.indexer().onTrue(Commands.runOnce(superstructure::toggleIndexer));
+    driver.shootToggle().onTrue(Commands.runOnce(superstructure::toggleShootEnabled));
     driver
-        .intakePivotZero()
-        .onTrue(
-            Commands.runOnce(
-                    () -> {
-                      if (superstructure.getArms().intakePivot != null) {
-                        superstructure.getArms().intakePivot.requestZeroCalibration();
-                      }
-                    })
-                .ignoringDisable(true));
-  }
-
-  private void configureOperatorButtonBindings() {
-    operator.autoManualToggle().onTrue(Commands.runOnce(superstructure::toggleManualControl));
-    superstructure.bindManualControlSuppliers(
-        operator.manualTurretAxis(), operator.manualPivotAxis());
-    var intakeTrigger = operator.intake();
-    var shooterTrigger = operator.shooter();
-    var shootIntakeTrigger = intakeTrigger.and(shooterTrigger);
-    shootIntakeTrigger.whileTrue(
-        superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));
-    intakeTrigger
-        .and(shooterTrigger.negate())
-        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
-    shooterTrigger
-        .and(intakeTrigger.negate())
-        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
-    operator.idling().whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING));
-    operator
-        .ferrying()
-        .whileTrue(superstructure.setSuperStateCmd(Superstructure.SuperState.FERRYING));
-
-    if (turret == null) {
-      return;
-    }
-    if (pivot == null) {
-      return;
-    }
-    if (superstructure.getCurrentState() == Superstructure.SuperState.SHOOTING) {
-      if (operator.manualPivotAxis() != null) {
-        while (operator.manualPivotAxis().getAsDouble() == -1
-            && (operator.manualTurretAxis().getAsDouble() != -1
-                || operator.manualTurretAxis().getAsDouble() != 1)) {
-          ShooterCommands.pivotOpenLoop(pivot, () -> -ShooterPivotConstants.MANUAL_PERCENT);
-        }
-        while (operator.manualPivotAxis().getAsDouble() == 1
-            && (operator.manualTurretAxis().getAsDouble() != -1
-                || operator.manualTurretAxis().getAsDouble() != 1)) {
-          ShooterCommands.pivotOpenLoop(pivot, () -> ShooterPivotConstants.MANUAL_PERCENT);
-        }
-      }
-    }
+        .intakeRollersHold()
+        .onTrue(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(true)))
+        .onFalse(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(false)));
+    driver.intakeDeployToggle().onTrue(Commands.runOnce(superstructure::toggleIntakeDeploy));
   }
 
   /**

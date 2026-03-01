@@ -27,6 +27,8 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final DoubleSubscriber swerveMusicVolumeIn;
   private final BooleanSubscriber rollLogsIn;
   private final BooleanSubscriber cleanLogsIn;
+  private final BooleanSubscriber requestIntakeDeployRezeroIn;
+  private final BooleanSubscriber cancelIntakeDeployRezeroIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -62,6 +64,11 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final DoublePublisher sysIdTurnLastCompletedOut;
   private final StringPublisher sysIdTurnLastCompletedPhaseOut;
   private final StringPublisher visionStatusOut;
+  private final BooleanPublisher shootEnabledOut;
+  private final BooleanPublisher intakeRollersHeldOut;
+  private final BooleanPublisher intakeDeployedOut;
+  private final BooleanPublisher shootReadyLatchedOut;
+  private final BooleanPublisher intakeDeployRezeroInProgressOut;
   private final StringPublisher logRollStatusOut;
   private final DoublePublisher logRollLastTimestampOut;
   private final IntegerPublisher logRollCountOut;
@@ -99,6 +106,14 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     cleanLogsIn =
         inputTable
             .getBooleanTopic(OperatorBoardContract.CLEAN_LOGS)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    requestIntakeDeployRezeroIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.REQUEST_INTAKE_DEPLOY_REZERO)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    cancelIntakeDeployRezeroIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.CANCEL_INTAKE_DEPLOY_REZERO)
             .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
@@ -153,6 +168,17 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     sysIdTurnLastCompletedPhaseOut =
         outputTable.getStringTopic(OperatorBoardContract.SYSID_TURN_LAST_COMPLETED_PHASE).publish();
     visionStatusOut = outputTable.getStringTopic(OperatorBoardContract.VISION_STATUS).publish();
+    shootEnabledOut = outputTable.getBooleanTopic(OperatorBoardContract.SHOOT_ENABLED).publish();
+    intakeRollersHeldOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.INTAKE_ROLLERS_HELD).publish();
+    intakeDeployedOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.INTAKE_DEPLOYED).publish();
+    shootReadyLatchedOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.SHOOT_READY_LATCHED).publish();
+    intakeDeployRezeroInProgressOut =
+        outputTable
+            .getBooleanTopic(OperatorBoardContract.INTAKE_DEPLOY_REZERO_IN_PROGRESS)
+            .publish();
     logRollStatusOut = outputTable.getStringTopic(OperatorBoardContract.LOG_ROLL_STATUS).publish();
     logRollLastTimestampOut =
         outputTable.getDoubleTopic(OperatorBoardContract.LOG_ROLL_LAST_TIMESTAMP).publish();
@@ -207,6 +233,18 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
       inputs.cleanLogsRequested = cleanQueue[cleanQueue.length - 1].value;
     } else {
       inputs.cleanLogsRequested = false;
+    }
+    TimestampedBoolean[] requestRezeroQueue = requestIntakeDeployRezeroIn.readQueue();
+    if (requestRezeroQueue.length > 0) {
+      inputs.requestIntakeDeployRezero = requestRezeroQueue[requestRezeroQueue.length - 1].value;
+    } else {
+      inputs.requestIntakeDeployRezero = false;
+    }
+    TimestampedBoolean[] cancelRezeroQueue = cancelIntakeDeployRezeroIn.readQueue();
+    if (cancelRezeroQueue.length > 0) {
+      inputs.cancelIntakeDeployRezero = cancelRezeroQueue[cancelRezeroQueue.length - 1].value;
+    } else {
+      inputs.cancelIntakeDeployRezero = false;
     }
   }
 
@@ -378,6 +416,31 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setVisionStatus(String value) {
     visionStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setShootEnabled(boolean value) {
+    shootEnabledOut.set(value);
+  }
+
+  @Override
+  public void setIntakeRollersHeld(boolean value) {
+    intakeRollersHeldOut.set(value);
+  }
+
+  @Override
+  public void setIntakeDeployed(boolean value) {
+    intakeDeployedOut.set(value);
+  }
+
+  @Override
+  public void setShootReadyLatched(boolean value) {
+    shootReadyLatchedOut.set(value);
+  }
+
+  @Override
+  public void setIntakeDeployRezeroInProgress(boolean value) {
+    intakeDeployRezeroInProgressOut.set(value);
   }
 
   @Override

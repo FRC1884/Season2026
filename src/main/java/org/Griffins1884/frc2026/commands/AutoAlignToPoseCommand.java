@@ -10,6 +10,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.littletonrobotics.junction.Logger;
 
 public class AutoAlignToPoseCommand extends Command {
@@ -26,7 +27,7 @@ public class AutoAlignToPoseCommand extends Command {
   private final double toleranceOverride;
 
   public AutoAlignToPoseCommand(SwerveSubsystem drive, Pose2d target) {
-    this(drive, target, 1.0, 0.0, 0.1);
+    this(drive, target, 1.0, 0.0, 0.1, true);
   }
 
   public AutoAlignToPoseCommand(
@@ -35,8 +36,19 @@ public class AutoAlignToPoseCommand extends Command {
       double constraintFactor,
       double endVelocity,
       double tolerance) {
+    this(drive, target, constraintFactor, endVelocity, tolerance, true);
+  }
+
+  public AutoAlignToPoseCommand(
+      SwerveSubsystem drive,
+      Pose2d target,
+      double constraintFactor,
+      double endVelocity,
+      double tolerance,
+      boolean targetInBlueFrame) {
     this.drive = drive;
-    this.target = target;
+    this.target =
+        target == null ? null : (targetInBlueFrame ? AllianceFlipUtil.apply(target) : target);
     this.constraintFactor = Math.max(0.0, constraintFactor);
     this.endVelocity = endVelocity;
     this.toleranceOverride = tolerance;

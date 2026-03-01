@@ -13,9 +13,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
-import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
-import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.util.swerve.ModuleLimits;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
@@ -76,101 +74,63 @@ public final class SwerveConstants {
 
   static final int PIGEON_ID =
       switch (ROBOT) {
-        case DEVBOT -> 60;
         case COMPBOT, SIMBOT -> 60;
-        case CRESCENDO -> 40;
       };
   ;
   private static final int FRD_ID =
       switch (ROBOT) {
-        case DEVBOT -> 14;
         case COMPBOT, SIMBOT -> 13;
-        case CRESCENDO -> 43;
       };
   private static final int FRR_ID =
       switch (ROBOT) {
-        case DEVBOT -> 15;
         case COMPBOT, SIMBOT -> 12;
-        case CRESCENDO -> 5;
       };
   private static final int FRR_CANCODER_ID =
       switch (ROBOT) {
-        case DEVBOT -> 5;
         case COMPBOT, SIMBOT -> 4;
-        case CRESCENDO -> -1;
       };
   private static final int FLD_ID =
       switch (ROBOT) {
-        case DEVBOT -> 13;
         case COMPBOT, SIMBOT -> 11;
-        case CRESCENDO -> 41;
       };
   private static final int FLR_ID =
       switch (ROBOT) {
-        case DEVBOT -> 12;
         case COMPBOT, SIMBOT -> 10;
-        case CRESCENDO -> 1;
       };
   private static final int FLR_CANCODER_ID =
       switch (ROBOT) {
-        case DEVBOT -> 4;
         case COMPBOT, SIMBOT -> 3;
-        case CRESCENDO -> -1;
       };
   private static final int BRD_ID =
       switch (ROBOT) {
-        case DEVBOT -> 16;
         case COMPBOT, SIMBOT -> 14;
-        case CRESCENDO -> 40;
       };
   private static final int BRR_ID =
       switch (ROBOT) {
-        case DEVBOT -> 17;
         case COMPBOT, SIMBOT -> 15;
-        case CRESCENDO -> 7;
       };
   private static final int BRR_CANCODER_ID =
       switch (ROBOT) {
-        case DEVBOT -> 6;
         case COMPBOT, SIMBOT -> 5;
-        case CRESCENDO -> -1;
       };
   private static final int BLD_ID =
       switch (ROBOT) {
-        case DEVBOT -> 11;
         case COMPBOT, SIMBOT -> 16;
-        case CRESCENDO -> 31;
       };
   private static final int BLR_ID =
       switch (ROBOT) {
-        case DEVBOT -> 10;
         case COMPBOT, SIMBOT -> 17;
-        case CRESCENDO -> 3;
       };
   private static final int BLR_CANCODER_ID =
       switch (ROBOT) {
-        case DEVBOT -> 3;
         case COMPBOT, SIMBOT -> 6;
-        case CRESCENDO -> -1;
       };
 
   // Zeroed rotation values for each module, see setup instructions
-  private static final Rotation2d FLR_ZERO =
-      (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.482666015625 * (2 * PI))
-          : Rotation2d.fromRadians(-PI / 2);
-  private static final Rotation2d FRR_ZERO =
-      (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.111328125 * (2 * PI))
-          : Rotation2d.fromRadians(0);
-  private static final Rotation2d BLR_ZERO =
-      (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(0.00390625 * (2 * PI))
-          : Rotation2d.fromRadians(PI);
-  private static final Rotation2d BRR_ZERO =
-      (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-          ? Rotation2d.fromRadians(-0.290283203125 * (2 * PI))
-          : Rotation2d.fromRadians(PI / 2);
+  private static final Rotation2d FLR_ZERO = Rotation2d.fromRadians(-0.482666015625 * (2 * PI));
+  private static final Rotation2d FRR_ZERO = Rotation2d.fromRadians(-0.111328125 * (2 * PI));
+  private static final Rotation2d BLR_ZERO = Rotation2d.fromRadians(0.00390625 * (2 * PI));
+  private static final Rotation2d BRR_ZERO = Rotation2d.fromRadians(-0.290283203125 * (2 * PI));
 
   // Inverted encoders or turn motors
   private static final boolean FLR_INVERTED = false;
@@ -245,10 +205,7 @@ public final class SwerveConstants {
   public static final double ROBOT_MASS = 45;
 
   // Drive motor configuration
-  public static final DCMotor DRIVE_GEARBOX =
-      (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLSPARK)
-          ? DCMotor.getNeoVortex(1)
-          : DCMotor.getKrakenX60(1);
+  public static final DCMotor DRIVE_GEARBOX = DCMotor.getKrakenX60(1);
 
   public static final double DRIVE_GEAR_RATIO = 5.08; // Spark Max
   public static final double KRAKEN_DRIVE_GEAR_RATIO = 6.03; // MK5n drive ratio (per team)
@@ -268,29 +225,12 @@ public final class SwerveConstants {
       switch (ROBOT) {
         case COMPBOT -> new Gains("Swerve/DriveMotor/Compbot", 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
         case SIMBOT -> new Gains("Swerve/DriveMotor/Simbot", 0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
-        case DEVBOT ->
-            new Gains(
-                "Swerve/DriveMotor/Devbot", 1.0629, 0.0, 0.0, 0.23397, 0.72165, 0.039375, 0.0);
-        case CRESCENDO ->
-            new Gains(
-                "Swerve/DriveMotor/Crescendo",
-                0.0023439,
-                0.0,
-                0.0,
-                0.10953,
-                0.54241,
-                0.084571,
-                0.0);
       };
   // Torque-current gains for Kraken FOC (amps-based, per-radian units)
   static final Gains KRAKEN_DRIVE_TORQUE_GAINS =
       switch (ROBOT) {
         case COMPBOT ->
             new Gains("Swerve/KrakenDriveTorque/Compbot", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
-        case DEVBOT ->
-            new Gains("Swerve/KrakenDriveTorque/Devbot", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
-        case CRESCENDO ->
-            new Gains("Swerve/KrakenDriveTorque/Crescendo", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
         case SIMBOT ->
             new Gains("Swerve/KrakenDriveTorque/Simbot", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
       };
@@ -318,17 +258,13 @@ public final class SwerveConstants {
   // Rotator PID configuration
   static final Gains ROTATOR_GAINS =
       switch (ROBOT) {
-        case DEVBOT -> new Gains("Swerve/Rotator/Devbot", 2.0, 0.0, 0.0);
         case COMPBOT -> new Gains("Swerve/Rotator/Compbot", 2.0, 0.0, 0.0);
         case SIMBOT -> new Gains("Swerve/Rotator/Simbot", 8.0, 0.0, 0.0);
-        case CRESCENDO -> new Gains("Swerve/Rotator/Crescendo", 2.0, 0.0, 0.0);
       };
   // Torque-current gains for Kraken turn control (amps-based, per-radian units)
   static final Gains KRAKEN_TURN_TORQUE_GAINS =
       switch (ROBOT) {
-        case DEVBOT -> new Gains("Swerve/KrakenTurnTorque/Devbot", 8000.0, 0.0, 50.0);
         case COMPBOT -> new Gains("Swerve/KrakenTurnTorque/Compbot", 8000.0, 0.0, 50.0);
-        case CRESCENDO -> new Gains("Swerve/KrakenTurnTorque/Crescendo", 8000.0, 0.0, 50.0);
         case SIMBOT -> new Gains("Swerve/KrakenTurnTorque/Simbot", 0.0, 0.0, 0.0);
       };
 

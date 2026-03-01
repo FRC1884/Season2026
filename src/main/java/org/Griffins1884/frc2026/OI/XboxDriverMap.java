@@ -59,12 +59,17 @@ public class XboxDriverMap extends CommandXboxController implements DriverMap {
   }
 
   @Override
-  public Trigger indexer() {
+  public Trigger shootToggle() {
     return x();
   }
 
   @Override
-  public Trigger intakePivotZero() {
+  public Trigger intakeRollersHold() {
+    return y();
+  }
+
+  @Override
+  public Trigger intakeDeployToggle() {
     return a();
   }
 

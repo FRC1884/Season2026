@@ -19,6 +19,8 @@ public interface OperatorBoardIO {
     public double swerveMusicVolume = Double.NaN;
     public boolean rollLogsRequested = false;
     public boolean cleanLogsRequested = false;
+    public boolean requestIntakeDeployRezero = false;
+    public boolean cancelIntakeDeployRezero = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}
@@ -90,6 +92,16 @@ public interface OperatorBoardIO {
   default void setSysIdTurnLastCompletedPhase(String value) {}
 
   default void setVisionStatus(String value) {}
+
+  default void setShootEnabled(boolean value) {}
+
+  default void setIntakeRollersHeld(boolean value) {}
+
+  default void setIntakeDeployed(boolean value) {}
+
+  default void setShootReadyLatched(boolean value) {}
+
+  default void setIntakeDeployRezeroInProgress(boolean value) {}
 
   default void setLogRollStatus(String value) {}
 

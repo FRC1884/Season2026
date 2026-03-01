@@ -44,6 +44,34 @@
                 Return To Auto
               </button>
             </div>
+            <div class="driver-controls">
+              <div class="driver-indicator">
+                <div class="driver-indicator__label">Shoot Enabled</div>
+                <div id="driver-shoot-indicator" class="driver-indicator__value">--</div>
+              </div>
+              <div class="driver-indicator">
+                <div class="driver-indicator__label">Intake Rollers Hold</div>
+                <div id="driver-intake-rollers-indicator" class="driver-indicator__value">--</div>
+              </div>
+              <div class="driver-indicator">
+                <div class="driver-indicator__label">Intake Deploy</div>
+                <div id="driver-intake-deploy-indicator" class="driver-indicator__value">--</div>
+              </div>
+            </div>
+            <div class="state-actions">
+              <button id="intake-rezero-button" class="state-button state-button--auto" type="button">
+                Rezero Intake Deploy
+              </button>
+            </div>
+            <div class="state-actions">
+              <button
+                id="intake-rezero-cancel-button"
+                class="state-button state-button--danger"
+                type="button"
+              >
+                Cancel Intake Rezero
+              </button>
+            </div>
             <div class="kv">
               <div class="kv__row">
                 <div class="kv__k">Requested</div>
@@ -60,6 +88,10 @@
               <div class="kv__row">
                 <div class="kv__k">Reason</div>
                 <div id="request-reason" class="kv__v kv__v--muted">--</div>
+              </div>
+              <div class="kv__row">
+                <div class="kv__k">Intake Rezero</div>
+                <div id="intake-rezero-status" class="kv__v kv__v--muted">--</div>
               </div>
             </div>
           </section>

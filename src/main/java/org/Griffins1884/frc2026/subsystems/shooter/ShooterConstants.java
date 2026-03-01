@@ -20,7 +20,7 @@ public final class ShooterConstants {
   public static final GenericRollerSystemIOKraken.VelocityControlRequest VELOCITY_CONTROL_REQUEST =
       GenericRollerSystemIOKraken.VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC;
   public static final boolean BRAKE_MODE = false;
-  public static final double REDUCTION = 1.0; // TODO: set gear ratio
+  public static final double REDUCTION = 1.0;
 
   public static final double TARGET_RPM = 5000.0;
   public static final double MAX_DISTANCE = 8.83;
@@ -41,13 +41,13 @@ public final class ShooterConstants {
       new LoggedTunableNumber("Shooter/RecoveryCurrentGainVoltsPerAmp", 0.03);
   public static final LoggedTunableNumber RECOVERY_MAX_BOOST_VOLTS =
       new LoggedTunableNumber("Shooter/RecoveryMaxBoostVolts", 5.0);
-  public static final double VELOCITY_TOLERANCE = 100; // TODO: tune for shooter
-  public static final double MAX_VOLTAGE = 12.0; // TODO: tune for shooter
+  public static final double VELOCITY_TOLERANCE = 100;
+  public static final double MAX_VOLTAGE = 12.0;
 
   public static final double FLYWHEEL_RADIUS_METERS = 0.05;
   public static final double FLYWHEEL_GEAR_RATIO = 1.0;
   public static final LoggedTunableNumber SLIP_FACTOR =
-      new LoggedTunableNumber("Shooter/SlipFactor", 0.64); // TODO: tune for real exit speed
+      new LoggedTunableNumber("Shooter/SlipFactor", 0.64);
   public static final double EXIT_HEIGHT_METERS = 0.587;
   public static final double TARGET_HEIGHT_METERS = GlobalConstants.FieldConstants.Hub.innerHeight;
   public static final ShotLookupMode SHOT_LOOKUP_MODE = ShotLookupMode.LOOKUP_TABLE;

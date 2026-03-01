@@ -8,10 +8,7 @@ import static edu.wpi.first.units.Units.Second;
 import static org.Griffins1884.frc2026.subsystems.leds.LEDConstants.*;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.LEDPattern;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -22,6 +19,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.Superstructure.SuperState;
+import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.littletonrobotics.junction.Logger;
 
 public class LEDSubsystem extends SubsystemBase {
@@ -206,14 +204,7 @@ public class LEDSubsystem extends SubsystemBase {
     if (pose == null) {
       return null;
     }
-    Optional<Alliance> alliance = DriverStation.getAlliance();
-    if (alliance.isEmpty() || alliance.get() == Alliance.Blue) {
-      return pose;
-    }
-    double x = GlobalConstants.FieldConstants.fieldLength - pose.getX();
-    double y = pose.getY();
-    Rotation2d rotation = Rotation2d.fromRadians(Math.PI).minus(pose.getRotation());
-    return new Pose2d(x, y, rotation);
+    return AllianceFlipUtil.apply(pose);
   }
 
   public void close() {

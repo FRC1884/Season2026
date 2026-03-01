@@ -198,6 +198,54 @@ body {
   background: rgba(255, 209, 102, 0.16);
 }
 
+.state-button--danger {
+  width: 100%;
+  border-color: rgba(255, 90, 118, 0.65);
+  background: rgba(255, 90, 118, 0.2);
+}
+
+.driver-controls {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.driver-indicator {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px 10px;
+}
+
+.driver-indicator__label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.driver-indicator__value {
+  margin-top: 6px;
+  font-weight: 900;
+  font-size: 26px;
+  line-height: 1;
+  text-align: center;
+  border-radius: 10px;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.driver-indicator__value.is-on {
+  color: #05210f;
+  background: rgba(57, 217, 138, 0.94);
+}
+
+.driver-indicator__value.is-off {
+  color: #2a0811;
+  background: rgba(255, 90, 118, 0.94);
+}
+
 .music-upload,
 .music-volume {
   padding: 0 12px 12px;

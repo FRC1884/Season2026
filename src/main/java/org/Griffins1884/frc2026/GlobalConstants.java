@@ -41,7 +41,6 @@ public final class GlobalConstants {
   public static final RobotType ROBOT = RobotType.COMPBOT;
   public static final LoggingMode LOGGING_MODE = LoggingMode.DEBUG;
   public static final double ODOMETRY_FREQUENCY = 250.0;
-  public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
   public static boolean TUNING_MODE = LOGGING_MODE == LoggingMode.DEBUG;
 
@@ -56,15 +55,7 @@ public final class GlobalConstants {
 
   public static enum RobotType {
     COMPBOT,
-    DEVBOT,
-    SIMBOT,
-    CRESCENDO
-  }
-
-  public static enum RobotSwerveMotors {
-    FULLSPARK,
-    HALFSPARK,
-    FULLKRACKENS
+    SIMBOT
   }
 
   public static enum LoggingMode {

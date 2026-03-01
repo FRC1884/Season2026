@@ -23,9 +23,14 @@ public interface DriverMap {
 
   Trigger slowMode();
 
-  Trigger indexer();
+  // Placeholder mapping for "start/stop shooting" control.
+  Trigger shootToggle();
 
-  Trigger intakePivotZero();
+  // Placeholder mapping for "run intake rollers while held" control.
+  Trigger intakeRollersHold();
+
+  // Placeholder mapping for "toggle intake deploy" control.
+  Trigger intakeDeployToggle();
 
   default Command rumble() {
     return none();

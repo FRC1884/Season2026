@@ -85,6 +85,14 @@ public class IntakePivotSubsystem extends SubsystemBase {
     zeroingDetectSamples = 0;
   }
 
+  public boolean isZeroCalibrationInProgress() {
+    return zeroingRequested;
+  }
+
+  public String getZeroCalibrationAction() {
+    return zeroingAction;
+  }
+
   public void setOpenLoop(double percent) {
     primary.setOpenLoop(percent);
     secondary.setOpenLoop(percent);

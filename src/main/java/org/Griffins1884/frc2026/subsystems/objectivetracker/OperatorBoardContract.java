@@ -12,6 +12,8 @@ final class OperatorBoardContract {
   static final String SWERVE_MUSIC_VOLUME = "SwerveMusicVolume";
   static final String ROLL_LOGS = "RollLogs";
   static final String CLEAN_LOGS = "CleanLogs";
+  static final String REQUEST_INTAKE_DEPLOY_REZERO = "RequestIntakeDeployRezero";
+  static final String CANCEL_INTAKE_DEPLOY_REZERO = "CancelIntakeDeployRezero";
   static final String SYSID_DRIVE_PHASE = "SysIdDrivePhase";
   static final String SYSID_DRIVE_ACTIVE = "SysIdDriveActive";
   static final String SYSID_DRIVE_LAST_COMPLETED = "SysIdDriveLastCompleted";
@@ -52,6 +54,11 @@ final class OperatorBoardContract {
   static final String TURRET_AT_SETPOINT = "TurretAtSetpoint";
   static final String TURRET_MODE = "TurretMode";
   static final String VISION_STATUS = "VisionStatus";
+  static final String SHOOT_ENABLED = "ShootEnabled";
+  static final String INTAKE_ROLLERS_HELD = "IntakeRollersHeld";
+  static final String INTAKE_DEPLOYED = "IntakeDeployed";
+  static final String SHOOT_READY_LATCHED = "ShootReadyLatched";
+  static final String INTAKE_DEPLOY_REZERO_IN_PROGRESS = "IntakeDeployRezeroInProgress";
 
   private OperatorBoardContract() {}
 }

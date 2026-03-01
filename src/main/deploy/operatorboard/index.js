@@ -20,6 +20,8 @@ const contract = {
     swerveMusicVolume: "SwerveMusicVolume",
     rollLogs: "RollLogs",
     cleanLogs: "CleanLogs",
+    requestIntakeDeployRezero: "RequestIntakeDeployRezero",
+    cancelIntakeDeployRezero: "CancelIntakeDeployRezero",
     sysIdDrivePhase: "SysIdDrivePhase",
     sysIdDriveActive: "SysIdDriveActive",
     sysIdDriveLastCompleted: "SysIdDriveLastCompleted",
@@ -60,6 +62,11 @@ const contract = {
     turretAtSetpoint: "TurretAtSetpoint",
     turretMode: "TurretMode",
     visionStatus: "VisionStatus",
+    shootEnabled: "ShootEnabled",
+    intakeRollersHeld: "IntakeRollersHeld",
+    intakeDeployed: "IntakeDeployed",
+    shootReadyLatched: "ShootReadyLatched",
+    intakeDeployRezeroInProgress: "IntakeDeployRezeroInProgress",
   },
 };
 
@@ -114,6 +121,11 @@ const state = {
   logCleanCount: null,
   logCleanDeletedEntries: null,
   visionStatus: null,
+  shootEnabled: null,
+  intakeRollersHeld: null,
+  intakeDeployed: null,
+  shootReadyLatched: null,
+  intakeDeployRezeroInProgress: null,
 };
 
 const ui = {
@@ -164,6 +176,12 @@ const ui = {
   cleanLogsButton: null,
   fieldImage: null,
   fieldCanvas: null,
+  driverShootIndicator: null,
+  driverIntakeRollersIndicator: null,
+  driverIntakeDeployIndicator: null,
+  intakeRezeroStatus: null,
+  intakeRezeroButton: null,
+  intakeRezeroCancelButton: null,
 };
 
 let fieldCtx = null;
@@ -241,6 +259,10 @@ function cacheUi() {
   ui.logCleanLast = document.getElementById("log-clean-last");
   ui.logCleanCount = document.getElementById("log-clean-count");
   ui.logCleanDeleted = document.getElementById("log-clean-deleted");
+  ui.driverShootIndicator = document.getElementById("driver-shoot-indicator");
+  ui.driverIntakeRollersIndicator = document.getElementById("driver-intake-rollers-indicator");
+  ui.driverIntakeDeployIndicator = document.getElementById("driver-intake-deploy-indicator");
+  ui.intakeRezeroStatus = document.getElementById("intake-rezero-status");
   ui.toast = document.getElementById("toast");
   ui.fieldImage = document.getElementById("field-image");
   ui.fieldCanvas = document.getElementById("field-canvas");
@@ -278,6 +300,14 @@ function cacheUi() {
   ui.cleanLogsButton = document.getElementById("clean-logs-button");
   if (ui.cleanLogsButton) {
     ui.cleanLogsButton.addEventListener("click", sendCleanLogs);
+  }
+  ui.intakeRezeroButton = document.getElementById("intake-rezero-button");
+  if (ui.intakeRezeroButton) {
+    ui.intakeRezeroButton.addEventListener("click", sendRequestIntakeDeployRezero);
+  }
+  ui.intakeRezeroCancelButton = document.getElementById("intake-rezero-cancel-button");
+  if (ui.intakeRezeroCancelButton) {
+    ui.intakeRezeroCancelButton.addEventListener("click", sendCancelIntakeDeployRezero);
   }
 }
 
@@ -359,6 +389,14 @@ function sendCleanLogs() {
   ntClient.addSample(contract.toRobot + contract.keys.cleanLogs, true);
 }
 
+function sendRequestIntakeDeployRezero() {
+  ntClient.addSample(contract.toRobot + contract.keys.requestIntakeDeployRezero, true);
+}
+
+function sendCancelIntakeDeployRezero() {
+  ntClient.addSample(contract.toRobot + contract.keys.cancelIntakeDeployRezero, true);
+}
+
 async function uploadMusicFile() {
   if (!ui.musicFile || !ui.musicFile.files || ui.musicFile.files.length === 0) {
     setText(ui.musicUploadStatus, "Select a .chrp file first");
@@ -392,6 +430,8 @@ function startNetworkTables() {
   ntClient.publishTopic(contract.toRobot + contract.keys.swerveMusicVolume, "double");
   ntClient.publishTopic(contract.toRobot + contract.keys.rollLogs, "boolean");
   ntClient.publishTopic(contract.toRobot + contract.keys.cleanLogs, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.requestIntakeDeployRezero, "boolean");
+  ntClient.publishTopic(contract.toRobot + contract.keys.cancelIntakeDeployRezero, "boolean");
   ntClient.connect();
 }
 
@@ -555,6 +595,21 @@ function handleTopicUpdate(topic, value) {
     case contract.toDashboard + contract.keys.visionStatus:
       state.visionStatus = parseString(value);
       break;
+    case contract.toDashboard + contract.keys.shootEnabled:
+      state.shootEnabled = !!value;
+      break;
+    case contract.toDashboard + contract.keys.intakeRollersHeld:
+      state.intakeRollersHeld = !!value;
+      break;
+    case contract.toDashboard + contract.keys.intakeDeployed:
+      state.intakeDeployed = !!value;
+      break;
+    case contract.toDashboard + contract.keys.shootReadyLatched:
+      state.shootReadyLatched = !!value;
+      break;
+    case contract.toDashboard + contract.keys.intakeDeployRezeroInProgress:
+      state.intakeDeployRezeroInProgress = !!value;
+      break;
     default:
       break;
   }
@@ -570,6 +625,23 @@ function render() {
     setText(ui.requestStatus, state.requestAccepted ? "ACCEPTED" : "REJECTED");
   }
   setText(ui.requestReason, state.requestReason || "--");
+  applyDriverIndicator(ui.driverShootIndicator, state.shootEnabled);
+  applyDriverIndicator(ui.driverIntakeRollersIndicator, state.intakeRollersHeld);
+  applyDriverIndicator(ui.driverIntakeDeployIndicator, state.intakeDeployed);
+  setText(
+    ui.intakeRezeroStatus,
+    state.intakeDeployRezeroInProgress === null
+      ? "--"
+      : state.intakeDeployRezeroInProgress
+        ? "IN PROGRESS"
+        : "IDLE"
+  );
+  if (ui.intakeRezeroStatus) {
+    ui.intakeRezeroStatus.classList.remove("kv__v--ok", "kv__v--bad", "kv__v--warn");
+    ui.intakeRezeroStatus.classList.add(
+      state.intakeDeployRezeroInProgress ? "kv__v--warn" : "kv__v--ok"
+    );
+  }
 
   setText(ui.alliance, state.alliance || "--");
   setText(ui.matchTime, formatMatchTime(state.matchTime));
@@ -701,6 +773,19 @@ function applyStatusClass(el, isActive, hubStatusValid) {
   } else {
     el.classList.add("tile__v--bad");
   }
+}
+
+function applyDriverIndicator(element, value) {
+  if (!element) return;
+  if (value === null) {
+    setText(element, "--");
+    element.classList.remove("is-on", "is-off");
+    return;
+  }
+  const isOn = !!value;
+  setText(element, isOn ? "ON" : "OFF");
+  element.classList.toggle("is-on", isOn);
+  element.classList.toggle("is-off", !isOn);
 }
 
 function applyRecommendationClass(el, recommendation) {

@@ -23,8 +23,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -37,6 +35,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.RobotLogging;
 import org.littletonrobotics.junction.Logger;
 
@@ -94,9 +93,7 @@ public class DriveCommands {
             linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
             linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
             omega * drive.getMaxAngularSpeedRadPerSec());
-    boolean isFlipped =
-        DriverStation.getAlliance().isPresent()
-            && DriverStation.getAlliance().get() == Alliance.Red;
+    boolean isFlipped = AllianceFlipUtil.shouldFlip(drive.getPose());
     drive.runVelocity(
         ChassisSpeeds.fromFieldRelativeSpeeds(
             speeds,
@@ -143,9 +140,7 @@ public class DriveCommands {
                       linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
                       linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
                       omega);
-              boolean isFlipped =
-                  DriverStation.getAlliance().isPresent()
-                      && DriverStation.getAlliance().get() == Alliance.Red;
+              boolean isFlipped = AllianceFlipUtil.shouldFlip(drive.getPose());
               drive.runVelocity(
                   ChassisSpeeds.fromFieldRelativeSpeeds(
                       speeds,
@@ -183,7 +178,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterCollectStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterCollectStart", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
@@ -193,7 +188,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterOverBumpStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterBumpStart", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
@@ -203,7 +198,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterSecondBumpStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterSecondBumpStart", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
@@ -213,7 +208,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getStandStillShootPose();
           Logger.recordOutput("Autonomy/AlignTargetStandStillShoot", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
@@ -223,7 +218,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterBumpToNeutralStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterBumpToNeutralStart", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
@@ -233,7 +228,7 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getAfterBumpRightToNeutralStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterBumpRightToNeutralStart", target);
-          return new AutoAlignToPoseCommand(drive, target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
         },
         Set.of(drive));
   }

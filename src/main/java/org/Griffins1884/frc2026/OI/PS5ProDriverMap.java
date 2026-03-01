@@ -4,28 +4,28 @@ import static edu.wpi.first.wpilibj.GenericHID.RumbleType.kBothRumble;
 import static edu.wpi.first.wpilibj2.command.Commands.startEnd;
 
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 
-public class SimXboxUniversalMap extends CommandXboxController implements DriverMap {
+public class PS5ProDriverMap extends CommandPS5Controller implements DriverMap {
   /**
    * Construct an instance of a controller.
    *
    * @param port The port index on the Driver Station that the controller is plugged into.
    */
-  public SimXboxUniversalMap(int port) {
+  public PS5ProDriverMap(int port) {
     super(port);
   }
 
   @Override
   public Trigger leftAlign() {
-    return leftBumper();
+    return L3();
   }
 
   @Override
   public Trigger rightAlign() {
-    return rightBumper();
+    return R3();
   }
 
   @Override
@@ -45,32 +45,32 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
 
   @Override
   public Trigger resetOdometry() {
-    return back();
+    return options();
   }
 
   @Override
   public Trigger alignWithBall() {
-    return x();
+    return circle();
   }
 
   @Override
   public Trigger slowMode() {
-    return new Trigger(() -> this.getLeftTriggerAxis() > 0.5);
+    return L2();
   }
 
   @Override
   public Trigger shootToggle() {
-    return x();
+    return cross();
   }
 
   @Override
   public Trigger intakeRollersHold() {
-    return y();
+    return R1();
   }
 
   @Override
   public Trigger intakeDeployToggle() {
-    return a();
+    return triangle();
   }
 
   @Override

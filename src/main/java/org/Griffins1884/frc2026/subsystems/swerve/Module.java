@@ -25,8 +25,6 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import java.util.List;
 import lombok.Getter;
-import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
@@ -86,16 +84,14 @@ public class Module {
   }
 
   public void periodic() {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      if (krakenDrivekS.hasChanged(hashCode()) || krakenDrivekV.hasChanged(hashCode())) {
-        krakenFfModel = new SimpleMotorFeedforward(krakenDrivekS.get(), krakenDrivekV.get());
-      }
-      if (krakenDrivekP.hasChanged(hashCode()) || krakenDrivekD.hasChanged(hashCode())) {
-        io.setDrivePID(krakenDrivekP.get(), 0.0, krakenDrivekD.get());
-      }
-      if (krakenTurnkP.hasChanged(hashCode()) || krakenTurnkD.hasChanged(hashCode())) {
-        io.setTurnPID(krakenTurnkP.get(), 0.0, krakenTurnkD.get());
-      }
+    if (krakenDrivekS.hasChanged(hashCode()) || krakenDrivekV.hasChanged(hashCode())) {
+      krakenFfModel = new SimpleMotorFeedforward(krakenDrivekS.get(), krakenDrivekV.get());
+    }
+    if (krakenDrivekP.hasChanged(hashCode()) || krakenDrivekD.hasChanged(hashCode())) {
+      io.setDrivePID(krakenDrivekP.get(), 0.0, krakenDrivekD.get());
+    }
+    if (krakenTurnkP.hasChanged(hashCode()) || krakenTurnkD.hasChanged(hashCode())) {
+      io.setTurnPID(krakenTurnkP.get(), 0.0, krakenTurnkD.get());
     }
 
     io.updateInputs(inputs);
@@ -117,25 +113,14 @@ public class Module {
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */
   public void runSetpoint(SwerveModuleState state) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      // Mechanical Advantage-style control for full Kraken modules
-      double speedRadPerSec = state.speedMetersPerSecond / WHEEL_RADIUS;
-      io.setDriveVelocity(speedRadPerSec, krakenFfModel.calculate(speedRadPerSec));
-      if (Math.abs(state.angle.minus(getAngle()).getDegrees()) < TURN_DEADBAND_DEGREES) {
-        io.setTurnOpenLoop(0.0);
-      } else {
-        io.setTurnPosition(state.angle);
-      }
-      return;
+    // Mechanical Advantage-style control for full Kraken modules
+    double speedRadPerSec = state.speedMetersPerSecond / WHEEL_RADIUS;
+    io.setDriveVelocity(speedRadPerSec, krakenFfModel.calculate(speedRadPerSec));
+    if (Math.abs(state.angle.minus(getAngle()).getDegrees()) < TURN_DEADBAND_DEGREES) {
+      io.setTurnOpenLoop(0.0);
+    } else {
+      io.setTurnPosition(state.angle);
     }
-
-    // Default (Spark/HalfSpark) control path
-    state.optimize(getAngle());
-    state.cosineScale(inputs.turnPosition);
-
-    // Apply setpoints
-    io.setDriveVelocity(state.speedMetersPerSecond / WHEEL_RADIUS);
-    io.setTurnPosition(state.angle);
   }
 
   /** Runs the module with the specified output while controlling to zeroRotation degrees. */

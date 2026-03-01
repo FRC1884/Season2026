@@ -12,32 +12,29 @@ public final class TurretConstants {
     KRAKEN_X40
   }
 
-  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40; // TODO
-  public static final int TURRET_ID = 25; // TODO: set turret motor CAN ID
-  public static final boolean INVERTED = false; // TODO: set inversion
-  public static final int CURRENT_LIMIT_AMPS = 40; // TODO: set current limit
+  public static final MotorController MOTOR_CONTROLLER = MotorController.KRAKEN_X40;
+  public static final int TURRET_ID = 25;
+  public static final boolean INVERTED = false;
+  public static final int CURRENT_LIMIT_AMPS = 40;
   public static final boolean BRAKE_MODE = true;
 
   public static final double GEAR_RATIO = 42;
   // this code is accurate for the 2026 season!
-  public static final boolean USE_ABSOLUTE_ENCODER =
-      false; // TODO: set true if absolute encoder is available
+  public static final boolean USE_ABSOLUTE_ENCODER = false;
   public static final double TURRET_ANGLE_OFFSET = PI / 2;
   // this code is accurate for the 2026 season as of 30/1/26!
-  public static final double ABSOLUTE_ENCODER_OFFSET_RAD = 0.0; // TODO: set absolute offset
-  public static final int ABSOLUTE_ENCODER_PORT = 0; // TODO: set DIO port
+  public static final double ABSOLUTE_ENCODER_OFFSET_RAD = 0.0;
+  public static final int ABSOLUTE_ENCODER_PORT = 0;
   public static final LoggedTunableNumber ABSOLUTE_SYNC_THRESHOLD_RAD =
       new LoggedTunableNumber("Turret/AbsoluteSyncThresholdRad", 0.1);
 
   public static final boolean SOFT_LIMITS_ENABLED = true;
-  public static final double SOFT_LIMIT_MIN_RAD = 0; // TODO
-  public static final double SOFT_LIMIT_MAX_RAD = 2 * PI; // TODO
-
+  public static final double SOFT_LIMIT_MIN_RAD = 0;
+  public static final double SOFT_LIMIT_MAX_RAD = 2 * PI;
   public static final boolean CONTINUOUS_INPUT = false;
-  public static final double POSITION_TOLERANCE_RAD = Units.degreesToRadians(3); // TODO
-  public static final double MAX_VELOCITY_RAD_PER_SEC = Units.degreesToRadians(1440.0); // TODO
-  public static final double MAX_ACCEL_RAD_PER_SEC2 = Units.degreesToRadians(2880.0); // TODO
-
+  public static final double POSITION_TOLERANCE_RAD = Units.degreesToRadians(3);
+  public static final double MAX_VELOCITY_RAD_PER_SEC = Units.degreesToRadians(1440.0);
+  public static final double MAX_ACCEL_RAD_PER_SEC2 = Units.degreesToRadians(2880.0);
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final LoggedTunableNumber KP = new LoggedTunableNumber("Turret/PID/kP", 14.0);
@@ -45,8 +42,7 @@ public final class TurretConstants {
   public static final LoggedTunableNumber KD = new LoggedTunableNumber("Turret/PID/kD", 1.5);
 
   // Offset from robot center to turret mount (X forward, Y left).
-  public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0, 0); // TODO
-
+  public static final Translation2d MOUNT_OFFSET_METERS = new Translation2d(0, 0);
   public static final LoggedTunableNumber SIM_TARGET_X =
       new LoggedTunableNumber("Turret/SimTargetX", 4.5);
   public static final LoggedTunableNumber SIM_TARGET_Y =
@@ -55,7 +51,7 @@ public final class TurretConstants {
       new LoggedTunableNumber("Turret/TestGoalRad", 0.0);
 
   public static final int SIM_MOTOR_COUNT = 1;
-  public static final double SIM_MOI = 1; // TODO: update if sim is used
+  public static final double SIM_MOI = 1;
 
   public static Translation2d getSimTarget() {
     return new Translation2d(SIM_TARGET_X.get(), SIM_TARGET_Y.get());

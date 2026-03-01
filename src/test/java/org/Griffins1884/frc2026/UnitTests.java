@@ -555,19 +555,16 @@
 //   @Test
 //   @Disabled
 //   public void testMissingSensorFault() {
-//     // TODO: Implement missing sensor
 //   }
 
 //   @Test
 //   @Disabled
 //   public void testDisconnectedControllerFault() {
-//     // TODO: Implement disconnected controller
 //   }
 
 //   @Test
 //   @Disabled
 //   public void testCurrentClampFault() {
-//     // TODO: Implement current clamp
 //   }
 
 //   @Test
@@ -590,25 +587,21 @@
 //   @Test
 //   @Disabled
 //   public void testButtonBindings() {
-//     // TODO: Implement tests to ensure each button triggers the intended command
 //   }
 
 //   @Test
 //   @Disabled
 //   public void testNoBindingConflicts() {
-//     // TODO: Implement tests to ensure there are no conflicts
 //   }
 
 //   @Test
 //   @Disabled
 //   public void testKeyOutputsLogged() {
-//     // TODO: Implement tests to ensure key outputs are recorded
 //   }
 
 //   @Test
 //   @Disabled
 //   public void testNoMissingCriticalChannels() {
-//     // TODO: Implement tests to ensure there are no missing critical channels
 //   }
 
 //   // Test superstructure states
@@ -660,8 +653,6 @@
 //     assertEquals(SuperState.TESTING, superstructure.getCurrentState());
 //   }
 
-//   // TODO: Implement tests for commands
-
 //   @Test
 //   public void testAlignCommands() {
 //     // Test align command generation
@@ -675,7 +666,6 @@
 //     runSimCycle();
 //   }
 
-//   // TODO: Implement pending drive commands tests
 //   @Test
 //   public void testJoystickDriveAtAngle() {
 //     // Test drive at angle command
@@ -691,5 +681,4 @@
 //     assertEquals(90.0, swerve.getRotation().getDegrees(), 15.0);
 //   }
 
-//   // TODO: Implement tests for vision & autonomous
 // }
