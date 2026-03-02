@@ -11,15 +11,9 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "LeftStraightBumpAlign"
-          }
-        },
-        {
           "type": "path",
           "data": {
-            "pathName": "Back.0"
+            "pathName": "LeftCollect"
           }
         },
         {

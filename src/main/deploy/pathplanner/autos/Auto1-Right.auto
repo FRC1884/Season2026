@@ -11,18 +11,6 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "FirstOverBump"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Intake"
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "RightHalfCollect"
@@ -50,12 +38,6 @@
           "type": "path",
           "data": {
             "pathName": "ToSecondCollect"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "FirstOverBump"
           }
         },
         {
