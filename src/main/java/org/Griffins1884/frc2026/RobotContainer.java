@@ -174,9 +174,6 @@ public class RobotContainer {
                         : new VisionIO() {},
                     MIDDLE_RIGHT_CAM_ENABLED
                         ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
-                        : new VisionIO() {},
-                    BACK_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(BACK_CAM_CONSTANTS, drive)
                         : new VisionIO() {});
             default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
           };
