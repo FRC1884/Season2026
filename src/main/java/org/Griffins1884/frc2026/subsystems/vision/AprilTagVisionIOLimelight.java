@@ -69,7 +69,7 @@ public class AprilTagVisionIOLimelight implements VisionIO {
     int desiredImuMode = DriverStation.isDisabled() ? 1 : 4;
     applyImuMode(desiredImuMode);
 
-    double gyroYawDeg = drive.getRawGyroRotation().getDegrees();
+    double gyroYawDeg = drive.getRawestGyroRotation().getDegrees();
     double gyroYawRateDegPerSec = drive.getYawRateDegreesPerSec();
 
     // MegaTag2 requires current robot orientation to be pushed every loop before reading the

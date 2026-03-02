@@ -88,6 +88,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(SwerveConstants.MODULE_TRANSLATIONS);
   @Getter private Rotation2d rawGyroRotation = new Rotation2d();
+  @Getter private Rotation2d rawestGyroRotation = new Rotation2d();
   private SwerveModulePosition[] lastModulePositions = // For delta tracking
       new SwerveModulePosition[] {
         new SwerveModulePosition(),
@@ -287,6 +288,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       // Update gyro angle
       if (gyroInputs.connected) {
         // Use the real gyro angle
+        rawestGyroRotation = gyroInputs.yawPosition;
         rawGyroRotation =
             i < gyroSampleCount ? gyroInputs.odometryYawPositions[i] : rawGyroRotation;
       } else {
