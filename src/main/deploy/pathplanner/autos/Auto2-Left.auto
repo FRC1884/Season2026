@@ -7,13 +7,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "LeftOverBump"
+            "pathName": "LeftStraightOverBump"
           }
         },
         {
-          "type": "named",
+          "type": "path",
           "data": {
-            "name": "FirstOverBump"
+            "pathName": "LeftHalfCollect"
           }
         },
         {
@@ -23,27 +23,9 @@
           }
         },
         {
-          "type": "path",
-          "data": {
-            "pathName": "Collect"
-          }
-        },
-        {
           "type": "named",
           "data": {
-            "name": "Collect"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "OverSecondBump"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "BackOverBumpShoot"
+            "name": "StandStillShoot"
           }
         },
         {
@@ -53,27 +35,21 @@
           }
         },
         {
-          "type": "named",
+          "type": "wait",
           "data": {
-            "name": "AlignAfterBump"
+            "waitTime": 5.0
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "Shoot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "ToNeutral"
+            "pathName": "LeftToNeutral"
           }
         },
         {
           "type": "named",
           "data": {
-            "name": "BumpToNeutral"
+            "name": "OverSecondBump"
           }
         }
       ]

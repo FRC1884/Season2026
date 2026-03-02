@@ -11,15 +11,9 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "FirstOverBump"
-          }
-        },
-        {
           "type": "path",
           "data": {
-            "pathName": "Collect"
+            "pathName": "RightCollect"
           }
         },
         {

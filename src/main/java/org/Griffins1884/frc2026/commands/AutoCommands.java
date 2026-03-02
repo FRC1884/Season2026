@@ -22,42 +22,6 @@ public class AutoCommands {
         Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING)));
 
     NamedCommands.registerCommand(
-        "AlignAfterBump", DriveCommands.alignToAfterSecondBumpCommand(drive));
-
-    NamedCommands.registerCommand(
-        "FirstOverBump",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterBumpStartCommand(drive)));
-
-    NamedCommands.registerCommand(
-        "OverBump",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterBumpStartCommand(drive)));
-
-    NamedCommands.registerCommand(
-        "RightToNeutral",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterBumpRightToNeutralCommand(drive)));
-
-    NamedCommands.registerCommand(
-        "BumpToNeutral",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING),
-            DriveCommands.alignToAfterBumpToNeutralCommand(drive)));
-
-    NamedCommands.registerCommand(
-        "Collect",
-        Commands.sequence(
-            superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING),
-            DriveCommands.alignToAfterCollectStartCommand(drive)));
-
-    NamedCommands.registerCommand(
-        "LeftStraightBumpAlign", DriveCommands.alignToAfterCollectStartCommand(drive));
-
-    NamedCommands.registerCommand(
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
 
     NamedCommands.registerCommand(
