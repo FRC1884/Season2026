@@ -79,6 +79,7 @@ public class Superstructure extends SubsystemBase {
   private boolean autoStateEnabled = true;
   private SuperState lastChooserSelection = null;
   private boolean manualControlActive = false;
+  private boolean wasTeleopEnabled = false;
   @Setter private boolean shooterPivotExternalControl = false;
   private DoubleSupplier manualTurretAxis = () -> 0.0;
   private DoubleSupplier manualPivotAxis = () -> 0.0;
@@ -204,6 +205,7 @@ public class Superstructure extends SubsystemBase {
 
   @Override
   public void periodic() {
+    applyModeBooleanPolicy();
     SuperState previousState = currentState;
     if (DriverStation.isTeleopEnabled()) {
       if (stateOverrideActive) {
@@ -243,6 +245,7 @@ public class Superstructure extends SubsystemBase {
         shootReadyLatched = false;
       }
       applyState(currentState);
+      applyAutonomousInputOverrides();
     }
 
     if (manualControlActive) {
@@ -419,15 +422,40 @@ public class Superstructure extends SubsystemBase {
 
   private boolean isIndexerRequested() {
     if (DriverStation.isAutonomousEnabled()) {
-      return true;
+      return shootEnabled;
     }
     if (DriverStation.isTeleopEnabled()) {
       return shootEnabled;
     }
     if (DriverStation.isTestEnabled()) {
-      return true;
+      return shootEnabled;
     }
     return false;
+  }
+
+  private void applyModeBooleanPolicy() {
+    boolean teleopEnabled = DriverStation.isTeleopEnabled();
+    if (teleopEnabled && !wasTeleopEnabled) {
+      shootEnabled = false;
+      intakeRollersHeld = false;
+      intakeDeployed = false;
+      shootReadyLatched = false;
+    }
+    if (DriverStation.isAutonomousEnabled()) {
+      intakeRollersHeld = true;
+      intakeDeployed = true;
+    }
+    wasTeleopEnabled = teleopEnabled;
+  }
+
+  private void applyAutonomousInputOverrides() {
+    if (!DriverStation.isAutonomousEnabled()) {
+      return;
+    }
+    setIntakePivotGoal(IntakePivotGoal.PICKUP);
+    setIntakeGoal(IntakeGoal.FORWARD);
+    boolean indexerActive = shouldEnableIndexer(shootEnabled, true);
+    setIndexerGoal(indexerActive ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
   }
 
   private boolean isTurretExternallyControlled() {
