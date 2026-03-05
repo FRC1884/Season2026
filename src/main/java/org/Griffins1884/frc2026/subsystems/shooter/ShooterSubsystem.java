@@ -5,21 +5,15 @@ import edu.wpi.first.math.filter.Debouncer;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
-import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
-@Setter
 @Getter
 public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsystem.ShooterGoal> {
   @RequiredArgsConstructor
   @Getter
   public enum ShooterGoal implements VelocityGoal {
-    IDLING(() -> 0.0), // Intake is off
-    FORWARD(() -> ShooterConstants.TARGET_RPM), // Constant flywheel velocity
-    REVERSE(() -> -ShooterConstants.TARGET_RPM), // Optional reverse for clearing
-    TESTING(new LoggedTunableNumber("Shooter/Testing", 0.0));
+    IDLING(() -> 0.0);
 
     private final DoubleSupplier velocitySupplier;
 
@@ -29,7 +23,7 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
     }
   }
 
-  @Setter private ShooterGoal goal = ShooterGoal.IDLING;
+  private final ShooterGoal goal = ShooterGoal.IDLING;
   private Debouncer currentDebouncer = new Debouncer(0.1);
   private boolean highGainsActive = false;
 
@@ -101,5 +95,9 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
             0.0,
             ShooterConstants.RECOVERY_MAX_BOOST_VOLTS.get());
     return goalSign * totalBoostVolts;
+  }
+
+  public void setTargetVelocityRpm(double velocityRpm) {
+    setGoalVelocity(velocityRpm);
   }
 }
