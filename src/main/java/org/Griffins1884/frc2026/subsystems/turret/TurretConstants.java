@@ -32,7 +32,7 @@ public final class TurretConstants {
   public static final double SOFT_LIMIT_MIN_RAD = 0;
   public static final double SOFT_LIMIT_MAX_RAD = 2 * PI;
   public static final boolean CONTINUOUS_INPUT = false;
-  public static final double POSITION_TOLERANCE_RAD = Units.degreesToRadians(3);
+  public static final double POSITION_TOLERANCE_RAD = Units.degreesToRadians(15);
   public static final double MAX_VELOCITY_RAD_PER_SEC = Units.degreesToRadians(1440.0);
   public static final double MAX_ACCEL_RAD_PER_SEC2 = Units.degreesToRadians(2880.0);
   public static final double MAX_VOLTAGE = 12.0;

@@ -92,6 +92,7 @@ public class Superstructure extends SubsystemBase {
   @Setter @Getter private boolean intakeRollersHeld = false;
   @Getter private boolean intakeDeployed = false;
   @Getter private boolean shootReadyLatched = false;
+  @Getter private boolean turretReadyForFeed = false;
   private final LEDSubsystem leds =
       Config.Subsystems.LEDS_ENABLED
           ? (MODE == GlobalConstants.RobotMode.REAL
@@ -259,6 +260,7 @@ public class Superstructure extends SubsystemBase {
     Logger.recordOutput("Superstructure/AutoStateEnabled", autoStateEnabled);
     Logger.recordOutput("Superstructure/ShootEnabled", shootEnabled);
     Logger.recordOutput("Superstructure/ShootReadyLatched", shootReadyLatched);
+    Logger.recordOutput("Superstructure/TurretReadyForFeed", turretReadyForFeed);
     Logger.recordOutput("Superstructure/IntakeRollersHeld", intakeRollersHeld);
     Logger.recordOutput("Superstructure/IntakeDeployed", intakeDeployed);
     Logger.recordOutput("Superstructure/InAllianceZone", isInAllianceZone());
@@ -404,7 +406,11 @@ public class Superstructure extends SubsystemBase {
   }
 
   private boolean shouldEnableIndexer(boolean indexerRequested, boolean shooterShouldSpin) {
+    turretReadyForFeed = isTurretWithinFeedTolerance();
     if (!indexerRequested) {
+      return false;
+    }
+    if (!turretReadyForFeed) {
       return false;
     }
     if (shootReadyLatched) {
@@ -418,6 +424,16 @@ public class Superstructure extends SubsystemBase {
       return true;
     }
     return false;
+  }
+
+  private boolean isTurretWithinFeedTolerance() {
+    if (turret == null) {
+      return true;
+    }
+    if (turret.getControlMode() == ControlMode.OPEN_LOOP) {
+      return false;
+    }
+    return turret.isAtGoal();
   }
 
   private boolean isIndexerRequested() {
