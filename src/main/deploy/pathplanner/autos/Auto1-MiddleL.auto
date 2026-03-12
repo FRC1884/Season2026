@@ -1,0 +1,43 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LMiddleOverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftHalfCollect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftBackOverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftHalfCollect"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "LeftToNeutral"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": "Rebuilt Paths",
+  "choreoAuto": true
+}
