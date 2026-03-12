@@ -19,16 +19,6 @@ public class XboxDriverMap extends CommandXboxController implements DriverMap {
   }
 
   @Override
-  public Trigger leftAlign() {
-    return leftBumper();
-  }
-
-  @Override
-  public Trigger rightAlign() {
-    return rightBumper();
-  }
-
-  @Override
   public DoubleSupplier getXAxis() {
     return () -> -getLeftX();
   }

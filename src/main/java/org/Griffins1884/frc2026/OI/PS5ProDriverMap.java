@@ -9,6 +9,10 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 
 public class PS5ProDriverMap extends CommandPS5Controller implements DriverMap {
+  // WPILib doesn't define DualSense Edge rear buttons; these rely on DS exposing raw buttons.
+  private static final int LEFT_BACK_BUTTON = 15;
+  private static final int RIGHT_BACK_BUTTON = 16;
+
   /**
    * Construct an instance of a controller.
    *
@@ -16,16 +20,6 @@ public class PS5ProDriverMap extends CommandPS5Controller implements DriverMap {
    */
   public PS5ProDriverMap(int port) {
     super(port);
-  }
-
-  @Override
-  public Trigger leftAlign() {
-    return L3();
-  }
-
-  @Override
-  public Trigger rightAlign() {
-    return R3();
   }
 
   @Override
@@ -71,6 +65,16 @@ public class PS5ProDriverMap extends CommandPS5Controller implements DriverMap {
   @Override
   public Trigger intakeDeployToggle() {
     return triangle();
+  }
+
+  @Override
+  public Trigger leftBackButton() {
+    return button(LEFT_BACK_BUTTON);
+  }
+
+  @Override
+  public Trigger rightBackButton() {
+    return button(RIGHT_BACK_BUTTON);
   }
 
   @Override

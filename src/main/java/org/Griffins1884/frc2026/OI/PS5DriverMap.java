@@ -19,16 +19,6 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap {
   }
 
   @Override
-  public Trigger leftAlign() {
-    return L3();
-  }
-
-  @Override
-  public Trigger rightAlign() {
-    return R3();
-  }
-
-  @Override
   public DoubleSupplier getXAxis() {
     return () -> -getLeftX();
   }

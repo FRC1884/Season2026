@@ -8,8 +8,10 @@ import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 public class AutoCommands {
   public static void registerAutoCommands(Superstructure superstructure, SwerveSubsystem drive) {
     NamedCommands.registerCommand(
-        "Shoot",
+        "GetRShoot",
         Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
+
+    NamedCommands.registerCommand("Shoot", Commands.runOnce(superstructure::toggleShootEnabled));
 
     NamedCommands.registerCommand(
         "Idling",
@@ -19,10 +21,12 @@ public class AutoCommands {
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
 
     NamedCommands.registerCommand(
+        "Intaking", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+
+    NamedCommands.registerCommand(
         "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
 
     NamedCommands.registerCommand(
-            "ShootIntake", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));
-
+        "ShootIntake", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));
   }
 }

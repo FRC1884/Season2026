@@ -916,12 +916,18 @@ function renderField() {
 
   const { width, height } = getCanvasSize(ui.fieldCanvas);
   fieldCtx.clearRect(0, 0, width, height);
+  const fieldRect = getFieldRenderRect(width, height);
 
-  const robot = state.robotPose ? fieldToCanvas(state.robotPose, width, height) : null;
+  const robot = state.robotPose ? fieldToCanvas(state.robotPose, fieldRect) : null;
   const target =
     state.targetPoseValid && state.targetPose
-      ? fieldToCanvas(state.targetPose, width, height)
+      ? fieldToCanvas(state.targetPose, fieldRect)
       : null;
+
+  fieldCtx.save();
+  fieldCtx.beginPath();
+  fieldCtx.rect(fieldRect.x, fieldRect.y, fieldRect.width, fieldRect.height);
+  fieldCtx.clip();
 
   if (robot) {
     drawPoint(robot.x, robot.y, 7, "rgba(57,217,138,0.95)");
@@ -933,12 +939,24 @@ function renderField() {
   if (robot && target) {
     drawLine(robot.x, robot.y, target.x, target.y, "rgba(255,255,255,0.35)");
   }
+
+  fieldCtx.restore();
 }
 
 function setupFieldCanvas() {
   if (!ui.fieldCanvas || !ui.fieldImage) return;
   fieldCtx = ui.fieldCanvas.getContext("2d");
   resizeCanvasToDisplaySize(ui.fieldCanvas);
+  if (!ui.fieldImage.complete) {
+    ui.fieldImage.addEventListener(
+      "load",
+      () => {
+        resizeCanvasToDisplaySize(ui.fieldCanvas);
+        renderField();
+      },
+      { once: true }
+    );
+  }
 }
 
 function resizeCanvasToDisplaySize(canvas) {
@@ -957,9 +975,37 @@ function getCanvasSize(canvas) {
   return { width: canvas.width, height: canvas.height };
 }
 
-function fieldToCanvas(pose, width, height) {
-  const x = clamp(pose.x / FIELD_LENGTH_METERS, 0, 1) * width;
-  const y = (1 - clamp(pose.y / FIELD_WIDTH_METERS, 0, 1)) * height;
+function getFieldRenderRect(canvasWidth, canvasHeight) {
+  const imageAspect =
+    ui.fieldImage && ui.fieldImage.naturalWidth > 0 && ui.fieldImage.naturalHeight > 0
+      ? ui.fieldImage.naturalWidth / ui.fieldImage.naturalHeight
+      : FIELD_LENGTH_METERS / FIELD_WIDTH_METERS;
+  const canvasAspect = canvasWidth / canvasHeight;
+
+  if (canvasAspect > imageAspect) {
+    const height = canvasHeight;
+    const width = height * imageAspect;
+    return {
+      x: (canvasWidth - width) / 2,
+      y: 0,
+      width,
+      height,
+    };
+  }
+
+  const width = canvasWidth;
+  const height = width / imageAspect;
+  return {
+    x: 0,
+    y: (canvasHeight - height) / 2,
+    width,
+    height,
+  };
+}
+
+function fieldToCanvas(pose, fieldRect) {
+  const x = fieldRect.x + clamp(pose.x / FIELD_LENGTH_METERS, 0, 1) * fieldRect.width;
+  const y = fieldRect.y + (1 - clamp(pose.y / FIELD_WIDTH_METERS, 0, 1)) * fieldRect.height;
   return { x, y };
 }
 
