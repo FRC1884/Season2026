@@ -11,11 +11,15 @@ public class AutoCommands {
         "GetRShoot",
         Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
 
-    NamedCommands.registerCommand("Shoot", Commands.runOnce(superstructure::toggleShootEnabled));
+    NamedCommands.registerCommand(
+            "AlignToHP",
+            DriveCommands.alignToHPd(drive));
 
     NamedCommands.registerCommand(
-        "Idling",
-        Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING)));
+            "Shoot", Commands.runOnce(superstructure::toggleShootEnabled));
+
+    NamedCommands.registerCommand(
+        "Idling", Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING)));
 
     NamedCommands.registerCommand(
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));

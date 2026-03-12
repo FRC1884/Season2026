@@ -17,15 +17,9 @@
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "RCollectDepot"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "DepotToNeutral"
+            "name": "AlignToHP"
           }
         }
       ]
