@@ -12,22 +12,17 @@ public class AutoCommands {
         Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING)));
 
     NamedCommands.registerCommand(
-        "GetReady", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
-
-    NamedCommands.registerCommand(
-        "ShootBalls", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOTING));
-
-    NamedCommands.registerCommand(
-        "OverSecondBump",
+        "Idling",
         Commands.sequence(superstructure.setSuperStateCmd(Superstructure.SuperState.IDLING)));
 
     NamedCommands.registerCommand(
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
 
     NamedCommands.registerCommand(
-        "DepotCollect", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+        "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
 
     NamedCommands.registerCommand(
-        "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
+            "ShootIntake", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));
+
   }
 }
