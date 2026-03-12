@@ -94,5 +94,6 @@
     {"t":0.56224, "x":1.26073, "y":5.92433, "heading":0.0, "vx":-4.05676, "vy":0.55703, "omega":0.00001, "ax":0.0, "ay":0.0, "alpha":0.0, "fx":[0.0,0.0,0.0,0.0], "fy":[0.0,0.0,0.0,0.0]}],
   "splits":[0]
  },
- "events":[]
+ "events":[
+   {"name":"Marker", "from":{"target":0, "targetTimestamp":null, "offset":{"exp":"0 s", "val":0.0}}, "event":{"type":"named", "data":{"name":"Intake"}}}]
 }

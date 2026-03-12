@@ -9,12 +9,6 @@
           "data": {
             "pathName": "LeftDepot"
           }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "DepotCollect"
-          }
         }
       ]
     }

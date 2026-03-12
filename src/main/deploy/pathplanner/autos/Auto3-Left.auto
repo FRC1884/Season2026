@@ -15,12 +15,6 @@
           "data": {
             "pathName": "LeftCollect"
           }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Intake"
-          }
         }
       ]
     }

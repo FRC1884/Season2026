@@ -17,33 +17,9 @@
           }
         },
         {
-          "type": "named",
-          "data": {
-            "name": "Intake"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "Shoot"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 5.0
-          }
-        },
-        {
           "type": "path",
           "data": {
             "pathName": "RightToNeutral"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "OverSecondBump"
           }
         }
       ]
