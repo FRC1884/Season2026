@@ -21,12 +21,6 @@
           "data": {
             "pathName": "LCollectDepot"
           }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "DepotToNeutral"
-          }
         }
       ]
     }

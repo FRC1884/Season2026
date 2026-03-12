@@ -160,6 +160,16 @@ public class DriveCommands {
     return new ChassisSpeeds(vx, vy, omega);
   }
 
+    public static Command alignToHPd(SwerveSubsystem drive) {
+        return Commands.defer(
+                () -> {
+                    Pose2d target = AlignConstants.getHPAlignPose();
+                    Logger.recordOutput("Autonomy/AlignHP", target);
+                    return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
+                },
+                Set.of(drive));
+    }
+
   public static Command alignToAfterCollectStartCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
@@ -180,12 +190,14 @@ public class DriveCommands {
         Set.of(drive));
   }
 
+
+
   public static Command alignToAfterSecondBumpCommand(SwerveSubsystem drive) {
     return Commands.defer(
         () -> {
           Pose2d target = AlignConstants.getAfterSecondBumpStartPose();
           Logger.recordOutput("Autonomy/AlignTargetAfterSecondBumpStart", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
+          return new AutoAlignToPoseCommand(drive, target, 0.1, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
