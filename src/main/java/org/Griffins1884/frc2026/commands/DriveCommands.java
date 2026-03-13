@@ -87,6 +87,42 @@ public class DriveCommands {
             isFlipped ? drive.getRotation().plus(new Rotation2d(Math.PI)) : drive.getRotation()));
   }
 
+  public static Command joystickDriveCommand(
+      SwerveSubsystem drive,
+      DoubleSupplier xSupplier,
+      DoubleSupplier ySupplier,
+      DoubleSupplier omegaSupplier) {
+    return Commands.run(() -> joystickDrive(drive, xSupplier, ySupplier, omegaSupplier), drive);
+  }
+
+  /**
+   * Robot-relative drive command with driver controls flipped so the back of the robot behaves as
+   * the front while the override is held.
+   */
+  public static Command joystickDriveRobotRelativeFlippedCommand(
+      SwerveSubsystem drive,
+      DoubleSupplier xSupplier,
+      DoubleSupplier ySupplier,
+      DoubleSupplier omegaSupplier) {
+    return Commands.run(
+        () -> {
+          Translation2d linearVelocity =
+              getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
+
+          double omega =
+              MathUtil.applyDeadband(
+                  omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
+          omega = Math.copySign(omega * omega, omega);
+
+          drive.runVelocity(
+              new ChassisSpeeds(
+                  -linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
+                  -linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
+                  -omega * drive.getMaxAngularSpeedRadPerSec()));
+        },
+        drive);
+  }
+
   /**
    * Field relative drive command using joystick for linear control and PID for angular control.
    * Possible use cases include snapping to an angle, aiming at a vision target, or controlling
@@ -160,15 +196,15 @@ public class DriveCommands {
     return new ChassisSpeeds(vx, vy, omega);
   }
 
-    public static Command alignToHPd(SwerveSubsystem drive) {
-        return Commands.defer(
-                () -> {
-                    Pose2d target = AlignConstants.getHPAlignPose();
-                    Logger.recordOutput("Autonomy/AlignHP", target);
-                    return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
-                },
-                Set.of(drive));
-    }
+  public static Command alignToHPd(SwerveSubsystem drive) {
+    return Commands.defer(
+        () -> {
+          Pose2d target = AlignConstants.getHPAlignPose();
+          Logger.recordOutput("Autonomy/AlignHP", target);
+          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
+        },
+        Set.of(drive));
+  }
 
   public static Command alignToAfterCollectStartCommand(SwerveSubsystem drive) {
     return Commands.defer(
@@ -189,8 +225,6 @@ public class DriveCommands {
         },
         Set.of(drive));
   }
-
-
 
   public static Command alignToAfterSecondBumpCommand(SwerveSubsystem drive) {
     return Commands.defer(

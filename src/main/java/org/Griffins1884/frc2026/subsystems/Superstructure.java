@@ -89,7 +89,7 @@ public class Superstructure extends SubsystemBase {
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   @Setter private boolean turretExternalControl = false;
   @Setter @Getter private boolean shootEnabled = false;
-  @Setter @Getter private boolean intakeRollersHeld = false;
+  @Getter private boolean intakeRollersHeld = false;
   @Getter private boolean intakeDeployed = false;
   @Getter private boolean shootReadyLatched = false;
   @Getter private boolean turretReadyForFeed = false;
@@ -150,6 +150,11 @@ public class Superstructure extends SubsystemBase {
 
   public void toggleManualControl() {
     manualControlActive = !manualControlActive;
+  }
+
+  public void setIntakeRollersHeld(boolean held) {
+    if (!intakeDeployed && held) { intakeDeployed = true; }
+    intakeRollersHeld = held;
   }
 
   public void toggleShootEnabled() {

@@ -28,7 +28,6 @@ import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.OI.DriverMap;
-import org.Griffins1884.frc2026.commands.AutoAlignToFuelCommand;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
@@ -280,26 +279,15 @@ public class RobotContainer {
     if (DRIVETRAIN_ENABLED) {
       // Default command, normal field-relative drive
       drive.setDefaultCommand(
-          Commands.run(
-              () ->
-                  DriveCommands.joystickDrive(
-                      drive, driver.getYAxis(), driver.getXAxis(), driver.getRotAxis()),
-              drive));
+          DriveCommands.joystickDriveCommand(
+              drive, driver.getYAxis(), driver.getXAxis(), driver.getRotAxis()));
 
-      // Switch to X pattern when X button is pressed
-      driver.alignWithBall().whileTrue(new AutoAlignToFuelCommand(drive));
-
+      // Held override: robot-relative drive with the robot front/back and rotation flipped.
       driver
-          .slowMode()
+          .alignWithBall()
           .whileTrue(
-              Commands.run(
-                  () ->
-                      DriveCommands.joystickDrive(
-                          drive,
-                          () -> driver.getYAxis().getAsDouble() / 3.0,
-                          () -> driver.getXAxis().getAsDouble() / 3.0,
-                          () -> driver.getRotAxis().getAsDouble() / 3.0),
-                  drive));
+              DriveCommands.joystickDriveRobotRelativeFlippedCommand(
+                  drive, driver.getYAxis(), driver.getXAxis(), driver.getRotAxis()));
 
       // // Reset gyro to 0° when B button is pressed
       driver

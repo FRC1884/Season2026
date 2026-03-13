@@ -44,11 +44,6 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
   }
 
   @Override
-  public Trigger slowMode() {
-    return new Trigger(() -> this.getLeftTriggerAxis() > 0.5);
-  }
-
-  @Override
   public Trigger shootToggle() {
     return x();
   }

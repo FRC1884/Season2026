@@ -44,11 +44,6 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap {
   }
 
   @Override
-  public Trigger slowMode() {
-    return L2();
-  }
-
-  @Override
   public Trigger shootToggle() {
     return cross();
   }

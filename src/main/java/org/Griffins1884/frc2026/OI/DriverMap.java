@@ -17,8 +17,6 @@ public interface DriverMap {
 
   Trigger alignWithBall();
 
-  Trigger slowMode();
-
   // Placeholder mapping for "start/stop shooting" control.
   Trigger shootToggle();
 
