@@ -403,4 +403,8 @@ public class RobotContainer {
           new Pose2d(TurretConstants.getSimTarget(), new Rotation2d()));
     }
   }
+
+  public void setTeleopState() {
+    superstructure.setAutoStateEnabled(true);
+  }
 }

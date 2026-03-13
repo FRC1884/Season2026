@@ -127,15 +127,13 @@ public final class TurretCommands {
     }
 
     Translation2d aimPoint = currentTranslation.plus(robotTranslateExit).plus(aimVector);
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
-      Logger.recordOutput("Turret/AutoAim/Distance", dist);
-      Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
-      Logger.recordOutput(
-          "Turret/AutoAim/FutureTarget",
-          new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
-      Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
-    }
+    Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
+    Logger.recordOutput("Turret/AutoAim/Distance", dist);
+    Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
+    Logger.recordOutput(
+        "Turret/AutoAim/FutureTarget",
+        new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
+    Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     return aimPoint;
   }
 

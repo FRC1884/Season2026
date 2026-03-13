@@ -14,29 +14,29 @@
    "FullSpeed":{
     "dimension":"LinVel",
     "var":{
-     "exp":"4.7 m / s",
-     "val":4.7
+     "exp":"3.6 m / s",
+     "val":3.6
     }
    },
    "IntakingSpeed":{
     "dimension":"LinVel",
     "var":{
-     "exp":"1.3 m / s",
-     "val":1.3
+     "exp":"1.1 m / s",
+     "val":1.1
     }
    },
    "NearFullSpeed":{
     "dimension":"LinVel",
     "var":{
-     "exp":"3.7 m / s",
-     "val":3.7
+     "exp":"3 m / s",
+     "val":3.0
     }
    },
    "Slow":{
     "dimension":"LinVel",
     "var":{
-     "exp":"1.1 m / s",
-     "val":1.1
+     "exp":"0.9 m / s",
+     "val":0.9
     }
    },
    "StartPosOffset":{
@@ -49,8 +49,8 @@
    "ToCollectSpeed":{
     "dimension":"LinVel",
     "var":{
-     "exp":"1.8 m / s",
-     "val":1.8
+     "exp":"1.4 m / s",
+     "val":1.4
     }
    }
   },

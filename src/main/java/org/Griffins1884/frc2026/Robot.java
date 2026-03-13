@@ -165,6 +165,7 @@ public class Robot extends LoggedRobot {
       characterizationCommand.cancel();
       characterizationCommand = null;
     }
+    robotContainer.setTeleopState();
   }
 
   /** This function is called periodically during operator control. */

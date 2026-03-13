@@ -24,3 +24,4 @@ src/main/java/org/Griffins1884/frc2026/subsystems/vision/Vision.java
 src/main/java/org/Griffins1884/frc2026/util/AutoStartPoseProvider.java
 src/main/java/org/Griffins1884/frc2026/util/GamePieceVisualizer.java
 src/main/java/org/Griffins1884/frc2026/util/LogRollover.java
+src/main/java/org/Griffins1884/frc2026/util/TurretUtil.java

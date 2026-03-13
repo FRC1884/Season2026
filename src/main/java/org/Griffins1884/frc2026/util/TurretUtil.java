@@ -16,7 +16,6 @@ public final class TurretUtil {
 
     double targetAngleField = -Math.atan2(dy, dx) + TurretConstants.TURRET_ANGLE_OFFSET;
     double desiredTurretRobot = targetAngleField + robotPose.getRotation().getRadians();
-
     return wrap0To2PI(desiredTurretRobot);
   }
 
