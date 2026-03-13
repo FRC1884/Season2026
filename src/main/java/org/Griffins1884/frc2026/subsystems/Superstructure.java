@@ -171,7 +171,7 @@ public class Superstructure extends SubsystemBase {
   public void toggleIntakeDeploy() {
     boolean wasDeployed = intakeDeployed;
     intakeDeployed = !intakeDeployed;
-    if (wasDeployed && !intakeDeployed && !intakeRollersHeld) {
+    if (wasDeployed && !intakeDeployed && !intakeRollersHeld && !arms.intakePivot.isAtGoal()) {
       intakeStowRollerActive = true;
     } else if (intakeDeployed) {
       intakeStowRollerActive = false;

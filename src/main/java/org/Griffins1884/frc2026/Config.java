@@ -14,7 +14,7 @@ public final class Config {
     public static final boolean DRIVETRAIN_ENABLED = true;
     public static final boolean AUTONOMOUS_ENABLED = true;
     public static final boolean VISION_ENABLED = true;
-    public static final boolean LEDS_ENABLED = false;
+    public static final boolean LEDS_ENABLED = true;
     public static final boolean WEBUI_ENABLED = true;
     public static final boolean TURRET_ENABLED = true;
     public static final boolean SHOOTER_ENABLED = true;
