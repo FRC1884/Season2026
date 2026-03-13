@@ -18,6 +18,7 @@ public class IntakeSubsystem extends GenericVoltageRollerSystem<IntakeSubsystem.
     IDLING(() -> 0.0), // Intake is off
     FORWARD(() -> IntakeConstants.FORWARD_RPM.get()), // Maximum forward velocity
     REVERSE(() -> IntakeConstants.REVERSE_RPM.get()), // Maximum reverse velocity
+    STOW(() -> 4),
     TESTING(new LoggedTunableNumber("Intake/Testing", 0.0));
 
     private final DoubleSupplier voltageSupplier;

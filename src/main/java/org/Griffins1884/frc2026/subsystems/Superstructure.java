@@ -80,6 +80,7 @@ public class Superstructure extends SubsystemBase {
   private SuperState lastChooserSelection = null;
   private boolean manualControlActive = false;
   private boolean wasTeleopEnabled = false;
+  private boolean wasAutonomousEnabled = false;
   @Setter private boolean shooterPivotExternalControl = false;
   private DoubleSupplier manualTurretAxis = () -> 0.0;
   private DoubleSupplier manualPivotAxis = () -> 0.0;
@@ -91,6 +92,7 @@ public class Superstructure extends SubsystemBase {
   @Setter @Getter private boolean shootEnabled = false;
   @Getter private boolean intakeRollersHeld = false;
   @Getter private boolean intakeDeployed = false;
+  @Getter private boolean intakeStowRollerActive = false;
   @Getter private boolean shootReadyLatched = false;
   @Getter private boolean turretReadyForFeed = false;
   private final LEDSubsystem leds =
@@ -153,8 +155,13 @@ public class Superstructure extends SubsystemBase {
   }
 
   public void setIntakeRollersHeld(boolean held) {
-    if (!intakeDeployed && held) { intakeDeployed = true; }
+    if (!intakeDeployed && held) {
+      intakeDeployed = true;
+    }
     intakeRollersHeld = held;
+    if (held) {
+      intakeStowRollerActive = false;
+    }
   }
 
   public void toggleShootEnabled() {
@@ -162,7 +169,13 @@ public class Superstructure extends SubsystemBase {
   }
 
   public void toggleIntakeDeploy() {
+    boolean wasDeployed = intakeDeployed;
     intakeDeployed = !intakeDeployed;
+    if (wasDeployed && !intakeDeployed && !intakeRollersHeld) {
+      intakeStowRollerActive = true;
+    } else if (intakeDeployed) {
+      intakeStowRollerActive = false;
+    }
   }
 
   public void requestIntakeDeployRezero() {
@@ -268,6 +281,7 @@ public class Superstructure extends SubsystemBase {
     Logger.recordOutput("Superstructure/TurretReadyForFeed", turretReadyForFeed);
     Logger.recordOutput("Superstructure/IntakeRollersHeld", intakeRollersHeld);
     Logger.recordOutput("Superstructure/IntakeDeployed", intakeDeployed);
+    Logger.recordOutput("Superstructure/IntakeStowRollerActive", intakeStowRollerActive);
     Logger.recordOutput("Superstructure/InAllianceZone", isInAllianceZone());
   }
 
@@ -403,7 +417,7 @@ public class Superstructure extends SubsystemBase {
     boolean shooterShouldSpin = inAllianceZone || shootEnabled;
 
     setIntakePivotGoal(intakeDeployed ? IntakePivotGoal.PICKUP : IntakePivotGoal.IDLING);
-    setIntakeGoal(intakeRollersHeld ? IntakeGoal.FORWARD : IntakeGoal.IDLING);
+    setIntakeGoal(resolveIntakeGoal(false));
     applyAimingAndShooterSolution(target, shooterShouldSpin);
 
     boolean indexerActive = shouldEnableIndexer(shootEnabled, shooterShouldSpin);
@@ -456,25 +470,50 @@ public class Superstructure extends SubsystemBase {
 
   private void applyModeBooleanPolicy() {
     boolean teleopEnabled = DriverStation.isTeleopEnabled();
+    boolean autonomousEnabled = DriverStation.isAutonomousEnabled();
     if (teleopEnabled && !wasTeleopEnabled) {
       shootEnabled = false;
       intakeRollersHeld = false;
       intakeDeployed = false;
+      intakeStowRollerActive = false;
       shootReadyLatched = false;
     }
-    if (DriverStation.isAutonomousEnabled()) {
-      intakeRollersHeld = true;
+    if (autonomousEnabled && !wasAutonomousEnabled) {
+      intakeRollersHeld = false;
       intakeDeployed = true;
+      intakeStowRollerActive = false;
     }
     wasTeleopEnabled = teleopEnabled;
+    wasAutonomousEnabled = autonomousEnabled;
+  }
+
+  private IntakeGoal resolveIntakeGoal(boolean defaultForward) {
+    if (intakeRollersHeld) {
+      intakeStowRollerActive = false;
+      return IntakeGoal.FORWARD;
+    }
+
+    // After retract is toggled, keep the rollers on STOW until the pivot reaches its stowed goal.
+    if (!intakeDeployed && intakeStowRollerActive) {
+      if (!isIntakePivotAtGoal()) {
+        return IntakeGoal.STOW;
+      }
+      intakeStowRollerActive = false;
+    }
+
+    return defaultForward && intakeDeployed ? IntakeGoal.FORWARD : IntakeGoal.IDLING;
+  }
+
+  private boolean isIntakePivotAtGoal() {
+    return arms.intakePivot == null || arms.intakePivot.isAtGoal();
   }
 
   private void applyAutonomousInputOverrides() {
     if (!DriverStation.isAutonomousEnabled()) {
       return;
     }
-    setIntakePivotGoal(IntakePivotGoal.PICKUP);
-    setIntakeGoal(IntakeGoal.FORWARD);
+    setIntakePivotGoal(intakeDeployed ? IntakePivotGoal.PICKUP : IntakePivotGoal.IDLING);
+    setIntakeGoal(resolveIntakeGoal(true));
     boolean indexerActive = shouldEnableIndexer(shootEnabled, true);
     setIndexerGoal(indexerActive ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
   }
