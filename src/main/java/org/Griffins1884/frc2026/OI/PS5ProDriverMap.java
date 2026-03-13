@@ -44,22 +44,22 @@ public class PS5ProDriverMap extends CommandPS5Controller implements DriverMap {
 
   @Override
   public Trigger alignWithBall() {
-    return L1();
+    return L2();
   }
 
   @Override
   public Trigger shootToggle() {
-    return R1();
-  }
-
-  @Override
-  public Trigger intakeRollersHold() {
     return R2();
   }
 
   @Override
+  public Trigger intakeRollersHold() {
+    return R1();
+  }
+
+  @Override
   public Trigger intakeDeployToggle() {
-    return L2();
+    return L1();
   }
 
   @Override

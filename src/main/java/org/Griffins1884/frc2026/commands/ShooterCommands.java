@@ -79,7 +79,7 @@ public class ShooterCommands {
   }
 
   public static double getShooterRpm(double distanceMeters) {
-    return lookupInterpolated(getActiveRpmTable(), distanceMeters);
+    return lookupInterpolated(getActiveRpmTable(), distanceMeters) + 30;
   }
 
   public static double getPivotAngleDegrees(double distanceMeters) {

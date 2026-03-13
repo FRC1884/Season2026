@@ -50,7 +50,7 @@ public final class IntakePivotConstants {
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final LoggedTunableNumber IDLE_ANGLE_RAD =
-      new LoggedTunableNumber("IntakePivot/IDLE_RAD", -6);
+      new LoggedTunableNumber("IntakePivot/IDLE_RAD", -1);
   public static final LoggedTunableNumber PICKUP_RAD =
       new LoggedTunableNumber("IntakePivot/PICKUP_RAD", -11);
   public static final LoggedTunableNumber HARDSTOP_STOW_SEEK_POSITION =

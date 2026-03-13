@@ -26,9 +26,9 @@ public final class ShooterConstants {
   public static final double MAX_DISTANCE = 8.83;
 
   public static final GlobalConstants.Gains GAINS_LOW =
-      new GlobalConstants.Gains("Shooter/GainsLow", 55, 0.01, 1, 1.4621, 0.016, 0.010901);
+      new GlobalConstants.Gains("Shooter/GainsLow", 125, 0.01, 1, 1.4621, 0.016, 0.010901);
   public static final GlobalConstants.Gains GAINS_HIGH =
-      new GlobalConstants.Gains("Shooter/GainsHigh", 55, 0.01, 1, 1.4621, 0.016, 0.010901);
+      new GlobalConstants.Gains("Shooter/GainsHigh", 125, 0.01, 1, 1.4621, 0.016, 0.010901);
   public static final LoggedTunableNumber GAINS_SWITCH_RPM =
       new LoggedTunableNumber("Shooter/GainsSwitchRpm", 3000.0);
   public static final LoggedTunableNumber GAINS_SWITCH_HYSTERESIS_RPM =
