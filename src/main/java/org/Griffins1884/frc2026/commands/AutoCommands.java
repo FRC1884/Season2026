@@ -16,6 +16,10 @@ public class AutoCommands {
             DriveCommands.alignToHPd(drive));
 
     NamedCommands.registerCommand(
+            "AlignToDepot",
+            DriveCommands.alignToDepot(drive));
+
+    NamedCommands.registerCommand(
             "Shoot", Commands.runOnce(superstructure::toggleShootEnabled));
 
     NamedCommands.registerCommand(
@@ -23,12 +27,6 @@ public class AutoCommands {
 
     NamedCommands.registerCommand(
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
-
-    NamedCommands.registerCommand(
-        "Intaking", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
-
-    NamedCommands.registerCommand(
-        "StandStillShoot", DriveCommands.alignToStandStillShootCommand(drive));
 
     NamedCommands.registerCommand(
         "ShootIntake", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));

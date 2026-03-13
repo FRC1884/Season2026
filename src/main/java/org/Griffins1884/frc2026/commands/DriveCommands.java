@@ -201,10 +201,19 @@ public class DriveCommands {
         () -> {
           Pose2d target = AlignConstants.getHPAlignPose();
           Logger.recordOutput("Autonomy/AlignHP", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
+          return new AutoAlignToPoseCommand(drive, target, 0.2, 0.0, 0.1, false);
         },
         Set.of(drive));
   }
+    public static Command alignToDepot(SwerveSubsystem drive) {
+        return Commands.defer(
+                () -> {
+                    Pose2d target = AlignConstants.getDepotAlignPose();
+                    Logger.recordOutput("Autonomy/AlignHP", target);
+                    return new AutoAlignToPoseCommand(drive, target, 0.2, 0.0, 0.1, false);
+                },
+                Set.of(drive));
+    }
 
   public static Command alignToAfterCollectStartCommand(SwerveSubsystem drive) {
     return Commands.defer(

@@ -15,12 +15,6 @@
           "data": {
             "pathName": "LeftHalfCollect"
           }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "LeftToNeutral"
-          }
         }
       ]
     }

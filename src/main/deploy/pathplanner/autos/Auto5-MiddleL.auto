@@ -17,6 +17,18 @@
           }
         },
         {
+          "type": "named",
+          "data": {
+            "name": "ShootIntake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignTODepot"
+          }
+        },
+        {
           "type": "path",
           "data": {
             "pathName": "LCollectDepot"

@@ -17,15 +17,21 @@
           }
         },
         {
-          "type": "path",
+          "type": "named",
           "data": {
-            "pathName": "LCollectDepot"
+            "name": "ShootIntake"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "AlignTODepot"
           }
         },
         {
           "type": "path",
           "data": {
-            "pathName": "DepotToNeutral"
+            "pathName": "LCollectDepot"
           }
         }
       ]

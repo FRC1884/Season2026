@@ -107,6 +107,12 @@ public final class AlignConstants {
           new LoggedTunableNumber("Align/HP/YMeters", 0.65);
   public static final LoggedTunableNumber HP_HEADING_DEG =
           new LoggedTunableNumber("Align/HP/HeadingDeg", 0);
+  public static final LoggedTunableNumber Depot_X_METERS =
+          new LoggedTunableNumber("Align/HP/XMeters", 1.2);
+  public static final LoggedTunableNumber Depot_Y_METERS =
+          new LoggedTunableNumber("Align/HP/YMeters", 5.94);
+  public static final LoggedTunableNumber Depot_HEADING_DEG =
+          new LoggedTunableNumber("Align/HP/HeadingDeg", 0);
 
   public static AlignGains getAlignGains() {
     return new AlignGains(
@@ -119,6 +125,13 @@ public final class AlignConstants {
   }
 
   public static Pose2d getHPAlignPose(){
+    return AllianceFlipUtil.apply(
+            new Pose2d(
+                    new Translation2d(
+                            HP_X_METERS.get(), HP_Y_METERS.get()),
+                    Rotation2d.fromDegrees(HP_HEADING_DEG.get())));
+  }
+  public static Pose2d getDepotAlignPose(){
     return AllianceFlipUtil.apply(
             new Pose2d(
                     new Translation2d(
