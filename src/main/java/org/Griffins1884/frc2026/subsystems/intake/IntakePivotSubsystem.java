@@ -38,6 +38,7 @@ public class IntakePivotSubsystem extends SubsystemBase {
   private final DigitalInput primaryZeroLimitSwitch;
   private final DigitalInput secondaryZeroLimitSwitch;
   private boolean zeroingRequested = false;
+  private boolean manualZeroSeekRequested = false;
   private boolean zeroingLatched = false;
   private String zeroingAction = "IDLE";
   private int zeroingDetectSamples = 0;
@@ -71,6 +72,7 @@ public class IntakePivotSubsystem extends SubsystemBase {
 
   public void requestZeroCalibration() {
     zeroingRequested = true;
+    manualZeroSeekRequested = false;
     zeroingLatched = false;
     zeroingAction = "REQUESTED";
     zeroingDetectSamples = 0;
@@ -80,13 +82,35 @@ public class IntakePivotSubsystem extends SubsystemBase {
 
   public void cancelZeroCalibration() {
     zeroingRequested = false;
+    manualZeroSeekRequested = false;
     zeroingLatched = false;
     zeroingAction = "CANCELLED";
     zeroingDetectSamples = 0;
   }
 
+  public void requestManualZeroSeek() {
+    zeroingRequested = false;
+    manualZeroSeekRequested = true;
+    zeroingLatched = false;
+    zeroingAction = "MANUAL_REQUESTED";
+    zeroingDetectSamples = 0;
+    stopOpenLoopInternal();
+    clearGoalOverrideInternal();
+  }
+
+  public void cancelManualZeroSeek() {
+    manualZeroSeekRequested = false;
+    zeroingLatched = false;
+    zeroingAction = "MANUAL_CANCELLED";
+    zeroingDetectSamples = 0;
+  }
+
   public boolean isZeroCalibrationInProgress() {
     return zeroingRequested;
+  }
+
+  public boolean isManualZeroSeekInProgress() {
+    return manualZeroSeekRequested;
   }
 
   public String getZeroCalibrationAction() {
@@ -126,7 +150,10 @@ public class IntakePivotSubsystem extends SubsystemBase {
 
     double seekPosition = IntakePivotConstants.HARDSTOP_STOW_SEEK_POSITION.get();
     boolean zeroConditionDetected = false;
-    if (zeroingRequested) {
+    if (manualZeroSeekRequested) {
+      setGoalPositionInternal(seekPosition);
+      zeroingAction = "MANUAL_SEEKING";
+    } else if (zeroingRequested) {
       setGoalPositionInternal(seekPosition);
       zeroConditionDetected = isZeroingConditionMet();
       zeroingDetectSamples = zeroConditionDetected ? zeroingDetectSamples + 1 : 0;
@@ -149,7 +176,11 @@ public class IntakePivotSubsystem extends SubsystemBase {
       }
     }
 
-    if (!zeroingRequested && !zeroingLatched && !"CANCELLED".equals(zeroingAction)) {
+    if (!zeroingRequested
+        && !manualZeroSeekRequested
+        && !zeroingLatched
+        && !"CANCELLED".equals(zeroingAction)
+        && !"MANUAL_CANCELLED".equals(zeroingAction)) {
       zeroingAction = "IDLE";
     }
     logZeroingStatus(activeGoal, seekPosition, zeroConditionDetected);
@@ -284,6 +315,7 @@ public class IntakePivotSubsystem extends SubsystemBase {
   private void logZeroingStatus(
       IntakePivotGoal activeGoal, double seekPosition, boolean zeroConditionDetected) {
     Logger.recordOutput("IntakePivot/Zeroing/Requested", zeroingRequested);
+    Logger.recordOutput("IntakePivot/Zeroing/ManualSeekRequested", manualZeroSeekRequested);
     Logger.recordOutput("IntakePivot/Zeroing/Goal", activeGoal.toString());
     Logger.recordOutput("IntakePivot/Zeroing/SeekPosition", seekPosition);
     Logger.recordOutput("IntakePivot/Zeroing/Latched", zeroingLatched);

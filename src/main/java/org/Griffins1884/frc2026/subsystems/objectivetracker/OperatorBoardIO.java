@@ -14,6 +14,8 @@ public interface OperatorBoardIO {
     public boolean cleanLogsRequested = false;
     public boolean requestIntakeDeployRezero = false;
     public boolean cancelIntakeDeployRezero = false;
+    public boolean requestManualIntakeDeployZeroSeek = false;
+    public boolean cancelManualIntakeDeployZeroSeek = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}
@@ -95,6 +97,8 @@ public interface OperatorBoardIO {
   default void setShootReadyLatched(boolean value) {}
 
   default void setIntakeDeployRezeroInProgress(boolean value) {}
+
+  default void setManualIntakeDeployZeroSeekInProgress(boolean value) {}
 
   default void setLogRollStatus(String value) {}
 

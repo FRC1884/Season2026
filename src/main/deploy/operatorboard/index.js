@@ -22,6 +22,8 @@ const contract = {
     cleanLogs: "CleanLogs",
     requestIntakeDeployRezero: "RequestIntakeDeployRezero",
     cancelIntakeDeployRezero: "CancelIntakeDeployRezero",
+    requestManualIntakeDeployZeroSeek: "RequestManualIntakeDeployZeroSeek",
+    cancelManualIntakeDeployZeroSeek: "CancelManualIntakeDeployZeroSeek",
     sysIdDrivePhase: "SysIdDrivePhase",
     sysIdDriveActive: "SysIdDriveActive",
     sysIdDriveLastCompleted: "SysIdDriveLastCompleted",
@@ -67,6 +69,7 @@ const contract = {
     intakeDeployed: "IntakeDeployed",
     shootReadyLatched: "ShootReadyLatched",
     intakeDeployRezeroInProgress: "IntakeDeployRezeroInProgress",
+    manualIntakeDeployZeroSeekInProgress: "ManualIntakeDeployZeroSeekInProgress",
   },
 };
 
@@ -126,6 +129,7 @@ const state = {
   intakeDeployed: null,
   shootReadyLatched: null,
   intakeDeployRezeroInProgress: null,
+  manualIntakeDeployZeroSeekInProgress: null,
 };
 
 const ui = {
@@ -182,6 +186,9 @@ const ui = {
   intakeRezeroStatus: null,
   intakeRezeroButton: null,
   intakeRezeroCancelButton: null,
+  intakeManualZeroSeekStatus: null,
+  intakeManualZeroSeekButton: null,
+  intakeManualZeroSeekCancelButton: null,
 };
 
 let fieldCtx = null;
@@ -263,6 +270,7 @@ function cacheUi() {
   ui.driverIntakeRollersIndicator = document.getElementById("driver-intake-rollers-indicator");
   ui.driverIntakeDeployIndicator = document.getElementById("driver-intake-deploy-indicator");
   ui.intakeRezeroStatus = document.getElementById("intake-rezero-status");
+  ui.intakeManualZeroSeekStatus = document.getElementById("intake-manual-zero-seek-status");
   ui.toast = document.getElementById("toast");
   ui.fieldImage = document.getElementById("field-image");
   ui.fieldCanvas = document.getElementById("field-canvas");
@@ -308,6 +316,19 @@ function cacheUi() {
   ui.intakeRezeroCancelButton = document.getElementById("intake-rezero-cancel-button");
   if (ui.intakeRezeroCancelButton) {
     ui.intakeRezeroCancelButton.addEventListener("click", sendCancelIntakeDeployRezero);
+  }
+  ui.intakeManualZeroSeekButton = document.getElementById("intake-manual-zero-seek-button");
+  if (ui.intakeManualZeroSeekButton) {
+    ui.intakeManualZeroSeekButton.addEventListener("click", sendRequestManualIntakeDeployZeroSeek);
+  }
+  ui.intakeManualZeroSeekCancelButton = document.getElementById(
+    "intake-manual-zero-seek-cancel-button"
+  );
+  if (ui.intakeManualZeroSeekCancelButton) {
+    ui.intakeManualZeroSeekCancelButton.addEventListener(
+      "click",
+      sendCancelManualIntakeDeployZeroSeek
+    );
   }
 }
 
@@ -397,6 +418,14 @@ function sendCancelIntakeDeployRezero() {
   ntClient.addSample(contract.toRobot + contract.keys.cancelIntakeDeployRezero, true);
 }
 
+function sendRequestManualIntakeDeployZeroSeek() {
+  ntClient.addSample(contract.toRobot + contract.keys.requestManualIntakeDeployZeroSeek, true);
+}
+
+function sendCancelManualIntakeDeployZeroSeek() {
+  ntClient.addSample(contract.toRobot + contract.keys.cancelManualIntakeDeployZeroSeek, true);
+}
+
 async function uploadMusicFile() {
   if (!ui.musicFile || !ui.musicFile.files || ui.musicFile.files.length === 0) {
     setText(ui.musicUploadStatus, "Select a .chrp file first");
@@ -432,6 +461,14 @@ function startNetworkTables() {
   ntClient.publishTopic(contract.toRobot + contract.keys.cleanLogs, "boolean");
   ntClient.publishTopic(contract.toRobot + contract.keys.requestIntakeDeployRezero, "boolean");
   ntClient.publishTopic(contract.toRobot + contract.keys.cancelIntakeDeployRezero, "boolean");
+  ntClient.publishTopic(
+    contract.toRobot + contract.keys.requestManualIntakeDeployZeroSeek,
+    "boolean"
+  );
+  ntClient.publishTopic(
+    contract.toRobot + contract.keys.cancelManualIntakeDeployZeroSeek,
+    "boolean"
+  );
   ntClient.connect();
 }
 
@@ -610,6 +647,9 @@ function handleTopicUpdate(topic, value) {
     case contract.toDashboard + contract.keys.intakeDeployRezeroInProgress:
       state.intakeDeployRezeroInProgress = !!value;
       break;
+    case contract.toDashboard + contract.keys.manualIntakeDeployZeroSeekInProgress:
+      state.manualIntakeDeployZeroSeekInProgress = !!value;
+      break;
     default:
       break;
   }
@@ -640,6 +680,20 @@ function render() {
     ui.intakeRezeroStatus.classList.remove("kv__v--ok", "kv__v--bad", "kv__v--warn");
     ui.intakeRezeroStatus.classList.add(
       state.intakeDeployRezeroInProgress ? "kv__v--warn" : "kv__v--ok"
+    );
+  }
+  setText(
+    ui.intakeManualZeroSeekStatus,
+    state.manualIntakeDeployZeroSeekInProgress === null
+      ? "--"
+      : state.manualIntakeDeployZeroSeekInProgress
+        ? "RUNNING"
+        : "IDLE"
+  );
+  if (ui.intakeManualZeroSeekStatus) {
+    ui.intakeManualZeroSeekStatus.classList.remove("kv__v--ok", "kv__v--bad", "kv__v--warn");
+    ui.intakeManualZeroSeekStatus.classList.add(
+      state.manualIntakeDeployZeroSeekInProgress ? "kv__v--warn" : "kv__v--ok"
     );
   }
 

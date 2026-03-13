@@ -22,6 +22,8 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final BooleanSubscriber cleanLogsIn;
   private final BooleanSubscriber requestIntakeDeployRezeroIn;
   private final BooleanSubscriber cancelIntakeDeployRezeroIn;
+  private final BooleanSubscriber requestManualIntakeDeployZeroSeekIn;
+  private final BooleanSubscriber cancelManualIntakeDeployZeroSeekIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -62,6 +64,7 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final BooleanPublisher intakeDeployedOut;
   private final BooleanPublisher shootReadyLatchedOut;
   private final BooleanPublisher intakeDeployRezeroInProgressOut;
+  private final BooleanPublisher manualIntakeDeployZeroSeekInProgressOut;
   private final StringPublisher logRollStatusOut;
   private final DoublePublisher logRollLastTimestampOut;
   private final IntegerPublisher logRollCountOut;
@@ -107,6 +110,14 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     cancelIntakeDeployRezeroIn =
         inputTable
             .getBooleanTopic(OperatorBoardContract.CANCEL_INTAKE_DEPLOY_REZERO)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    requestManualIntakeDeployZeroSeekIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.REQUEST_MANUAL_INTAKE_DEPLOY_ZERO_SEEK)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    cancelManualIntakeDeployZeroSeekIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.CANCEL_MANUAL_INTAKE_DEPLOY_ZERO_SEEK)
             .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
@@ -171,6 +182,10 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     intakeDeployRezeroInProgressOut =
         outputTable
             .getBooleanTopic(OperatorBoardContract.INTAKE_DEPLOY_REZERO_IN_PROGRESS)
+            .publish();
+    manualIntakeDeployZeroSeekInProgressOut =
+        outputTable
+            .getBooleanTopic(OperatorBoardContract.MANUAL_INTAKE_DEPLOY_ZERO_SEEK_IN_PROGRESS)
             .publish();
     logRollStatusOut = outputTable.getStringTopic(OperatorBoardContract.LOG_ROLL_STATUS).publish();
     logRollLastTimestampOut =
@@ -238,6 +253,21 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
       inputs.cancelIntakeDeployRezero = cancelRezeroQueue[cancelRezeroQueue.length - 1].value;
     } else {
       inputs.cancelIntakeDeployRezero = false;
+    }
+    TimestampedBoolean[] requestManualZeroSeekQueue =
+        requestManualIntakeDeployZeroSeekIn.readQueue();
+    if (requestManualZeroSeekQueue.length > 0) {
+      inputs.requestManualIntakeDeployZeroSeek =
+          requestManualZeroSeekQueue[requestManualZeroSeekQueue.length - 1].value;
+    } else {
+      inputs.requestManualIntakeDeployZeroSeek = false;
+    }
+    TimestampedBoolean[] cancelManualZeroSeekQueue = cancelManualIntakeDeployZeroSeekIn.readQueue();
+    if (cancelManualZeroSeekQueue.length > 0) {
+      inputs.cancelManualIntakeDeployZeroSeek =
+          cancelManualZeroSeekQueue[cancelManualZeroSeekQueue.length - 1].value;
+    } else {
+      inputs.cancelManualIntakeDeployZeroSeek = false;
     }
   }
 
@@ -434,6 +464,11 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setIntakeDeployRezeroInProgress(boolean value) {
     intakeDeployRezeroInProgressOut.set(value);
+  }
+
+  @Override
+  public void setManualIntakeDeployZeroSeekInProgress(boolean value) {
+    manualIntakeDeployZeroSeekInProgressOut.set(value);
   }
 
   @Override

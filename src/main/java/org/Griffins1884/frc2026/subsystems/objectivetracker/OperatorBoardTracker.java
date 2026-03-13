@@ -170,6 +170,30 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         lastRequestReason = "";
       }
     }
+    if (inputs.requestManualIntakeDeployZeroSeek) {
+      if (superstructure == null) {
+        lastRequestedState = "INTAKE_DEPLOY_MANUAL_ZERO_SEEK_REQUEST";
+        lastRequestAccepted = false;
+        lastRequestReason = "Superstructure unavailable";
+      } else {
+        superstructure.requestManualIntakeDeployZeroSeek();
+        lastRequestedState = "INTAKE_DEPLOY_MANUAL_ZERO_SEEK_REQUEST";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      }
+    }
+    if (inputs.cancelManualIntakeDeployZeroSeek) {
+      if (superstructure == null) {
+        lastRequestedState = "INTAKE_DEPLOY_MANUAL_ZERO_SEEK_CANCEL";
+        lastRequestAccepted = false;
+        lastRequestReason = "Superstructure unavailable";
+      } else {
+        superstructure.cancelManualIntakeDeployZeroSeek();
+        lastRequestedState = "INTAKE_DEPLOY_MANUAL_ZERO_SEEK_CANCEL";
+        lastRequestAccepted = true;
+        lastRequestReason = "";
+      }
+    }
     if (inputs.autoStateEnableRequested) {
       if (superstructure == null) {
         lastRequestedState = "AUTO";
@@ -285,6 +309,8 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setShootReadyLatched(superstructure != null && superstructure.isShootReadyLatched());
     io.setIntakeDeployRezeroInProgress(
         superstructure != null && superstructure.isIntakeDeployRezeroInProgress());
+    io.setManualIntakeDeployZeroSeekInProgress(
+        superstructure != null && superstructure.isManualIntakeDeployZeroSeekInProgress());
     io.setLogRollStatus(LogRollover.getStatus());
     io.setLogRollLastTimestamp(LogRollover.getLastRollTimestampSec());
     io.setLogRollCount(LogRollover.getRollCount());

@@ -14,6 +14,8 @@ final class OperatorBoardContract {
   static final String CLEAN_LOGS = "CleanLogs";
   static final String REQUEST_INTAKE_DEPLOY_REZERO = "RequestIntakeDeployRezero";
   static final String CANCEL_INTAKE_DEPLOY_REZERO = "CancelIntakeDeployRezero";
+  static final String REQUEST_MANUAL_INTAKE_DEPLOY_ZERO_SEEK = "RequestManualIntakeDeployZeroSeek";
+  static final String CANCEL_MANUAL_INTAKE_DEPLOY_ZERO_SEEK = "CancelManualIntakeDeployZeroSeek";
   static final String SYSID_DRIVE_PHASE = "SysIdDrivePhase";
   static final String SYSID_DRIVE_ACTIVE = "SysIdDriveActive";
   static final String SYSID_DRIVE_LAST_COMPLETED = "SysIdDriveLastCompleted";
@@ -59,6 +61,8 @@ final class OperatorBoardContract {
   static final String INTAKE_DEPLOYED = "IntakeDeployed";
   static final String SHOOT_READY_LATCHED = "ShootReadyLatched";
   static final String INTAKE_DEPLOY_REZERO_IN_PROGRESS = "IntakeDeployRezeroInProgress";
+  static final String MANUAL_INTAKE_DEPLOY_ZERO_SEEK_IN_PROGRESS =
+      "ManualIntakeDeployZeroSeekInProgress";
 
   private OperatorBoardContract() {}
 }

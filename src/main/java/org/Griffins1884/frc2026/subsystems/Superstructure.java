@@ -171,7 +171,7 @@ public class Superstructure extends SubsystemBase {
   public void toggleIntakeDeploy() {
     boolean wasDeployed = intakeDeployed;
     intakeDeployed = !intakeDeployed;
-    if (wasDeployed && !intakeDeployed && !intakeRollersHeld && !arms.intakePivot.isAtGoal()) {
+    if (wasDeployed && !intakeDeployed && !intakeRollersHeld && !isIntakePivotAtGoal()) {
       intakeStowRollerActive = true;
     } else if (intakeDeployed) {
       intakeStowRollerActive = false;
@@ -190,8 +190,24 @@ public class Superstructure extends SubsystemBase {
     }
   }
 
+  public void requestManualIntakeDeployZeroSeek() {
+    if (arms.intakePivot != null) {
+      arms.intakePivot.requestManualZeroSeek();
+    }
+  }
+
+  public void cancelManualIntakeDeployZeroSeek() {
+    if (arms.intakePivot != null) {
+      arms.intakePivot.cancelManualZeroSeek();
+    }
+  }
+
   public boolean isIntakeDeployRezeroInProgress() {
     return arms.intakePivot != null && arms.intakePivot.isZeroCalibrationInProgress();
+  }
+
+  public boolean isManualIntakeDeployZeroSeekInProgress() {
+    return arms.intakePivot != null && arms.intakePivot.isManualZeroSeekInProgress();
   }
 
   public StateRequestResult requestStateFromDashboard(SuperState state) {
