@@ -35,6 +35,7 @@ import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
+import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.TurretUtil;
@@ -884,6 +885,13 @@ public class Superstructure extends SubsystemBase {
   }
 
   public Translation2d getCurrentTurretTarget() {
+    if (MODE == GlobalConstants.RobotMode.SIM && turretExternalControl && drive != null) {
+      return TurretCommands.predictShootingWhileMoving(
+          drive::getPose,
+          TurretConstants::getSimTarget,
+          drive::getFieldVelocity,
+          drive::getFieldAcceleration);
+    }
     return isInAllianceZone() ? getHubTarget() : getFerryingTarget();
   }
 

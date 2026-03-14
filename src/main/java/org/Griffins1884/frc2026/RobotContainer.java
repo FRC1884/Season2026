@@ -145,8 +145,12 @@ public class RobotContainer {
 
     if (MODE == RobotMode.SIM && turret != null && drive != null) {
       turret.setDefaultCommand(
-          TurretCommands.autoAimToTarget(
-              turret, drive::getPose, pose -> Optional.of(TurretConstants.getSimTarget())));
+          TurretCommands.autoAimWhileMovingToTarget(
+              turret,
+              drive::getPose,
+              pose -> Optional.of(TurretConstants.getSimTarget()),
+              drive::getFieldVelocity,
+              drive::getFieldAcceleration));
       superstructure.setTurretExternalControl(true);
     }
 
@@ -401,11 +405,18 @@ public class RobotContainer {
               .plus(TurretConstants.MOUNT_OFFSET_METERS.rotateBy(robotPose.getRotation()));
       Rotation2d turretRotation =
           robotPose.getRotation().plus(Rotation2d.fromRadians(turret.getPositionRad()));
+      Translation2d turretTarget =
+          MODE == RobotMode.SIM
+              ? TurretCommands.predictShootingWhileMoving(
+                  drive::getPose,
+                  TurretConstants::getSimTarget,
+                  drive::getFieldVelocity,
+                  drive::getFieldAcceleration)
+              : TurretConstants.getSimTarget();
       Logger.recordOutput(
           "FieldSimulation/TurretPose", new Pose2d(turretTranslation, turretRotation));
       Logger.recordOutput(
-          "FieldSimulation/TurretTarget",
-          new Pose2d(TurretConstants.getSimTarget(), new Rotation2d()));
+          "FieldSimulation/TurretTarget", new Pose2d(turretTarget, new Rotation2d()));
     }
   }
 

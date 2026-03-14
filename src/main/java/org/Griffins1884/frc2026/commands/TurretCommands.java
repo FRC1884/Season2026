@@ -54,17 +54,66 @@ public final class TurretCommands {
         turret);
   }
 
+  public static Command autoAimWhileMovingToTarget(
+      TurretSubsystem turret,
+      Supplier<Pose2d> robotPoseSupplier,
+      Function<Pose2d, Optional<Translation2d>> targetSupplier,
+      Supplier<Translation2d> fieldVelocitySupplier,
+      Supplier<Translation2d> fieldAccelerationSupplier) {
+    return Commands.run(
+        () -> {
+          Pose2d robotPose = robotPoseSupplier.get();
+          Optional<Translation2d> target =
+              robotPose == null ? Optional.empty() : targetSupplier.apply(robotPose);
+          if (GlobalConstants.isDebugMode()) {
+            Logger.recordOutput("Turret/AutoAim/HasTarget", target.isPresent());
+          }
+          if (robotPose == null || target.isEmpty()) {
+            turret.setGoalRad(turret.getPositionRad());
+            if (GlobalConstants.isDebugMode()) {
+              Logger.recordOutput("Turret/AutoAim/GoalRad", turret.getGoalRad());
+            }
+            return;
+          }
+          Translation2d aimPoint =
+              shootingWhileMoving(
+                  robotPoseSupplier, target::get, fieldVelocitySupplier, fieldAccelerationSupplier);
+          double goalRad = TurretUtil.turretAngleToTarget(robotPose, aimPoint);
+          turret.setGoalRad(goalRad);
+          if (GlobalConstants.isDebugMode()) {
+            Logger.recordOutput("Turret/AutoAim/Target", target.get());
+            Logger.recordOutput("Turret/AutoAim/GoalRad", goalRad);
+          }
+        },
+        turret);
+  }
+
   public static Translation2d shootingWhileMoving(
       Supplier<Pose2d> robotPoseSupplier,
       Supplier<Translation2d> targetSupplier,
       Supplier<Translation2d> fieldVelocitySupplier,
       Supplier<Translation2d> fieldAccelerationSupplier) {
-    return shootingWhileMoving(
+    return movingAimPoint(
         robotPoseSupplier,
         targetSupplier,
         fieldVelocitySupplier,
         fieldAccelerationSupplier,
-        TurretCommands::estimateShotTimeSeconds);
+        TurretCommands::estimateShotTimeSeconds,
+        true);
+  }
+
+  public static Translation2d predictShootingWhileMoving(
+      Supplier<Pose2d> robotPoseSupplier,
+      Supplier<Translation2d> targetSupplier,
+      Supplier<Translation2d> fieldVelocitySupplier,
+      Supplier<Translation2d> fieldAccelerationSupplier) {
+    return movingAimPoint(
+        robotPoseSupplier,
+        targetSupplier,
+        fieldVelocitySupplier,
+        fieldAccelerationSupplier,
+        TurretCommands::estimateShotTimeSeconds,
+        false);
   }
 
   static Translation2d shootingWhileMoving(
@@ -73,6 +122,22 @@ public final class TurretCommands {
       Supplier<Translation2d> fieldVelocitySupplier,
       Supplier<Translation2d> fieldAccelerationSupplier,
       DoubleUnaryOperator shotTimeEstimator) {
+    return movingAimPoint(
+        robotPoseSupplier,
+        targetSupplier,
+        fieldVelocitySupplier,
+        fieldAccelerationSupplier,
+        shotTimeEstimator,
+        true);
+  }
+
+  static Translation2d movingAimPoint(
+      Supplier<Pose2d> robotPoseSupplier,
+      Supplier<Translation2d> targetSupplier,
+      Supplier<Translation2d> fieldVelocitySupplier,
+      Supplier<Translation2d> fieldAccelerationSupplier,
+      DoubleUnaryOperator shotTimeEstimator,
+      boolean logOutputs) {
     Pose2d currentPose = robotPoseSupplier.get();
     Translation2d target = targetSupplier.get();
     if (currentPose == null || target == null || shotTimeEstimator == null) {
@@ -127,13 +192,15 @@ public final class TurretCommands {
     }
 
     Translation2d aimPoint = currentTranslation.plus(robotTranslateExit).plus(aimVector);
-    Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
-    Logger.recordOutput("Turret/AutoAim/Distance", dist);
-    Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
-    Logger.recordOutput(
-        "Turret/AutoAim/FutureTarget",
-        new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
-    Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
+    if (logOutputs) {
+      Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
+      Logger.recordOutput("Turret/AutoAim/Distance", dist);
+      Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
+      Logger.recordOutput(
+          "Turret/AutoAim/FutureTarget",
+          new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
+      Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
+    }
     return aimPoint;
   }
 
