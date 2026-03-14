@@ -64,6 +64,7 @@ const contract = {
     turretAtSetpoint: "TurretAtSetpoint",
     turretMode: "TurretMode",
     visionStatus: "VisionStatus",
+    visionPoseVisible: "VisionPoseVisible",
     shootEnabled: "ShootEnabled",
     intakeRollersHeld: "IntakeRollersHeld",
     intakeDeployed: "IntakeDeployed",
@@ -126,6 +127,7 @@ const state = {
   logCleanCount: null,
   logCleanDeletedEntries: null,
   visionStatus: null,
+  visionPoseVisible: null,
   shootEnabled: null,
   intakeRollersHeld: null,
   intakeDeployed: null,
@@ -155,6 +157,7 @@ const ui = {
   battery: null,
   brownout: null,
   hasBall: null,
+  visionPoseVisible: null,
   visionStatus: null,
   turretStatus: null,
   sysIdDrive: null,
@@ -257,6 +260,7 @@ function cacheUi() {
   ui.battery = document.getElementById("battery");
   ui.brownout = document.getElementById("brownout");
   ui.hasBall = document.getElementById("has-ball");
+  ui.visionPoseVisible = document.getElementById("vision-pose-visible");
   ui.visionStatus = document.getElementById("vision-status");
   ui.turretStatus = document.getElementById("turret-status");
   ui.sysIdDrive = document.getElementById("sysid-drive");
@@ -640,6 +644,9 @@ function handleTopicUpdate(topic, value) {
     case contract.toDashboard + contract.keys.visionStatus:
       state.visionStatus = parseString(value);
       break;
+    case contract.toDashboard + contract.keys.visionPoseVisible:
+      state.visionPoseVisible = !!value;
+      break;
     case contract.toDashboard + contract.keys.shootEnabled:
       state.shootEnabled = !!value;
       break;
@@ -732,6 +739,17 @@ function render() {
   setText(ui.battery, formatVoltage(state.batteryVoltage));
   setText(ui.brownout, state.brownout ? "YES" : "NO");
   setText(ui.hasBall, state.hasBall ? "YES" : "NO");
+  if (ui.visionPoseVisible) {
+    if (state.visionPoseVisible === null) {
+      setText(ui.visionPoseVisible, "--");
+      ui.visionPoseVisible.classList.remove("is-on", "is-off");
+    } else {
+      const hasPose = !!state.visionPoseVisible;
+      setText(ui.visionPoseVisible, hasPose ? "TRUE" : "FALSE");
+      ui.visionPoseVisible.classList.toggle("is-on", hasPose);
+      ui.visionPoseVisible.classList.toggle("is-off", !hasPose);
+    }
+  }
   setText(ui.visionStatus, state.visionStatus || "--");
 
   const turret = state.turretMode ? state.turretMode : "UNAVAILABLE";

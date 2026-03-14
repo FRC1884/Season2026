@@ -56,6 +56,7 @@ final class OperatorBoardContract {
   static final String TURRET_AT_SETPOINT = "TurretAtSetpoint";
   static final String TURRET_MODE = "TurretMode";
   static final String VISION_STATUS = "VisionStatus";
+  static final String VISION_POSE_VISIBLE = "VisionPoseVisible";
   static final String SHOOT_ENABLED = "ShootEnabled";
   static final String INTAKE_ROLLERS_HELD = "IntakeRollersHeld";
   static final String INTAKE_DEPLOYED = "IntakeDeployed";

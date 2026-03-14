@@ -154,13 +154,6 @@ public class RobotContainer {
       superstructure.setTurretExternalControl(true);
     }
 
-    if (Config.Subsystems.WEBUI_ENABLED) {
-      operatorBoard =
-          new OperatorBoardTracker(new OperatorBoardIOServer(), superstructure, drive, turret);
-    } else {
-      operatorBoard = null;
-    }
-
     if (VISION_ENABLED) {
       vision =
           switch (MODE) {
@@ -181,6 +174,14 @@ public class RobotContainer {
             default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
           };
     } else vision = null;
+
+    if (Config.Subsystems.WEBUI_ENABLED) {
+      operatorBoard =
+          new OperatorBoardTracker(
+              new OperatorBoardIOServer(), superstructure, drive, turret, vision);
+    } else {
+      operatorBoard = null;
+    }
 
     if (drive != null) {
       drive.setOdometryResetListener(this::handleOdometryReset);

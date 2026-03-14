@@ -28,6 +28,7 @@ import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.Superstructure.SuperState;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
+import org.Griffins1884.frc2026.subsystems.vision.Vision;
 import org.Griffins1884.frc2026.util.HubShiftTracker;
 import org.Griffins1884.frc2026.util.LogRollover;
 import org.littletonrobotics.junction.Logger;
@@ -41,6 +42,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   private final Superstructure superstructure;
   private final SwerveSubsystem drive;
   private final TurretSubsystem turret;
+  private final Vision vision;
   private final OperatorBoardWebServer webServer;
 
   private String lastRequestedState = "";
@@ -49,12 +51,12 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   private double lastTelemetryPublishTimestampSec = Double.NEGATIVE_INFINITY;
 
   public OperatorBoardTracker(OperatorBoardIO io, Superstructure superstructure) {
-    this(io, superstructure, null, null);
+    this(io, superstructure, null, null, null);
   }
 
   public OperatorBoardTracker(
       OperatorBoardIO io, Superstructure superstructure, SwerveSubsystem drive) {
-    this(io, superstructure, drive, null);
+    this(io, superstructure, drive, null, null);
   }
 
   public OperatorBoardTracker(
@@ -62,10 +64,20 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       Superstructure superstructure,
       SwerveSubsystem drive,
       TurretSubsystem turret) {
+    this(io, superstructure, drive, turret, null);
+  }
+
+  public OperatorBoardTracker(
+      OperatorBoardIO io,
+      Superstructure superstructure,
+      SwerveSubsystem drive,
+      TurretSubsystem turret,
+      Vision vision) {
     this.io = Objects.requireNonNull(io, "io");
     this.superstructure = superstructure;
     this.drive = drive;
     this.turret = turret;
+    this.vision = vision;
     this.webServer = maybeStartWebServer();
     if (superstructure != null) {
       lastRequestedState = superstructure.getRequestedState().name();
@@ -303,6 +315,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setSysIdTurnLastCompletedPhase(
         drive != null ? drive.getTurnSysIdLastCompletedPhase() : "UNAVAILABLE");
     io.setVisionStatus(Config.Subsystems.VISION_ENABLED ? "ENABLED" : "DISABLED");
+    io.setVisionPoseVisible(vision != null && vision.anyCameraHasAcceptedPose());
     io.setShootEnabled(superstructure != null && superstructure.isShootEnabled());
     io.setIntakeRollersHeld(superstructure != null && superstructure.isIntakeRollersHeld());
     io.setIntakeDeployed(superstructure != null && superstructure.isIntakeDeployed());

@@ -59,6 +59,7 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final DoublePublisher sysIdTurnLastCompletedOut;
   private final StringPublisher sysIdTurnLastCompletedPhaseOut;
   private final StringPublisher visionStatusOut;
+  private final BooleanPublisher visionPoseVisibleOut;
   private final BooleanPublisher shootEnabledOut;
   private final BooleanPublisher intakeRollersHeldOut;
   private final BooleanPublisher intakeDeployedOut;
@@ -174,6 +175,8 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     sysIdTurnLastCompletedPhaseOut =
         outputTable.getStringTopic(OperatorBoardContract.SYSID_TURN_LAST_COMPLETED_PHASE).publish();
     visionStatusOut = outputTable.getStringTopic(OperatorBoardContract.VISION_STATUS).publish();
+    visionPoseVisibleOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.VISION_POSE_VISIBLE).publish();
     shootEnabledOut = outputTable.getBooleanTopic(OperatorBoardContract.SHOOT_ENABLED).publish();
     intakeRollersHeldOut =
         outputTable.getBooleanTopic(OperatorBoardContract.INTAKE_ROLLERS_HELD).publish();
@@ -447,6 +450,11 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setVisionStatus(String value) {
     visionStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setVisionPoseVisible(boolean value) {
+    visionPoseVisibleOut.set(value);
   }
 
   @Override

@@ -48,6 +48,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final DoubleSupplier yawRateRadPerSecSupplier;
   private Integer exclusiveTagId = null;
   private double ignoreVisionUntilTimestamp = 0.0;
+  private boolean anyCameraHasAcceptedPose = false;
 
   /** Creates a Vision system with one or more camera IO instances. */
   public Vision(VisionConsumer consumer, VisionIO... io) {
@@ -194,6 +195,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (startTime < ignoreVisionUntilTimestamp) {
+      anyCameraHasAcceptedPose = false;
       Logger.recordOutput("Vision/usingVision", false);
       Logger.recordOutput("Vision/rejectReason", "RESET_SUPPRESS");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -232,6 +234,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (!useVision) {
+      anyCameraHasAcceptedPose = false;
       Logger.recordOutput("Vision/usingVision", false);
       Logger.recordOutput("Vision/rejectReason", "VISION_DISABLED");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -251,6 +254,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     boolean hasAccepted = accepted.isPresent();
+    anyCameraHasAcceptedPose = hasAccepted;
     Logger.recordOutput("Vision/usingVision", hasAccepted);
     Logger.recordOutput("Vision/rejectReason", hasAccepted ? "ACCEPTED" : "NO_ACCEPTED_ESTIMATE");
 
@@ -262,6 +266,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         });
 
     Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+  }
+
+  public boolean anyCameraHasAcceptedPose() {
+    return anyCameraHasAcceptedPose;
   }
 
   private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(

@@ -88,6 +88,8 @@ public interface OperatorBoardIO {
 
   default void setVisionStatus(String value) {}
 
+  default void setVisionPoseVisible(boolean value) {}
+
   default void setShootEnabled(boolean value) {}
 
   default void setIntakeRollersHeld(boolean value) {}
