@@ -67,6 +67,8 @@ const contract = {
     shootEnabled: "ShootEnabled",
     intakeRollersHeld: "IntakeRollersHeld",
     intakeDeployed: "IntakeDeployed",
+    teleopOverrideActive: "TeleopOverrideActive",
+    driverControllerControlActive: "DriverControllerControlActive",
     shootReadyLatched: "ShootReadyLatched",
     intakeDeployRezeroInProgress: "IntakeDeployRezeroInProgress",
     manualIntakeDeployZeroSeekInProgress: "ManualIntakeDeployZeroSeekInProgress",
@@ -127,6 +129,8 @@ const state = {
   shootEnabled: null,
   intakeRollersHeld: null,
   intakeDeployed: null,
+  teleopOverrideActive: null,
+  driverControllerControlActive: null,
   shootReadyLatched: null,
   intakeDeployRezeroInProgress: null,
   manualIntakeDeployZeroSeekInProgress: null,
@@ -183,6 +187,8 @@ const ui = {
   driverShootIndicator: null,
   driverIntakeRollersIndicator: null,
   driverIntakeDeployIndicator: null,
+  teleopOverrideIndicator: null,
+  driverControlIndicator: null,
   intakeRezeroStatus: null,
   intakeRezeroButton: null,
   intakeRezeroCancelButton: null,
@@ -269,6 +275,8 @@ function cacheUi() {
   ui.driverShootIndicator = document.getElementById("driver-shoot-indicator");
   ui.driverIntakeRollersIndicator = document.getElementById("driver-intake-rollers-indicator");
   ui.driverIntakeDeployIndicator = document.getElementById("driver-intake-deploy-indicator");
+  ui.teleopOverrideIndicator = document.getElementById("teleop-override-indicator");
+  ui.driverControlIndicator = document.getElementById("driver-control-indicator");
   ui.intakeRezeroStatus = document.getElementById("intake-rezero-status");
   ui.intakeManualZeroSeekStatus = document.getElementById("intake-manual-zero-seek-status");
   ui.toast = document.getElementById("toast");
@@ -641,6 +649,12 @@ function handleTopicUpdate(topic, value) {
     case contract.toDashboard + contract.keys.intakeDeployed:
       state.intakeDeployed = !!value;
       break;
+    case contract.toDashboard + contract.keys.teleopOverrideActive:
+      state.teleopOverrideActive = !!value;
+      break;
+    case contract.toDashboard + contract.keys.driverControllerControlActive:
+      state.driverControllerControlActive = !!value;
+      break;
     case contract.toDashboard + contract.keys.shootReadyLatched:
       state.shootReadyLatched = !!value;
       break;
@@ -668,6 +682,8 @@ function render() {
   applyDriverIndicator(ui.driverShootIndicator, state.shootEnabled);
   applyDriverIndicator(ui.driverIntakeRollersIndicator, state.intakeRollersHeld);
   applyDriverIndicator(ui.driverIntakeDeployIndicator, state.intakeDeployed);
+  applyDriverIndicator(ui.teleopOverrideIndicator, state.teleopOverrideActive);
+  applyDriverIndicator(ui.driverControlIndicator, state.driverControllerControlActive);
   setText(
     ui.intakeRezeroStatus,
     state.intakeDeployRezeroInProgress === null

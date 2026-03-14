@@ -15,6 +15,7 @@ import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 public class LoggedTunableNumber implements DoubleSupplier {
   private static final String tableKey = "/SmartDashboard/TunableNumbers";
   private final String key;
+  private final boolean allowInCompMode;
   private boolean hasDefault = false;
   private double defaultValue;
   private LoggedNetworkNumber dashboardNumber;
@@ -26,7 +27,18 @@ public class LoggedTunableNumber implements DoubleSupplier {
    * @param dashboardKey Key on dashboard
    */
   public LoggedTunableNumber(String dashboardKey) {
+    this(dashboardKey, false);
+  }
+
+  /**
+   * Create a new LoggedTunableNumber
+   *
+   * @param dashboardKey Key on dashboard
+   * @param allowInCompMode True to keep this number live in COMP logging mode
+   */
+  public LoggedTunableNumber(String dashboardKey, boolean allowInCompMode) {
     this.key = tableKey + "/" + dashboardKey;
+    this.allowInCompMode = allowInCompMode;
   }
 
   /**
@@ -36,7 +48,18 @@ public class LoggedTunableNumber implements DoubleSupplier {
    * @param defaultValue Default value
    */
   public LoggedTunableNumber(String dashboardKey, double defaultValue) {
-    this(dashboardKey);
+    this(dashboardKey, defaultValue, false);
+  }
+
+  /**
+   * Create a new LoggedTunableNumber with the default value
+   *
+   * @param dashboardKey Key on dashboard
+   * @param defaultValue Default value
+   * @param allowInCompMode True to keep this number live in COMP logging mode
+   */
+  public LoggedTunableNumber(String dashboardKey, double defaultValue, boolean allowInCompMode) {
+    this(dashboardKey, allowInCompMode);
     initDefault(defaultValue);
   }
 
@@ -49,7 +72,7 @@ public class LoggedTunableNumber implements DoubleSupplier {
     if (!hasDefault) {
       hasDefault = true;
       this.defaultValue = defaultValue;
-      if (GlobalConstants.TUNING_MODE) {
+      if (isDashboardEnabled()) {
         dashboardNumber = new LoggedNetworkNumber(key, defaultValue);
       }
     }
@@ -64,8 +87,12 @@ public class LoggedTunableNumber implements DoubleSupplier {
     if (!hasDefault) {
       return 0.0;
     } else {
-      return GlobalConstants.TUNING_MODE ? dashboardNumber.get() : defaultValue;
+      return isDashboardEnabled() ? dashboardNumber.get() : defaultValue;
     }
+  }
+
+  private boolean isDashboardEnabled() {
+    return GlobalConstants.TUNING_MODE || (allowInCompMode && GlobalConstants.isCompMode());
   }
 
   /**

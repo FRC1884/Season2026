@@ -309,7 +309,10 @@ public class RobotContainer {
                       drive)
                   .ignoringDisable(true));
     }
-    driver.shootToggle().onTrue(Commands.runOnce(superstructure::toggleShootEnabled));
+    driver
+        .shootToggle()
+        .onTrue(Commands.runOnce(() -> superstructure.setShootEnabled(true)))
+        .onFalse(Commands.runOnce(() -> superstructure.setShootEnabled(false)));
     driver
         .intakeRollersHold()
         .onTrue(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(true)))
@@ -325,7 +328,9 @@ public class RobotContainer {
   public Command getAutonomousCommand() {
     if (!AUTONOMOUS_ENABLED) return null;
     Command selected = autoChooser.get();
-    return selected == autoIdleCommand ? null : selected;
+    boolean doNothingSelected = selected == null || selected == autoIdleCommand;
+    superstructure.setAutonomousHoldEnabled(doNothingSelected);
+    return doNothingSelected ? null : selected;
   }
 
   public Command getCharacterizationCommand() {
@@ -405,6 +410,7 @@ public class RobotContainer {
   }
 
   public void setTeleopState() {
+    superstructure.setAutonomousHoldEnabled(false);
     superstructure.setAutoStateEnabled(true);
   }
 }

@@ -59,6 +59,8 @@ final class OperatorBoardContract {
   static final String SHOOT_ENABLED = "ShootEnabled";
   static final String INTAKE_ROLLERS_HELD = "IntakeRollersHeld";
   static final String INTAKE_DEPLOYED = "IntakeDeployed";
+  static final String TELEOP_OVERRIDE_ACTIVE = "TeleopOverrideActive";
+  static final String DRIVER_CONTROLLER_CONTROL_ACTIVE = "DriverControllerControlActive";
   static final String SHOOT_READY_LATCHED = "ShootReadyLatched";
   static final String INTAKE_DEPLOY_REZERO_IN_PROGRESS = "IntakeDeployRezeroInProgress";
   static final String MANUAL_INTAKE_DEPLOY_ZERO_SEEK_IN_PROGRESS =

@@ -25,7 +25,7 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
  */
 public final class GlobalConstants {
   public static final RobotMode MODE = RobotMode.REAL;
-  public static final RobotType ROBOT = RobotType.COMPBOT;
+  public static final RobotType ROBOT = RobotType.DBOT;
   public static final LoggingMode LOGGING_MODE = LoggingMode.COMP;
   public static final double ODOMETRY_FREQUENCY = 250.0;
 
@@ -42,6 +42,7 @@ public final class GlobalConstants {
 
   public static enum RobotType {
     COMPBOT,
+    DBOT,
     SIMBOT
   }
 
@@ -178,9 +179,7 @@ public final class GlobalConstants {
       // Relevant reference points on the opposite side
       public static final Translation3d oppTopCenterPoint =
           new Translation3d(
-              AprilTagLayoutType.OFFICIAL.getLayout().getTagPose(4).get().getX() + width / 2.0,
-              fieldWidth / 2.0,
-              height);
+              fieldLength - topCenterPoint.getX(), topCenterPoint.getY(), topCenterPoint.getZ());
       public static final Translation2d oppNearLeftCorner =
           new Translation2d(oppTopCenterPoint.getX() - width / 2.0, fieldWidth / 2.0 + width / 2.0);
       public static final Translation2d oppNearRightCorner =

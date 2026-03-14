@@ -77,6 +77,7 @@ public class Superstructure extends SubsystemBase {
   @Getter private SuperState currentState = SuperState.IDLING;
   private boolean stateOverrideActive = false;
   private boolean autoStateEnabled = true;
+  private boolean autonomousHoldEnabled = false;
   private SuperState lastChooserSelection = null;
   private boolean manualControlActive = false;
   private boolean wasTeleopEnabled = false;
@@ -139,6 +140,10 @@ public class Superstructure extends SubsystemBase {
     if (enabled) {
       clearStateOverride();
     }
+  }
+
+  public void setAutonomousHoldEnabled(boolean enabled) {
+    autonomousHoldEnabled = enabled;
   }
 
   public void bindManualControlSuppliers(DoubleSupplier turretAxis, DoubleSupplier pivotAxis) {
@@ -210,6 +215,14 @@ public class Superstructure extends SubsystemBase {
     return arms.intakePivot != null && arms.intakePivot.isManualZeroSeekInProgress();
   }
 
+  public boolean isTeleopOverrideActive() {
+    return DriverStation.isTeleopEnabled() && stateOverrideActive;
+  }
+
+  public boolean isDriverControllerControlActive() {
+    return DriverStation.isTeleopEnabled() && !stateOverrideActive;
+  }
+
   public StateRequestResult requestStateFromDashboard(SuperState state) {
     return requestState(state);
   }
@@ -242,6 +255,22 @@ public class Superstructure extends SubsystemBase {
   public void periodic() {
     applyModeBooleanPolicy();
     SuperState previousState = currentState;
+    if (DriverStation.isAutonomousEnabled() && autonomousHoldEnabled) {
+      applyAutonomousHold();
+      Logger.recordOutput("Superstructure/AutoState", "AUTONOMOUS_HOLD");
+      Logger.recordOutput("Superstructure/State", currentState.toString());
+      Logger.recordOutput("Superstructure/RequestedState", requestedState.toString());
+      Logger.recordOutput("Superstructure/turretTarget", lastTurretTarget);
+      Logger.recordOutput("Superstructure/AutoStateEnabled", autoStateEnabled);
+      Logger.recordOutput("Superstructure/ShootEnabled", shootEnabled);
+      Logger.recordOutput("Superstructure/ShootReadyLatched", shootReadyLatched);
+      Logger.recordOutput("Superstructure/TurretReadyForFeed", turretReadyForFeed);
+      Logger.recordOutput("Superstructure/IntakeRollersHeld", intakeRollersHeld);
+      Logger.recordOutput("Superstructure/IntakeDeployed", intakeDeployed);
+      Logger.recordOutput("Superstructure/IntakeStowRollerActive", intakeStowRollerActive);
+      Logger.recordOutput("Superstructure/InAllianceZone", isInAllianceZone());
+      return;
+    }
     if (DriverStation.isTeleopEnabled()) {
       if (stateOverrideActive) {
         if (requestedState != currentState) {
@@ -503,6 +532,30 @@ public class Superstructure extends SubsystemBase {
     wasAutonomousEnabled = autonomousEnabled;
   }
 
+  private void applyAutonomousHold() {
+    setIntakeGoal(IntakeGoal.IDLING);
+    setIndexerGoal(IndexerGoal.IDLING);
+    setShooterTargetVelocity(0.0);
+    intakeStowRollerActive = false;
+    shootReadyLatched = false;
+
+    if (arms.intakePivot != null) {
+      arms.intakePivot.cancelZeroCalibration();
+      arms.intakePivot.cancelManualZeroSeek();
+      arms.intakePivot.setGoalPosition(arms.intakePivot.getPosition());
+    }
+
+    if (arms.shooterPivot != null && !isShooterPivotExternallyControlled()) {
+      arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
+      arms.shooterPivot.setGoalPosition(arms.shooterPivot.getPosition());
+      lastShooterPivotGoal = ShooterPivotGoal.IDLING;
+      lastShooterPivotManual = true;
+      lastShooterPivotPosition = arms.shooterPivot.getPosition();
+    }
+
+    holdTurret();
+  }
+
   private IntakeGoal resolveIntakeGoal(boolean defaultForward) {
     if (intakeRollersHeld) {
       intakeStowRollerActive = false;
@@ -628,15 +681,10 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean indexerRequested) {
-    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
-      final Translation2d oldTarget = target;
-      target =
-          TurretCommands.shootingWhileMoving(
-              drive::getPose,
-              () -> oldTarget,
-              drive::getFieldVelocity,
-              drive::getFieldAcceleration);
-    }
+    final Translation2d oldTarget = target;
+    target =
+        TurretCommands.shootingWhileMoving(
+            drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
     setIntakeGoal(IntakeGoal.IDLING);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
     applyAimingAndShooterSolution(target, true);
@@ -645,15 +693,10 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShootingAndIntaking(Translation2d target, boolean indexerRequested) {
-    if (SuperstructureConstants.SHOOTING_WHILE_MOVING) {
-      final Translation2d oldTarget = target;
-      target =
-          TurretCommands.shootingWhileMoving(
-              drive::getPose,
-              () -> oldTarget,
-              drive::getFieldVelocity,
-              drive::getFieldAcceleration);
-    }
+    final Translation2d oldTarget = target;
+    target =
+        TurretCommands.shootingWhileMoving(
+            drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
     setIntakeGoal(IntakeGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
     applyAimingAndShooterSolution(target, true);

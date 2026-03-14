@@ -216,66 +216,6 @@ public class DriveCommands {
         Set.of(drive));
   }
 
-  public static Command alignToAfterCollectStartCommand(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getAfterCollectStartPose();
-          Logger.recordOutput("Autonomy/AlignTargetAfterCollectStart", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToAfterBumpStartCommand(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getAfterOverBumpStartPose();
-          Logger.recordOutput("Autonomy/AlignTargetAfterBumpStart", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToAfterSecondBumpCommand(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getAfterSecondBumpStartPose();
-          Logger.recordOutput("Autonomy/AlignTargetAfterSecondBumpStart", target);
-          return new AutoAlignToPoseCommand(drive, target, 0.1, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToStandStillShootCommand(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getStandStillShootPose();
-          Logger.recordOutput("Autonomy/AlignTargetStandStillShoot", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToAfterBumpToNeutralCommand(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getAfterBumpToNeutralStartPose();
-          Logger.recordOutput("Autonomy/AlignTargetAfterBumpToNeutralStart", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToAfterBumpRightToNeutralCommand(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getAfterBumpRightToNeutralStartPose();
-          Logger.recordOutput("Autonomy/AlignTargetAfterBumpRightToNeutralStart", target);
-          return new AutoAlignToPoseCommand(drive, target, 1.0, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
   /**
    * Measures the velocity feedforward constants for the drive motors.
    *

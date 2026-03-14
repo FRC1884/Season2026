@@ -46,60 +46,18 @@ public final class AlignConstants {
       new LoggedTunableNumber("Align/Gains/Feedforward/kV", 1.0);
   public static final LoggedTunableNumber ALIGN_FEEDFORWARD_DEADBAND =
       new LoggedTunableNumber("Align/Gains/Feedforward/DeadbandMeters", 0.02);
-
-  public static final LoggedTunableNumber AFTER_COLLECT_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterCollectStart/XMeters", 7.7);
-  public static final LoggedTunableNumber AFTER_COLLECT_START_Y_METERS =
-      new LoggedTunableNumber("Align/AfterCollectStart/YMeters", 6.5);
-  public static final LoggedTunableNumber AFTER_COLLECT_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterCollectStart/HeadingDeg", 100.0);
   public static final LoggedTunableNumber TURRET_KV =
-      new LoggedTunableNumber("Turret/AutoAim/kV", 1.22);
+      new LoggedTunableNumber("Turret/AutoAim/kV", 1.22, true);
   public static final LoggedTunableNumber TURRET_KS =
-      new LoggedTunableNumber("Turret/AutoAim/kS", -0.005);
+      new LoggedTunableNumber("Turret/AutoAim/kS", -0.005, true);
   public static final LoggedTunableNumber TURRET_BASE_LATENCY_SECONDS =
-      new LoggedTunableNumber("Turret/AutoAim/BaseLatencySeconds", 0.2);
+      new LoggedTunableNumber("Turret/AutoAim/BaseLatencySeconds", 0.2, true);
   public static final LoggedTunableNumber TURRET_MAX_MOTION_SAMPLE_AGE_SECONDS =
-      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSampleAgeSeconds", 0.15);
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSampleAgeSeconds", 0.15, true);
   public static final LoggedTunableNumber TURRET_MAX_MOTION_SPEED_MPS =
-      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSpeedMps", 6.0);
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionSpeedMps", 6.0, true);
   public static final LoggedTunableNumber TURRET_MAX_MOTION_ACCEL_MPS2 =
-      new LoggedTunableNumber("Turret/AutoAim/MaxMotionAccelMps2", 18.0);
-
-  public static final LoggedTunableNumber AFTER_BUMP_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterBumpStart/XMeters", 7.7);
-  public static final LoggedTunableNumber AFTER_BUMP_START_Y_METERS =
-      new LoggedTunableNumber("Align/AfterBumpStart/YMeters", 0.9);
-  public static final LoggedTunableNumber AFTER_BUMP_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterBumpStart/HeadingDeg", -90);
-
-  public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterSecondBump/XMeters", 2);
-  public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_Y_METERS =
-      new LoggedTunableNumber("Align/AfterSecondBump/YMeters", 4);
-  public static final LoggedTunableNumber AFTER_SECOND_BUMP_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterSecondBump/HeadingDeg", 0);
-
-  public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterBumpToNeutral/XMeters", 6);
-  public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_Y_METERS =
-      new LoggedTunableNumber("Align/AfterBumpToNeutral/YMeters", 5.6);
-  public static final LoggedTunableNumber AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterBumpToNeutral/HeadingDeg", 320);
-
-  public static final LoggedTunableNumber AFTER_BUMP_RIGHT_TO_NEUTRAL_START_X_METERS =
-      new LoggedTunableNumber("Align/AfterBumpRightToNeutral/XMeters", 6.4);
-  public static final LoggedTunableNumber AFTER_BUMP_RIGHT_TO_NEUTRAL_START_Y_METERS =
-      new LoggedTunableNumber("Align/AfterBumpRightToNeutral/YMeters", 2.4);
-  public static final LoggedTunableNumber AFTER_BUMP_RIGHT_TO_NEUTRAL_START_HEADING_DEG =
-      new LoggedTunableNumber("Align/AfterBumpRightToNeutral/HeadingDeg", 140);
-
-  public static final LoggedTunableNumber STAND_STILL_SHOOT_X_METERS =
-      new LoggedTunableNumber("Align/StandStillShoot/XMeters", 2.8);
-  public static final LoggedTunableNumber STAND_STILL_SHOOT_Y_METERS =
-      new LoggedTunableNumber("Align/StandStillShoot/YMeters", 5.6);
-  public static final LoggedTunableNumber STAND_STILL_SHOOT_HEADING_DEG =
-      new LoggedTunableNumber("Align/StandStillShoot/HeadingDeg", 320);
+      new LoggedTunableNumber("Turret/AutoAim/MaxMotionAccelMps2", 18.0, true);
 
   public static final LoggedTunableNumber HP_X_METERS =
       new LoggedTunableNumber("Align/HP/XMeters", 0.44);
@@ -134,56 +92,8 @@ public final class AlignConstants {
   public static Pose2d getDepotAlignPose() {
     return AllianceFlipUtil.apply(
         new Pose2d(
-            new Translation2d(HP_X_METERS.get(), HP_Y_METERS.get()),
-            Rotation2d.fromDegrees(HP_HEADING_DEG.get())));
-  }
-
-  public static Pose2d getAfterCollectStartPose() {
-    return AllianceFlipUtil.apply(
-        new Pose2d(
-            new Translation2d(
-                AFTER_COLLECT_START_X_METERS.get(), AFTER_COLLECT_START_Y_METERS.get()),
-            Rotation2d.fromDegrees(AFTER_COLLECT_START_HEADING_DEG.get())));
-  }
-
-  public static Pose2d getStandStillShootPose() {
-    return AllianceFlipUtil.apply(
-        new Pose2d(
-            new Translation2d(STAND_STILL_SHOOT_X_METERS.get(), STAND_STILL_SHOOT_Y_METERS.get()),
-            Rotation2d.fromDegrees(STAND_STILL_SHOOT_HEADING_DEG.get())));
-  }
-
-  public static Pose2d getAfterBumpRightToNeutralStartPose() {
-    return AllianceFlipUtil.apply(
-        new Pose2d(
-            new Translation2d(
-                AFTER_BUMP_RIGHT_TO_NEUTRAL_START_X_METERS.get(),
-                AFTER_BUMP_RIGHT_TO_NEUTRAL_START_Y_METERS.get()),
-            Rotation2d.fromDegrees(AFTER_BUMP_RIGHT_TO_NEUTRAL_START_HEADING_DEG.get())));
-  }
-
-  public static Pose2d getAfterOverBumpStartPose() {
-    return AllianceFlipUtil.apply(
-        new Pose2d(
-            new Translation2d(AFTER_BUMP_START_X_METERS.get(), AFTER_BUMP_START_Y_METERS.get()),
-            Rotation2d.fromDegrees(AFTER_BUMP_START_HEADING_DEG.get())));
-  }
-
-  public static Pose2d getAfterSecondBumpStartPose() {
-    return AllianceFlipUtil.apply(
-        new Pose2d(
-            new Translation2d(
-                AFTER_SECOND_BUMP_START_X_METERS.get(), AFTER_SECOND_BUMP_START_Y_METERS.get()),
-            Rotation2d.fromDegrees(AFTER_SECOND_BUMP_START_HEADING_DEG.get())));
-  }
-
-  public static Pose2d getAfterBumpToNeutralStartPose() {
-    return AllianceFlipUtil.apply(
-        new Pose2d(
-            new Translation2d(
-                AFTER_BUMP_TO_NEUTRAL_START_X_METERS.get(),
-                AFTER_BUMP_TO_NEUTRAL_START_Y_METERS.get()),
-            Rotation2d.fromDegrees(AFTER_BUMP_TO_NEUTRAL_START_HEADING_DEG.get())));
+            new Translation2d(Depot_X_METERS.get(), Depot_Y_METERS.get()),
+            Rotation2d.fromDegrees(Depot_HEADING_DEG.get())));
   }
 
   /** Feedforward definition for translation alignment. */

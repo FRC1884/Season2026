@@ -62,6 +62,8 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final BooleanPublisher shootEnabledOut;
   private final BooleanPublisher intakeRollersHeldOut;
   private final BooleanPublisher intakeDeployedOut;
+  private final BooleanPublisher teleopOverrideActiveOut;
+  private final BooleanPublisher driverControllerControlActiveOut;
   private final BooleanPublisher shootReadyLatchedOut;
   private final BooleanPublisher intakeDeployRezeroInProgressOut;
   private final BooleanPublisher manualIntakeDeployZeroSeekInProgressOut;
@@ -177,6 +179,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         outputTable.getBooleanTopic(OperatorBoardContract.INTAKE_ROLLERS_HELD).publish();
     intakeDeployedOut =
         outputTable.getBooleanTopic(OperatorBoardContract.INTAKE_DEPLOYED).publish();
+    teleopOverrideActiveOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.TELEOP_OVERRIDE_ACTIVE).publish();
+    driverControllerControlActiveOut =
+        outputTable
+            .getBooleanTopic(OperatorBoardContract.DRIVER_CONTROLLER_CONTROL_ACTIVE)
+            .publish();
     shootReadyLatchedOut =
         outputTable.getBooleanTopic(OperatorBoardContract.SHOOT_READY_LATCHED).publish();
     intakeDeployRezeroInProgressOut =
@@ -454,6 +462,16 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setIntakeDeployed(boolean value) {
     intakeDeployedOut.set(value);
+  }
+
+  @Override
+  public void setTeleopOverrideActive(boolean value) {
+    teleopOverrideActiveOut.set(value);
+  }
+
+  @Override
+  public void setDriverControllerControlActive(boolean value) {
+    driverControllerControlActiveOut.set(value);
   }
 
   @Override

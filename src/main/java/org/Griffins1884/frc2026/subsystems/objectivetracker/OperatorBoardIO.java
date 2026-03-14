@@ -94,6 +94,10 @@ public interface OperatorBoardIO {
 
   default void setIntakeDeployed(boolean value) {}
 
+  default void setTeleopOverrideActive(boolean value) {}
+
+  default void setDriverControllerControlActive(boolean value) {}
+
   default void setShootReadyLatched(boolean value) {}
 
   default void setIntakeDeployRezeroInProgress(boolean value) {}

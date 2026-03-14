@@ -14,14 +14,14 @@ public final class Config {
     public static final boolean DRIVETRAIN_ENABLED = true;
     public static final boolean AUTONOMOUS_ENABLED = true;
     public static final boolean VISION_ENABLED = true;
-    public static final boolean LEDS_ENABLED = true;
-    public static final boolean WEBUI_ENABLED = true;
-    public static final boolean TURRET_ENABLED = true;
-    public static final boolean SHOOTER_ENABLED = true;
-    public static final boolean SHOOTER_PIVOT_ENABLED = true;
+    public static final boolean LEDS_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean WEBUI_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean TURRET_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean SHOOTER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean SHOOTER_PIVOT_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean INTAKE_PIVOT_ENABLED = true;
-    public static final boolean INTAKE_ENABLED = true;
-    public static final boolean INDEXER_ENABLED = true;
+    public static final boolean INTAKE_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean INDEXER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
   }
 
   public static final class WebUIConfig {
@@ -43,12 +43,14 @@ public final class Config {
 
     public static final int DRIVER_PORT = 0;
     public static final DriverControllerType COMPBOT_DRIVER = DriverControllerType.PS5_PRO;
+    public static final DriverControllerType DBOT_DRIVER = DriverControllerType.PS5_PRO;
     public static final DriverControllerType SIMBOT_DRIVER =
         DriverControllerType.SIM_XBOX_UNIVERSAL;
 
     public static DriverMap getDriverController() {
       return switch (ROBOT) {
         case COMPBOT -> createDriverController(COMPBOT_DRIVER);
+        case DBOT -> createDriverController(DBOT_DRIVER);
         case SIMBOT -> createDriverController(SIMBOT_DRIVER);
       };
     }

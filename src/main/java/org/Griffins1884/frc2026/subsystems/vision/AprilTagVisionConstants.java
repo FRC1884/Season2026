@@ -23,7 +23,7 @@ public final class AprilTagVisionConstants {
   public static final boolean LEFT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT ->
+        case COMPBOT, DBOT, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
@@ -38,7 +38,7 @@ public final class AprilTagVisionConstants {
   public static final boolean RIGHT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT ->
+        case COMPBOT, DBOT, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
                 new Transform3d(
@@ -53,7 +53,7 @@ public final class AprilTagVisionConstants {
   public static final boolean MIDDLE_RIGHT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants MIDDLE_RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT ->
+        case COMPBOT, DBOT, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-side" : "middlerighttagcam",
                 new Transform3d(

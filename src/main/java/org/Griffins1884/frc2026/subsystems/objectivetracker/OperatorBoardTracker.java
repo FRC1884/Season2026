@@ -306,6 +306,9 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     io.setShootEnabled(superstructure != null && superstructure.isShootEnabled());
     io.setIntakeRollersHeld(superstructure != null && superstructure.isIntakeRollersHeld());
     io.setIntakeDeployed(superstructure != null && superstructure.isIntakeDeployed());
+    io.setTeleopOverrideActive(superstructure != null && superstructure.isTeleopOverrideActive());
+    io.setDriverControllerControlActive(
+        superstructure != null && superstructure.isDriverControllerControlActive());
     io.setShootReadyLatched(superstructure != null && superstructure.isShootReadyLatched());
     io.setIntakeDeployRezeroInProgress(
         superstructure != null && superstructure.isIntakeDeployRezeroInProgress());

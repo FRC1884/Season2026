@@ -74,56 +74,56 @@ public final class SwerveConstants {
 
   static final int PIGEON_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 60;
+        case COMPBOT, DBOT, SIMBOT -> 60;
       };
   ;
   private static final int FRD_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 13;
+        case COMPBOT, DBOT, SIMBOT -> 13;
       };
   private static final int FRR_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 12;
+        case COMPBOT, DBOT, SIMBOT -> 12;
       };
   private static final int FRR_CANCODER_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 4;
+        case COMPBOT, DBOT, SIMBOT -> 4;
       };
   private static final int FLD_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 11;
+        case COMPBOT, DBOT, SIMBOT -> 11;
       };
   private static final int FLR_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 10;
+        case COMPBOT, DBOT, SIMBOT -> 10;
       };
   private static final int FLR_CANCODER_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 3;
+        case COMPBOT, DBOT, SIMBOT -> 3;
       };
   private static final int BRD_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 14;
+        case COMPBOT, DBOT, SIMBOT -> 14;
       };
   private static final int BRR_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 15;
+        case COMPBOT, DBOT, SIMBOT -> 15;
       };
   private static final int BRR_CANCODER_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 5;
+        case COMPBOT, DBOT, SIMBOT -> 5;
       };
   private static final int BLD_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 16;
+        case COMPBOT, DBOT, SIMBOT -> 16;
       };
   private static final int BLR_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 17;
+        case COMPBOT, DBOT, SIMBOT -> 17;
       };
   private static final int BLR_CANCODER_ID =
       switch (ROBOT) {
-        case COMPBOT, SIMBOT -> 6;
+        case COMPBOT, DBOT, SIMBOT -> 6;
       };
 
   // Zeroed rotation values for each module, see setup instructions
@@ -223,13 +223,14 @@ public final class SwerveConstants {
   // Drive motor PID configuration
   static final Gains DRIVE_MOTOR_GAINS =
       switch (ROBOT) {
-        case COMPBOT -> new Gains("Swerve/DriveMotor/Compbot", 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
+        case COMPBOT, DBOT ->
+            new Gains("Swerve/DriveMotor/Compbot", 0.0, 0.0, 0.0, 0.0, 0.1, 0.0, 0.0);
         case SIMBOT -> new Gains("Swerve/DriveMotor/Simbot", 0.05, 0.0, 0.0, 0.0, 0.0789, 0.0, 0.0);
       };
   // Torque-current gains for Kraken FOC (amps-based, per-radian units)
   static final Gains KRAKEN_DRIVE_TORQUE_GAINS =
       switch (ROBOT) {
-        case COMPBOT ->
+        case COMPBOT, DBOT ->
             new Gains("Swerve/KrakenDriveTorque/Compbot", 45.0, 0.0, 0.0, 5.0, 0.4, 0.0, 0.0);
         case SIMBOT ->
             new Gains("Swerve/KrakenDriveTorque/Simbot", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
@@ -258,13 +259,13 @@ public final class SwerveConstants {
   // Rotator PID configuration
   static final Gains ROTATOR_GAINS =
       switch (ROBOT) {
-        case COMPBOT -> new Gains("Swerve/Rotator/Compbot", 2.0, 0.0, 0.0);
+        case COMPBOT, DBOT -> new Gains("Swerve/Rotator/Compbot", 2.0, 0.0, 0.0);
         case SIMBOT -> new Gains("Swerve/Rotator/Simbot", 8.0, 0.0, 0.0);
       };
   // Torque-current gains for Kraken turn control (amps-based, per-radian units)
   static final Gains KRAKEN_TURN_TORQUE_GAINS =
       switch (ROBOT) {
-        case COMPBOT -> new Gains("Swerve/KrakenTurnTorque/Compbot", 8000.0, 0.0, 50.0);
+        case COMPBOT, DBOT -> new Gains("Swerve/KrakenTurnTorque/Compbot", 8000.0, 0.0, 50.0);
         case SIMBOT -> new Gains("Swerve/KrakenTurnTorque/Simbot", 0.0, 0.0, 0.0);
       };
 
