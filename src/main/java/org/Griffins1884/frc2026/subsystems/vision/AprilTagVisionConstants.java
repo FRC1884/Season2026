@@ -10,6 +10,7 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class AprilTagVisionConstants {
@@ -50,7 +51,8 @@ public final class AprilTagVisionConstants {
                 getPrimaryCameraType());
       };
 
-  public static final boolean MIDDLE_RIGHT_CAM_ENABLED = true;
+  public static final boolean MIDDLE_RIGHT_CAM_ENABLED =
+      GlobalConstants.ROBOT != GlobalConstants.RobotType.DBOT;
   public static final VisionIO.CameraConstants MIDDLE_RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
         case COMPBOT, DBOT, SIMBOT ->

@@ -14,6 +14,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
+import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.util.swerve.ModuleLimits;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
@@ -184,7 +185,7 @@ public final class SwerveConstants {
   public static final double WHEEL_RADIUS = Units.inchesToMeters(2);
 
   /** Meters per second */
-  public static final double MAX_LINEAR_SPEED = 5.4804;
+  public static final double MAX_LINEAR_SPEED = (ROBOT == RobotType.COMPBOT) ? 5.4804 : 8.0;
 
   /** Radians per second */
   public static final double MAX_ANGULAR_SPEED = (0.5 * MAX_LINEAR_SPEED) / DRIVE_BASE_RADIUS;

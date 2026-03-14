@@ -24,8 +24,8 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.SIM;
-  public static final RobotType ROBOT = RobotType.SIMBOT;
+  public static final RobotMode MODE = RobotMode.REAL;
+  public static final RobotType ROBOT = RobotType.COMPBOT;
   public static final LoggingMode LOGGING_MODE = LoggingMode.COMP;
   public static final double ODOMETRY_FREQUENCY = 250.0;
 

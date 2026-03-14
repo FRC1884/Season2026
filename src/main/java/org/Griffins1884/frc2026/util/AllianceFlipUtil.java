@@ -127,7 +127,8 @@ public class AllianceFlipUtil {
       return pose;
     }
     Translation2d flippedTranslation =
-        new Translation2d(FieldConstants.fieldLength - pose.getX(), pose.getY());
+        new Translation2d(
+            FieldConstants.fieldLength - pose.getX(), FieldConstants.fieldWidth - pose.getY());
     Rotation2d flippedRotation =
         new Rotation2d(-pose.getRotation().getCos(), pose.getRotation().getSin());
     return new Pose2d(flippedTranslation, flippedRotation);
