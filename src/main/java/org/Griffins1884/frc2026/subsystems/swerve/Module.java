@@ -3,6 +3,7 @@ package org.Griffins1884.frc2026.subsystems.swerve;
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.*;
 
 import com.ctre.phoenix6.hardware.TalonFX;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -16,6 +17,9 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 public class Module {
+  private static final double ANGLE_JUMP_THRESHOLD_RAD = Math.toRadians(35.0);
+  private static final double ANGLE_JUMP_MAX_TURN_RATE_RAD_PER_SEC = 1.0;
+  private static final double SPEED_RATIO_EPSILON_MPS = 0.15;
   private static final LoggedTunableNumber krakenDrivekS =
       new LoggedTunableNumber("Drive/Module/DrivekS");
   private static final LoggedTunableNumber krakenDrivekV =
@@ -50,6 +54,12 @@ public class Module {
 
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
+  private double desiredSpeedMetersPerSec = 0.0;
+  private Rotation2d desiredAngle = new Rotation2d();
+  private Rotation2d lastTurnPosition = new Rotation2d();
+  private boolean angleJumpDetected = false;
+  private int angleJumpCount = 0;
+  private double lastAngleDeltaRad = 0.0;
 
   /** -- GETTER -- Returns the module positions received this cycle. */
   @Getter private SwerveModulePosition[] odometryPositions = new SwerveModulePosition[] {};
@@ -84,6 +94,34 @@ public class Module {
     io.updateInputs(inputs);
     Logger.processInputs("Swerve/Module" + index, inputs);
 
+    double actualSpeedMetersPerSec = getVelocityMetersPerSec();
+    double angleErrorRad = MathUtil.angleModulus(desiredAngle.minus(getAngle()).getRadians());
+    double speedErrorMetersPerSec = desiredSpeedMetersPerSec - actualSpeedMetersPerSec;
+    double speedRatio =
+        Math.abs(desiredSpeedMetersPerSec) > SPEED_RATIO_EPSILON_MPS
+            ? actualSpeedMetersPerSec / desiredSpeedMetersPerSec
+            : 1.0;
+    lastAngleDeltaRad = MathUtil.angleModulus(getAngle().minus(lastTurnPosition).getRadians());
+    boolean suspiciousJump =
+        Math.abs(lastAngleDeltaRad) > ANGLE_JUMP_THRESHOLD_RAD
+            && Math.abs(inputs.turnVelocityRadPerSec) < ANGLE_JUMP_MAX_TURN_RATE_RAD_PER_SEC;
+    if (suspiciousJump) {
+      angleJumpCount++;
+    }
+    angleJumpDetected = suspiciousJump;
+    lastTurnPosition = getAngle();
+
+    Logger.recordOutput("Swerve/Module" + index + "/DesiredSpeedMps", desiredSpeedMetersPerSec);
+    Logger.recordOutput("Swerve/Module" + index + "/ActualSpeedMps", actualSpeedMetersPerSec);
+    Logger.recordOutput("Swerve/Module" + index + "/SpeedErrorMps", speedErrorMetersPerSec);
+    Logger.recordOutput("Swerve/Module" + index + "/SpeedRatio", speedRatio);
+    Logger.recordOutput("Swerve/Module" + index + "/DesiredAngleRad", desiredAngle.getRadians());
+    Logger.recordOutput("Swerve/Module" + index + "/ActualAngleRad", getAngle().getRadians());
+    Logger.recordOutput("Swerve/Module" + index + "/AngleErrorRad", angleErrorRad);
+    Logger.recordOutput("Swerve/Module" + index + "/LastAngleDeltaRad", lastAngleDeltaRad);
+    Logger.recordOutput("Swerve/Module" + index + "/AngleJumpDetected", angleJumpDetected);
+    Logger.recordOutput("Swerve/Module" + index + "/AngleJumpCount", angleJumpCount);
+
     // Calculate positions for odometry
     int sampleCount = inputs.odometryTimestamps.length; // All signals are sampled together
     odometryPositions = new SwerveModulePosition[sampleCount];
@@ -100,6 +138,8 @@ public class Module {
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */
   public void runSetpoint(SwerveModuleState state) {
+    desiredSpeedMetersPerSec = state.speedMetersPerSecond;
+    desiredAngle = state.angle;
     // Mechanical Advantage-style control for full Kraken modules
     double speedRadPerSec = state.speedMetersPerSecond / WHEEL_RADIUS;
     io.setDriveVelocity(speedRadPerSec, krakenFfModel.calculate(speedRadPerSec));
@@ -112,18 +152,24 @@ public class Module {
 
   /** Runs the module with the specified output while controlling to zeroRotation degrees. */
   public void runCharacterization(double output) {
+    desiredSpeedMetersPerSec = 0.0;
+    desiredAngle = new Rotation2d();
     io.setDriveOpenLoop(output);
     io.setTurnPosition(new Rotation2d());
   }
 
   /** Runs a steer-only SysId sweep while keeping the drive stage disabled. */
   public void runTurnCharacterization(double output) {
+    desiredSpeedMetersPerSec = 0.0;
+    desiredAngle = new Rotation2d();
     io.setDriveOpenLoop(0.0);
     io.setTurnOpenLoop(output);
   }
 
   /** Disables all outputs to motors. */
   public void stop() {
+    desiredSpeedMetersPerSec = 0.0;
+    desiredAngle = getAngle();
     io.setDriveOpenLoop(0.0);
     io.setTurnOpenLoop(0.0);
   }
@@ -186,5 +232,39 @@ public class Module {
 
   public double getTurnVelocityRadPerSec() {
     return inputs.turnVelocityRadPerSec;
+  }
+
+  public int getIndex() {
+    return index;
+  }
+
+  public double getDesiredSpeedMetersPerSec() {
+    return desiredSpeedMetersPerSec;
+  }
+
+  public Rotation2d getDesiredAngle() {
+    return desiredAngle;
+  }
+
+  public double getSpeedErrorMetersPerSec() {
+    return desiredSpeedMetersPerSec - getVelocityMetersPerSec();
+  }
+
+  public double getSpeedRatio() {
+    return Math.abs(desiredSpeedMetersPerSec) > SPEED_RATIO_EPSILON_MPS
+        ? getVelocityMetersPerSec() / desiredSpeedMetersPerSec
+        : 1.0;
+  }
+
+  public double getAngleErrorRad() {
+    return MathUtil.angleModulus(desiredAngle.minus(getAngle()).getRadians());
+  }
+
+  public boolean isAngleJumpDetected() {
+    return angleJumpDetected;
+  }
+
+  public int getAngleJumpCount() {
+    return angleJumpCount;
   }
 }

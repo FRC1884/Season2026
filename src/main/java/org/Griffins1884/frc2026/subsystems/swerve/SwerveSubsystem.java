@@ -35,6 +35,7 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -357,6 +358,58 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     if (!krakenVelocityMode) {
       krakenCurrentSetpoint = new SwerveSetpoint(getChassisSpeeds(), getModuleStates());
     }
+
+    double commandedTranslationalMps =
+        Math.hypot(
+            krakenCurrentSetpoint.chassisSpeeds().vxMetersPerSecond,
+            krakenCurrentSetpoint.chassisSpeeds().vyMetersPerSecond);
+    double measuredTranslationalMps =
+        Math.hypot(getChassisSpeeds().vxMetersPerSecond, getChassisSpeeds().vyMetersPerSecond);
+    double commandedOmega = krakenCurrentSetpoint.chassisSpeeds().omegaRadiansPerSecond;
+    double measuredOmega = getChassisSpeeds().omegaRadiansPerSecond;
+    double overallSpeedRatio =
+        commandedTranslationalMps > 0.15
+            ? measuredTranslationalMps / commandedTranslationalMps
+            : 1.0;
+    int badModule = -1;
+    String badReason = "NONE";
+    double worstScore = 0.0;
+    for (var module : modules) {
+      double absSpeedError = Math.abs(module.getSpeedErrorMetersPerSec());
+      double absAngleError = Math.abs(module.getAngleErrorRad());
+      double ratioPenalty = Math.max(0.0, 0.75 - Math.abs(module.getSpeedRatio()));
+      double score = absSpeedError + absAngleError + ratioPenalty;
+      String reason = "NONE";
+      if (module.isAngleJumpDetected()) {
+        score += 5.0;
+        reason = "ANGLE_JUMP";
+      } else if (Math.abs(module.getSpeedRatio()) < 0.55
+          && Math.abs(module.getDesiredSpeedMetersPerSec()) > 0.75) {
+        reason = "UNDERSPEED";
+      } else if (!Double.isFinite(module.getSpeedRatio())) {
+        reason = "INVALID_RATIO";
+      }
+      if (score > worstScore) {
+        worstScore = score;
+        badModule = module.getIndex();
+        badReason = reason;
+      }
+    }
+    var canStatus = RobotController.getCANStatus();
+    Logger.recordOutput("Swerve/Debug/CommandedSpeedMps", commandedTranslationalMps);
+    Logger.recordOutput("Swerve/Debug/MeasuredSpeedMps", measuredTranslationalMps);
+    Logger.recordOutput("Swerve/Debug/OverallSpeedRatio", overallSpeedRatio);
+    Logger.recordOutput("Swerve/Debug/CommandedOmegaRadPerSec", commandedOmega);
+    Logger.recordOutput("Swerve/Debug/MeasuredOmegaRadPerSec", measuredOmega);
+    Logger.recordOutput("Swerve/Debug/BatteryVoltage", RobotController.getBatteryVoltage());
+    Logger.recordOutput("Swerve/Debug/BrownedOut", RobotController.isBrownedOut());
+    Logger.recordOutput("Swerve/Debug/CANUtilization", canStatus.percentBusUtilization);
+    Logger.recordOutput("Swerve/Debug/CANTxFullCount", canStatus.txFullCount);
+    Logger.recordOutput("Swerve/Debug/CANReceiveErrorCount", canStatus.receiveErrorCount);
+    Logger.recordOutput("Swerve/Debug/CANTransmitErrorCount", canStatus.transmitErrorCount);
+    Logger.recordOutput("Swerve/Debug/BadModule", badModule);
+    Logger.recordOutput("Swerve/Debug/BadModuleReason", badReason);
+    Logger.recordOutput("Swerve/Debug/BadModuleScore", worstScore);
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && GlobalConstants.MODE != SIM);
