@@ -209,6 +209,7 @@ let logRollInitialized = false;
 let logCleanInitialized = false;
 
 const queryParams = new URLSearchParams(window.location.search);
+const previewOverrides = resolvePreviewOverrides(queryParams);
 const { host: ntHost, port: ntPort } = resolveNtConnectionParams(queryParams);
 
 const ntClient = new NT4_Client(
@@ -677,6 +678,11 @@ function handleTopicUpdate(topic, value) {
 }
 
 function render() {
+  const effectiveDsMode = previewOverrides.dsMode ?? state.dsMode;
+  const effectiveMatchTime = previewOverrides.matchTime ?? state.matchTime;
+  const effectiveVisionPoseVisible =
+    previewOverrides.visionPoseVisible ?? state.visionPoseVisible;
+
   setText(ui.requestedState, state.requestedState || "--");
   setText(ui.currentState, state.currentState || "--");
 
@@ -721,7 +727,14 @@ function render() {
   }
 
   setText(ui.alliance, state.alliance || "--");
-  setText(ui.matchTime, formatMatchTime(state.matchTime));
+  setText(ui.matchTime, formatMatchTime(effectiveMatchTime));
+  document.body.classList.toggle(
+    "body--match-alert",
+    effectiveDsMode === "TELEOP" &&
+      Number.isFinite(effectiveMatchTime) &&
+      effectiveMatchTime <= 30.0 &&
+      effectiveMatchTime > 0.0
+  );
   setText(ui.hubTimeframe, state.hubTimeframe || "--");
 
   const ourHubText = formatOurHubStatus(
@@ -740,11 +753,11 @@ function render() {
   setText(ui.brownout, state.brownout ? "YES" : "NO");
   setText(ui.hasBall, state.hasBall ? "YES" : "NO");
   if (ui.visionPoseVisible) {
-    if (state.visionPoseVisible === null) {
+    if (effectiveVisionPoseVisible === null) {
       setText(ui.visionPoseVisible, "--");
       ui.visionPoseVisible.classList.remove("is-on", "is-off");
     } else {
-      const hasPose = !!state.visionPoseVisible;
+      const hasPose = !!effectiveVisionPoseVisible;
       setText(ui.visionPoseVisible, hasPose ? "TRUE" : "FALSE");
       ui.visionPoseVisible.classList.toggle("is-on", hasPose);
       ui.visionPoseVisible.classList.toggle("is-off", !hasPose);
@@ -1182,6 +1195,33 @@ function parseString(value) {
   if (typeof value === "string") return value;
   if (value === null || value === undefined) return null;
   return String(value);
+}
+
+function resolvePreviewOverrides(params) {
+  const demo = parseString(params.get("demo"))?.toLowerCase() || null;
+  if (demo === "endgame") {
+    return { dsMode: "TELEOP", matchTime: 29.5, visionPoseVisible: true };
+  }
+
+  return {
+    dsMode: parseString(params.get("dsMode"))?.toUpperCase() || null,
+    matchTime: parseQueryNumber(params.get("matchTime")),
+    visionPoseVisible: parseQueryBoolean(params.get("visionPoseVisible")),
+  };
+}
+
+function parseQueryBoolean(value) {
+  const token = parseString(value)?.toLowerCase();
+  if (token === null) return null;
+  if (token === "true" || token === "1" || token === "yes" || token === "on") return true;
+  if (token === "false" || token === "0" || token === "no" || token === "off") return false;
+  return null;
+}
+
+function parseQueryNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function parsePose(value) {
