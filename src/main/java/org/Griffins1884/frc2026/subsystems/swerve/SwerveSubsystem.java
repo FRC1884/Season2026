@@ -72,6 +72,17 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
   private final SwerveMusicPlayer musicPlayer;
+  private double requestedTranslationalMps = 0.0;
+  private double requestedOmegaRadPerSec = 0.0;
+  private int lastCanTxFullCount = 0;
+  private int lastCanReceiveErrorCount = 0;
+  private int lastCanTransmitErrorCount = 0;
+  private String observerCandidateIssue = "OK";
+  private int observerCandidateModule = -1;
+  private int observerCandidateLoops = 0;
+  private String observerLatchedIssue = "OK";
+  private int observerLatchedModule = -1;
+  private double observerHoldUntilSec = 0.0;
 
   private SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(SwerveConstants.MODULE_TRANSLATIONS);
@@ -411,8 +422,105 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/Debug/BadModuleReason", badReason);
     Logger.recordOutput("Swerve/Debug/BadModuleScore", worstScore);
 
+    updateObserver(
+        commandedTranslationalMps,
+        measuredTranslationalMps,
+        overallSpeedRatio,
+        badModule,
+        badReason,
+        commandedOmega,
+        measuredOmega);
+
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && GlobalConstants.MODE != SIM);
+  }
+
+  private void updateObserver(
+      double commandedTranslationalMps,
+      double measuredTranslationalMps,
+      double overallSpeedRatio,
+      int badModule,
+      String badReason,
+      double commandedOmega,
+      double measuredOmega) {
+    var canStatus = RobotController.getCANStatus();
+    int canErrorDelta =
+        (canStatus.txFullCount - lastCanTxFullCount)
+            + (canStatus.receiveErrorCount - lastCanReceiveErrorCount)
+            + (canStatus.transmitErrorCount - lastCanTransmitErrorCount);
+    lastCanTxFullCount = canStatus.txFullCount;
+    lastCanReceiveErrorCount = canStatus.receiveErrorCount;
+    lastCanTransmitErrorCount = canStatus.transmitErrorCount;
+
+    boolean commandedFast = requestedTranslationalMps > 1.5;
+    boolean slowdown = commandedFast && overallSpeedRatio < 0.75;
+    boolean softwareLimit =
+        commandedFast && commandedTranslationalMps < requestedTranslationalMps * 0.8;
+
+    String candidateIssue = "OK";
+    int candidateModule = -1;
+
+    if (RobotController.isBrownedOut() || RobotController.getBatteryVoltage() < 6.8) {
+      candidateIssue = "BROWNOUT";
+    } else if (canErrorDelta > 0 && (slowdown || commandedFast)) {
+      candidateIssue = "CAN_OR_COMMS";
+    } else {
+      for (var module : modules) {
+        if (module.isAngleJumpDetected()) {
+          candidateIssue = "ANGLE_SENSOR";
+          candidateModule = module.getIndex();
+          break;
+        }
+      }
+      if ("OK".equals(candidateIssue) && softwareLimit) {
+        candidateIssue = "SOFTWARE_LIMIT";
+      } else if ("OK".equals(candidateIssue)
+          && slowdown
+          && badModule >= 0
+          && "UNDERSPEED".equals(badReason)) {
+        candidateIssue = "MODULE_SLOW";
+        candidateModule = badModule;
+      } else if ("OK".equals(candidateIssue) && slowdown) {
+        candidateIssue = "UNKNOWN";
+      }
+    }
+
+    if (candidateIssue.equals(observerCandidateIssue)
+        && candidateModule == observerCandidateModule) {
+      observerCandidateLoops++;
+    } else {
+      observerCandidateIssue = candidateIssue;
+      observerCandidateModule = candidateModule;
+      observerCandidateLoops = "OK".equals(candidateIssue) ? 0 : 1;
+    }
+
+    double nowSec = Timer.getFPGATimestamp();
+    if (!"OK".equals(candidateIssue) && observerCandidateLoops >= 5) {
+      observerLatchedIssue = candidateIssue;
+      observerLatchedModule = candidateModule;
+      observerHoldUntilSec = nowSec + 0.25;
+    } else if ("OK".equals(candidateIssue) && nowSec >= observerHoldUntilSec) {
+      observerLatchedIssue = "OK";
+      observerLatchedModule = -1;
+    }
+
+    boolean issueActive = !"OK".equals(observerLatchedIssue);
+    Logger.recordOutput("Swerve/Observer/IssueActive", issueActive);
+    Logger.recordOutput("Swerve/Observer/Issue", observerLatchedIssue);
+    Logger.recordOutput("Swerve/Observer/IssueModule", observerLatchedModule);
+    Logger.recordOutput("Swerve/Observer/RequestedSpeedMps", requestedTranslationalMps);
+    Logger.recordOutput("Swerve/Observer/RequestedOmegaRadPerSec", requestedOmegaRadPerSec);
+    Logger.recordOutput("Swerve/Observer/CommandedSpeedMps", commandedTranslationalMps);
+    Logger.recordOutput("Swerve/Observer/MeasuredSpeedMps", measuredTranslationalMps);
+    Logger.recordOutput("Swerve/Observer/OverallSpeedRatio", overallSpeedRatio);
+    Logger.recordOutput("Swerve/Observer/CommandedOmegaRadPerSec", commandedOmega);
+    Logger.recordOutput("Swerve/Observer/MeasuredOmegaRadPerSec", measuredOmega);
+    Logger.recordOutput("Swerve/Observer/CanErrorDelta", canErrorDelta);
+    Logger.recordOutput("Swerve/Observer/BatteryVoltage", RobotController.getBatteryVoltage());
+    Logger.recordOutput("Swerve/Observer/BrownedOut", RobotController.isBrownedOut());
+    Logger.recordOutput("Swerve/Observer/CandidateIssue", candidateIssue);
+    Logger.recordOutput("Swerve/Observer/CandidateModule", candidateModule);
+    Logger.recordOutput("Swerve/Observer/CandidateLoops", observerCandidateLoops);
   }
 
   /**
@@ -422,6 +530,8 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
    */
   public void runVelocity(ChassisSpeeds speeds) {
     krakenVelocityMode = true;
+    requestedTranslationalMps = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    requestedOmegaRadPerSec = speeds.omegaRadiansPerSecond;
     ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
     SwerveModuleState[] setpointStatesUnoptimized = kinematics.toSwerveModuleStates(discreteSpeeds);
     krakenCurrentSetpoint =
