@@ -27,6 +27,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
+import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.OI.DriverMap;
 import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
@@ -318,11 +319,18 @@ public class RobotContainer {
         .shootToggle()
         .onTrue(Commands.runOnce(() -> superstructure.setShootEnabled(true)))
         .onFalse(Commands.runOnce(() -> superstructure.setShootEnabled(false)));
-    driver
-        .intakeRollersHold()
-        .onTrue(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(true)))
-        .onFalse(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(false)));
-    driver.intakeDeployToggle().onTrue(Commands.runOnce(superstructure::toggleIntakeDeploy));
+    if (GlobalConstants.ROBOT != RobotType.DBOT) {
+      driver
+          .intakeRollersHold()
+          .onTrue(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(true)))
+          .onFalse(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(false)));
+      driver.intakeDeployToggle().onTrue(Commands.runOnce(superstructure::toggleIntakeDeploy));
+    } else {
+      driver
+          .intakeRollersHold()
+          .onTrue(Commands.runOnce(superstructure::toggleIntakeDeploy))
+          .onFalse(Commands.runOnce(superstructure::toggleIntakeDeploy));
+    }
   }
 
   /**

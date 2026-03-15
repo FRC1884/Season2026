@@ -906,9 +906,9 @@ public class Superstructure extends SubsystemBase {
     }
     Translation2d target;
     if (isBlue) {
-      target = new Translation2d(3, yChange ? 7.0 : 1.0);
+      target = new Translation2d(3, yChange ? 6.0 : 2.0);
     } else {
-      target = new Translation2d(13.5, yChange ? 7.0 : 1.0);
+      target = new Translation2d(13.5, yChange ? 6.0 : 2.0);
     }
     return target;
   }

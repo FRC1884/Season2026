@@ -15,7 +15,7 @@ public final class Config {
     public static final boolean AUTONOMOUS_ENABLED = true;
     public static final boolean VISION_ENABLED = true;
     public static final boolean LEDS_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
-    public static final boolean WEBUI_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean WEBUI_ENABLED = true;
     public static final boolean TURRET_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean SHOOTER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean SHOOTER_PIVOT_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
