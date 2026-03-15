@@ -175,8 +175,12 @@ public class Superstructure extends SubsystemBase {
   }
 
   public void toggleIntakeDeploy() {
+    setIntakeDeployed(!intakeDeployed);
+  }
+
+  public void setIntakeDeployed(boolean deployed) {
     boolean wasDeployed = intakeDeployed;
-    intakeDeployed = !intakeDeployed;
+    intakeDeployed = deployed;
     if (wasDeployed && !intakeDeployed && !intakeRollersHeld && !isIntakePivotAtGoal()) {
       intakeStowRollerActive = true;
     } else if (intakeDeployed) {
@@ -534,6 +538,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyAutonomousHold() {
+    shootEnabled = false;
+    intakeRollersHeld = false;
+    intakeDeployed = false;
     setIntakeGoal(IntakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
     setShooterTargetVelocity(0.0);

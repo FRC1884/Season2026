@@ -327,9 +327,9 @@ public class RobotContainer {
       driver.intakeDeployToggle().onTrue(Commands.runOnce(superstructure::toggleIntakeDeploy));
     } else {
       driver
-          .intakeRollersHold()
-          .onTrue(Commands.runOnce(superstructure::toggleIntakeDeploy))
-          .onFalse(Commands.runOnce(superstructure::toggleIntakeDeploy));
+          .intakeDeployToggle()
+          .onTrue(Commands.runOnce(() -> superstructure.setIntakeDeployed(true)))
+          .onFalse(Commands.runOnce(() -> superstructure.setIntakeDeployed(false)));
     }
   }
 
