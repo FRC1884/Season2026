@@ -23,6 +23,7 @@ public final class LogRollover {
   private static final String CLEAN_STATUS_FAILED = "FAILED";
   private static final String CLEAN_STATUS_UNAVAILABLE = "UNAVAILABLE";
   private static final String CLEAN_STATUS_CLEANING = "CLEANING";
+  private static final long CLEAN_MIN_DELETE_AGE_MS = 24L * 60L * 60L * 1000L;
 
   private static RollingWPILOGWriter rollingWriter;
   private static String status = STATUS_UNAVAILABLE;
@@ -32,6 +33,10 @@ public final class LogRollover {
   private static double lastCleanTimestampSec = Double.NaN;
   private static int cleanCount = 0;
   private static int lastCleanDeletedEntries = 0;
+  private static Path activeNetworkTablesSessionDir;
+  private static String lastCleanError = "";
+  private static String lastCleanKeepNtSession = "";
+  private static String lastCleanKeepWpilib = "";
 
   private LogRollover() {}
 
@@ -39,6 +44,14 @@ public final class LogRollover {
     rollingWriter = writer;
     status = writer == null ? STATUS_UNAVAILABLE : STATUS_READY;
     cleanStatus = writer == null ? CLEAN_STATUS_UNAVAILABLE : CLEAN_STATUS_READY;
+    lastCleanError = "";
+    lastCleanKeepNtSession = "";
+    lastCleanKeepWpilib = "";
+    publishStatus();
+  }
+
+  public static synchronized void setActiveNetworkTablesSessionDir(Path sessionDir) {
+    activeNetworkTablesSessionDir = sessionDir;
     publishStatus();
   }
 
@@ -85,13 +98,14 @@ public final class LogRollover {
       return false;
     }
     cleanStatus = CLEAN_STATUS_CLEANING;
+    lastCleanError = "";
     publishStatus();
     try {
       // Roll first so we keep the newest active file and only clear older artifacts.
       roll();
       int deleted = 0;
-      deleted += cleanDirectory(resolveOperatingLogsDir());
-      deleted += cleanDirectory(Path.of("/U/logs"));
+      deleted += cleanOperatingLogsDir(resolveOperatingLogsDir());
+      deleted += cleanUsbLogsDir(Path.of("/U/logs"));
 
       cleanStatus = CLEAN_STATUS_CLEANED;
       lastCleanTimestampSec = Timer.getFPGATimestamp();
@@ -101,6 +115,7 @@ public final class LogRollover {
       return true;
     } catch (Exception ex) {
       cleanStatus = CLEAN_STATUS_FAILED;
+      lastCleanError = ex.getClass().getSimpleName() + ": " + String.valueOf(ex.getMessage());
       publishStatus();
       return false;
     }
@@ -126,7 +141,81 @@ public final class LogRollover {
     return Filesystem.getOperatingDirectory().toPath().resolve("logs");
   }
 
-  private static int cleanDirectory(Path logsDir) throws IOException {
+  private static int cleanOperatingLogsDir(Path logsDir) throws IOException {
+    if (logsDir == null || !Files.exists(logsDir) || !Files.isDirectory(logsDir)) {
+      return 0;
+    }
+
+    int deletedEntries = 0;
+    deletedEntries += cleanNetworkTablesDir(logsDir.resolve("networktables"));
+
+    List<Path> entries;
+    try (Stream<Path> stream = Files.list(logsDir)) {
+      entries = stream.toList();
+    }
+    if (entries.isEmpty()) {
+      return deletedEntries;
+    }
+
+    Path keepWpilibLog = newestPath(entries, LogRollover::isWpilibLog);
+    lastCleanKeepWpilib = keepWpilibLog != null ? keepWpilibLog.toString() : "";
+
+    for (Path entry : entries) {
+      if (entry.equals(keepWpilibLog) || entry.equals(logsDir.resolve("networktables"))) {
+        continue;
+      }
+      if (!looksLikeTopLevelLogArtifact(entry) || !isOlderThanDeleteThreshold(entry)) {
+        continue;
+      }
+      deleteRecursively(entry);
+      deletedEntries++;
+    }
+
+    Files.writeString(
+        logsDir.resolve(".cleanup-marker"),
+        "cleaned@" + Timer.getFPGATimestamp(),
+        StandardOpenOption.CREATE,
+        StandardOpenOption.TRUNCATE_EXISTING);
+    return deletedEntries;
+  }
+
+  private static int cleanNetworkTablesDir(Path networkTablesDir) throws IOException {
+    if (networkTablesDir == null
+        || !Files.exists(networkTablesDir)
+        || !Files.isDirectory(networkTablesDir)) {
+      return 0;
+    }
+
+    List<Path> entries;
+    try (Stream<Path> stream = Files.list(networkTablesDir)) {
+      entries = stream.toList();
+    }
+    if (entries.isEmpty()) {
+      return 0;
+    }
+
+    Path keepNtSession =
+        activeNetworkTablesSessionDir != null && Files.exists(activeNetworkTablesSessionDir)
+            ? activeNetworkTablesSessionDir
+            : newestPath(entries, LogRollover::isNetworkTablesSessionDir);
+    lastCleanKeepNtSession = keepNtSession != null ? keepNtSession.toString() : "";
+
+    int deletedEntries = 0;
+    for (Path entry : entries) {
+      if (entry.equals(keepNtSession)) {
+        continue;
+      }
+      if (!isNetworkTablesSessionDir(entry) || !isOlderThanDeleteThreshold(entry)) {
+        continue;
+      }
+      deleteRecursively(entry);
+      deletedEntries++;
+    }
+
+    return deletedEntries;
+  }
+
+  private static int cleanUsbLogsDir(Path logsDir) throws IOException {
     if (logsDir == null || !Files.exists(logsDir) || !Files.isDirectory(logsDir)) {
       return 0;
     }
@@ -139,28 +228,32 @@ public final class LogRollover {
       return 0;
     }
 
-    Path keepWpilibLog = newestPath(entries, path -> isWpilibLog(path));
-    Path keepNtSession = newestPath(entries, path -> isNetworkTablesSessionDir(path));
+    Path keepWpilibLog = newestPath(entries, LogRollover::isWpilibLog);
+    if (keepWpilibLog != null && lastCleanKeepWpilib.isEmpty()) {
+      lastCleanKeepWpilib = keepWpilibLog.toString();
+    }
 
     int deletedEntries = 0;
     for (Path entry : entries) {
-      if (entry.equals(keepWpilibLog) || entry.equals(keepNtSession)) {
+      if (entry.equals(keepWpilibLog)) {
         continue;
       }
-      if (!looksLikeLogArtifact(entry)) {
+      if (!isWpilibLog(entry) || !isOlderThanDeleteThreshold(entry)) {
         continue;
       }
       deleteRecursively(entry);
       deletedEntries++;
     }
-
-    // Touch logs directory so we can easily see "cleanup happened" in file metadata.
-    Files.writeString(
-        logsDir.resolve(".cleanup-marker"),
-        "cleaned@" + Timer.getFPGATimestamp(),
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING);
     return deletedEntries;
+  }
+
+  private static boolean isOlderThanDeleteThreshold(Path path) {
+    try {
+      long ageMs = System.currentTimeMillis() - Files.getLastModifiedTime(path).toMillis();
+      return ageMs >= CLEAN_MIN_DELETE_AGE_MS;
+    } catch (IOException ex) {
+      return false;
+    }
   }
 
   private static Path newestPath(List<Path> entries, java.util.function.Predicate<Path> predicate)
@@ -203,19 +296,12 @@ public final class LogRollover {
     return name.startsWith("nt_");
   }
 
-  private static boolean looksLikeLogArtifact(Path path) {
-    if (path == null) {
+  private static boolean looksLikeTopLevelLogArtifact(Path path) {
+    if (path == null || Files.isDirectory(path)) {
       return false;
     }
     String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
-    if (Files.isDirectory(path)) {
-      return name.startsWith("nt_") || name.startsWith("session") || name.equals("networktables");
-    }
-    return name.endsWith(".wpilog")
-        || name.endsWith(".wpilog.tmp")
-        || name.endsWith(".log")
-        || name.endsWith(".dslog")
-        || name.endsWith(".dsevents");
+    return name.endsWith(".wpilog") || name.endsWith(".wpilog.tmp");
   }
 
   private static void deleteRecursively(Path path) throws IOException {
@@ -249,5 +335,9 @@ public final class LogRollover {
     Logger.recordOutput("Log/CleanTimestampSec", lastCleanTimestampSec);
     Logger.recordOutput("Log/CleanCount", cleanCount);
     Logger.recordOutput("Log/CleanDeletedEntries", lastCleanDeletedEntries);
+    Logger.recordOutput("Log/CleanLastError", lastCleanError);
+    Logger.recordOutput("Log/CleanKeepNtSession", lastCleanKeepNtSession);
+    Logger.recordOutput("Log/CleanKeepWpilib", lastCleanKeepWpilib);
+    Logger.recordOutput("Log/CleanMinDeleteAgeHours", CLEAN_MIN_DELETE_AGE_MS / 3600000.0);
   }
 }
