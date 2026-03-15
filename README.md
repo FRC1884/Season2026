@@ -19,6 +19,10 @@
 | `docs/` | Supplemental notes, coordinate frames, tuning logs. |
 | `vendordeps/` | Vendor libraries pinned for 2026 (Phoenix 6, REVLib, etc.). |
 
+## Planning
+
+- [Post-season priorities](docs/post-season-priorities.md)
+
 ## Getting Started
 
 1. **Tools** – Install WPILib 2026 beta, JDK 17, and AdvantageScope.
