@@ -435,6 +435,16 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     gyroDisconnectedAlert.set(!gyroInputs.connected && GlobalConstants.MODE != SIM);
   }
 
+  private static String moduleName(int moduleIndex) {
+    return switch (moduleIndex) {
+      case 0 -> "FL";
+      case 1 -> "FR";
+      case 2 -> "BL";
+      case 3 -> "BR";
+      default -> "NONE";
+    };
+  }
+
   private void updateObserver(
       double commandedTranslationalMps,
       double measuredTranslationalMps,
@@ -508,6 +518,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/Observer/IssueActive", issueActive);
     Logger.recordOutput("Swerve/Observer/Issue", observerLatchedIssue);
     Logger.recordOutput("Swerve/Observer/IssueModule", observerLatchedModule);
+    Logger.recordOutput("Swerve/Observer/IssueModuleName", moduleName(observerLatchedModule));
     Logger.recordOutput("Swerve/Observer/RequestedSpeedMps", requestedTranslationalMps);
     Logger.recordOutput("Swerve/Observer/RequestedOmegaRadPerSec", requestedOmegaRadPerSec);
     Logger.recordOutput("Swerve/Observer/CommandedSpeedMps", commandedTranslationalMps);
