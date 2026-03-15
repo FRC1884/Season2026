@@ -224,6 +224,7 @@ public class Robot extends LoggedRobot {
     Path baseDir =
         Filesystem.getOperatingDirectory().toPath().resolve("logs").resolve("networktables");
     Path sessionDir = baseDir.resolve(LOG_DIR_FORMAT.format(LocalDateTime.now()));
+    LogRollover.setActiveNetworkTablesSessionDir(sessionDir);
 
     boolean dataLogStarted = false;
     boolean sessionDirCreated = false;
