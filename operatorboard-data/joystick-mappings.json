@@ -1,0 +1,154 @@
+{
+  "schemaVersion": "2026.03",
+  "metadata": {
+    "id": "joystick-mappings",
+    "type": "joystickMappings",
+    "displayName": "Joystick Mappings",
+    "updatedAtIso": "2026-03-17T00:00:00Z",
+    "updatedAtEpochMs": 1773705600000,
+    "buildVersion": "unspecified",
+    "gitSha": "",
+    "gitBranch": "main"
+  },
+  "activeProfileId": "default-driver",
+  "targets": [
+    {
+      "id": "superstate:IDLING",
+      "label": "IDLING",
+      "category": "state",
+      "subsystem": "superstructure",
+      "description": "Request the IDLING superstructure state."
+    },
+    {
+      "id": "superstate:INTAKING",
+      "label": "INTAKING",
+      "category": "state",
+      "subsystem": "superstructure",
+      "description": "Request the INTAKING superstructure state."
+    },
+    {
+      "id": "superstate:SHOOTING",
+      "label": "SHOOTING",
+      "category": "state",
+      "subsystem": "superstructure",
+      "description": "Request the SHOOTING superstructure state."
+    },
+    {
+      "id": "superstate:FERRYING",
+      "label": "FERRYING",
+      "category": "state",
+      "subsystem": "superstructure",
+      "description": "Request the FERRYING superstructure state."
+    },
+    {
+      "id": "action:shootToggle",
+      "label": "Shoot Toggle",
+      "category": "action",
+      "subsystem": "superstructure",
+      "description": "Toggle the shoot gate."
+    },
+    {
+      "id": "action:intakeRollersHold",
+      "label": "Intake Rollers Hold",
+      "category": "action",
+      "subsystem": "superstructure",
+      "description": "Hold intake rollers while active."
+    },
+    {
+      "id": "action:intakeDeployToggle",
+      "label": "Intake Deploy Toggle",
+      "category": "action",
+      "subsystem": "superstructure",
+      "description": "Toggle intake deploy state."
+    },
+    {
+      "id": "action:resetOdometry",
+      "label": "Reset Odometry",
+      "category": "action",
+      "subsystem": "swerve",
+      "description": "Reset field pose reference."
+    },
+    {
+      "id": "action:requestIntakeDeployRezero",
+      "label": "Rezero Intake Deploy",
+      "category": "debug",
+      "subsystem": "intakePivot",
+      "description": "Start intake deploy rezero."
+    }
+  ],
+  "profiles": [
+    {
+      "id": "default-driver",
+      "name": "Default Driver",
+      "controllerType": "Generic Gamepad",
+      "deviceName": "Driver Controller",
+      "enabled": true,
+      "bindings": [
+        {
+          "inputKind": "axis",
+          "inputId": "left-x",
+          "displayLabel": "Left Stick X",
+          "targetType": "action",
+          "targetId": "drive.strafe",
+          "targetLabel": "Drive Strafe",
+          "enabled": true,
+          "notes": "Continuous drivetrain axis."
+        },
+        {
+          "inputKind": "axis",
+          "inputId": "left-y",
+          "displayLabel": "Left Stick Y",
+          "targetType": "action",
+          "targetId": "drive.forward",
+          "targetLabel": "Drive Forward/Reverse",
+          "enabled": true,
+          "notes": "Continuous drivetrain axis."
+        },
+        {
+          "inputKind": "axis",
+          "inputId": "right-x",
+          "displayLabel": "Right Stick X",
+          "targetType": "action",
+          "targetId": "drive.rotate",
+          "targetLabel": "Drive Rotate",
+          "enabled": true,
+          "notes": "Continuous drivetrain axis."
+        },
+        {
+          "inputKind": "button",
+          "inputId": "r1",
+          "displayLabel": "Right Bumper",
+          "targetType": "action",
+          "targetId": "action:shootToggle",
+          "targetLabel": "Shoot Toggle",
+          "enabled": true,
+          "notes": "Toggle shoot enable."
+        },
+        {
+          "inputKind": "button",
+          "inputId": "l1",
+          "displayLabel": "Left Bumper",
+          "targetType": "action",
+          "targetId": "action:intakeRollersHold",
+          "targetLabel": "Intake Rollers Hold",
+          "enabled": true,
+          "notes": "Hold intake rollers while pressed."
+        },
+        {
+          "inputKind": "button",
+          "inputId": "cross",
+          "displayLabel": "Cross / A",
+          "targetType": "action",
+          "targetId": "action:intakeDeployToggle",
+          "targetLabel": "Intake Deploy Toggle",
+          "enabled": true,
+          "notes": "Toggle intake deploy."
+        }
+      ],
+      "warnings": [
+        "Mappings are persisted and deploy-synced now.",
+        "Robot-side command consumption still uses the hard-coded DriverMap path."
+      ]
+    }
+  ]
+}

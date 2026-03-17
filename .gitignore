@@ -185,3 +185,9 @@ compile_commands.json
 
 # Version file
 src/main/java/org/Griffins1884/frc2026/BuildConstants.java
+
+# Operator board runtime artifacts
+operatorboard-data/diagnostics/
+
+# Local script caches
+tools/deploy_preserve/__pycache__/

@@ -1,0 +1,170 @@
+{
+  "schemaVersion": "2026.03",
+  "metadata": {
+    "id": "subsystem-descriptions",
+    "type": "subsystemDescriptions",
+    "displayName": "Subsystem Descriptions",
+    "updatedAtIso": "2026-03-17T00:00:00Z",
+    "updatedAtEpochMs": 1773705600000,
+    "buildVersion": "unspecified",
+    "gitSha": "",
+    "gitBranch": "main"
+  },
+  "subsystems": [
+    {
+      "key": "superstructure",
+      "name": "Superstructure",
+      "purpose": "Coordinates intake, indexer, shooter, pivots, and turret into named operating states.",
+      "actuators": [
+        "Intake rollers",
+        "Indexer",
+        "Shooter",
+        "Intake pivot",
+        "Shooter pivot",
+        "Turret"
+      ],
+      "sensors": [
+        "Ball detection",
+        "Pivot encoders",
+        "Turret encoder",
+        "Vision pose visibility"
+      ],
+      "safetyConditions": [
+        "Reject unsafe state requests instead of forcing motion.",
+        "Keep auto-state selection and teleop override from fighting each other."
+      ],
+      "commands": [
+        "Dashboard state requests",
+        "Auto state selection",
+        "Driver quick actions"
+      ],
+      "operatorOutcomes": [
+        "Drivers can read requested versus current state quickly.",
+        "Debugging can compare expected state intent with actual behavior."
+      ],
+      "states": [
+        {
+          "name": "IDLING",
+          "purpose": "Neutral ready state.",
+          "expectedMotion": "Actuators settle into safe hold behavior.",
+          "readyCondition": "No queued action requires motion.",
+          "transitionConditions": "Default fallback when no higher-priority state is active.",
+          "faultBlockers": "Hard faults can force conservative fallback behavior."
+        },
+        {
+          "name": "INTAKING",
+          "purpose": "Acquire fuel from the floor.",
+          "expectedMotion": "Intake deploys, intake rollers and indexer move fuel inward.",
+          "readyCondition": "Intake path is clear and deploy geometry is reached.",
+          "transitionConditions": "Entered by operator request or intake-capable workflow.",
+          "faultBlockers": "Pivot zeroing, jams, or sensor disagreement block action."
+        },
+        {
+          "name": "SHOOTING",
+          "purpose": "Prepare and execute scoring shots.",
+          "expectedMotion": "Shooter spins up, pivots move to shot angle, turret tracks target.",
+          "readyCondition": "Velocity, angle, and turret are within tolerance and shoot gate is enabled.",
+          "transitionConditions": "Entered by operator or auto shot request.",
+          "faultBlockers": "Missing vision, turret faults, or shooter not at speed prevent readiness."
+        },
+        {
+          "name": "FERRYING",
+          "purpose": "Score to a ferry target outside the main hub zone.",
+          "expectedMotion": "Shooter and turret target a ferry solution while drivetrain remains field-oriented.",
+          "readyCondition": "Turret and shooter satisfy ferry tolerances.",
+          "transitionConditions": "Entered when ferry targeting is preferred over hub targeting.",
+          "faultBlockers": "Target ambiguity or pose estimate issues block action."
+        }
+      ]
+    },
+    {
+      "key": "intake",
+      "name": "Intake",
+      "purpose": "Collects fuel and feeds the indexer.",
+      "actuators": [
+        "Intake roller motor",
+        "Intake pivot"
+      ],
+      "sensors": [
+        "Pivot encoder",
+        "Ball present signal",
+        "Motor current"
+      ],
+      "safetyConditions": [
+        "Do not command aggressive roller motion while stowed.",
+        "Zeroing routines must own pivot motion when active."
+      ],
+      "commands": [
+        "Intaking",
+        "Shoot intake",
+        "Deploy/stow toggles"
+      ],
+      "operatorOutcomes": [
+        "Drivers can see whether the intake is deployed and holding rollers.",
+        "Debuggers can separate deploy faults from roller faults."
+      ],
+      "states": [
+        {
+          "name": "DEPLOYED",
+          "purpose": "Floor collection geometry active.",
+          "expectedMotion": "Pivot moves to deploy angle and rollers can run inward.",
+          "readyCondition": "Deploy angle reached and zeroing is not active.",
+          "transitionConditions": "Entered by deploy toggle or intake-capable superstate.",
+          "faultBlockers": "Zeroing, sensor faults, or soft-limit violations."
+        },
+        {
+          "name": "STOWED",
+          "purpose": "Safe travel position.",
+          "expectedMotion": "Pivot retracts and rollers idle or briefly clear fuel path.",
+          "readyCondition": "Pivot reaches stow target.",
+          "transitionConditions": "Entered when intake demand ends or robot returns to idle.",
+          "faultBlockers": "Blocked travel or missing pivot feedback."
+        }
+      ]
+    },
+    {
+      "key": "turret",
+      "name": "Turret",
+      "purpose": "Rotates the shooter toward scoring targets.",
+      "actuators": [
+        "Turret motor"
+      ],
+      "sensors": [
+        "Turret encoder",
+        "Field pose",
+        "Vision target estimate"
+      ],
+      "safetyConditions": [
+        "Respect turret soft limits.",
+        "Yield manual commands to zeroing and fault handling."
+      ],
+      "commands": [
+        "Auto aim",
+        "Ferry aim",
+        "Testing"
+      ],
+      "operatorOutcomes": [
+        "Readiness depends on stable at-goal confirmation.",
+        "The systems tab explains whether aim issues are target, pose, or mechanism related."
+      ],
+      "states": [
+        {
+          "name": "TRACKING",
+          "purpose": "Closed-loop target following.",
+          "expectedMotion": "Turret rotates toward a computed target and holds there.",
+          "readyCondition": "Position error is within tolerance.",
+          "transitionConditions": "Entered during hub or ferry aim workflows.",
+          "faultBlockers": "Pose uncertainty or turret health faults."
+        },
+        {
+          "name": "HOLD",
+          "purpose": "Safe stationary hold.",
+          "expectedMotion": "Turret resists drift at current or parked heading.",
+          "readyCondition": "Closed-loop hold remains stable.",
+          "transitionConditions": "Used in idle, disabled, or fallback behavior.",
+          "faultBlockers": "Encoder loss or latched mechanism fault."
+        }
+      ]
+    }
+  ]
+}
