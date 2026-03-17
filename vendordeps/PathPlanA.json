@@ -1,0 +1,14 @@
+{
+  "fileName": "PathPlanA.json",
+  "name": "PathPlanA",
+  "version": "2026.0.0",
+  "frcYear": "2026",
+  "uuid": "c7c6b2c6-4c5e-4ef4-93fb-bf0d19740d79",
+  "mavenUrls": [],
+  "jsonUrl": "https://raw.githubusercontent.com/FRC1884/PathPlanA/main/vendor/PathPlanA.json",
+  "schemaUrl": "https://raw.githubusercontent.com/FRC1884/PathPlanA/main/vendor/pathplana_autos.schema.json",
+  "deployLibraryPath": "pathplana/autos",
+  "javaDependencies": [],
+  "jniDependencies": [],
+  "cppDependencies": []
+}
