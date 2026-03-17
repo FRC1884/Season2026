@@ -9,11 +9,12 @@ public final class SuperstructureConstants {
       new LoggedTunableNumber("Superstructure/BallPresenceDebounceSec", 0.15);
   public static final boolean AUTO_STOP_ON_EMPTY = false;
 
-  public static final boolean SHOOTING_WHILE_MOVING = true;
   public static final double MANUAL_JOG_VOLTAGE = 0.5;
   public static final double AUTO_STATE_SHOOTING_X_MAX_METERS = 4.0;
   public static final double AUTO_STATE_IDLE_X_MAX_METERS = 5.4;
   public static final double AUTO_STATE_INTAKE_X_MAX_METERS = 11.0;
+  public static final LoggedTunableNumber ALLIANCE_ZONE_MAX_X_METERS =
+      new LoggedTunableNumber("Superstructure/AllianceZoneMaxXMeters", 5.4);
 
   private SuperstructureConstants() {}
 }

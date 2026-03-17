@@ -8,10 +8,13 @@ import lombok.Getter;
 
 /** IO implementation for a Limelight camera on a game element detection pipeline. */
 public class GamePieceVisionIOLimelight implements VisionIO {
+  private static final long FLUSH_PERIOD_MICROS = 100_000;
+
   private final DoubleSubscriber latencySubscriber;
   private final DoubleSubscriber txSubscriber;
   private final DoubleSubscriber tySubscriber;
   @Getter private final CameraConstants cameraConstants;
+  private long lastFlushMicros = Long.MIN_VALUE;
 
   /**
    * Creates a new GamePieceVisionIOLimelight.
@@ -49,7 +52,10 @@ public class GamePieceVisionIOLimelight implements VisionIO {
         new TargetObservation(
             Rotation2d.fromDegrees(txSubscriber.get()), Rotation2d.fromDegrees(tySubscriber.get()));
 
-    NetworkTableInstance.getDefault()
-        .flush(); // Increases network traffic but recommended by Limelight
+    long nowMicros = RobotController.getFPGATime();
+    if (nowMicros - lastFlushMicros >= FLUSH_PERIOD_MICROS) {
+      NetworkTableInstance.getDefault().flush();
+      lastFlushMicros = nowMicros;
+    }
   }
 }

@@ -1,10 +1,3 @@
-// Copyright (c) 2025 FRC 6328
-// http://github.com/Mechanical-Advantage
-//
-// Use of this source code is governed by an MIT-style
-// license that can be found in the LICENSE file at
-// the root directory of this project.
-
 package org.Griffins1884.frc2026.subsystems.objectivetracker;
 
 import org.littletonrobotics.junction.AutoLog;
@@ -19,6 +12,16 @@ public interface OperatorBoardIO {
     public double swerveMusicVolume = Double.NaN;
     public boolean rollLogsRequested = false;
     public boolean cleanLogsRequested = false;
+    public boolean requestIntakeDeployRezero = false;
+    public boolean cancelIntakeDeployRezero = false;
+    public boolean requestManualIntakeDeployZeroSeek = false;
+    public boolean cancelManualIntakeDeployZeroSeek = false;
+    public String[] selectedAutoId = new String[] {};
+    public String[] autoQueueSpec = new String[] {};
+    public String[] autoQueueCommand = new String[] {};
+    public String[] runtimeProfileSpec = new String[] {};
+    public boolean applyRuntimeProfile = false;
+    public boolean resetRuntimeProfile = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}
@@ -38,6 +41,30 @@ public interface OperatorBoardIO {
   default void setTargetPoseValid(boolean value) {}
 
   default void setRobotPose(double[] value) {}
+
+  default void setAutoQueueState(String value) {}
+
+  default void setAutoQueuePreviewPose(double[] value) {}
+
+  default void setAutoQueuePreviewPoseValid(boolean value) {}
+
+  default void setSelectedAutoState(String value) {}
+
+  default void setRuntimeProfileState(String value) {}
+
+  default void setRuntimeProfileStatus(String value) {}
+
+  default void setSystemCheckState(String value) {}
+
+  default void setAutoCheckState(String value) {}
+
+  default void setAutoQuickRunState(String value) {}
+
+  default void setNtDiagnosticsState(String value) {}
+
+  default void setMechanismStatusState(String value) {}
+
+  default void setActionTraceState(String value) {}
 
   default void setHasBall(boolean value) {}
 
@@ -90,6 +117,24 @@ public interface OperatorBoardIO {
   default void setSysIdTurnLastCompletedPhase(String value) {}
 
   default void setVisionStatus(String value) {}
+
+  default void setVisionPoseVisible(boolean value) {}
+
+  default void setShootEnabled(boolean value) {}
+
+  default void setIntakeRollersHeld(boolean value) {}
+
+  default void setIntakeDeployed(boolean value) {}
+
+  default void setTeleopOverrideActive(boolean value) {}
+
+  default void setDriverControllerControlActive(boolean value) {}
+
+  default void setShootReadyLatched(boolean value) {}
+
+  default void setIntakeDeployRezeroInProgress(boolean value) {}
+
+  default void setManualIntakeDeployZeroSeekInProgress(boolean value) {}
 
   default void setLogRollStatus(String value) {}
 

@@ -12,6 +12,16 @@ final class OperatorBoardContract {
   static final String SWERVE_MUSIC_VOLUME = "SwerveMusicVolume";
   static final String ROLL_LOGS = "RollLogs";
   static final String CLEAN_LOGS = "CleanLogs";
+  static final String REQUEST_INTAKE_DEPLOY_REZERO = "RequestIntakeDeployRezero";
+  static final String CANCEL_INTAKE_DEPLOY_REZERO = "CancelIntakeDeployRezero";
+  static final String REQUEST_MANUAL_INTAKE_DEPLOY_ZERO_SEEK = "RequestManualIntakeDeployZeroSeek";
+  static final String CANCEL_MANUAL_INTAKE_DEPLOY_ZERO_SEEK = "CancelManualIntakeDeployZeroSeek";
+  static final String SELECTED_AUTO_ID = "SelectedAutoId";
+  static final String AUTO_QUEUE_SPEC = "AutoQueueSpec";
+  static final String AUTO_QUEUE_COMMAND = "AutoQueueCommand";
+  static final String RUNTIME_PROFILE_SPEC = "RuntimeProfileSpec";
+  static final String APPLY_RUNTIME_PROFILE = "ApplyRuntimeProfile";
+  static final String RESET_RUNTIME_PROFILE = "ResetRuntimeProfile";
   static final String SYSID_DRIVE_PHASE = "SysIdDrivePhase";
   static final String SYSID_DRIVE_ACTIVE = "SysIdDriveActive";
   static final String SYSID_DRIVE_LAST_COMPLETED = "SysIdDriveLastCompleted";
@@ -34,6 +44,18 @@ final class OperatorBoardContract {
   static final String TARGET_POSE = "TargetPose";
   static final String TARGET_POSE_VALID = "TargetPoseValid";
   static final String ROBOT_POSE = "RobotPose";
+  static final String AUTO_QUEUE_STATE = "AutoQueueState";
+  static final String AUTO_QUEUE_PREVIEW_POSE = "AutoQueuePreviewPose";
+  static final String AUTO_QUEUE_PREVIEW_POSE_VALID = "AutoQueuePreviewPoseValid";
+  static final String SELECTED_AUTO_STATE = "SelectedAutoState";
+  static final String RUNTIME_PROFILE_STATE = "RuntimeProfileState";
+  static final String RUNTIME_PROFILE_STATUS = "RuntimeProfileStatus";
+  static final String SYSTEM_CHECK_STATE = "SystemCheckState";
+  static final String AUTO_CHECK_STATE = "AutoCheckState";
+  static final String AUTO_QUICK_RUN_STATE = "AutoQuickRunState";
+  static final String NT_DIAGNOSTICS_STATE = "NtDiagnosticsState";
+  static final String MECHANISM_STATUS_STATE = "MechanismStatusState";
+  static final String ACTION_TRACE_STATE = "ActionTraceState";
   static final String HAS_BALL = "HasBall";
   static final String DS_MODE = "DsMode";
   static final String BATTERY_VOLTAGE = "BatteryVoltage";
@@ -52,6 +74,16 @@ final class OperatorBoardContract {
   static final String TURRET_AT_SETPOINT = "TurretAtSetpoint";
   static final String TURRET_MODE = "TurretMode";
   static final String VISION_STATUS = "VisionStatus";
+  static final String VISION_POSE_VISIBLE = "VisionPoseVisible";
+  static final String SHOOT_ENABLED = "ShootEnabled";
+  static final String INTAKE_ROLLERS_HELD = "IntakeRollersHeld";
+  static final String INTAKE_DEPLOYED = "IntakeDeployed";
+  static final String TELEOP_OVERRIDE_ACTIVE = "TeleopOverrideActive";
+  static final String DRIVER_CONTROLLER_CONTROL_ACTIVE = "DriverControllerControlActive";
+  static final String SHOOT_READY_LATCHED = "ShootReadyLatched";
+  static final String INTAKE_DEPLOY_REZERO_IN_PROGRESS = "IntakeDeployRezeroInProgress";
+  static final String MANUAL_INTAKE_DEPLOY_ZERO_SEEK_IN_PROGRESS =
+      "ManualIntakeDeployZeroSeekInProgress";
 
   private OperatorBoardContract() {}
 }

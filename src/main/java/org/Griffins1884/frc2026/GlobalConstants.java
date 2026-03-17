@@ -1,16 +1,3 @@
-// Copyright 2021-2024 FRC 6328
-// http://github.com/Mechanical-Advantage
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// version 3 as published by the Free Software Foundation or
-// available in the root directory of this project.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-
 package org.Griffins1884.frc2026;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,13 +24,12 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.REAL;
-  public static final RobotType ROBOT = RobotType.COMPBOT;
+  public static final RobotMode MODE = RobotMode.SIM;
+  public static final RobotType ROBOT = RobotType.SIMBOT;
   public static final LoggingMode LOGGING_MODE = LoggingMode.DEBUG;
   public static final double ODOMETRY_FREQUENCY = 250.0;
-  public static final RobotSwerveMotors robotSwerveMotors = RobotSwerveMotors.FULLKRACKENS;
 
-  public static boolean TUNING_MODE = LOGGING_MODE == LoggingMode.DEBUG;
+  public static boolean TUNING_MODE = false;
 
   public static enum RobotMode {
     /** Running on a real robot. */
@@ -56,15 +42,8 @@ public final class GlobalConstants {
 
   public static enum RobotType {
     COMPBOT,
-    DEVBOT,
-    SIMBOT,
-    CRESCENDO
-  }
-
-  public static enum RobotSwerveMotors {
-    FULLSPARK,
-    HALFSPARK,
-    FULLKRACKENS
+    DBOT,
+    SIMBOT
   }
 
   public static enum LoggingMode {
@@ -78,25 +57,6 @@ public final class GlobalConstants {
 
   public static boolean isCompMode() {
     return LOGGING_MODE == LoggingMode.COMP;
-  }
-
-  private static LoggingMode resolveLoggingMode() {
-    String override = System.getProperty("frc.logMode");
-    if (override == null || override.isBlank()) {
-      override = System.getenv("FRC_LOG_MODE");
-    }
-
-    if (override != null) {
-      String normalized = override.trim().toUpperCase();
-      if ("DEBUG".equals(normalized)) {
-        return LoggingMode.DEBUG;
-      }
-      if ("COMP".equals(normalized)) {
-        return LoggingMode.COMP;
-      }
-    }
-
-    return MODE == RobotMode.REAL ? LoggingMode.COMP : LoggingMode.DEBUG;
   }
 
   /**
@@ -200,9 +160,7 @@ public final class GlobalConstants {
       // Relevant reference points on the opposite side
       public static final Translation3d oppTopCenterPoint =
           new Translation3d(
-              AprilTagLayoutType.OFFICIAL.getLayout().getTagPose(4).get().getX() + width / 2.0,
-              fieldWidth / 2.0,
-              height);
+              fieldLength - topCenterPoint.getX(), topCenterPoint.getY(), topCenterPoint.getZ());
       public static final Translation2d oppNearLeftCorner =
           new Translation2d(oppTopCenterPoint.getX() - width / 2.0, fieldWidth / 2.0 + width / 2.0);
       public static final Translation2d oppNearRightCorner =

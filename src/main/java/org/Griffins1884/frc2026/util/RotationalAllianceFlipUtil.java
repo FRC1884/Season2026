@@ -1,9 +1,6 @@
 package org.Griffins1884.frc2026.util;
 
 import edu.wpi.first.math.geometry.*;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
-import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.FieldConstants;
 
 /**
@@ -11,6 +8,8 @@ import org.Griffins1884.frc2026.GlobalConstants.FieldConstants;
  * credit goes to team 5712.
  */
 public class RotationalAllianceFlipUtil {
+  private RotationalAllianceFlipUtil() {}
+
   /**
    * Flips an x coordinate to the correct side of the field based on the current alliance color.
    *
@@ -83,11 +82,18 @@ public class RotationalAllianceFlipUtil {
    * @return The flipped pose.
    */
   public static Pose2d apply(Pose2d pose) {
-    if (shouldFlip()) {
-      return new Pose2d(apply(pose.getTranslation()), apply(pose.getRotation()));
-    } else {
+    if (pose == null) {
+      return null;
+    }
+    if (!shouldFlip(pose)) {
       return pose;
     }
+    Translation2d flippedTranslation =
+        new Translation2d(
+            FieldConstants.fieldLength - pose.getX(), FieldConstants.fieldWidth - pose.getY());
+    Rotation2d flippedRotation =
+        new Rotation2d(-pose.getRotation().getCos(), -pose.getRotation().getSin());
+    return new Pose2d(flippedTranslation, flippedRotation);
   }
 
   /**
@@ -110,7 +116,11 @@ public class RotationalAllianceFlipUtil {
    * @return True if the alliance color should be flipped, false otherwise.
    */
   public static boolean shouldFlip() {
-    Optional<Alliance> optional = DriverStation.getAlliance();
-    return optional.isPresent() && optional.get() == Alliance.Red;
+    return AllianceFlipUtil.shouldFlip();
+  }
+
+  /** Uses a pose hint when DS alliance is unavailable. */
+  public static boolean shouldFlip(Pose2d referencePose) {
+    return AllianceFlipUtil.shouldFlip(referencePose);
   }
 }

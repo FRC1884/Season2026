@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
-import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOSparkFlex;
+import org.Griffins1884.frc2026.mechanisms.arms.MechanismArmIOSparkFlex;
 
-public class ShooterPivotIOFlex extends GenericArmSystemIOSparkFlex implements ShooterPivotIO {
+public class ShooterPivotIOFlex extends MechanismArmIOSparkFlex implements ShooterPivotIO {
   public ShooterPivotIOFlex() {
     super(
         ShooterPivotConstants.MOTOR_ID,

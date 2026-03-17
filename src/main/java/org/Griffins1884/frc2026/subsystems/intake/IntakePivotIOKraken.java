@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.intake;
 
-import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOKraken;
+import org.Griffins1884.frc2026.mechanisms.arms.MechanismArmIOKraken;
 
-public class IntakePivotIOKraken extends GenericArmSystemIOKraken implements IntakePivotIO {
+public class IntakePivotIOKraken extends MechanismArmIOKraken implements IntakePivotIO {
   public IntakePivotIOKraken(int id, boolean inverted) {
     super(
         new int[] {id},

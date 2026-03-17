@@ -19,16 +19,6 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
   }
 
   @Override
-  public Trigger leftAlign() {
-    return leftBumper();
-  }
-
-  @Override
-  public Trigger rightAlign() {
-    return rightBumper();
-  }
-
-  @Override
   public DoubleSupplier getXAxis() {
     return () -> -getLeftX();
   }
@@ -54,18 +44,18 @@ public class SimXboxUniversalMap extends CommandXboxController implements Driver
   }
 
   @Override
-  public Trigger slowMode() {
-    return new Trigger(() -> this.getLeftTriggerAxis() > 0.5);
-  }
-
-  @Override
-  public Trigger indexer() {
+  public Trigger shootToggle() {
     return x();
   }
 
   @Override
-  public Trigger intakePivotZero() {
-    return new Trigger(() -> false);
+  public Trigger intakeRollersHold() {
+    return y();
+  }
+
+  @Override
+  public Trigger intakeDeployToggle() {
+    return a();
   }
 
   @Override

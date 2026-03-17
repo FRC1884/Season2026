@@ -17,7 +17,7 @@ import org.littletonrobotics.junction.Logger;
 
 public class ShooterCommands {
   private static final double GRAVITY = 9.80665;
-  private static final double shooterDistanceCenter = 0.02; // TODO: Tune
+  private static final double shooterDistanceCenter = 0.02;
   private static final double LEGACY_PIVOT_DEGREES_SLOPE = 11.875;
   private static final double LEGACY_PIVOT_DEGREES_OFFSET = 18.0;
   private static final double LEGACY_PIVOT_DEGREES_MIN = 18.0;
@@ -79,7 +79,7 @@ public class ShooterCommands {
   }
 
   public static double getShooterRpm(double distanceMeters) {
-    return lookupInterpolated(getActiveRpmTable(), distanceMeters);
+    return lookupInterpolated(getActiveRpmTable(), distanceMeters) + 30;
   }
 
   public static double getPivotAngleDegrees(double distanceMeters) {

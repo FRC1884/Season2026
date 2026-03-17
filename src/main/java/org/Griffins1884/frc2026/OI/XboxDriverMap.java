@@ -19,16 +19,6 @@ public class XboxDriverMap extends CommandXboxController implements DriverMap {
   }
 
   @Override
-  public Trigger leftAlign() {
-    return leftBumper();
-  }
-
-  @Override
-  public Trigger rightAlign() {
-    return rightBumper();
-  }
-
-  @Override
   public DoubleSupplier getXAxis() {
     return () -> -getLeftX();
   }
@@ -50,22 +40,22 @@ public class XboxDriverMap extends CommandXboxController implements DriverMap {
 
   @Override
   public Trigger alignWithBall() {
-    return new Trigger(() -> this.getRightTriggerAxis() > 0.5);
-  }
-
-  @Override
-  public Trigger slowMode() {
     return new Trigger(() -> this.getLeftTriggerAxis() > 0.5);
   }
 
   @Override
-  public Trigger indexer() {
-    return x();
+  public Trigger shootToggle() {
+    return new Trigger(() -> this.getRightTriggerAxis() > 0.5);
   }
 
   @Override
-  public Trigger intakePivotZero() {
-    return a();
+  public Trigger intakeRollersHold() {
+    return rightBumper();
+  }
+
+  @Override
+  public Trigger intakeDeployToggle() {
+    return leftBumper();
   }
 
   @Override

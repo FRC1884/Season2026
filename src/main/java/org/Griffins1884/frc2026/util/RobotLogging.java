@@ -1,18 +1,22 @@
 package org.Griffins1884.frc2026.util;
 
 import edu.wpi.first.wpilibj.DriverStation;
-import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.runtime.RuntimeModeManager;
 
 /** Shared runtime logging helpers for debug/competition behavior. */
 public final class RobotLogging {
   private RobotLogging() {}
 
   public static boolean isDebugMode() {
-    return GlobalConstants.isDebugMode();
+    return RuntimeModeManager.isDebugEnabled();
+  }
+
+  public static boolean isDebugMode(String subsystemKey) {
+    return RuntimeModeManager.isDebugEnabled(subsystemKey);
   }
 
   public static boolean isCompMode() {
-    return GlobalConstants.isCompMode();
+    return !RuntimeModeManager.isDebugEnabled();
   }
 
   public static void debug(String message) {

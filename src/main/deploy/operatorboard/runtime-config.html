@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Runtime Config</title>
+    <link rel="stylesheet" href="./runtime-config.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__title">Runtime Config</div>
+        <div class="brand__subtitle">FRC 1884 • 2026 REBUILT</div>
+        <p class="brand__lede">
+          Set the live runtime profile the robot uses for logging, publishing, and mechanism debug
+          visibility without redeploying code.
+        </p>
+      </div>
+      <div class="chips">
+        <a class="chip chip--link" href="./index.html">Operator Board</a>
+        <div id="nt-status" class="chip chip--bad">NT Offline</div>
+        <div id="profile-status" class="chip">READY</div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="summary-grid" aria-label="Runtime profile summary">
+        <article class="summary-card">
+          <div class="summary-card__k">Logging Mode</div>
+          <div id="summary-mode" class="summary-card__v">COMP</div>
+          <div id="summary-mode-detail" class="summary-card__sub">
+            Compact defaults for match use.
+          </div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-card__k">Tuning Inputs</div>
+          <div id="summary-tuning" class="summary-card__v">Disabled</div>
+          <div id="summary-tuning-detail" class="summary-card__sub">
+            Robot-side tunable numbers stay locked.
+          </div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-card__k">Subsystem Debug</div>
+          <div id="summary-debug" class="summary-card__v">0 Selected</div>
+          <div id="summary-debug-detail" class="summary-card__sub">
+            Extra debug coverage can be scoped by subsystem.
+          </div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-card__k">Signal Policy</div>
+          <div id="summary-signals" class="summary-card__v">Defaults</div>
+          <div id="summary-signals-detail" class="summary-card__sub">
+            Empty signal lists fall back to the active mode defaults.
+          </div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">Profile Basics</div>
+            <p class="panel__description">
+              Apply changes to the live robot profile, or reset back to the fixed code baseline.
+              Nothing on this page is permanent unless you save a local browser preset.
+            </p>
+          </div>
+        </div>
+
+        <div class="callout-grid">
+          <article class="callout">
+            <div class="callout__title">Apply Profile</div>
+            <div class="callout__text">
+              Sends the JSON shown below to the robot, then asks the runtime manager to use it
+              immediately.
+            </div>
+          </article>
+          <article class="callout">
+            <div class="callout__title">Reset Defaults</div>
+            <div class="callout__text">
+              Restores the profile built from the fixed code baseline, including the team’s current
+              logging and tuning constants.
+            </div>
+          </article>
+          <article class="callout">
+            <div class="callout__title">Empty Signal Lists</div>
+            <div class="callout__text">
+              Empty does not mean disabled. The robot falls back to COMP defaults or DEBUG-all
+              defaults based on the selected logging mode.
+            </div>
+          </article>
+        </div>
+
+        <div class="form-grid">
+          <label class="field">
+            <span class="field__label">Logging Mode</span>
+            <span class="field__help">
+              Picks the default signal set the robot uses when you leave the signal checklists
+              empty.
+            </span>
+            <select id="logging-mode">
+              <option value="COMP">COMP</option>
+              <option value="DEBUG">DEBUG</option>
+            </select>
+            <span id="logging-mode-help" class="field__note">
+              COMP keeps the compact match-safe defaults.
+            </span>
+          </label>
+
+          <label class="field field--toggle">
+            <span class="field__label">Tuning Inputs</span>
+            <span class="field__help">
+              Allows runtime tunable numbers and similar controls to stay editable while the robot
+              is running.
+            </span>
+            <span class="toggle-row">
+              <input id="tuning-enabled" type="checkbox" />
+              <span class="toggle-row__label">Enable runtime tuning</span>
+            </span>
+            <span class="field__note">
+              Leave this off unless you actively need live tuning changes.
+            </span>
+          </label>
+        </div>
+
+        <div class="button-row">
+          <button id="apply-profile" class="button button--primary" type="button">
+            Apply To Robot
+          </button>
+          <button id="reset-profile" class="button" type="button">Reset Robot Defaults</button>
+        </div>
+      </section>
+
+      <section class="columns columns--runtime">
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <div class="panel__title">Subsystem Debug</div>
+              <p id="subsystem-debug-help" class="panel__description">
+                In COMP mode, checked subsystems get expanded debug logging and publishing.
+              </p>
+            </div>
+            <div id="subsystem-debug-count" class="meta-chip">0 selected</div>
+          </div>
+          <div id="subsystem-debug-list" class="check-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <div class="panel__title">Logged Signals</div>
+              <p id="logged-signal-help" class="panel__description">
+                Choose an explicit log set, or leave everything unchecked to use the mode defaults.
+              </p>
+            </div>
+            <div id="logged-signal-count" class="meta-chip">Defaults</div>
+          </div>
+          <div id="logged-signal-list" class="check-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <div class="panel__title">Published Signals</div>
+              <p id="published-signal-help" class="panel__description">
+                Choose which mechanism telemetry groups should be pushed live to NetworkTables.
+              </p>
+            </div>
+            <div id="published-signal-count" class="meta-chip">Defaults</div>
+          </div>
+          <div id="published-signal-list" class="check-grid"></div>
+        </section>
+      </section>
+
+      <section class="columns columns--bottom">
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <div class="panel__title">Local Presets</div>
+              <p class="panel__description">
+                Presets save only in this browser on this device. They help you reload common forms
+                quickly before sending them to the robot.
+              </p>
+            </div>
+          </div>
+
+          <div class="preset-form">
+            <label class="field">
+              <span class="field__label">Preset Name</span>
+              <span class="field__help">Use a short name like Pit Debug, Match Safe, or Shooter Tune.</span>
+              <input id="preset-name-input" type="text" placeholder="Pit Debug" />
+            </label>
+            <button id="save-preset" class="button button--primary" type="button">
+              Save Current Form
+            </button>
+          </div>
+
+          <div id="preset-status" class="inline-note">
+            Saved presets stay on this device until you delete them.
+          </div>
+          <div id="preset-empty" class="empty-state">No local presets saved.</div>
+          <div id="preset-list" class="preset-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <div class="panel__title">Active JSON</div>
+              <p class="panel__description">
+                This is the exact runtime profile payload that will be sent when you press
+                <strong>Apply To Robot</strong>.
+              </p>
+            </div>
+          </div>
+          <pre id="json-preview" class="json-preview"></pre>
+        </section>
+      </section>
+
+      <section class="panel card--viewer">
+        <div class="panel__header">
+          <div>
+            <div class="panel__title">OperatorBoard NT Viewer</div>
+            <p class="panel__description">
+              Live view of the OperatorBoard NetworkTables namespace for profiling publish volume,
+              debugging stale topics, and verifying runtime profile traffic.
+            </p>
+          </div>
+          <div id="nt-metrics" class="meta-chip">0 topics</div>
+        </div>
+        <div class="viewer-toolbar">
+          <label class="field">
+            <span class="field__label">Topic Filter</span>
+            <span class="field__help">Filter by topic path or current value.</span>
+            <input id="topic-filter" type="text" placeholder="RuntimeProfile or AutoQueue" />
+          </label>
+          <div class="viewer-actions">
+            <button id="toggle-topic-viewer" class="button" type="button">Enable Live Viewer</button>
+            <div id="topic-viewer-status" class="inline-note">
+              Viewer disabled. Enable only when you actively need namespace profiling.
+            </div>
+          </div>
+        </div>
+        <div id="topic-empty" class="empty-state">Waiting for NetworkTables topics.</div>
+        <div id="topic-list" class="topic-list"></div>
+      </section>
+    </main>
+
+    <script type="module" src="./runtime-config.js"></script>
+  </body>
+</html>

@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.intake;
 
-import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOSparkFlex;
+import org.Griffins1884.frc2026.mechanisms.arms.MechanismArmIOSparkFlex;
 
-public class IntakePivotIOFlex extends GenericArmSystemIOSparkFlex implements IntakePivotIO {
+public class IntakePivotIOFlex extends MechanismArmIOSparkFlex implements IntakePivotIO {
   public IntakePivotIOFlex(int id, boolean inverted) {
     super(
         new int[] {id},

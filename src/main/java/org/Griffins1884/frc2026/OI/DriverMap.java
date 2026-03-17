@@ -7,10 +7,6 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 
 public interface DriverMap {
-  Trigger leftAlign();
-
-  Trigger rightAlign();
-
   DoubleSupplier getXAxis();
 
   DoubleSupplier getYAxis();
@@ -21,11 +17,22 @@ public interface DriverMap {
 
   Trigger alignWithBall();
 
-  Trigger slowMode();
+  // Placeholder mapping for "start/stop shooting" control.
+  Trigger shootToggle();
 
-  Trigger indexer();
+  // Placeholder mapping for "run intake rollers while held" control.
+  Trigger intakeRollersHold();
 
-  Trigger intakePivotZero();
+  // Placeholder mapping for "toggle intake deploy" control.
+  Trigger intakeDeployToggle();
+
+  default Trigger leftBackButton() {
+    return new Trigger(() -> false);
+  }
+
+  default Trigger rightBackButton() {
+    return new Trigger(() -> false);
+  }
 
   default Command rumble() {
     return none();

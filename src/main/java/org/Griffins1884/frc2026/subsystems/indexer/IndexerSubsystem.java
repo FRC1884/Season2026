@@ -4,13 +4,14 @@ import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
-import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem.VelocityGoal;
+import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.mechanisms.rollers.VelocityRollerMechanism;
+import org.Griffins1884.frc2026.mechanisms.rollers.VelocityRollerMechanism.VelocityGoal;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter
 @Getter
-public class IndexerSubsystem extends GenericVelocityRollerSystem<IndexerSubsystem.IndexerGoal> {
+public class IndexerSubsystem extends VelocityRollerMechanism<IndexerSubsystem.IndexerGoal> {
   @RequiredArgsConstructor
   @Getter
   public enum IndexerGoal implements VelocityGoal {
@@ -32,9 +33,10 @@ public class IndexerSubsystem extends GenericVelocityRollerSystem<IndexerSubsyst
   public IndexerSubsystem(String name, IndexerIO io) {
     super(
         name,
+        RobotMechanismDefinitions.INDEXER,
         io,
         new VelocityRollerConfig(
-            IndexerConstants.gains,
+            IndexerConstants.GAINS,
             IndexerConstants.VELOCITY_TOLERANCE,
             IndexerConstants.MAX_VOLTAGE));
   }

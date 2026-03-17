@@ -1,12 +1,10 @@
 package org.Griffins1884.frc2026.subsystems.vision;
 
 import static org.Griffins1884.frc2026.GlobalConstants.FieldConstants.defaultAprilTagType;
-import static org.Griffins1884.frc2026.subsystems.vision.AprilTagVisionHelpers.generateDynamicStdDevs;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.numbers.N1;
@@ -19,7 +17,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
@@ -51,14 +48,9 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final DoubleSupplier yawRateRadPerSecSupplier;
   private Integer exclusiveTagId = null;
   private double ignoreVisionUntilTimestamp = 0.0;
+  private boolean anyCameraHasAcceptedPose = false;
 
-  /**
-   * Creates a Vision system for PhotonVision inputs.
-   *
-   * @param consumer an object that processes the vision pose estimate (should be the drivetrain)
-   * @param io the collection of {@link VisionIO}s instances that represent the cameras in the
-   *     system.
-   */
+  /** Creates a Vision system with one or more camera IO instances. */
   public Vision(VisionConsumer consumer, VisionIO... io) {
     this(consumer, null, null, io);
   }
@@ -184,125 +176,12 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     return Optional.ofNullable(bestTranslation);
   }
 
-  /**
-   * Updates vision inputs and logs relevant pose data. Uses either PhotonVision observations or
-   * Limelight Megatag fusion depending on construction.
-   */
+  /** Updates vision inputs and logs Limelight Megatag fusion data. */
   @Override
   public void periodic() {
     if (useLimelightFusion) {
       periodicLimelight();
-    } else {
-      periodicPhotonVision();
     }
-  }
-
-  private void periodicPhotonVision() {
-    for (int i = 0; i < io.length; i++) {
-      io[i].updateInputs(inputs[i]);
-      Logger.processInputs("AprilTagVision/" + io[i].getCameraConstants().cameraName(), inputs[i]);
-    }
-
-    List<Pose3d> allTagPoses = new LinkedList<>();
-    List<Pose3d> allRobotPoses = new LinkedList<>();
-    List<Pose3d> allRobotPosesAccepted = new LinkedList<>();
-
-    for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
-      String cameraLabel = io[cameraIndex].getCameraConstants().cameraName();
-      boolean connected = inputs[cameraIndex].connected;
-      disconnectedAlerts[cameraIndex].set(!connected);
-      handleConnectionTransition(cameraIndex, cameraLabel, connected);
-
-      List<Pose3d> tagPoses = new LinkedList<>();
-      List<Pose3d> robotPoses = new LinkedList<>();
-      List<Pose3d> robotPosesAccepted = new LinkedList<>();
-
-      for (int tagId : inputs[cameraIndex].tagIds) {
-        var tagPose = defaultAprilTagType.getLayout().getTagPose(tagId);
-        tagPose.ifPresent(tagPoses::add);
-      }
-
-      for (var observation : inputs[cameraIndex].poseObservations) {
-        if (observation == null || observation.pose() == null) {
-          continue;
-        }
-        robotPoses.add(observation.pose());
-        if (!isObservationValid(observation)) {
-          continue;
-        }
-        if (!isTimestampInOrder(cameraIndex, observation.timestamp())) {
-          if (GlobalConstants.isDebugMode()) {
-            String prefix = "AprilTagVision/" + cameraLabel + "/Timestamp";
-            Logger.recordOutput(prefix + "/OutOfOrder", true);
-            Logger.recordOutput(prefix + "/LastAccepted", lastAcceptedTimestampsSec[cameraIndex]);
-            Logger.recordOutput(prefix + "/Current", observation.timestamp());
-          }
-          continue;
-        }
-
-        robotPosesAccepted.add(observation.pose());
-        markTimestampAccepted(cameraIndex, observation.timestamp());
-
-        consumer.accept(
-            observation.pose().toPose2d(),
-            observation.timestamp(),
-            generateDynamicStdDevs(observation, io[cameraIndex].getCameraConstants().cameraType()));
-      }
-
-      if (GlobalConstants.isDebugMode()) {
-        Logger.recordOutput(
-            "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/TagPoses",
-            tagPoses.toArray(new Pose3d[tagPoses.size()]));
-        Logger.recordOutput(
-            "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/RobotPoses",
-            robotPoses.toArray(new Pose3d[robotPoses.size()]));
-        Logger.recordOutput(
-            "AprilTagVision/"
-                + io[cameraIndex].getCameraConstants().cameraName()
-                + "/RobotPosesAccepted",
-            robotPosesAccepted.toArray(new Pose3d[robotPosesAccepted.size()]));
-        Logger.recordOutput(
-            "AprilTagVision/" + io[cameraIndex].getCameraConstants().cameraName() + "/CameraPose",
-            io[cameraIndex].getCameraConstants().robotToCamera());
-      }
-      allTagPoses.addAll(tagPoses);
-      allRobotPoses.addAll(robotPoses);
-      allRobotPosesAccepted.addAll(robotPosesAccepted);
-      updateNoAcceptedMeasurementAlert(cameraIndex, cameraLabel, connected);
-    }
-
-    if (GlobalConstants.isDebugMode()) {
-      Logger.recordOutput(
-          "AprilTagVision/Summary/TagPoses", allTagPoses.toArray(new Pose3d[allTagPoses.size()]));
-      Logger.recordOutput(
-          "AprilTagVision/Summary/RobotPoses",
-          allRobotPoses.toArray(new Pose3d[allRobotPoses.size()]));
-      Logger.recordOutput(
-          "AprilTagVision/Summary/RobotPosesAccepted",
-          allRobotPosesAccepted.toArray(new Pose3d[allRobotPosesAccepted.size()]));
-    }
-  }
-
-  private boolean isObservationValid(VisionIO.PoseObservation observation) {
-    if (observation.tagCount() <= 0) {
-      return false;
-    }
-    if (!isFinite(observation.timestamp()) || !isFinite(observation.averageTagDistance())) {
-      return false;
-    }
-    Pose3d pose = observation.pose();
-    if (!isFinite(pose.getX())
-        || !isFinite(pose.getY())
-        || !isFinite(pose.getZ())
-        || !isFinite(pose.getRotation().getX())
-        || !isFinite(pose.getRotation().getY())
-        || !isFinite(pose.getRotation().getZ())) {
-      return false;
-    }
-    Rotation2d rotation = pose.toPose2d().getRotation();
-    double cos = rotation.getCos();
-    double sin = rotation.getSin();
-    return isFinite(cos) && isFinite(sin) && !(Math.abs(cos) < 1e-9 && Math.abs(sin) < 1e-9);
   }
 
   private boolean isFinite(double value) {
@@ -316,6 +195,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (startTime < ignoreVisionUntilTimestamp) {
+      anyCameraHasAcceptedPose = false;
       Logger.recordOutput("Vision/usingVision", false);
       Logger.recordOutput("Vision/rejectReason", "RESET_SUPPRESS");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -354,6 +234,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     if (!useVision) {
+      anyCameraHasAcceptedPose = false;
       Logger.recordOutput("Vision/usingVision", false);
       Logger.recordOutput("Vision/rejectReason", "VISION_DISABLED");
       Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -373,6 +254,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
 
     boolean hasAccepted = accepted.isPresent();
+    anyCameraHasAcceptedPose = hasAccepted;
     Logger.recordOutput("Vision/usingVision", hasAccepted);
     Logger.recordOutput("Vision/rejectReason", hasAccepted ? "ACCEPTED" : "NO_ACCEPTED_ESTIMATE");
 
@@ -384,6 +266,10 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
         });
 
     Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
+  }
+
+  public boolean anyCameraHasAcceptedPose() {
+    return anyCameraHasAcceptedPose;
   }
 
   private Optional<VisionFieldPoseEstimate> buildLimelightEstimate(

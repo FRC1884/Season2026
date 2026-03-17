@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandPS5Controller;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 
-public class PS5DriverMap extends CommandPS5Controller implements DriverMap, OperatorMap {
+public class PS5DriverMap extends CommandPS5Controller implements DriverMap {
   /**
    * Construct an instance of a controller.
    *
@@ -16,40 +16,6 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap, Ope
    */
   public PS5DriverMap(int port) {
     super(port);
-  }
-
-  @Override
-  public Trigger intake() {
-    return R1();
-  }
-
-  @Override
-  public Trigger leftAlign() {
-    return L3();
-  }
-
-  @Override
-  public Trigger rightAlign() {
-    return R3();
-  }
-
-  @Override
-  public Trigger shooter() {
-    return R2();
-  }
-
-  public Trigger indexer() {
-    return cross();
-  }
-
-  @Override
-  public Trigger autoManualToggle() {
-    return create();
-  }
-
-  @Override
-  public Trigger idling() {
-    return touchpad();
   }
 
   @Override
@@ -78,28 +44,18 @@ public class PS5DriverMap extends CommandPS5Controller implements DriverMap, Ope
   }
 
   @Override
-  public Trigger ferrying() {
-    return L1();
+  public Trigger shootToggle() {
+    return cross();
   }
 
   @Override
-  public Trigger intakePivotZero() {
-    return new Trigger(() -> false);
+  public Trigger intakeRollersHold() {
+    return R1();
   }
 
   @Override
-  public DoubleSupplier manualTurretAxis() {
-    return null;
-  }
-
-  @Override
-  public DoubleSupplier manualPivotAxis() {
-    return null;
-  }
-
-  @Override
-  public Trigger slowMode() {
-    return L2();
+  public Trigger intakeDeployToggle() {
+    return triangle();
   }
 
   @Override

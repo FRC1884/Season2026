@@ -10,7 +10,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Optional;
 import lombok.Getter;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.util.RobotLogging;
@@ -66,10 +65,10 @@ public class AprilTagVisionIOLimelight implements VisionIO {
   public void updateInputs(VisionIOInputs inputs) {
     resetPerCycleOutputs(inputs);
 
-    int desiredImuMode = DriverStation.isDisabled() ? 1 : 4;
+    int desiredImuMode = DriverStation.isDisabled() ? 1 : 1;
     applyImuMode(desiredImuMode);
 
-    double gyroYawDeg = drive.getRawGyroRotation().getDegrees();
+    double gyroYawDeg = drive.getRawestGyroRotation().getDegrees();
     double gyroYawRateDegPerSec = drive.getYawRateDegreesPerSec();
 
     // MegaTag2 requires current robot orientation to be pushed every loop before reading the
@@ -138,10 +137,6 @@ public class AprilTagVisionIOLimelight implements VisionIO {
   }
 
   private LimelightHelpers.PoseEstimate getMegaTag2Estimate() {
-    Optional<DriverStation.Alliance> alliance = DriverStation.getAlliance();
-    if (alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red) {
-      return LimelightHelpers.getBotPoseEstimate_wpiRed_MegaTag2(limelightName);
-    }
     return LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
   }
 

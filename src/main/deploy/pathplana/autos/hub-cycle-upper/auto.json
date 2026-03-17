@@ -1,0 +1,51 @@
+{
+  "id": "hub-cycle-upper",
+  "name": "Hub Cycle Upper",
+  "folder": "UpperCycles",
+  "updatedAt": 1773705600000,
+  "startPose": {
+    "xMeters": 1.55,
+    "yMeters": 5.75,
+    "headingDeg": 180.0
+  },
+  "customZones": [],
+  "steps": [
+    {
+      "spotId": "blue-depot",
+      "label": "Depot Intake",
+      "group": "DEPOT",
+      "requestedState": "INTAKING",
+      "xMeters": 1.82,
+      "yMeters": 5.92,
+      "headingDeg": 180.0,
+      "routeWaypoints": [
+        {
+          "xMeters": 1.44,
+          "yMeters": 5.38,
+          "headingDeg": 180.0
+        }
+      ]
+    },
+    {
+      "spotId": "blue-hub-left",
+      "label": "Hub Left",
+      "group": "HUB",
+      "requestedState": "SHOOTING",
+      "xMeters": 4.61,
+      "yMeters": 5.48,
+      "headingDeg": -90.0,
+      "routeWaypoints": [
+        {
+          "xMeters": 2.70,
+          "yMeters": 5.66,
+          "headingDeg": 0.0
+        },
+        {
+          "xMeters": 3.88,
+          "yMeters": 5.66,
+          "headingDeg": -60.0
+        }
+      ]
+    }
+  ]
+}

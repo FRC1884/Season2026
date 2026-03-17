@@ -1,9 +1,9 @@
 package org.Griffins1884.frc2026.subsystems.turret;
 
 import edu.wpi.first.math.system.plant.DCMotor;
-import org.Griffins1884.frc2026.generic.turrets.GenericTurretSystemIOSim;
+import org.Griffins1884.frc2026.mechanisms.turrets.MechanismTurretIOSim;
 
-public class TurretIOSim extends GenericTurretSystemIOSim implements TurretIO {
+public class TurretIOSim extends MechanismTurretIOSim implements TurretIO {
   public TurretIOSim() {
     super(
         DCMotor.getNeoVortex(TurretConstants.SIM_MOTOR_COUNT),

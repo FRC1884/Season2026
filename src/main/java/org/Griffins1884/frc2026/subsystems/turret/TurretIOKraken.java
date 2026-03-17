@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.turret;
 
-import org.Griffins1884.frc2026.generic.turrets.GenericTurretSystemIOKraken;
+import org.Griffins1884.frc2026.mechanisms.turrets.MechanismTurretIOKraken;
 
-public class TurretIOKraken extends GenericTurretSystemIOKraken implements TurretIO {
+public class TurretIOKraken extends MechanismTurretIOKraken implements TurretIO {
   public TurretIOKraken() {
     super(
         TurretConstants.TURRET_ID,

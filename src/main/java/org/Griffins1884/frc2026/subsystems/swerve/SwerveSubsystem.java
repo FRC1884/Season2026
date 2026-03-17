@@ -1,16 +1,3 @@
-// Copyright 2021-2024 FRC 6328
-// http://github.com/Mechanical-Advantage
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// version 3 as published by the Free Software Foundation or
-// available in the root directory of this project.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-
 package org.Griffins1884.frc2026.subsystems.swerve;
 
 import static edu.wpi.first.units.Units.Meters;
@@ -20,13 +7,7 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 import static org.Griffins1884.frc2026.GlobalConstants.RobotMode.SIM;
-import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.PATHPLANNER_CONFIG;
 
-import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.pathfinding.Pathfinding;
-import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
@@ -48,6 +29,7 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -59,10 +41,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.GlobalConstants.RobotSwerveMotors;
 import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.subsystems.vision.Vision;
-import org.Griffins1884.frc2026.util.LocalADStarAK;
 import org.Griffins1884.frc2026.util.LogRollover;
 import org.Griffins1884.frc2026.util.RobotLogging;
 import org.Griffins1884.frc2026.util.swerve.SwerveSetpoint;
@@ -84,10 +64,22 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private final Alert gyroDisconnectedAlert =
       new Alert("Disconnected gyro, using kinematics as fallback.", AlertType.kError);
   private final SwerveMusicPlayer musicPlayer;
+  private double requestedTranslationalMps = 0.0;
+  private double requestedOmegaRadPerSec = 0.0;
+  private int lastCanTxFullCount = 0;
+  private int lastCanReceiveErrorCount = 0;
+  private int lastCanTransmitErrorCount = 0;
+  private String observerCandidateIssue = "OK";
+  private int observerCandidateModule = -1;
+  private int observerCandidateLoops = 0;
+  private String observerLatchedIssue = "OK";
+  private int observerLatchedModule = -1;
+  private double observerHoldUntilSec = 0.0;
 
   private SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(SwerveConstants.MODULE_TRANSLATIONS);
   @Getter private Rotation2d rawGyroRotation = new Rotation2d();
+  @Getter private Rotation2d rawestGyroRotation = new Rotation2d();
   private SwerveModulePosition[] lastModulePositions = // For delta tracking
       new SwerveModulePosition[] {
         new SwerveModulePosition(),
@@ -140,8 +132,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     modules[1] = new Module(frModuleIO, 1);
     modules[2] = new Module(blModuleIO, 2);
     modules[3] = new Module(brModuleIO, 3);
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
-        && GlobalConstants.MODE != SIM) {
+    if (GlobalConstants.MODE != SIM) {
       musicPlayer = new SwerveMusicPlayer(modules, SwerveConstants.SWERVE_MUSIC_FILE);
     } else {
       musicPlayer = null;
@@ -151,31 +142,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     HAL.report(tResourceType.kResourceType_RobotDrive, tInstances.kRobotDriveSwerve_AdvantageKit);
 
     // Start odometry thread
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS)
-      PhoenixOdometryThread.getInstance().start();
-    else SparkOdometryThread.getInstance().start();
-
-    // Configure AutoBuilder for PathPlanner
-    AutoBuilder.configure(
-        this::getPose,
-        this::resetOdometry,
-        this::getChassisSpeeds,
-        this::runVelocity,
-        new PPHolonomicDriveController(
-            new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
-        PATHPLANNER_CONFIG,
-        () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
-        this);
-    Pathfinding.setPathfinder(new LocalADStarAK());
-    PathPlannerLogging.setLogActivePathCallback(
-        (activePath) -> {
-          Logger.recordOutput(
-              "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
-        });
-    PathPlannerLogging.setLogTargetPoseCallback(
-        (targetPose) -> {
-          Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
-        });
+    PhoenixOdometryThread.getInstance().start();
 
     Consumer<SysIdRoutineLog> sysIdLogCallbackDrive =
         (log) -> {
@@ -290,6 +257,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       // Update gyro angle
       if (gyroInputs.connected) {
         // Use the real gyro angle
+        rawestGyroRotation = gyroInputs.yawPosition;
         rawGyroRotation =
             i < gyroSampleCount ? gyroInputs.odometryYawPositions[i] : rawGyroRotation;
       } else {
@@ -327,9 +295,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       double dt = now - lastFieldVelTimestamp;
       fieldMotionSampleDtSec = dt;
       double maxMotionSpeedMps =
-          sanitizePositiveOrInfinite(AlignConstants.TURRET_MAX_MOTION_SPEED_MPS.get());
+          sanitizePositiveOrInfinite(AlignConstants.TurretAutoAim.MAX_MOTION_SPEED_MPS.get());
       double maxMotionAccelMps2 =
-          sanitizePositiveOrInfinite(AlignConstants.TURRET_MAX_MOTION_ACCEL_MPS2.get());
+          sanitizePositiveOrInfinite(AlignConstants.TurretAutoAim.MAX_MOTION_ACCEL_MPS2.get());
       if (dt > 1e-4 && dt < 0.25) {
         Translation2d acceleration = currentVelocity.minus(lastFieldVelocity).times(1 / dt);
         double speedNorm = currentVelocity.getNorm();
@@ -368,13 +336,172 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/FieldMotionSampleDtSec", fieldMotionSampleDtSec);
     Logger.recordOutput("Swerve/FieldMotionSampleAgeSec", getFieldMotionSampleAgeSec());
 
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS
-        && !krakenVelocityMode) {
+    if (!krakenVelocityMode) {
       krakenCurrentSetpoint = new SwerveSetpoint(getChassisSpeeds(), getModuleStates());
     }
 
+    double commandedTranslationalMps =
+        Math.hypot(
+            krakenCurrentSetpoint.chassisSpeeds().vxMetersPerSecond,
+            krakenCurrentSetpoint.chassisSpeeds().vyMetersPerSecond);
+    double measuredTranslationalMps =
+        Math.hypot(getChassisSpeeds().vxMetersPerSecond, getChassisSpeeds().vyMetersPerSecond);
+    double commandedOmega = krakenCurrentSetpoint.chassisSpeeds().omegaRadiansPerSecond;
+    double measuredOmega = getChassisSpeeds().omegaRadiansPerSecond;
+    double overallSpeedRatio =
+        commandedTranslationalMps > 0.15
+            ? measuredTranslationalMps / commandedTranslationalMps
+            : 1.0;
+    int badModule = -1;
+    String badReason = "NONE";
+    double worstScore = 0.0;
+    for (var module : modules) {
+      double absSpeedError = Math.abs(module.getSpeedErrorMetersPerSec());
+      double absAngleError = Math.abs(module.getAngleErrorRad());
+      double ratioPenalty = Math.max(0.0, 0.75 - Math.abs(module.getSpeedRatio()));
+      double score = absSpeedError + absAngleError + ratioPenalty;
+      String reason = "NONE";
+      if (module.isAngleJumpDetected()) {
+        score += 5.0;
+        reason = "ANGLE_JUMP";
+      } else if (Math.abs(module.getSpeedRatio()) < 0.55
+          && Math.abs(module.getDesiredSpeedMetersPerSec()) > 0.75) {
+        reason = "UNDERSPEED";
+      } else if (!Double.isFinite(module.getSpeedRatio())) {
+        reason = "INVALID_RATIO";
+      }
+      if (score > worstScore) {
+        worstScore = score;
+        badModule = module.getIndex();
+        badReason = reason;
+      }
+    }
+    var canStatus = RobotController.getCANStatus();
+    Logger.recordOutput("Swerve/Debug/CommandedSpeedMps", commandedTranslationalMps);
+    Logger.recordOutput("Swerve/Debug/MeasuredSpeedMps", measuredTranslationalMps);
+    Logger.recordOutput("Swerve/Debug/OverallSpeedRatio", overallSpeedRatio);
+    Logger.recordOutput("Swerve/Debug/CommandedOmegaRadPerSec", commandedOmega);
+    Logger.recordOutput("Swerve/Debug/MeasuredOmegaRadPerSec", measuredOmega);
+    Logger.recordOutput("Swerve/Debug/BatteryVoltage", RobotController.getBatteryVoltage());
+    Logger.recordOutput("Swerve/Debug/BrownedOut", RobotController.isBrownedOut());
+    Logger.recordOutput("Swerve/Debug/CANUtilization", canStatus.percentBusUtilization);
+    Logger.recordOutput("Swerve/Debug/CANTxFullCount", canStatus.txFullCount);
+    Logger.recordOutput("Swerve/Debug/CANReceiveErrorCount", canStatus.receiveErrorCount);
+    Logger.recordOutput("Swerve/Debug/CANTransmitErrorCount", canStatus.transmitErrorCount);
+    Logger.recordOutput("Swerve/Debug/BadModule", badModule);
+    Logger.recordOutput("Swerve/Debug/BadModuleReason", badReason);
+    Logger.recordOutput("Swerve/Debug/BadModuleScore", worstScore);
+
+    updateObserver(
+        commandedTranslationalMps,
+        measuredTranslationalMps,
+        overallSpeedRatio,
+        badModule,
+        badReason,
+        commandedOmega,
+        measuredOmega);
+
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && GlobalConstants.MODE != SIM);
+  }
+
+  private static String moduleName(int moduleIndex) {
+    return switch (moduleIndex) {
+      case 0 -> "FL";
+      case 1 -> "FR";
+      case 2 -> "BL";
+      case 3 -> "BR";
+      default -> "NONE";
+    };
+  }
+
+  private void updateObserver(
+      double commandedTranslationalMps,
+      double measuredTranslationalMps,
+      double overallSpeedRatio,
+      int badModule,
+      String badReason,
+      double commandedOmega,
+      double measuredOmega) {
+    var canStatus = RobotController.getCANStatus();
+    int canErrorDelta =
+        (canStatus.txFullCount - lastCanTxFullCount)
+            + (canStatus.receiveErrorCount - lastCanReceiveErrorCount)
+            + (canStatus.transmitErrorCount - lastCanTransmitErrorCount);
+    lastCanTxFullCount = canStatus.txFullCount;
+    lastCanReceiveErrorCount = canStatus.receiveErrorCount;
+    lastCanTransmitErrorCount = canStatus.transmitErrorCount;
+
+    boolean commandedFast = requestedTranslationalMps > 1.5;
+    boolean slowdown = commandedFast && overallSpeedRatio < 0.75;
+    boolean softwareLimit =
+        commandedFast && commandedTranslationalMps < requestedTranslationalMps * 0.8;
+
+    String candidateIssue = "OK";
+    int candidateModule = -1;
+
+    if (RobotController.isBrownedOut() || RobotController.getBatteryVoltage() < 6.8) {
+      candidateIssue = "BROWNOUT";
+    } else if (canErrorDelta > 0 && (slowdown || commandedFast)) {
+      candidateIssue = "CAN_OR_COMMS";
+    } else {
+      for (var module : modules) {
+        if (module.isAngleJumpDetected()) {
+          candidateIssue = "ANGLE_SENSOR";
+          candidateModule = module.getIndex();
+          break;
+        }
+      }
+      if ("OK".equals(candidateIssue) && softwareLimit) {
+        candidateIssue = "SOFTWARE_LIMIT";
+      } else if ("OK".equals(candidateIssue)
+          && slowdown
+          && badModule >= 0
+          && "UNDERSPEED".equals(badReason)) {
+        candidateIssue = "MODULE_SLOW";
+        candidateModule = badModule;
+      } else if ("OK".equals(candidateIssue) && slowdown) {
+        candidateIssue = "UNKNOWN";
+      }
+    }
+
+    if (candidateIssue.equals(observerCandidateIssue)
+        && candidateModule == observerCandidateModule) {
+      observerCandidateLoops++;
+    } else {
+      observerCandidateIssue = candidateIssue;
+      observerCandidateModule = candidateModule;
+      observerCandidateLoops = "OK".equals(candidateIssue) ? 0 : 1;
+    }
+
+    double nowSec = Timer.getFPGATimestamp();
+    if (!"OK".equals(candidateIssue) && observerCandidateLoops >= 5) {
+      observerLatchedIssue = candidateIssue;
+      observerLatchedModule = candidateModule;
+      observerHoldUntilSec = nowSec + 0.25;
+    } else if ("OK".equals(candidateIssue) && nowSec >= observerHoldUntilSec) {
+      observerLatchedIssue = "OK";
+      observerLatchedModule = -1;
+    }
+
+    boolean issueActive = !"OK".equals(observerLatchedIssue);
+    Logger.recordOutput("Swerve/Observer/IssueActive", issueActive);
+    Logger.recordOutput("Swerve/Observer/Issue", observerLatchedIssue);
+    Logger.recordOutput("Swerve/Observer/IssueModule", observerLatchedModule);
+    Logger.recordOutput("Swerve/Observer/IssueModuleName", moduleName(observerLatchedModule));
+    Logger.recordOutput("Swerve/Observer/RequestedSpeedMps", requestedTranslationalMps);
+    Logger.recordOutput("Swerve/Observer/RequestedOmegaRadPerSec", requestedOmegaRadPerSec);
+    Logger.recordOutput("Swerve/Observer/CommandedSpeedMps", commandedTranslationalMps);
+    Logger.recordOutput("Swerve/Observer/MeasuredSpeedMps", measuredTranslationalMps);
+    Logger.recordOutput("Swerve/Observer/OverallSpeedRatio", overallSpeedRatio);
+    Logger.recordOutput("Swerve/Observer/CommandedOmegaRadPerSec", commandedOmega);
+    Logger.recordOutput("Swerve/Observer/MeasuredOmegaRadPerSec", measuredOmega);
+    Logger.recordOutput("Swerve/Observer/CanErrorDelta", canErrorDelta);
+    Logger.recordOutput("Swerve/Observer/BatteryVoltage", RobotController.getBatteryVoltage());
+    Logger.recordOutput("Swerve/Observer/BrownedOut", RobotController.isBrownedOut());
+    Logger.recordOutput("Swerve/Observer/CandidateIssue", candidateIssue);
+    Logger.recordOutput("Swerve/Observer/CandidateModule", candidateModule);
+    Logger.recordOutput("Swerve/Observer/CandidateLoops", observerCandidateLoops);
   }
 
   /**
@@ -383,54 +510,30 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
    * @param speeds Speeds in meters/sec
    */
   public void runVelocity(ChassisSpeeds speeds) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      krakenVelocityMode = true;
-      ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
-      SwerveModuleState[] setpointStatesUnoptimized =
-          kinematics.toSwerveModuleStates(discreteSpeeds);
-      krakenCurrentSetpoint =
-          krakenSetpointGenerator.generateSetpoint(
-              SwerveConstants.KRAKEN_MODULE_LIMITS_FREE,
-              krakenCurrentSetpoint,
-              discreteSpeeds,
-              0.02);
-      SwerveModuleState[] setpointStates = krakenCurrentSetpoint.moduleStates();
+    krakenVelocityMode = true;
+    requestedTranslationalMps = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    requestedOmegaRadPerSec = speeds.omegaRadiansPerSecond;
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, 0.02);
+    SwerveModuleState[] setpointStatesUnoptimized = kinematics.toSwerveModuleStates(discreteSpeeds);
+    krakenCurrentSetpoint =
+        krakenSetpointGenerator.generateSetpoint(
+            SwerveConstants.KRAKEN_MODULE_LIMITS_FREE, krakenCurrentSetpoint, discreteSpeeds, 0.02);
+    SwerveModuleState[] setpointStates = krakenCurrentSetpoint.moduleStates();
 
-      Logger.recordOutput("SwerveStates/SetpointsUnoptimized", setpointStatesUnoptimized);
-      Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
-      Logger.recordOutput("SwerveChassisSpeeds/Setpoints", krakenCurrentSetpoint.chassisSpeeds());
-
-      for (int i = 0; i < 4; i++) {
-        modules[i].runSetpoint(setpointStates[i]);
-      }
-
-      Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
-      return;
-    }
-
-    // Calculate module setpoints
-    speeds = ChassisSpeeds.discretize(speeds, 0.02);
-    SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(speeds);
-    SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, SwerveConstants.MAX_LINEAR_SPEED);
-
-    // Log unoptimized setpoints
+    Logger.recordOutput("SwerveStates/SetpointsUnoptimized", setpointStatesUnoptimized);
     Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
-    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", speeds);
+    Logger.recordOutput("SwerveChassisSpeeds/Setpoints", krakenCurrentSetpoint.chassisSpeeds());
 
-    // Send setpoints to modules
     for (int i = 0; i < 4; i++) {
       modules[i].runSetpoint(setpointStates[i]);
     }
 
-    // Log optimized setpoints (runSetpoint mutates each state)
     Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
   }
 
   /** Runs the drive in a straight line with the specified drive output. */
   public void runCharacterization(double output) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      krakenVelocityMode = false;
-    }
+    krakenVelocityMode = false;
     for (int i = 0; i < 4; i++) {
       modules[i].runCharacterization(output);
     }
@@ -438,9 +541,7 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
   /** Runs the turn motors open-loop for SysId and tuning. */
   public void runTurnCharacterization(double output) {
-    if (GlobalConstants.robotSwerveMotors == RobotSwerveMotors.FULLKRACKENS) {
-      krakenVelocityMode = false;
-    }
+    krakenVelocityMode = false;
     for (int i = 0; i < 4; i++) {
       modules[i].runTurnCharacterization(output);
     }

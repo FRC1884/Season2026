@@ -1,11 +1,13 @@
 package org.Griffins1884.frc2026.subsystems.turret;
 
-import org.Griffins1884.frc2026.generic.turrets.GenericPositionTurretSystem;
+import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.mechanisms.turrets.PositionTurretMechanism;
 
-public class TurretSubsystem extends GenericPositionTurretSystem {
+public class TurretSubsystem extends PositionTurretMechanism {
   public TurretSubsystem(TurretIO io) {
     super(
         "Turret",
+        RobotMechanismDefinitions.TURRET,
         io,
         new TurretConfig(
             TurretConstants.KP,

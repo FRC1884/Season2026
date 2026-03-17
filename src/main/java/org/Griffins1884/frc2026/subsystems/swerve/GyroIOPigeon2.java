@@ -1,16 +1,3 @@
-// Copyright 2021-2024 FRC 6328
-// http://github.com/Mechanical-Advantage
-//
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// version 3 as published by the Free Software Foundation or
-// available in the root directory of this project.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-
 package org.Griffins1884.frc2026.subsystems.swerve;
 
 import static org.Griffins1884.frc2026.GlobalConstants.ODOMETRY_FREQUENCY;
@@ -25,7 +12,6 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import java.util.Queue;
-import org.Griffins1884.frc2026.GlobalConstants;
 
 /** IO implementation for Pigeon 2. */
 public class GyroIOPigeon2 implements GyroIO {
@@ -41,14 +27,8 @@ public class GyroIOPigeon2 implements GyroIO {
     yaw.setUpdateFrequency(ODOMETRY_FREQUENCY);
     yawVelocity.setUpdateFrequency(50.0);
     pigeon.optimizeBusUtilization();
-    yawTimestampQueue =
-        (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLKRACKENS)
-            ? PhoenixOdometryThread.getInstance().makeTimestampQueue()
-            : SparkOdometryThread.getInstance().makeTimestampQueue();
-    yawPositionQueue =
-        (GlobalConstants.robotSwerveMotors == GlobalConstants.RobotSwerveMotors.FULLKRACKENS)
-            ? PhoenixOdometryThread.getInstance().registerSignal(yaw::getValueAsDouble)
-            : SparkOdometryThread.getInstance().registerSignal(yaw::getValueAsDouble);
+    yawTimestampQueue = PhoenixOdometryThread.getInstance().makeTimestampQueue();
+    yawPositionQueue = PhoenixOdometryThread.getInstance().registerSignal(yaw::getValueAsDouble);
   }
 
   @Override

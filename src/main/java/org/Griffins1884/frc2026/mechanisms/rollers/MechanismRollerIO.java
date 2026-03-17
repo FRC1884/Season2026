@@ -1,0 +1,47 @@
+package org.Griffins1884.frc2026.mechanisms.rollers;
+
+import org.littletonrobotics.junction.AutoLog;
+
+public interface MechanismRollerIO {
+  @AutoLog
+  abstract class MechanismRollerIOInputs {
+    public boolean[] connected = {true, true};
+    public double positionRads = 0.0;
+    public double velocity = 0.0;
+    public double velocityRadsPerSec = 0.0;
+    public double appliedVoltage = 0.0;
+    public double supplyCurrentAmps = 0.0;
+    public double torqueCurrentAmps = 0.0;
+    public double tempCelsius = 0.0;
+  }
+
+  default void updateInputs(MechanismRollerIOInputs inputs) {}
+
+  /** Run roller system at volts */
+  default void runVolts(double volts) {}
+
+  /** Run roller system at velocity (RPM) with optional feedforward (volts). */
+  default void runVelocity(double velocityRpm, double feedforwardVolts) {}
+
+  /** Update the onboard velocity PID gains if supported. */
+  default void setVelocityPID(double kP, double kI, double kD) {}
+
+  /** Update the onboard velocity PID gains for a specific slot if supported. */
+  default void setVelocityPID(int slot, double kP, double kI, double kD) {
+    setVelocityPID(kP, kI, kD);
+  }
+
+  /** Select active onboard velocity slot if supported. */
+  default void setVelocityControlSlot(int slot) {}
+
+  /** Whether this IO supports onboard velocity control. */
+  default boolean supportsVelocityControl() {
+    return false;
+  }
+
+  /** Stop roller system */
+  default void stop() {}
+
+  /** Enable or disable brake mode. */
+  default void setBrakeMode(boolean enabled) {}
+}

@@ -91,7 +91,6 @@ class AprilTagVisionProfileConstantsTest {
 
     assertTrue(isLimelightType(AprilTagVisionConstants.LEFT_CAM_CONSTANTS.cameraType()));
     assertTrue(isLimelightType(AprilTagVisionConstants.RIGHT_CAM_CONSTANTS.cameraType()));
-    assertTrue(isLimelightType(AprilTagVisionConstants.BACK_CAM_CONSTANTS.cameraType()));
   }
 
   private static boolean isLimelightType(VisionIO.CameraType cameraType) {

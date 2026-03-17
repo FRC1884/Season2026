@@ -2,13 +2,11 @@ package org.Griffins1884.frc2026;
 
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
-import org.Griffins1884.frc2026.OI.BoardOperatorMap;
 import org.Griffins1884.frc2026.OI.DriverMap;
-import org.Griffins1884.frc2026.OI.OperatorMap;
 import org.Griffins1884.frc2026.OI.PS5DriverMap;
+import org.Griffins1884.frc2026.OI.PS5ProDriverMap;
 import org.Griffins1884.frc2026.OI.SimXboxUniversalMap;
 import org.Griffins1884.frc2026.OI.XboxDriverMap;
-import org.Griffins1884.frc2026.OI.XboxOperatorMap;
 
 public final class Config {
 
@@ -16,14 +14,16 @@ public final class Config {
     public static final boolean DRIVETRAIN_ENABLED = true;
     public static final boolean AUTONOMOUS_ENABLED = true;
     public static final boolean VISION_ENABLED = true;
-    public static final boolean LEDS_ENABLED = false;
+    public static final boolean LEDS_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean WEBUI_ENABLED = true;
-    public static final boolean TURRET_ENABLED = true;
-    public static final boolean SHOOTER_ENABLED = true;
-    public static final boolean SHOOTER_PIVOT_ENABLED = true;
+    public static final boolean TURRET_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean SHOOTER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean SHOOTER_PIVOT_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean INTAKE_PIVOT_ENABLED = true;
-    public static final boolean INTAKE_ENABLED = true;
-    public static final boolean INDEXER_ENABLED = true;
+    public static final boolean INTAKE_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean INDEXER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean TOOTH_ROLLOUT_ENABLED = false;
+    public static final boolean SPINDEXER_ENABLED = false;
   }
 
   public static final class WebUIConfig {
@@ -36,35 +36,33 @@ public final class Config {
   }
 
   public static final class Controllers {
-    public static final int DRIVER_PORT = 0;
+    public enum DriverControllerType {
+      XBOX,
+      PS5,
+      PS5_PRO,
+      SIM_XBOX_UNIVERSAL
+    }
 
-    public static final int OPERATOR_PORT = 1;
-    public static final boolean JOYSTICK_OPERATOR_ENABLED = false;
+    public static final int DRIVER_PORT = 0;
+    public static final DriverControllerType COMPBOT_DRIVER = DriverControllerType.PS5_PRO;
+    public static final DriverControllerType DBOT_DRIVER = DriverControllerType.PS5_PRO;
+    public static final DriverControllerType SIMBOT_DRIVER =
+        DriverControllerType.SIM_XBOX_UNIVERSAL;
 
     public static DriverMap getDriverController() {
       return switch (ROBOT) {
-        case COMPBOT -> new XboxDriverMap(DRIVER_PORT);
-        case CRESCENDO -> new PS5DriverMap(DRIVER_PORT);
-        case DEVBOT -> new XboxDriverMap(DRIVER_PORT);
-        case SIMBOT -> new SimXboxUniversalMap(DRIVER_PORT);
+        case COMPBOT -> createDriverController(COMPBOT_DRIVER);
+        case DBOT -> createDriverController(DBOT_DRIVER);
+        case SIMBOT -> createDriverController(SIMBOT_DRIVER);
       };
     }
 
-    public static OperatorMap getOperatorController() {
-      return switch (ROBOT) {
-        case COMPBOT ->
-            JOYSTICK_OPERATOR_ENABLED
-                ? new XboxOperatorMap(OPERATOR_PORT)
-                : new BoardOperatorMap(OPERATOR_PORT);
-        case CRESCENDO ->
-            JOYSTICK_OPERATOR_ENABLED
-                ? new XboxOperatorMap(OPERATOR_PORT)
-                : new BoardOperatorMap(OPERATOR_PORT);
-        case DEVBOT ->
-            JOYSTICK_OPERATOR_ENABLED
-                ? new XboxOperatorMap(OPERATOR_PORT)
-                : new BoardOperatorMap(OPERATOR_PORT);
-        case SIMBOT -> new BoardOperatorMap(OPERATOR_PORT);
+    private static DriverMap createDriverController(DriverControllerType type) {
+      return switch (type) {
+        case XBOX -> new XboxDriverMap(DRIVER_PORT);
+        case PS5 -> new PS5DriverMap(DRIVER_PORT);
+        case PS5_PRO -> new PS5ProDriverMap(DRIVER_PORT);
+        case SIM_XBOX_UNIVERSAL -> new SimXboxUniversalMap(DRIVER_PORT);
       };
     }
   }
