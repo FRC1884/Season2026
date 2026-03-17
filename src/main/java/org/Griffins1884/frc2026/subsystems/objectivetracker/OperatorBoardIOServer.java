@@ -24,6 +24,12 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final BooleanSubscriber cancelIntakeDeployRezeroIn;
   private final BooleanSubscriber requestManualIntakeDeployZeroSeekIn;
   private final BooleanSubscriber cancelManualIntakeDeployZeroSeekIn;
+  private final StringSubscriber selectedAutoIdIn;
+  private final StringSubscriber autoQueueSpecIn;
+  private final StringSubscriber autoQueueCommandIn;
+  private final StringSubscriber runtimeProfileSpecIn;
+  private final BooleanSubscriber applyRuntimeProfileIn;
+  private final BooleanSubscriber resetRuntimeProfileIn;
 
   private final StringPublisher requestedStateOut;
   private final StringPublisher currentStateOut;
@@ -33,6 +39,18 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   private final DoubleArrayPublisher targetPoseOut;
   private final BooleanPublisher targetPoseValidOut;
   private final DoubleArrayPublisher robotPoseOut;
+  private final StringPublisher autoQueueStateOut;
+  private final DoubleArrayPublisher autoQueuePreviewPoseOut;
+  private final BooleanPublisher autoQueuePreviewPoseValidOut;
+  private final StringPublisher selectedAutoStateOut;
+  private final StringPublisher runtimeProfileStateOut;
+  private final StringPublisher runtimeProfileStatusOut;
+  private final StringPublisher systemCheckStateOut;
+  private final StringPublisher autoCheckStateOut;
+  private final StringPublisher autoQuickRunStateOut;
+  private final StringPublisher ntDiagnosticsStateOut;
+  private final StringPublisher mechanismStatusStateOut;
+  private final StringPublisher actionTraceStateOut;
   private final BooleanPublisher hasBallOut;
   private final StringPublisher dsModeOut;
   private final DoublePublisher batteryVoltageOut;
@@ -122,6 +140,30 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
         inputTable
             .getBooleanTopic(OperatorBoardContract.CANCEL_MANUAL_INTAKE_DEPLOY_ZERO_SEEK)
             .subscribe(false, PubSubOption.keepDuplicates(true));
+    selectedAutoIdIn =
+        inputTable
+            .getStringTopic(OperatorBoardContract.SELECTED_AUTO_ID)
+            .subscribe("", PubSubOption.keepDuplicates(true));
+    autoQueueSpecIn =
+        inputTable
+            .getStringTopic(OperatorBoardContract.AUTO_QUEUE_SPEC)
+            .subscribe("", PubSubOption.keepDuplicates(true));
+    autoQueueCommandIn =
+        inputTable
+            .getStringTopic(OperatorBoardContract.AUTO_QUEUE_COMMAND)
+            .subscribe("", PubSubOption.keepDuplicates(true));
+    runtimeProfileSpecIn =
+        inputTable
+            .getStringTopic(OperatorBoardContract.RUNTIME_PROFILE_SPEC)
+            .subscribe("", PubSubOption.keepDuplicates(true));
+    applyRuntimeProfileIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.APPLY_RUNTIME_PROFILE)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
+    resetRuntimeProfileIn =
+        inputTable
+            .getBooleanTopic(OperatorBoardContract.RESET_RUNTIME_PROFILE)
+            .subscribe(false, PubSubOption.keepDuplicates(true));
 
     var outputTable =
         NetworkTableInstance.getDefault().getTable(OperatorBoardContract.TO_DASHBOARD);
@@ -135,6 +177,30 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     targetPoseValidOut =
         outputTable.getBooleanTopic(OperatorBoardContract.TARGET_POSE_VALID).publish();
     robotPoseOut = outputTable.getDoubleArrayTopic(OperatorBoardContract.ROBOT_POSE).publish();
+    autoQueueStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.AUTO_QUEUE_STATE).publish();
+    autoQueuePreviewPoseOut =
+        outputTable.getDoubleArrayTopic(OperatorBoardContract.AUTO_QUEUE_PREVIEW_POSE).publish();
+    autoQueuePreviewPoseValidOut =
+        outputTable.getBooleanTopic(OperatorBoardContract.AUTO_QUEUE_PREVIEW_POSE_VALID).publish();
+    selectedAutoStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.SELECTED_AUTO_STATE).publish();
+    runtimeProfileStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.RUNTIME_PROFILE_STATE).publish();
+    runtimeProfileStatusOut =
+        outputTable.getStringTopic(OperatorBoardContract.RUNTIME_PROFILE_STATUS).publish();
+    systemCheckStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.SYSTEM_CHECK_STATE).publish();
+    autoCheckStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.AUTO_CHECK_STATE).publish();
+    autoQuickRunStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.AUTO_QUICK_RUN_STATE).publish();
+    ntDiagnosticsStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.NT_DIAGNOSTICS_STATE).publish();
+    mechanismStatusStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.MECHANISM_STATUS_STATE).publish();
+    actionTraceStateOut =
+        outputTable.getStringTopic(OperatorBoardContract.ACTION_TRACE_STATE).publish();
     hasBallOut = outputTable.getBooleanTopic(OperatorBoardContract.HAS_BALL).publish();
     dsModeOut = outputTable.getStringTopic(OperatorBoardContract.DS_MODE).publish();
     batteryVoltageOut = outputTable.getDoubleTopic(OperatorBoardContract.BATTERY_VOLTAGE).publish();
@@ -280,6 +346,29 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
     } else {
       inputs.cancelManualIntakeDeployZeroSeek = false;
     }
+    String currentSelectedAutoId = selectedAutoIdIn.get();
+    inputs.selectedAutoId =
+        currentSelectedAutoId == null || currentSelectedAutoId.isBlank()
+            ? new String[] {}
+            : new String[] {currentSelectedAutoId};
+    inputs.autoQueueSpec =
+        autoQueueSpecIn.readQueue().length > 0
+            ? new String[] {autoQueueSpecIn.get()}
+            : new String[] {};
+    inputs.autoQueueCommand =
+        autoQueueCommandIn.readQueue().length > 0
+            ? new String[] {autoQueueCommandIn.get()}
+            : new String[] {};
+    inputs.runtimeProfileSpec =
+        runtimeProfileSpecIn.readQueue().length > 0
+            ? new String[] {runtimeProfileSpecIn.get()}
+            : new String[] {};
+    TimestampedBoolean[] applyProfileQueue = applyRuntimeProfileIn.readQueue();
+    inputs.applyRuntimeProfile =
+        applyProfileQueue.length > 0 && applyProfileQueue[applyProfileQueue.length - 1].value;
+    TimestampedBoolean[] resetProfileQueue = resetRuntimeProfileIn.readQueue();
+    inputs.resetRuntimeProfile =
+        resetProfileQueue.length > 0 && resetProfileQueue[resetProfileQueue.length - 1].value;
   }
 
   @Override
@@ -320,6 +409,66 @@ public class OperatorBoardIOServer implements OperatorBoardIO {
   @Override
   public void setRobotPose(double[] value) {
     robotPoseOut.set(value == null ? new double[] {} : value);
+  }
+
+  @Override
+  public void setAutoQueueState(String value) {
+    autoQueueStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setAutoQueuePreviewPose(double[] value) {
+    autoQueuePreviewPoseOut.set(value == null ? new double[] {} : value);
+  }
+
+  @Override
+  public void setAutoQueuePreviewPoseValid(boolean value) {
+    autoQueuePreviewPoseValidOut.set(value);
+  }
+
+  @Override
+  public void setSelectedAutoState(String value) {
+    selectedAutoStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setRuntimeProfileState(String value) {
+    runtimeProfileStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setRuntimeProfileStatus(String value) {
+    runtimeProfileStatusOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setSystemCheckState(String value) {
+    systemCheckStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setAutoCheckState(String value) {
+    autoCheckStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setAutoQuickRunState(String value) {
+    autoQuickRunStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setNtDiagnosticsState(String value) {
+    ntDiagnosticsStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setMechanismStatusState(String value) {
+    mechanismStatusStateOut.set(value == null ? "" : value);
+  }
+
+  @Override
+  public void setActionTraceState(String value) {
+    actionTraceStateOut.set(value == null ? "" : value);
   }
 
   @Override

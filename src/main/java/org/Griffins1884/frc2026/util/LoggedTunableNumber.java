@@ -5,7 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.DoubleSupplier;
-import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.runtime.RuntimeModeManager;
 import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
@@ -92,7 +92,7 @@ public class LoggedTunableNumber implements DoubleSupplier {
   }
 
   private boolean isDashboardEnabled() {
-    return GlobalConstants.TUNING_MODE || (allowInCompMode && GlobalConstants.isCompMode());
+    return RuntimeModeManager.allowsTuning(allowInCompMode);
   }
 
   /**

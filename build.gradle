@@ -63,6 +63,12 @@ deploy {
 }
 
 def deployArtifact = deploy.targets.roborio.artifacts.frcJava
+def deployPreserveRobotHost = findProperty("robotHost") ?: "roborio-1884-frc.local"
+def deployPreserveRobotDataRoot = findProperty("robotDataRoot") ?: "/home/lvuser/operatorboard-data"
+def deployPreserveRobotAutosRoot = findProperty("robotAutosRoot") ?: "/home/lvuser/deploy/pathplana/autos"
+def deployPreserveLocalDataRoot = "${projectDir}/operatorboard-data"
+def deployPreserveLocalAutosRoot = "${projectDir}/src/main/deploy/pathplana/autos"
+def deployPreserveCacheRoot = "${buildDir}/deploy-preserve"
 
 // Set to true to use debug for JNI.
 wpi.java.debugJni = false
@@ -212,6 +218,96 @@ deployArtifact.jarTask = jar
 wpi.java.configureExecutableTasks(jar)
 wpi.java.configureTestTasks(test)
 
+tasks.register("pullRobotSavedData", Exec) {
+    group = "deploy"
+    description = "Pull persistent operator-board data and autos from the roboRIO before deploy."
+    commandLine "bash", "${projectDir}/tools/deploy_preserve/saved_data_sync.sh",
+            "pull",
+            "--robot-host", deployPreserveRobotHost,
+            "--robot-data-root", deployPreserveRobotDataRoot,
+            "--robot-autos-root", deployPreserveRobotAutosRoot,
+            "--local-data-root", deployPreserveLocalDataRoot,
+            "--local-autos-root", deployPreserveLocalAutosRoot,
+            "--cache-root", deployPreserveCacheRoot
+}
+
+tasks.register("backupLocalSavedData", Exec) {
+    group = "deploy"
+    description = "Back up local persistent data before merge/deploy."
+    commandLine "bash", "${projectDir}/tools/deploy_preserve/saved_data_sync.sh",
+            "backup",
+            "--local-data-root", deployPreserveLocalDataRoot,
+            "--local-autos-root", deployPreserveLocalAutosRoot,
+            "--cache-root", deployPreserveCacheRoot
+}
+
+tasks.register("mergeSavedData", Exec) {
+    group = "deploy"
+    description = "Merge local and pulled roboRIO saved data according to the documented conflict policy."
+    commandLine "python3", "${projectDir}/tools/deploy_preserve/merge_saved_data.py",
+            "--local-data-root", deployPreserveLocalDataRoot,
+            "--local-autos-root", deployPreserveLocalAutosRoot,
+            "--cache-root", deployPreserveCacheRoot
+}
+
+tasks.register("pushRobotSavedData", Exec) {
+    group = "deploy"
+    description = "Push merged persistent data back to the roboRIO after code deploy."
+    commandLine "bash", "${projectDir}/tools/deploy_preserve/saved_data_sync.sh",
+            "push",
+            "--robot-host", deployPreserveRobotHost,
+            "--robot-data-root", deployPreserveRobotDataRoot,
+            "--robot-autos-root", deployPreserveRobotAutosRoot,
+            "--local-data-root", deployPreserveLocalDataRoot,
+            "--local-autos-root", deployPreserveLocalAutosRoot,
+            "--cache-root", deployPreserveCacheRoot
+}
+
+tasks.register("verifyRobotSavedData", Exec) {
+    group = "deploy"
+    description = "Verify persistent files still exist on the roboRIO after deploy."
+    commandLine "bash", "${projectDir}/tools/deploy_preserve/saved_data_sync.sh",
+            "verify",
+            "--robot-host", deployPreserveRobotHost,
+            "--robot-data-root", deployPreserveRobotDataRoot,
+            "--robot-autos-root", deployPreserveRobotAutosRoot,
+            "--local-data-root", deployPreserveLocalDataRoot,
+            "--local-autos-root", deployPreserveLocalAutosRoot,
+            "--cache-root", deployPreserveCacheRoot
+}
+
+tasks.named("backupLocalSavedData") {
+    mustRunAfter(tasks.named("pullRobotSavedData"))
+}
+
+tasks.named("mergeSavedData") {
+    mustRunAfter(tasks.named("backupLocalSavedData"))
+}
+
+tasks.named("deploy") {
+    mustRunAfter(tasks.named("mergeSavedData"))
+}
+
+tasks.named("pushRobotSavedData") {
+    mustRunAfter(tasks.named("deploy"))
+}
+
+tasks.named("verifyRobotSavedData") {
+    mustRunAfter(tasks.named("pushRobotSavedData"))
+}
+
+tasks.register("deployPreserve") {
+    group = "deploy"
+    description = "Pull, merge, deploy, restore, and verify persistent operator-board data."
+    dependsOn(
+            tasks.named("pullRobotSavedData"),
+            tasks.named("backupLocalSavedData"),
+            tasks.named("mergeSavedData"),
+            tasks.named("deploy"),
+            tasks.named("pushRobotSavedData"),
+            tasks.named("verifyRobotSavedData"))
+}
+
 // Configure string concat to always inline compile
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
@@ -231,7 +327,10 @@ gversion {
 // Create commit with working changes on event branches
 task(eventDeploy) {
     doLast {
-        if (project.gradle.startParameter.taskNames.any({ it.toLowerCase().contains("deploy") })) {
+        if (project.gradle.startParameter.taskNames.any({
+                    def normalized = it.toLowerCase()
+                    normalized == "deploy" || normalized.endsWith(":deploy")
+                })) {
             def branchPrefix = "event"
             def branch = 'git branch --show-current'.execute().text.trim()
             def commitMessage = "Update at '${new Date().toString()}'"

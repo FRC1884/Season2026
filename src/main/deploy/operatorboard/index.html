@@ -13,29 +13,46 @@
         <div class="brand__subtitle">FRC 1884 • 2026 REBUILT</div>
       </div>
       <div class="chips">
+        <a class="chip chip--link" href="./runtime-config.html">CONFIG</a>
         <div id="chip-nt" class="chip chip--bad">NT</div>
         <div id="chip-data" class="chip chip--bad">DATA</div>
         <div id="chip-mode" class="chip">MODE</div>
       </div>
     </header>
 
+    <section class="alerts-strip">
+      <div class="alerts-strip__label">Alerts</div>
+      <div id="alerts-bar" class="alerts-bar">
+        <div class="alert-pill alert-pill--muted">No active alerts</div>
+      </div>
+    </section>
+
     <nav class="tabbar" aria-label="Operator board tabs">
       <button
-        id="tab-game"
+        id="tab-teleop"
         class="tabbar__button is-active"
         type="button"
-        data-tab-target="game"
+        data-tab-target="teleop"
       >
-        Game
+        Teleop
       </button>
-      <button id="tab-debugging" class="tabbar__button" type="button" data-tab-target="debugging">
-        Debugging
+      <button id="tab-auto" class="tabbar__button" type="button" data-tab-target="auto">
+        Auto
+      </button>
+      <button id="tab-joystick" class="tabbar__button" type="button" data-tab-target="joystick">
+        Joystick
+      </button>
+      <button id="tab-systems" class="tabbar__button" type="button" data-tab-target="systems">
+        Systems
+      </button>
+      <button id="tab-debug" class="tabbar__button" type="button" data-tab-target="debug">
+        Debug
       </button>
     </nav>
 
     <main>
-      <section class="tab-page is-active" data-tab-page="game">
-        <div class="layout">
+      <section class="tab-page is-active" data-tab-page="teleop">
+        <div class="layout layout--teleop">
           <section class="panel panel--states">
             <div class="panel__title">Game State</div>
             <div id="state-buttons" class="state-buttons"></div>
@@ -98,22 +115,9 @@
                 <div id="request-reason" class="kv__v kv__v--muted">--</div>
               </div>
               <div class="kv__row">
-                <div class="kv__k">Int ake Rezero</div>
+                <div class="kv__k">Intake Rezero</div>
                 <div id="intake-rezero-status" class="kv__v kv__v--muted">--</div>
               </div>
-            </div>
-          </section>
-
-          <section class="panel panel--field">
-            <div class="panel__title">Field</div>
-            <div class="field">
-              <img
-                id="field-image"
-                class="field__image"
-                src="./field-2026.png"
-                alt="FRC field"
-              />
-              <canvas id="field-canvas" class="field__canvas"></canvas>
             </div>
           </section>
 
@@ -157,12 +161,9 @@
               </div>
             </div>
           </section>
-        </div>
-      </section>
 
-      <section class="tab-page" data-tab-page="debugging">
-        <div class="layout layout--debug">
-          <section class="panel panel--states">
+          <div class="teleop-stack">
+            <section class="panel panel--states">
             <div class="panel__title">Debug Controls</div>
             <div class="state-actions">
               <button id="music-button" class="state-button state-button--music" type="button">
@@ -175,9 +176,7 @@
               </button>
             </div>
             <div class="music-upload">
-              <label class="music-upload__label" for="music-file">
-                Upload .chrp
-              </label>
+              <label class="music-upload__label" for="music-file">Upload .chrp</label>
               <input id="music-file" class="music-upload__input" type="file" accept=".chrp" />
               <button id="music-upload-button" class="state-button state-button--auto" type="button">
                 Upload File
@@ -258,54 +257,446 @@
                 <div id="log-clean-deleted" class="kv__v">--</div>
               </div>
             </div>
+            </section>
+
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-page" data-tab-page="joystick">
+        <div class="layout layout--joystick">
+          <section class="panel">
+            <div class="panel__title">Joystick Profiles</div>
+            <div class="queue-card queue-card--compact">
+              <div class="queue-meta">
+                <div class="queue-meta__item">
+                  <div class="queue-meta__k">Profile</div>
+                  <select id="joystick-profile-select" class="queue-inline-select"></select>
+                </div>
+                <div class="queue-meta__item">
+                  <div class="queue-meta__k">Status</div>
+                  <div id="joystick-profile-status" class="queue-meta__v">Loading...</div>
+                </div>
+                <div class="queue-meta__item">
+                  <div class="queue-meta__k">Controller</div>
+                  <div id="joystick-controller-status" class="queue-meta__v">--</div>
+                </div>
+                <div class="queue-meta__item">
+                  <div class="queue-meta__k">Device</div>
+                  <div id="joystick-device-id" class="queue-meta__v queue-meta__v--mono">--</div>
+                </div>
+                <div class="queue-meta__item">
+                  <div class="queue-meta__k">Conflicts</div>
+                  <div id="joystick-conflict-status" class="queue-meta__v">--</div>
+                </div>
+              </div>
+              <div class="queue-actions">
+                <button id="joystick-save-button" class="state-button state-button--auto" type="button">
+                  Save Profile
+                </button>
+                <button id="joystick-reload-button" class="state-button" type="button">
+                  Reload
+                </button>
+                <button id="joystick-reset-button" class="state-button" type="button">
+                  Reset
+                </button>
+                <button id="joystick-export-button" class="state-button" type="button">
+                  Export JSON
+                </button>
+              </div>
+              <div id="joystick-warning-list" class="checks-list">
+                <div class="checks-list__empty">Loading profile warnings...</div>
+              </div>
+            </div>
           </section>
 
-          <section class="panel panel--telemetry">
-            <div class="panel__title">Diagnostics</div>
-            <div class="grid">
-              <div class="tile">
-                <div class="tile__k">Battery</div>
-                <div id="battery" class="tile__v">--</div>
+          <section class="panel">
+            <div class="panel__title">Mapping Editor</div>
+            <div class="mapping-table__header">
+              <div>Input</div>
+              <div>Target</div>
+              <div>Enabled</div>
+            </div>
+            <div id="joystick-binding-table" class="mapping-table">
+              <div class="checks-list__empty">Loading bindings...</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__title">Live Inputs</div>
+            <div id="joystick-live-inputs" class="checks-list">
+              <div class="checks-list__empty">Connect a controller to inspect live input data.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-page" data-tab-page="systems">
+        <div class="layout layout--systems">
+          <section class="panel">
+            <div class="panel__title">Subsystem Behaviors</div>
+            <div id="systems-catalog" class="systems-catalog">
+              <div class="checks-list__empty">Loading subsystem descriptions...</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__title">Persistent Storage</div>
+            <div class="queue-actions">
+              <button id="systems-reload-button" class="state-button" type="button">
+                Reload Data
+              </button>
+              <button id="systems-export-button" class="state-button state-button--auto" type="button">
+                Export Diagnostic Bundle
+              </button>
+            </div>
+            <div id="systems-diagnostic-summary" class="queue-form__note">No diagnostic bundle yet.</div>
+            <div id="systems-diagnostic-files" class="checks-list">
+              <div class="checks-list__empty">Run an export to create a bundle.</div>
+            </div>
+            <div id="systems-storage-inventory" class="checks-list">
+              <div class="checks-list__empty">Loading storage inventory...</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-page" data-tab-page="debug">
+        <div class="layout layout--debug">
+          <section class="panel panel--states">
+            <div class="panel__title">Debug Controls</div>
+            <div class="state-actions">
+              <button
+                id="debug-tab-music-button"
+                class="state-button state-button--music"
+                type="button"
+              >
+                Play Swerve Song
+              </button>
+            </div>
+            <div class="state-actions">
+              <button
+                id="debug-tab-music-stop-button"
+                class="state-button state-button--music"
+                type="button"
+              >
+                Stop Swerve Song
+              </button>
+            </div>
+            <div class="music-upload">
+              <label class="music-upload__label" for="debug-tab-music-file">Upload .chrp</label>
+              <input
+                id="debug-tab-music-file"
+                class="music-upload__input"
+                type="file"
+                accept=".chrp"
+              />
+              <button
+                id="debug-tab-music-upload-button"
+                class="state-button state-button--auto"
+                type="button"
+              >
+                Upload File
+              </button>
+              <div id="debug-tab-music-upload-status" class="music-upload__status">--</div>
+            </div>
+            <div class="music-volume">
+              <label class="music-volume__label" for="debug-tab-music-volume">Volume</label>
+              <input
+                id="debug-tab-music-volume"
+                class="music-volume__slider"
+                type="range"
+                min="0"
+                max="100"
+                value="70"
+              />
+              <div id="debug-tab-music-volume-value" class="music-volume__value">70%</div>
+            </div>
+            <div class="state-actions">
+              <button
+                id="debug-tab-roll-logs-button"
+                class="state-button state-button--auto"
+                type="button"
+              >
+                Roll Logs
+              </button>
+            </div>
+            <div class="state-actions">
+              <button
+                id="debug-tab-clean-logs-button"
+                class="state-button state-button--auto"
+                type="button"
+              >
+                Clean Logs Folder
+              </button>
+            </div>
+            <div class="state-actions">
+              <button
+                id="debug-tab-intake-manual-zero-seek-button"
+                class="state-button state-button--auto"
+                type="button"
+              >
+                Run Intake Zero Seek
+              </button>
+            </div>
+            <div class="state-actions">
+              <button
+                id="debug-tab-intake-manual-zero-seek-cancel-button"
+                class="state-button state-button--danger"
+                type="button"
+              >
+                Cancel Intake Zero Seek
+              </button>
+            </div>
+          </section>
+
+          <div class="teleop-stack">
+            <section class="panel panel--telemetry">
+              <div class="panel__title">Diagnostics</div>
+              <div class="grid">
+                <div class="tile">
+                  <div class="tile__k">Battery</div>
+                  <div id="battery" class="tile__v">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Brownout</div>
+                  <div id="brownout" class="tile__v">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Vision</div>
+                  <div id="vision-status" class="tile__v">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Turret</div>
+                  <div id="turret-status" class="tile__v">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Drive SysId</div>
+                  <div id="sysid-drive" class="tile__v">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Turn SysId</div>
+                  <div id="sysid-turn" class="tile__v">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">Drive SysId Options</div>
+                  <div id="sysid-drive-options" class="tile__v tile__v--mono tile__v--lines">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">Turn SysId Options</div>
+                  <div id="sysid-turn-options" class="tile__v tile__v--mono tile__v--lines">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">Robot Pose</div>
+                  <div id="robot-pose" class="tile__v tile__v--mono">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">Target</div>
+                  <div id="target" class="tile__v tile__v--mono">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">FMS Hub Data</div>
+                  <div id="hub-fms" class="tile__v tile__v--mono">--</div>
+                </div>
               </div>
-              <div class="tile">
-                <div class="tile__k">Brownout</div>
-                <div id="brownout" class="tile__v">--</div>
+            </section>
+
+            <section class="panel panel--telemetry">
+              <div class="panel__title">Match Readiness</div>
+              <div class="readiness-actions">
+                <button id="run-system-checks-button" class="state-button state-button--auto" type="button">
+                  Run System Checks
+                </button>
+                <button id="run-auto-checks-button" class="state-button" type="button">
+                  Run Next Auto Checks
+                </button>
+                <button id="run-auto-quick-run-button" class="state-button" type="button">
+                  Quick Run Validate
+                </button>
               </div>
-              <div class="tile">
-                <div class="tile__k">Vision</div>
-                <div id="vision-status" class="tile__v">--</div>
+              <div class="grid">
+                <div class="tile">
+                  <div class="tile__k">Overall</div>
+                  <div id="checks-overall" class="tile__v">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Last Check</div>
+                  <div id="checks-last-run" class="tile__v">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">Next Auto</div>
+                  <div id="next-auto-summary" class="tile__v tile__v--lines">--</div>
+                </div>
+                <div class="tile">
+                  <div class="tile__k">Mechanisms</div>
+                  <div id="mechanisms-summary" class="tile__v">--</div>
+                </div>
+                <div class="tile tile--wide">
+                  <div class="tile__k">Last Action</div>
+                  <div id="last-action-summary" class="tile__v tile__v--lines">--</div>
+                </div>
               </div>
-              <div class="tile">
-                <div class="tile__k">Turret</div>
-                <div id="turret-status" class="tile__v">--</div>
+              <div class="checks-block">
+                <div class="checks-block__title">System Checks</div>
+                <div id="system-checks-list" class="checks-list">
+                  <div class="checks-list__empty">Run checks to snapshot robot readiness.</div>
+                </div>
               </div>
-              <div class="tile">
-                <div class="tile__k">Drive SysId</div>
-                <div id="sysid-drive" class="tile__v">--</div>
+              <div class="checks-block">
+                <div class="checks-block__title">Auto Readiness</div>
+                <div id="auto-checks-list" class="checks-list">
+                  <div class="checks-list__empty">Run auto checks to validate the staged queue.</div>
+                </div>
               </div>
-              <div class="tile">
-                <div class="tile__k">Turn SysId</div>
-                <div id="sysid-turn" class="tile__v">--</div>
+              <div class="checks-block">
+                <div class="checks-block__title">Auto Quick Run</div>
+                <div id="auto-quick-run-list" class="checks-list">
+                  <div class="checks-list__empty">
+                    Run quick validation to build every staged auto step without executing it.
+                  </div>
+                </div>
               </div>
-              <div class="tile tile--wide">
-                <div class="tile__k">Drive SysId Options</div>
-                <div id="sysid-drive-options" class="tile__v tile__v--mono tile__v--lines">--</div>
+              <div class="checks-block">
+                <div class="checks-block__title">Mechanism Health</div>
+                <div id="mechanism-status-list" class="checks-list">
+                  <div class="checks-list__empty">Waiting for mechanism telemetry.</div>
+                </div>
               </div>
-              <div class="tile tile--wide">
-                <div class="tile__k">Turn SysId Options</div>
-                <div id="sysid-turn-options" class="tile__v tile__v--mono tile__v--lines">--</div>
+              <div class="checks-block">
+                <div class="checks-block__title">Control Validation</div>
+                <div id="action-trace-list" class="checks-list">
+                  <div class="checks-list__empty">Waiting for dashboard action traces.</div>
+                </div>
               </div>
-              <div class="tile tile--wide">
-                <div class="tile__k">Robot Pose</div>
-                <div id="robot-pose" class="tile__v tile__v--mono">--</div>
-              </div>
-              <div class="tile tile--wide">
-                <div class="tile__k">Target</div>
-                <div id="target" class="tile__v tile__v--mono">--</div>
-              </div>
-              <div class="tile tile--wide">
-                <div class="tile__k">FMS Hub Data</div>
-                <div id="hub-fms" class="tile__v tile__v--mono">--</div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-page" data-tab-page="auto">
+        <div class="layout layout--auto">
+          <section class="panel panel--field">
+            <div class="panel__title">Field & Auto Preview</div>
+            <div class="field-workspace">
+              <aside class="queue-sidebar">
+                <section class="queue-card queue-card--presets">
+                  <div class="queue-card__header">
+                    <div class="queue-card__title">Deploy Autos</div>
+                    <button id="planner-autos-reload-button" class="queue-inline-button" type="button">
+                      Reload
+                    </button>
+                  </div>
+                  <div class="queue-form__note">
+                    Reads PathPlanA autos from `/deploy/pathplana/autos`. Preview here, select one,
+                    and that selection is what autonomous will run.
+                  </div>
+                  <div id="planner-autos-import-status" class="queue-form__note">Loading deploy autos...</div>
+                  <div id="preset-empty-state" class="queue-empty-state queue-empty-state--small">
+                    No deploy autos were found.
+                  </div>
+                  <div id="preset-list" class="preset-gallery"></div>
+                </section>
+
+                <section class="queue-card">
+                  <div class="queue-card__title">Selected Auto</div>
+                  <div class="queue-meta">
+                    <div class="queue-meta__item">
+                      <div class="queue-meta__k">Name</div>
+                      <div id="selected-auto-name" class="queue-meta__v">--</div>
+                    </div>
+                    <div class="queue-meta__item">
+                      <div class="queue-meta__k">Summary</div>
+                      <div id="selected-auto-summary" class="queue-meta__v">--</div>
+                    </div>
+                  </div>
+                  <div class="queue-form__note">
+                    Blue-side authored autos are mirrored for red automatically at runtime.
+                  </div>
+                  <div class="queue-actions">
+                    <button id="select-selected-auto-button" class="state-button state-button--auto" type="button">
+                      Select For Autonomous
+                    </button>
+                  </div>
+                </section>
+
+                <section class="queue-card">
+                  <div class="queue-card__title">Auto Status</div>
+                  <div class="kv kv--queue">
+                    <div class="kv__row">
+                      <div class="kv__k">Phase</div>
+                      <div id="queue-phase" class="kv__v">--</div>
+                    </div>
+                    <div class="kv__row">
+                      <div class="kv__k">Running</div>
+                      <div id="queue-running" class="kv__v">--</div>
+                    </div>
+                    <div class="kv__row">
+                      <div class="kv__k">Selected</div>
+                      <div id="queue-active-label" class="kv__v">--</div>
+                    </div>
+                    <div class="kv__row">
+                      <div class="kv__k">Revision</div>
+                      <div id="queue-revision" class="kv__v">--</div>
+                    </div>
+                    <div class="kv__row">
+                      <div class="kv__k">Message</div>
+                      <div id="queue-message" class="kv__v kv__v--muted">--</div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="queue-card queue-card--steps">
+                  <div class="queue-card__header">
+                    <div class="queue-card__title">Auto Steps</div>
+                  </div>
+                  <div id="queue-empty-state" class="queue-empty-state">
+                    Select a deploy auto to preview it here.
+                  </div>
+                  <div id="queue-steps" class="queue-steps"></div>
+                </section>
+              </aside>
+
+              <div class="field-stage">
+                <div class="field-toolbar">
+                  <div class="field-toolbar__item">
+                    <div class="field-toolbar__k">Field Reference</div>
+                    <div id="field-alliance-view" class="field-toolbar__v">Blue Reference</div>
+                  </div>
+                  <div class="field-toolbar__item">
+                    <div class="field-toolbar__k">Auto Library</div>
+                    <div id="field-sync-mode" class="field-toolbar__v">Loading Deploy Autos</div>
+                  </div>
+                  <div class="field-toolbar__item">
+                    <div class="field-toolbar__k">Start Pose</div>
+                    <div id="field-preview-pose" class="field-toolbar__v">--</div>
+                  </div>
+                  <div class="field-toolbar__item field-toolbar__item--wide">
+                    <div class="field-toolbar__k">Auto Message</div>
+                    <div id="queue-status-message" class="field-toolbar__v">
+                      Select a deploy auto to preview it here.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <img
+                    id="field-image"
+                    class="field__image"
+                    src="./field-2026.png"
+                    alt="2026 REBUILT field"
+                  />
+                  <canvas id="field-canvas" class="field__canvas"></canvas>
+                </div>
+
+                <div class="field-legend">
+                  <div class="field-legend__chip field-legend__chip--hub">Hub</div>
+                  <div class="field-legend__chip field-legend__chip--tower">Tower</div>
+                  <div class="field-legend__chip field-legend__chip--depot">Depot</div>
+                  <div class="field-legend__chip field-legend__chip--outpost">Outpost</div>
+                  <div class="field-legend__chip field-legend__chip--bump">Bump</div>
+                  <div class="field-legend__chip field-legend__chip--trench">Trench</div>
+                  <div class="field-legend__chip field-legend__chip--lane">Lane</div>
+                </div>
               </div>
             </div>
           </section>

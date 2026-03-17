@@ -1,15 +1,14 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.filter.Debouncer;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.generic.rollers.GenericVelocityRollerSystem;
+import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.mechanisms.rollers.VelocityRollerMechanism;
 
 @Getter
-public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsystem.ShooterGoal> {
+public class ShooterSubsystem extends VelocityRollerMechanism<ShooterSubsystem.ShooterGoal> {
   @RequiredArgsConstructor
   @Getter
   public enum ShooterGoal implements VelocityGoal {
@@ -24,48 +23,19 @@ public class ShooterSubsystem extends GenericVelocityRollerSystem<ShooterSubsyst
   }
 
   private final ShooterGoal goal = ShooterGoal.IDLING;
-  private Debouncer currentDebouncer = new Debouncer(0.1);
-  private boolean highGainsActive = false;
 
   public ShooterSubsystem(String name, ShooterIO io) {
     super(
         name,
+        RobotMechanismDefinitions.SHOOTER,
         io,
         new VelocityRollerConfig(
-            ShooterConstants.GAINS_LOW,
+            ShooterConstants.GAINS,
             ShooterConstants.VELOCITY_TOLERANCE,
             ShooterConstants.MAX_VOLTAGE));
     if (supportsOnboardVelocityControl()) {
-      configureOnboardVelocitySlot(0, ShooterConstants.GAINS_LOW);
-      configureOnboardVelocitySlot(1, ShooterConstants.GAINS_HIGH);
+      configureOnboardVelocitySlot(0, ShooterConstants.GAINS);
     }
-  }
-
-  @Override
-  protected GlobalConstants.Gains getActiveGains(double requestedVelocityRpm) {
-    double rpm = Math.abs(requestedVelocityRpm);
-    double switchRpm = ShooterConstants.GAINS_SWITCH_RPM.get();
-    double hysteresis = ShooterConstants.GAINS_SWITCH_HYSTERESIS_RPM.get();
-    if (highGainsActive) {
-      if (rpm < switchRpm - hysteresis) {
-        highGainsActive = false;
-      }
-    } else {
-      if (rpm > switchRpm + hysteresis) {
-        highGainsActive = true;
-      }
-    }
-    return highGainsActive ? ShooterConstants.GAINS_HIGH : ShooterConstants.GAINS_LOW;
-  }
-
-  @Override
-  protected String getActiveGainsLabel(double requestedVelocityRpm) {
-    return highGainsActive ? "HIGH" : "LOW";
-  }
-
-  @Override
-  protected int getActiveVelocityControlSlot(double requestedVelocityRpm) {
-    return highGainsActive ? 1 : 0;
   }
 
   @Override

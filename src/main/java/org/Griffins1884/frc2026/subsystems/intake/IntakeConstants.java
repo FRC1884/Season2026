@@ -13,7 +13,7 @@ public final class IntakeConstants {
   public static final boolean BRAKE_MODE = true;
   public static final double REDUCTION = 1.0;
 
-  public static final GlobalConstants.Gains gains =
+  public static final GlobalConstants.Gains GAINS =
       new GlobalConstants.Gains("Intake/Gains", 0.002, 0.02, 1.0, 0.32726, 0.017, 0.15908);
   public static final double VELOCITY_TOLERANCE = 0.0;
   public static final double MAX_VOLTAGE = 12.0;

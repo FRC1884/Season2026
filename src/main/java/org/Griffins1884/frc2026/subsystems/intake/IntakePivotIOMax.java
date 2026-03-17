@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.intake;
 
-import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOSparkMax;
+import org.Griffins1884.frc2026.mechanisms.arms.MechanismArmIOSparkMax;
 
-public class IntakePivotIOMax extends GenericArmSystemIOSparkMax implements IntakePivotIO {
+public class IntakePivotIOMax extends MechanismArmIOSparkMax implements IntakePivotIO {
   public IntakePivotIOMax(int id, boolean inverted) {
     super(
         new int[] {id},

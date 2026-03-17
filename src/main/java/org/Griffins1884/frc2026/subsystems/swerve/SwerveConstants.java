@@ -6,9 +6,6 @@ import static java.lang.Math.PI;
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
 import com.ctre.phoenix6.CANBus;
-import com.pathplanner.lib.config.ModuleConfig;
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.config.RobotConfig;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -294,26 +291,12 @@ public final class SwerveConstants {
   static final double ROTATOR_ENCODER_VELOCITY_FACTOR = (2 * Math.PI) / 60.0; // RPM -> Rad/Sec
 
   // Drivetrain PID
-  public static final PIDConstants TRANSLATION_CONSTANTS = new PIDConstants(10, 0, 0);
-  public static final PIDConstants ROTATION_CONSTANTS = new PIDConstants(100, 0, 0);
+  public static final ClosedLoopGains TRANSLATION_CONSTANTS = new ClosedLoopGains(10, 0, 0);
+  public static final ClosedLoopGains ROTATION_CONSTANTS = new ClosedLoopGains(100, 0, 0);
 
   // Mechanical Advantage-style module limits (used for FULLKRACKENS)
   public static final ModuleLimits KRAKEN_MODULE_LIMITS_FREE =
       new ModuleLimits(MAX_LINEAR_SPEED, MAX_LINEAR_ACCELERATION, MAX_STEERING_VELOCITY);
-
-  // PathPlanner configuration
-  public static final RobotConfig PATHPLANNER_CONFIG =
-      new RobotConfig(
-          ROBOT_MASS,
-          ROBOT_INERTIA,
-          new ModuleConfig(
-              WHEEL_RADIUS,
-              MAX_LINEAR_SPEED,
-              WHEEL_FRICTION_COEFF,
-              DRIVE_GEARBOX.withReduction(KRAKEN_DRIVE_GEAR_RATIO),
-              DRIVE_MOTOR_CURRENT_LIMIT,
-              1),
-          MODULE_TRANSLATIONS);
 
   public static final DriveTrainSimulationConfig MAPLE_SIM_CONFIG =
       new DriveTrainSimulationConfig(
@@ -334,4 +317,6 @@ public final class SwerveConstants {
                       MAPLE_SIM_WHEEL_FRICTION_COEFF, // Clamp for sim stability
                       2) // Medium Gear ratio
                   .get());
+
+  public record ClosedLoopGains(double kP, double kI, double kD) {}
 }

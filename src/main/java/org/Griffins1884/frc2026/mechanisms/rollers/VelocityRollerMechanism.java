@@ -1,0 +1,417 @@
+package org.Griffins1884.frc2026.mechanisms.rollers;
+
+import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
+
+import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.sysid.SysIdRoutineLog;
+import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.DoubleSupplier;
+import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
+import org.Griffins1884.frc2026.mechanisms.MechanismHealth;
+import org.Griffins1884.frc2026.mechanisms.MechanismTelemetry;
+import org.Griffins1884.frc2026.runtime.RuntimeModeManager;
+import org.Griffins1884.frc2026.util.LoggedTunableNumber;
+import org.littletonrobotics.junction.Logger;
+
+/**
+ * Mechanism-backed replacement for the old generic velocity roller base.
+ *
+ * <p>This still uses the legacy roller IO contract during migration, but the runtime metadata,
+ * validation, and logging policy now flow through the new mechanism layer.
+ */
+public abstract class VelocityRollerMechanism<G extends VelocityRollerMechanism.VelocityGoal>
+    extends SubsystemBase {
+  public record VelocityRollerConfig(
+      GlobalConstants.Gains gains, double velocityTolerance, double maxVoltage) {}
+
+  public interface VelocityGoal {
+    DoubleSupplier getVelocitySupplier();
+  }
+
+  public abstract G getGoal();
+
+  private final String name;
+  private final MechanismDefinition definition;
+  private final String mechanismKey;
+  private final MechanismRollerIO io;
+  protected final MechanismRollerIOInputsAutoLogged inputs =
+      new MechanismRollerIOInputsAutoLogged();
+  private final Alert disconnected;
+  protected final Timer stateTimer = new Timer();
+  private G lastGoal;
+
+  private final SysIdRoutine sysIdRoutine;
+  private final PIDController pidController;
+  private SimpleMotorFeedforward feedforward;
+  private double feedforwardKa = 0.0;
+  private final VelocityRollerConfig config;
+  private final int tuningId = System.identityHashCode(this);
+
+  private static final double RPM_TO_RAD_PER_SEC = 2.0 * Math.PI / 60.0;
+  private static final double RPM_TO_ROTATIONS_PER_SEC = 1.0 / 60.0;
+
+  private double goalVelocity = 0.0;
+  private boolean manualGoalActive = false;
+  private double manualGoalVelocity = 0.0;
+  private double lastGoalVelocityRadPerSec = 0.0;
+  private double lastTimestampSec = 0.0;
+  private GlobalConstants.Gains lastActiveGains = null;
+  private int activeVelocityControlSlot = 0;
+  private int lastVelocityControlSlot = -1;
+  private final Map<Integer, double[]> onboardVelocityPidBySlot = new HashMap<>();
+  private boolean connected = false;
+  private MechanismHealth health = MechanismHealth.OFFLINE;
+
+  protected VelocityRollerMechanism(
+      String name,
+      MechanismDefinition definition,
+      MechanismRollerIO io,
+      GlobalConstants.Gains gains) {
+    this(name, definition, io, new VelocityRollerConfig(gains, 0.0, 12.0));
+  }
+
+  protected VelocityRollerMechanism(
+      String name,
+      MechanismDefinition definition,
+      MechanismRollerIO io,
+      VelocityRollerConfig config) {
+    this.name = Objects.requireNonNull(name, "name");
+    this.definition = Objects.requireNonNull(definition, "definition");
+    this.mechanismKey = definition.key();
+    this.io = Objects.requireNonNull(io, "io");
+    this.config = Objects.requireNonNull(config, "config");
+
+    pidController = new PIDController(config.gains().kP().get(), config.gains().kI().get(), 0.0);
+    pidController.setTolerance(config.velocityTolerance());
+    feedforward = new SimpleMotorFeedforward(config.gains().kS().get(), config.gains().kV().get());
+    feedforwardKa = config.gains().kA().get();
+    lastTimestampSec = Timer.getFPGATimestamp();
+    Consumer<SysIdRoutineLog> sysIdLog =
+        log ->
+            log.motor(name)
+                .voltage(Volts.of(inputs.appliedVoltage))
+                .angularVelocity(RadiansPerSecond.of(inputs.velocityRadsPerSec))
+                .angularPosition(Radian.of(inputs.positionRads));
+    sysIdRoutine =
+        new SysIdRoutine(
+            new SysIdRoutine.Config(
+                null,
+                null,
+                Seconds.of(4),
+                state -> {
+                  if (RuntimeModeManager.isDebugEnabled(mechanismKey)) {
+                    Logger.recordOutput("Rollers/" + name + "/SysIdState", state.toString());
+                  }
+                }),
+            new SysIdRoutine.Mechanism(voltage -> io.runVolts(voltage.in(Volts)), sysIdLog, this));
+
+    disconnected = new Alert(name + " motor disconnected!", AlertType.kWarning);
+    stateTimer.start();
+    recordConfigSnapshot();
+  }
+
+  public Command sysIdQuasistatic(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.quasistatic(direction);
+  }
+
+  public Command sysIdDynamic(SysIdRoutine.Direction direction) {
+    return sysIdRoutine.dynamic(direction);
+  }
+
+  @Override
+  public void periodic() {
+    io.updateInputs(inputs);
+    if (RuntimeModeManager.isDebugEnabled(mechanismKey)) {
+      Logger.processInputs(name, inputs);
+    }
+
+    boolean anyDisconnected = false;
+    for (boolean isConnected : inputs.connected) {
+      if (!isConnected) {
+        anyDisconnected = true;
+        break;
+      }
+    }
+    disconnected.set(anyDisconnected);
+    connected = !anyDisconnected;
+    health = connected ? MechanismHealth.NOMINAL : MechanismHealth.OFFLINE;
+
+    if (getGoal() != lastGoal) {
+      stateTimer.reset();
+      lastGoal = getGoal();
+    }
+
+    double measuredVelocity = inputs.velocity;
+    double requestedVelocity =
+        manualGoalActive ? manualGoalVelocity : getGoal().getVelocitySupplier().getAsDouble();
+    goalVelocity = requestedVelocity;
+
+    GlobalConstants.Gains activeGains = getActiveGains(requestedVelocity);
+    if (activeGains == null) {
+      activeGains = config.gains();
+    }
+    String gainsLabel = getActiveGainsLabel(requestedVelocity);
+    boolean onboardVelocityControl = io.supportsVelocityControl();
+    activeVelocityControlSlot =
+        sanitizeVelocityControlSlot(getActiveVelocityControlSlot(requestedVelocity));
+
+    logOutputs(
+        anyDisconnected,
+        measuredVelocity,
+        activeGains,
+        gainsLabel,
+        onboardVelocityControl ? "ONBOARD_VELOCITY" : "EXTERNAL_PID");
+
+    if (DriverStation.isDisabled()) {
+      io.runVolts(0.0);
+      pidController.reset();
+      lastGoalVelocityRadPerSec = 0.0;
+      lastTimestampSec = Timer.getFPGATimestamp();
+      return;
+    }
+
+    if (onboardVelocityControl && activeVelocityControlSlot != lastVelocityControlSlot) {
+      io.setVelocityControlSlot(activeVelocityControlSlot);
+      lastVelocityControlSlot = activeVelocityControlSlot;
+    }
+
+    if (activeGains != lastActiveGains) {
+      pidController.setPID(activeGains.kP().get(), activeGains.kI().get(), 0.0);
+      feedforward = new SimpleMotorFeedforward(activeGains.kS().get(), activeGains.kV().get());
+      feedforwardKa = activeGains.kA().get();
+      lastActiveGains = activeGains;
+    }
+
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> pidController.setPID(values[0], values[1], 0.0),
+        activeGains.kP(),
+        activeGains.kI(),
+        activeGains.kD());
+    LoggedTunableNumber.ifChanged(
+        tuningId,
+        values -> feedforward = new SimpleMotorFeedforward(values[0], values[1]),
+        activeGains.kS(),
+        activeGains.kV());
+    LoggedTunableNumber.ifChanged(tuningId, values -> feedforwardKa = values[0], activeGains.kA());
+
+    if (onboardVelocityControl) {
+      syncOnboardVelocityPID(activeVelocityControlSlot, activeGains);
+    }
+
+    double nowSec = Timer.getFPGATimestamp();
+    double dtSec = nowSec - lastTimestampSec;
+    if (dtSec <= 0.0) {
+      dtSec = 0.02;
+    }
+    lastTimestampSec = nowSec;
+
+    double goalVelocityRadPerSec = goalVelocity * RPM_TO_RAD_PER_SEC;
+    double goalAccelRadPerSec2 = (goalVelocityRadPerSec - lastGoalVelocityRadPerSec) / dtSec;
+    lastGoalVelocityRadPerSec = goalVelocityRadPerSec;
+
+    double feedforwardVolts =
+        feedforward.calculate(goalVelocityRadPerSec) + feedforwardKa * goalAccelRadPerSec2;
+    double additionalCompensationVolts =
+        getAdditionalCompensationVolts(goalVelocity, measuredVelocity);
+    double totalFeedforwardVolts = feedforwardVolts + additionalCompensationVolts;
+    double clampedFeedforwardVolts =
+        MathUtil.clamp(totalFeedforwardVolts, -config.maxVoltage(), config.maxVoltage());
+
+    if (onboardVelocityControl) {
+      io.runVelocity(goalVelocity, clampedFeedforwardVolts);
+    } else {
+      double pidOutput = pidController.calculate(measuredVelocity, goalVelocity);
+      double outputVoltage =
+          MathUtil.clamp(
+              pidOutput + totalFeedforwardVolts, -config.maxVoltage(), config.maxVoltage());
+      io.runVolts(outputVoltage);
+    }
+
+    if (RuntimeModeManager.isDebugEnabled(mechanismKey)) {
+      Logger.recordOutput("Rollers/" + name + "/Feedforward", feedforwardVolts);
+      Logger.recordOutput(
+          "Rollers/" + name + "/AdditionalCompensationVolts", additionalCompensationVolts);
+      Logger.recordOutput("Rollers/" + name + "Goal", getGoal().toString());
+    }
+    if (goalVelocity == 0.0) {
+      io.stop();
+    }
+  }
+
+  public void setGoalVelocity(double velocity) {
+    manualGoalVelocity = velocity;
+    manualGoalActive = true;
+  }
+
+  public void clearGoalOverride() {
+    manualGoalActive = false;
+  }
+
+  public boolean isAtGoal() {
+    return Math.abs(goalVelocity - inputs.velocity) <= config.velocityTolerance();
+  }
+
+  public double getVelocityRpm() {
+    return inputs.velocity;
+  }
+
+  public double getGoalVelocityRpm() {
+    return goalVelocity;
+  }
+
+  public double getVelocityRadPerSec() {
+    return inputs.velocityRadsPerSec;
+  }
+
+  public double getAppliedVolts() {
+    return inputs.appliedVoltage;
+  }
+
+  public double getSupplyCurrentAmps() {
+    return inputs.supplyCurrentAmps;
+  }
+
+  public double getTorqueCurrentAmps() {
+    return inputs.torqueCurrentAmps;
+  }
+
+  public void setBrakeMode(boolean enabled) {
+    io.setBrakeMode(enabled);
+  }
+
+  public MechanismDefinition getDefinition() {
+    return definition;
+  }
+
+  public boolean isConnected() {
+    return connected;
+  }
+
+  public MechanismHealth getHealth() {
+    return health;
+  }
+
+  protected final boolean supportsOnboardVelocityControl() {
+    return io.supportsVelocityControl();
+  }
+
+  protected final void configureOnboardVelocitySlot(int slot, GlobalConstants.Gains gains) {
+    syncOnboardVelocityPID(sanitizeVelocityControlSlot(slot), gains);
+  }
+
+  protected GlobalConstants.Gains getActiveGains(double requestedVelocityRpm) {
+    return config.gains();
+  }
+
+  protected String getActiveGainsLabel(double requestedVelocityRpm) {
+    return "DEFAULT";
+  }
+
+  protected int getActiveVelocityControlSlot(double requestedVelocityRpm) {
+    return 0;
+  }
+
+  protected double getAdditionalCompensationVolts(
+      double goalVelocityRpm, double measuredVelocityRpm) {
+    return 0.0;
+  }
+
+  private void logOutputs(
+      boolean anyDisconnected,
+      double measuredVelocity,
+      GlobalConstants.Gains activeGains,
+      String gainsLabel,
+      String controlMode) {
+    String mechanismRoot = "Mechanisms/" + mechanismKey;
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.CONNECTION, mechanismKey)) {
+      Logger.recordOutput(mechanismRoot + "/Connected", !anyDisconnected);
+    }
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.HEALTH, mechanismKey)) {
+      Logger.recordOutput(
+          mechanismRoot + "/Health",
+          anyDisconnected ? MechanismHealth.OFFLINE.name() : MechanismHealth.NOMINAL.name());
+    }
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.VELOCITY, mechanismKey)) {
+      Logger.recordOutput(mechanismRoot + "/VelocityRpm", measuredVelocity);
+    }
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.TARGET, mechanismKey)) {
+      Logger.recordOutput(mechanismRoot + "/TargetVelocityRpm", goalVelocity);
+    }
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.CURRENT, mechanismKey)) {
+      Logger.recordOutput(mechanismRoot + "/SupplyCurrentAmps", inputs.supplyCurrentAmps);
+      Logger.recordOutput(mechanismRoot + "/TorqueCurrentAmps", inputs.torqueCurrentAmps);
+    }
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.VOLTAGE, mechanismKey)) {
+      Logger.recordOutput(mechanismRoot + "/AppliedVoltage", inputs.appliedVoltage);
+    }
+    if (RuntimeModeManager.isDebugEnabled(mechanismKey)) {
+      Logger.recordOutput("Rollers/" + name + "/VelocityRpm", measuredVelocity);
+      Logger.recordOutput("Rollers/" + name + "/GoalVelocity", goalVelocity);
+      Logger.recordOutput("Rollers/" + name + "/Error", goalVelocity - measuredVelocity);
+      Logger.recordOutput("Rollers/" + name + "/AtGoal", isAtGoal());
+      Logger.recordOutput("Rollers/" + name + "/ControlMode", controlMode);
+      Logger.recordOutput("Rollers/" + name + "/VelocityCommandRpm", goalVelocity);
+      Logger.recordOutput("Rollers/" + name + "/VelocityMeasuredRpm", measuredVelocity);
+      Logger.recordOutput(
+          "Rollers/" + name + "/ClosedLoopErrorRpm", goalVelocity - measuredVelocity);
+      Logger.recordOutput(
+          "Rollers/" + name + "/VelocityCommandRadPerSec", goalVelocity * RPM_TO_RAD_PER_SEC);
+      Logger.recordOutput("Rollers/" + name + "/Gains/Profile", gainsLabel);
+      Logger.recordOutput("Rollers/" + name + "/Gains/kP", activeGains.kP().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kI", activeGains.kI().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kD", activeGains.kD().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kS", activeGains.kS().get());
+      Logger.recordOutput("Rollers/" + name + "/Gains/kV", activeGains.kV().get());
+      Logger.recordOutput("Rollers/" + name + "/FeedforwardDisabled", false);
+    }
+  }
+
+  private void recordConfigSnapshot() {
+    if (RuntimeModeManager.shouldLog(MechanismTelemetry.Signal.CONFIG_SNAPSHOT, mechanismKey)) {
+      Logger.recordOutput("Mechanisms/" + mechanismKey + "/Definition", definition.toString());
+    }
+  }
+
+  private static double rpmGainToRpsGain(double gainPerRpm) {
+    return gainPerRpm / RPM_TO_ROTATIONS_PER_SEC;
+  }
+
+  private void syncOnboardVelocityPID(int slot, GlobalConstants.Gains gains) {
+    double kP = rpmGainToRpsGain(gains.kP().get());
+    double kI = rpmGainToRpsGain(gains.kI().get());
+    double kD = rpmGainToRpsGain(gains.kD().get());
+    double[] existing = onboardVelocityPidBySlot.get(slot);
+    if (existing != null && existing[0] == kP && existing[1] == kI && existing[2] == kD) {
+      return;
+    }
+    io.setVelocityPID(slot, kP, kI, kD);
+    onboardVelocityPidBySlot.put(slot, new double[] {kP, kI, kD});
+  }
+
+  private static int sanitizeVelocityControlSlot(int slot) {
+    if (slot <= 0) {
+      return 0;
+    }
+    if (slot >= 2) {
+      return 2;
+    }
+    return slot;
+  }
+}

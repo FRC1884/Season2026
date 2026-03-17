@@ -22,10 +22,10 @@ import org.Griffins1884.frc2026.Config;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.commands.ShooterCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
-import org.Griffins1884.frc2026.generic.arms.Arms;
-import org.Griffins1884.frc2026.generic.elevators.Elevators;
-import org.Griffins1884.frc2026.generic.rollers.Rollers;
-import org.Griffins1884.frc2026.generic.turrets.GenericPositionTurretSystem.ControlMode;
+import org.Griffins1884.frc2026.mechanisms.turrets.PositionTurretMechanism.ControlMode;
+import org.Griffins1884.frc2026.subsystems.groups.Arms;
+import org.Griffins1884.frc2026.subsystems.groups.Elevators;
+import org.Griffins1884.frc2026.subsystems.groups.Rollers;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem.IndexerGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakePivotSubsystem.IntakePivotGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.IntakeGoal;
@@ -246,6 +246,10 @@ public class Superstructure extends SubsystemBase {
 
   public boolean hasBall() {
     return isBallPresent();
+  }
+
+  public Rollers getRollers() {
+    return rollers;
   }
 
   public void setAutoStartPoseSupplier(Supplier<Optional<Pose2d>> supplier) {

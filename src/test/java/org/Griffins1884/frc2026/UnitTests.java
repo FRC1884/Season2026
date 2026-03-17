@@ -63,7 +63,7 @@
 //     }
 
 //     @Override
-//     public void updateInputs(GenericRollerSystemIOInputs inputs) {
+//     public void updateInputs(MechanismRollerIOInputs inputs) {
 //       super.updateInputs(inputs);
 //       if (overrideCurrent >= 0) {
 //         inputs.supplyCurrentAmps = overrideCurrent;
@@ -658,7 +658,7 @@
 //     // Test align command generation
 //     Command alignCmd = DriveCommands.alignToClimbCommand(swerve);
 //     assertNotNull(alignCmd);
-//     // We don't fully run the align command as it depends on PathPlanner/Pose logic which is
+//     // We don't fully run the align command as it depends on pose-control logic which is
 // complex
 //     // in simple unit test,
 //     // but ensuring it constructs without error is a good first step.

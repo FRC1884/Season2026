@@ -1,0 +1,20 @@
+{
+  "version": "2026.1",
+  "generator": "PathPlanA",
+  "autos": [
+    {
+      "id": "hub-cycle-upper",
+      "name": "Hub Cycle Upper",
+      "folder": "UpperCycles",
+      "relativePath": "hub-cycle-upper/auto.json",
+      "updatedAt": 1773705600000
+    },
+    {
+      "id": "hub-cycle-lower",
+      "name": "Hub Cycle Lower",
+      "folder": "LowerCycles",
+      "relativePath": "hub-cycle-lower/auto.json",
+      "updatedAt": 1773705600000
+    }
+  ]
+}

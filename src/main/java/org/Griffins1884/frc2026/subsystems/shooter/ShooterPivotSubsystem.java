@@ -4,13 +4,14 @@ import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.Griffins1884.frc2026.generic.arms.GenericPositionArmSystem;
+import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.mechanisms.arms.PositionArmMechanism;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 @Setter
 @Getter
 public class ShooterPivotSubsystem
-    extends GenericPositionArmSystem<ShooterPivotSubsystem.ShooterPivotGoal> {
+    extends PositionArmMechanism<ShooterPivotSubsystem.ShooterPivotGoal> {
   @RequiredArgsConstructor
   @Getter
   public enum ShooterPivotGoal implements PivotGoal {
@@ -30,6 +31,7 @@ public class ShooterPivotSubsystem
   public ShooterPivotSubsystem(String name, ShooterPivotIO io) {
     super(
         name,
+        RobotMechanismDefinitions.SHOOTER_PIVOT,
         io,
         new ArmConfig(
             ShooterPivotConstants.GAINS.kP(),

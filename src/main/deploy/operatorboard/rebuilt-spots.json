@@ -1,0 +1,227 @@
+{
+  "field": {
+    "lengthMeters": 16.54048,
+    "widthMeters": 8.06958,
+    "safeAutoMaxXMeters": 8.15,
+    "robotLengthMeters": 0.6985,
+    "robotWidthMeters": 0.6985,
+    "referenceAlliance": "BLUE"
+  },
+  "noGoZones": [
+    {
+      "id": "hub",
+      "label": "Hub",
+      "xMin": 3.55,
+      "yMin": 2.72,
+      "xMax": 5.72,
+      "yMax": 5.33,
+      "locked": true
+    },
+    {
+      "id": "tower",
+      "label": "Tower",
+      "xMin": 1.72,
+      "yMin": 2.78,
+      "xMax": 2.72,
+      "yMax": 4.66,
+      "locked": true
+    },
+    {
+      "id": "upper-trench",
+      "label": "Upper Trench",
+      "xMin": 4.86,
+      "yMin": 6.9,
+      "xMax": 7.92,
+      "yMax": 8.052,
+      "locked": true
+    },
+    {
+      "id": "lower-trench",
+      "label": "Lower Trench",
+      "xMin": 4.86,
+      "yMin": 0.0,
+      "xMax": 7.92,
+      "yMax": 1.15,
+      "locked": true
+    }
+  ],
+  "spots": [
+    {
+      "id": "blue-hub-near",
+      "label": "Hub Near",
+      "shortLabel": "Hub N",
+      "group": "HUB",
+      "x": 3.08,
+      "y": 4.026,
+      "headingDeg": 0.0
+    },
+    {
+      "id": "blue-hub-far",
+      "label": "Hub Far",
+      "shortLabel": "Hub F",
+      "group": "HUB",
+      "x": 6.05,
+      "y": 4.026,
+      "headingDeg": 180.0
+    },
+    {
+      "id": "blue-hub-left",
+      "label": "Hub Left",
+      "shortLabel": "Hub L",
+      "group": "HUB",
+      "x": 4.61,
+      "y": 5.48,
+      "headingDeg": -90.0
+    },
+    {
+      "id": "blue-hub-right",
+      "label": "Hub Right",
+      "shortLabel": "Hub R",
+      "group": "HUB",
+      "x": 4.61,
+      "y": 2.58,
+      "headingDeg": 90.0
+    },
+    {
+      "id": "blue-depot",
+      "label": "Depot Intake",
+      "shortLabel": "Depot",
+      "group": "DEPOT",
+      "x": 1.82,
+      "y": 5.92,
+      "headingDeg": 180.0,
+      "approachDistanceMeters": 0.55
+    },
+    {
+      "id": "blue-outpost",
+      "label": "Outpost Intake",
+      "shortLabel": "Outpost",
+      "group": "OUTPOST",
+      "x": 1.24,
+      "y": 0.82,
+      "headingDeg": 180.0,
+      "approachDistanceMeters": 0.55
+    },
+    {
+      "id": "blue-tower-center",
+      "label": "Tower Center",
+      "shortLabel": "Tower C",
+      "group": "TOWER",
+      "x": 2.95,
+      "y": 3.95,
+      "headingDeg": 180.0
+    },
+    {
+      "id": "blue-tower-left",
+      "label": "Tower Left",
+      "shortLabel": "Tower L",
+      "group": "TOWER",
+      "x": 2.95,
+      "y": 4.56,
+      "headingDeg": 180.0
+    },
+    {
+      "id": "blue-tower-right",
+      "label": "Tower Right",
+      "shortLabel": "Tower R",
+      "group": "TOWER",
+      "x": 2.95,
+      "y": 3.32,
+      "headingDeg": 180.0
+    },
+    {
+      "id": "blue-left-trench",
+      "label": "Upper Trench Safe",
+      "shortLabel": "Trench U",
+      "group": "TRENCH",
+      "x": 4.78,
+      "y": 6.55,
+      "headingDeg": 0.0
+    },
+    {
+      "id": "blue-right-trench",
+      "label": "Lower Trench Safe",
+      "shortLabel": "Trench L",
+      "group": "TRENCH",
+      "x": 4.78,
+      "y": 1.46,
+      "headingDeg": 0.0
+    },
+    {
+      "id": "blue-left-bump",
+      "label": "Upper Bump",
+      "shortLabel": "Bump U",
+      "group": "BUMP",
+      "x": 4.42,
+      "y": 5.73,
+      "headingDeg": 0.0
+    },
+    {
+      "id": "blue-right-bump",
+      "label": "Lower Bump",
+      "shortLabel": "Bump L",
+      "group": "BUMP",
+      "x": 4.42,
+      "y": 2.32,
+      "headingDeg": 0.0
+    },
+    {
+      "id": "blue-mid-ball-upper",
+      "label": "Mid Ball Upper",
+      "shortLabel": "Ball U",
+      "group": "LANE",
+      "x": 7.94,
+      "y": 5.82,
+      "headingDeg": 0.0
+    },
+    {
+      "id": "blue-mid-ball-lower",
+      "label": "Mid Ball Lower",
+      "shortLabel": "Ball L",
+      "group": "LANE",
+      "x": 7.94,
+      "y": 2.22,
+      "headingDeg": 0.0
+    }
+  ],
+  "presets": [
+    {
+      "id": "hub-cycle-upper",
+      "name": "Hub Cycle Upper",
+      "startPose": {
+        "xMeters": 1.55,
+        "yMeters": 5.75,
+        "headingDeg": 180.0
+      },
+      "steps": [
+        {
+          "spotId": "blue-depot",
+          "requestedState": "INTAKING"
+        },
+        {
+          "spotId": "blue-hub-left",
+          "requestedState": "SHOOTING"
+        }
+      ]
+    },
+    {
+      "id": "hub-cycle-lower",
+      "name": "Hub Cycle Lower",
+      "startPose": {
+        "xMeters": 1.1,
+        "yMeters": 1.08,
+        "headingDeg": 180.0
+      },
+      "steps": [
+        {
+          "spotId": "blue-outpost",
+          "requestedState": "INTAKING"
+        },
+        {
+          "spotId": "blue-hub-right",
+          "requestedState": "SHOOTING"
+        }
+      ]
+    }
+  ]
+}

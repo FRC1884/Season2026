@@ -7,13 +7,7 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 import static org.Griffins1884.frc2026.GlobalConstants.RobotMode.SIM;
-import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.PATHPLANNER_CONFIG;
 
-import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.config.PIDConstants;
-import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import com.pathplanner.lib.pathfinding.Pathfinding;
-import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.hal.FRCNetComm.tInstances;
 import edu.wpi.first.hal.FRCNetComm.tResourceType;
 import edu.wpi.first.hal.HAL;
@@ -49,8 +43,6 @@ import lombok.Getter;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.subsystems.vision.Vision;
-import org.Griffins1884.frc2026.util.AllianceFlipUtil;
-import org.Griffins1884.frc2026.util.LocalADStarAK;
 import org.Griffins1884.frc2026.util.LogRollover;
 import org.Griffins1884.frc2026.util.RobotLogging;
 import org.Griffins1884.frc2026.util.swerve.SwerveSetpoint;
@@ -151,28 +143,6 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
 
     // Start odometry thread
     PhoenixOdometryThread.getInstance().start();
-
-    // Configure AutoBuilder for PathPlanner
-    AutoBuilder.configure(
-        this::getPose,
-        this::resetOdometry,
-        this::getChassisSpeeds,
-        this::runVelocity,
-        new PPHolonomicDriveController(
-            new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
-        PATHPLANNER_CONFIG,
-        () -> AllianceFlipUtil.shouldFlip(getPose()),
-        this);
-    Pathfinding.setPathfinder(new LocalADStarAK());
-    PathPlannerLogging.setLogActivePathCallback(
-        (activePath) -> {
-          Logger.recordOutput(
-              "Odometry/Trajectory", activePath.toArray(new Pose2d[activePath.size()]));
-        });
-    PathPlannerLogging.setLogTargetPoseCallback(
-        (targetPose) -> {
-          Logger.recordOutput("Odometry/TrajectorySetpoint", targetPose);
-        });
 
     Consumer<SysIdRoutineLog> sysIdLogCallbackDrive =
         (log) -> {
@@ -325,9 +295,9 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       double dt = now - lastFieldVelTimestamp;
       fieldMotionSampleDtSec = dt;
       double maxMotionSpeedMps =
-          sanitizePositiveOrInfinite(AlignConstants.TURRET_MAX_MOTION_SPEED_MPS.get());
+          sanitizePositiveOrInfinite(AlignConstants.TurretAutoAim.MAX_MOTION_SPEED_MPS.get());
       double maxMotionAccelMps2 =
-          sanitizePositiveOrInfinite(AlignConstants.TURRET_MAX_MOTION_ACCEL_MPS2.get());
+          sanitizePositiveOrInfinite(AlignConstants.TurretAutoAim.MAX_MOTION_ACCEL_MPS2.get());
       if (dt > 1e-4 && dt < 0.25) {
         Translation2d acceleration = currentVelocity.minus(lastFieldVelocity).times(1 / dt);
         double speedNorm = currentVelocity.getNorm();

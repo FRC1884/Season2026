@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
-import org.Griffins1884.frc2026.generic.rollers.GenericRollerSystemIOKraken;
+import org.Griffins1884.frc2026.mechanisms.rollers.MechanismRollerIOKraken;
 
-public class ShooterIOKraken extends GenericRollerSystemIOKraken implements ShooterIO {
+public class ShooterIOKraken extends MechanismRollerIOKraken implements ShooterIO {
   public ShooterIOKraken() {
     super(
         ShooterConstants.SHOOTER_IDS,

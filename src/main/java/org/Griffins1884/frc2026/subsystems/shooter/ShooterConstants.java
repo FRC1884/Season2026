@@ -2,7 +2,7 @@ package org.Griffins1884.frc2026.subsystems.shooter;
 
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.generic.rollers.GenericRollerSystemIOKraken;
+import org.Griffins1884.frc2026.mechanisms.rollers.MechanismRollerIOKraken;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterConstants {
@@ -17,22 +17,16 @@ public final class ShooterConstants {
   public static final boolean[] SHOOTER_INVERTED = {false, true};
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final double CLOSED_LOOP_RAMP_SECONDS = 0.01;
-  public static final GenericRollerSystemIOKraken.VelocityControlRequest VELOCITY_CONTROL_REQUEST =
-      GenericRollerSystemIOKraken.VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC;
+  public static final MechanismRollerIOKraken.VelocityControlRequest VELOCITY_CONTROL_REQUEST =
+      MechanismRollerIOKraken.VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC;
   public static final boolean BRAKE_MODE = false;
   public static final double REDUCTION = 1.0;
 
   public static final double TARGET_RPM = 5000.0;
   public static final double MAX_DISTANCE = 8.83;
 
-  public static final GlobalConstants.Gains GAINS_LOW =
-      new GlobalConstants.Gains("Shooter/GainsLow", 125, 0.01, 1, 1.4621, 0.016, 0.010901);
-  public static final GlobalConstants.Gains GAINS_HIGH =
-      new GlobalConstants.Gains("Shooter/GainsHigh", 125, 0.01, 1, 1.4621, 0.016, 0.010901);
-  public static final LoggedTunableNumber GAINS_SWITCH_RPM =
-      new LoggedTunableNumber("Shooter/GainsSwitchRpm", 3000.0);
-  public static final LoggedTunableNumber GAINS_SWITCH_HYSTERESIS_RPM =
-      new LoggedTunableNumber("Shooter/GainsSwitchHysteresisRpm", 100.0);
+  public static final GlobalConstants.Gains GAINS =
+      new GlobalConstants.Gains("Shooter/Gains", 125, 0.01, 1, 1.4621, 0.016, 0.010901);
   public static final LoggedTunableNumber RECOVERY_ERROR_GAIN_VOLTS_PER_RPM =
       new LoggedTunableNumber("Shooter/RecoveryErrorGainVoltsPerRpm", 0.0035);
   public static final LoggedTunableNumber RECOVERY_CURRENT_THRESHOLD_AMPS =
@@ -45,7 +39,7 @@ public final class ShooterConstants {
   public static final double MAX_VOLTAGE = 12.0;
 
   public static final double FLYWHEEL_RADIUS_METERS = 0.05;
-  public static final double FLYWHEEL_GEAR_RATIO = 1.0;
+  public static final double FLYWHEEL_GEAR_RATIO = REDUCTION;
   public static final LoggedTunableNumber SLIP_FACTOR =
       new LoggedTunableNumber("Shooter/SlipFactor", 0.64);
   public static final double EXIT_HEIGHT_METERS = 0.587;

@@ -24,9 +24,9 @@ import org.Griffins1884.frc2026.util.LoggedTunableNumber;
  * constants are needed, to reduce verbosity.
  */
 public final class GlobalConstants {
-  public static final RobotMode MODE = RobotMode.REAL;
-  public static final RobotType ROBOT = RobotType.DBOT;
-  public static final LoggingMode LOGGING_MODE = LoggingMode.COMP;
+  public static final RobotMode MODE = RobotMode.SIM;
+  public static final RobotType ROBOT = RobotType.SIMBOT;
+  public static final LoggingMode LOGGING_MODE = LoggingMode.DEBUG;
   public static final double ODOMETRY_FREQUENCY = 250.0;
 
   public static boolean TUNING_MODE = false;
@@ -57,25 +57,6 @@ public final class GlobalConstants {
 
   public static boolean isCompMode() {
     return LOGGING_MODE == LoggingMode.COMP;
-  }
-
-  private static LoggingMode resolveLoggingMode() {
-    String override = System.getProperty("frc.logMode");
-    if (override == null || override.isBlank()) {
-      override = System.getenv("FRC_LOG_MODE");
-    }
-
-    if (override != null) {
-      String normalized = override.trim().toUpperCase();
-      if ("DEBUG".equals(normalized)) {
-        return LoggingMode.DEBUG;
-      }
-      if ("COMP".equals(normalized)) {
-        return LoggingMode.COMP;
-      }
-    }
-
-    return MODE == RobotMode.REAL ? LoggingMode.COMP : LoggingMode.DEBUG;
   }
 
   /**

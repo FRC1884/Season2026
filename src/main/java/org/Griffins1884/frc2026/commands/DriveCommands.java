@@ -1,14 +1,12 @@
 package org.Griffins1884.frc2026.commands;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -17,14 +15,12 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Set;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.RobotLogging;
-import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
   private DriveCommands() {}
@@ -42,7 +38,7 @@ public class DriveCommands {
   private static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
     double linearMagnitude =
-        MathUtil.applyDeadband(Math.hypot(x, y), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
+        MathUtil.applyDeadband(Math.hypot(x, y), AlignConstants.Manual.DEADBAND.get());
     Rotation2d linearDirection = new Rotation2d(Math.atan2(y, x));
 
     // Square magnitude for more precise control
@@ -68,8 +64,7 @@ public class DriveCommands {
 
     // Apply rotation deadband
     double omega =
-        MathUtil.applyDeadband(
-            omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
+        MathUtil.applyDeadband(omegaSupplier.getAsDouble(), AlignConstants.Manual.DEADBAND.get());
 
     // Square rotation value for more precise control
     omega = Math.copySign(omega * omega, omega);
@@ -111,7 +106,7 @@ public class DriveCommands {
 
           double omega =
               MathUtil.applyDeadband(
-                  omegaSupplier.getAsDouble(), AlignConstants.ALIGN_MANUAL_DEADBAND.get());
+                  omegaSupplier.getAsDouble(), AlignConstants.Manual.DEADBAND.get());
           omega = Math.copySign(omega * omega, omega);
 
           drive.runVelocity(
@@ -121,99 +116,6 @@ public class DriveCommands {
                   -omega * drive.getMaxAngularSpeedRadPerSec()));
         },
         drive);
-  }
-
-  /**
-   * Field relative drive command using joystick for linear control and PID for angular control.
-   * Possible use cases include snapping to an angle, aiming at a vision target, or controlling
-   * absolute rotation with a joystick.
-   */
-  public static Command joystickDriveAtAngle(
-      SwerveSubsystem drive,
-      DoubleSupplier xSupplier,
-      DoubleSupplier ySupplier,
-      Supplier<Rotation2d> rotationSupplier) {
-
-    // Create PID controller
-    ProfiledPIDController angleController =
-        new ProfiledPIDController(
-            SwerveConstants.ROTATION_CONSTANTS.kP,
-            0.0,
-            SwerveConstants.ROTATION_CONSTANTS.kD,
-            new TrapezoidProfile.Constraints(
-                AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
-                AlignConstants.ALIGN_MAX_ANGULAR_ACCELERATION.get()));
-    angleController.enableContinuousInput(-Math.PI, Math.PI);
-
-    // Construct command
-    return Commands.run(
-            () -> {
-              // Get linear velocity
-              Translation2d linearVelocity =
-                  getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
-
-              // Calculate angular speed
-              double omega =
-                  angleController.calculate(
-                      drive.getRotation().getRadians(), rotationSupplier.get().getRadians());
-
-              // Convert to field relative speeds & send command
-              ChassisSpeeds speeds =
-                  new ChassisSpeeds(
-                      linearVelocity.getX() * drive.getMaxLinearSpeedMetersPerSec(),
-                      linearVelocity.getY() * drive.getMaxLinearSpeedMetersPerSec(),
-                      omega);
-              boolean isFlipped = AllianceFlipUtil.shouldFlip(drive.getPose());
-              drive.runVelocity(
-                  ChassisSpeeds.fromFieldRelativeSpeeds(
-                      speeds,
-                      isFlipped
-                          ? drive.getRotation().plus(new Rotation2d(Math.PI))
-                          : drive.getRotation()));
-            },
-            drive)
-
-        // Reset PID controller when command starts
-        .beforeStarting(() -> angleController.reset(drive.getRotation().getRadians()));
-  }
-
-  private static ChassisSpeeds clampChassisSpeeds(ChassisSpeeds speeds) {
-    double maxComponent =
-        Math.max(
-            1.0,
-            Math.max(
-                Math.abs(speeds.vxMetersPerSecond)
-                    / AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get(),
-                Math.abs(speeds.vyMetersPerSecond)
-                    / AlignConstants.ALIGN_MAX_TRANSLATIONAL_SPEED.get()));
-    double vx = speeds.vxMetersPerSecond / maxComponent;
-    double vy = speeds.vyMetersPerSecond / maxComponent;
-    double omega =
-        MathUtil.clamp(
-            speeds.omegaRadiansPerSecond,
-            -AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get(),
-            AlignConstants.ALIGN_MAX_ANGULAR_SPEED.get());
-    return new ChassisSpeeds(vx, vy, omega);
-  }
-
-  public static Command alignToHPd(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getHPAlignPose();
-          Logger.recordOutput("Autonomy/AlignHP", target);
-          return new AutoAlignToPoseCommand(drive, target, 0.2, 0.0, 0.1, false);
-        },
-        Set.of(drive));
-  }
-
-  public static Command alignToDepot(SwerveSubsystem drive) {
-    return Commands.defer(
-        () -> {
-          Pose2d target = AlignConstants.getDepotAlignPose();
-          Logger.recordOutput("Autonomy/AlignHP", target);
-          return new AutoAlignToPoseCommand(drive, target, 0.2, 0.0, 0.1, false);
-        },
-        Set.of(drive));
   }
 
   /**
@@ -240,7 +142,7 @@ public class DriveCommands {
                   drive.runCharacterization(0.0);
                 },
                 drive)
-            .withTimeout(AlignConstants.FF_START_DELAY.get()),
+            .withTimeout(AlignConstants.Characterization.FF_START_DELAY_SEC.get()),
 
         // Start timer
         Commands.runOnce(timer::restart),
@@ -248,7 +150,9 @@ public class DriveCommands {
         // Accelerate and gather data
         Commands.run(
                 () -> {
-                  double voltage = timer.get() * AlignConstants.FF_RAMP_RATE.get();
+                  double voltage =
+                      timer.get()
+                          * AlignConstants.Characterization.FF_RAMP_RATE_VOLTS_PER_SEC.get();
                   drive.runCharacterization(voltage);
                   velocitySamples.add(drive.getFFCharacterizationVelocity());
                   voltageSamples.add(voltage);
@@ -281,7 +185,9 @@ public class DriveCommands {
 
   /** Measures the robot's wheel radius by spinning in a circle. */
   public static Command wheelRadiusCharacterization(SwerveSubsystem drive) {
-    SlewRateLimiter limiter = new SlewRateLimiter(AlignConstants.WHEEL_RADIUS_RAMP_RATE.get());
+    SlewRateLimiter limiter =
+        new SlewRateLimiter(
+            AlignConstants.Characterization.WHEEL_RADIUS_RAMP_RATE_RAD_PER_SEC2.get());
     WheelRadiusCharacterizationState state = new WheelRadiusCharacterizationState();
 
     return Commands.parallel(
@@ -296,7 +202,10 @@ public class DriveCommands {
             // Turn in place, accelerating up to full speed
             Commands.run(
                 () -> {
-                  double speed = limiter.calculate(AlignConstants.WHEEL_RADIUS_MAX_VELOCITY.get());
+                  double speed =
+                      limiter.calculate(
+                          AlignConstants.Characterization.WHEEL_RADIUS_MAX_VELOCITY_RAD_PER_SEC
+                              .get());
                   drive.runVelocity(new ChassisSpeeds(0.0, 0.0, speed));
                 },
                 drive)),

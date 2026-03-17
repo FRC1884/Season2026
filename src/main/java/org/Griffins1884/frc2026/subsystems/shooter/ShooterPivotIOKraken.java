@@ -1,8 +1,8 @@
 package org.Griffins1884.frc2026.subsystems.shooter;
 
-import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIOKraken;
+import org.Griffins1884.frc2026.mechanisms.arms.MechanismArmIOKraken;
 
-public class ShooterPivotIOKraken extends GenericArmSystemIOKraken implements ShooterPivotIO {
+public class ShooterPivotIOKraken extends MechanismArmIOKraken implements ShooterPivotIO {
   public ShooterPivotIOKraken() {
     super(
         ShooterPivotConstants.MOTOR_ID,

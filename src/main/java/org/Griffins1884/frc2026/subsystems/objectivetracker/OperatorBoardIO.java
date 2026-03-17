@@ -16,6 +16,12 @@ public interface OperatorBoardIO {
     public boolean cancelIntakeDeployRezero = false;
     public boolean requestManualIntakeDeployZeroSeek = false;
     public boolean cancelManualIntakeDeployZeroSeek = false;
+    public String[] selectedAutoId = new String[] {};
+    public String[] autoQueueSpec = new String[] {};
+    public String[] autoQueueCommand = new String[] {};
+    public String[] runtimeProfileSpec = new String[] {};
+    public boolean applyRuntimeProfile = false;
+    public boolean resetRuntimeProfile = false;
   }
 
   default void updateInputs(OperatorBoardIOInputs inputs) {}
@@ -35,6 +41,30 @@ public interface OperatorBoardIO {
   default void setTargetPoseValid(boolean value) {}
 
   default void setRobotPose(double[] value) {}
+
+  default void setAutoQueueState(String value) {}
+
+  default void setAutoQueuePreviewPose(double[] value) {}
+
+  default void setAutoQueuePreviewPoseValid(boolean value) {}
+
+  default void setSelectedAutoState(String value) {}
+
+  default void setRuntimeProfileState(String value) {}
+
+  default void setRuntimeProfileStatus(String value) {}
+
+  default void setSystemCheckState(String value) {}
+
+  default void setAutoCheckState(String value) {}
+
+  default void setAutoQuickRunState(String value) {}
+
+  default void setNtDiagnosticsState(String value) {}
+
+  default void setMechanismStatusState(String value) {}
+
+  default void setActionTraceState(String value) {}
 
   default void setHasBall(boolean value) {}
 

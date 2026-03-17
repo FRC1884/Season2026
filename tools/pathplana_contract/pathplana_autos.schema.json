@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/FRC1884/PathPlanA/raw/main/vendor/pathplana_autos.schema.json",
+  "title": "PathPlanA Auto Package",
+  "type": "object",
+  "required": [
+    "autos"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "generator": {
+      "type": "string"
+    },
+    "commandProfiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/commandProfile"
+      }
+    },
+    "globalStartPoses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/namedPose"
+      }
+    },
+    "globalVariables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/namedValue"
+      }
+    },
+    "autos": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/autoSpec"
+      }
+    }
+  },
+  "$defs": {
+    "pose": {
+      "type": "object",
+      "required": [
+        "xMeters",
+        "yMeters",
+        "headingDeg"
+      ],
+      "properties": {
+        "xMeters": {
+          "type": "number"
+        },
+        "yMeters": {
+          "type": "number"
+        },
+        "headingDeg": {
+          "type": "number"
+        }
+      }
+    },
+    "zone": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "xMinMeters",
+        "yMinMeters",
+        "xMaxMeters",
+        "yMaxMeters"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "xMinMeters": {
+          "type": "number"
+        },
+        "yMinMeters": {
+          "type": "number"
+        },
+        "xMaxMeters": {
+          "type": "number"
+        },
+        "yMaxMeters": {
+          "type": "number"
+        },
+        "locked": {
+          "type": "boolean"
+        }
+      }
+    },
+    "eventMarker": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "progress"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "progress": {
+          "type": "number"
+        },
+        "commandId": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "eventZone": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "xMinMeters",
+        "yMinMeters",
+        "xMaxMeters",
+        "yMaxMeters"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "xMinMeters": {
+          "type": "number"
+        },
+        "yMinMeters": {
+          "type": "number"
+        },
+        "xMaxMeters": {
+          "type": "number"
+        },
+        "yMaxMeters": {
+          "type": "number"
+        },
+        "enterCommandId": {
+          "type": "string"
+        },
+        "exitCommandId": {
+          "type": "string"
+        },
+        "activeCommandId": {
+          "type": "string"
+        },
+        "colorHex": {
+          "type": "string"
+        }
+      }
+    },
+    "constraintZone": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "startProgress",
+        "endProgress"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "startProgress": {
+          "type": "number"
+        },
+        "endProgress": {
+          "type": "number"
+        },
+        "maxVelocityMps": {
+          "type": "number"
+        },
+        "maxAccelerationMpsSq": {
+          "type": "number"
+        },
+        "constraintFactor": {
+          "type": "number"
+        },
+        "maxAngularVelocityDegPerSec": {
+          "type": "number"
+        },
+        "maxAngularAccelerationDegPerSecSq": {
+          "type": "number"
+        },
+        "toleranceMetersOverride": {
+          "type": "number"
+        },
+        "poseBlendWeightOverride": {
+          "type": "number"
+        }
+      }
+    },
+    "waypoint": {
+      "type": "object",
+      "required": [
+        "pose"
+      ],
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "bendStrength": {
+          "type": "number"
+        },
+        "pose": {
+          "$ref": "#/$defs/pose"
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": [
+        "label",
+        "requestedState"
+      ],
+      "properties": {
+        "spotId": {
+          "type": "string"
+        },
+        "commandId": {
+          "type": "string"
+        },
+        "commandName": {
+          "type": "string"
+        },
+        "waitSeconds": {
+          "type": "number"
+        },
+        "label": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "requestedState": {
+          "type": "string"
+        },
+        "xMeters": {
+          "type": "number"
+        },
+        "yMeters": {
+          "type": "number"
+        },
+        "headingDeg": {
+          "type": "number"
+        },
+        "constraintFactor": {
+          "type": "number"
+        },
+        "toleranceMeters": {
+          "type": "number"
+        },
+        "timeoutSeconds": {
+          "type": "number"
+        },
+        "endVelocityMps": {
+          "type": "number"
+        },
+        "stopOnEnd": {
+          "type": "boolean"
+        },
+        "routeWaypoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/waypoint"
+          }
+        },
+        "plannerSettings": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "commandProfile": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "requestedState",
+        "colorHex"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "requestedState": {
+          "type": "string"
+        },
+        "colorHex": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "namedPose": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "pose"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "pose": {
+          "$ref": "#/$defs/pose"
+        }
+      }
+    },
+    "namedValue": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "value"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        }
+      }
+    },
+    "autoSpec": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "startPose",
+        "steps"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "number"
+        },
+        "startPose": {
+          "$ref": "#/$defs/pose"
+        },
+        "customZones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/zone"
+          }
+        },
+        "eventMarkers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/eventMarker"
+          }
+        },
+        "eventZones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/eventZone"
+          }
+        },
+        "constraintZones": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/constraintZone"
+          }
+        },
+        "plannerSettings": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    }
+  }
+}

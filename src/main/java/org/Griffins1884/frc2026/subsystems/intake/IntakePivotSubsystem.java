@@ -10,16 +10,19 @@ import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
-import org.Griffins1884.frc2026.generic.arms.GenericArmSystemIO;
-import org.Griffins1884.frc2026.generic.arms.GenericPositionArmSystem;
-import org.Griffins1884.frc2026.generic.arms.GenericPositionArmSystem.ControlMode;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
+import org.Griffins1884.frc2026.mechanisms.MechanismHealth;
+import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.mechanisms.arms.MechanismArmIO;
+import org.Griffins1884.frc2026.mechanisms.arms.PositionArmMechanism;
+import org.Griffins1884.frc2026.mechanisms.arms.PositionArmMechanism.ControlMode;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.Logger;
 
 public class IntakePivotSubsystem extends SubsystemBase {
   @RequiredArgsConstructor
   @Getter
-  public enum IntakePivotGoal implements GenericPositionArmSystem.PivotGoal {
+  public enum IntakePivotGoal implements PositionArmMechanism.PivotGoal {
     IDLING(IntakePivotConstants.IDLE_ANGLE_RAD),
     PICKUP(IntakePivotConstants.PICKUP_RAD),
     TESTING(new LoggedTunableNumber("IntakePivot/Test", 0.0));
@@ -138,6 +141,33 @@ public class IntakePivotSubsystem extends SubsystemBase {
   public void setBrakeMode(boolean enabled) {
     primary.setBrakeMode(enabled);
     secondary.setBrakeMode(enabled);
+  }
+
+  public boolean isConnected() {
+    return primary.isConnected() && secondary.isConnected();
+  }
+
+  public MechanismHealth getHealth() {
+    if (!primary.isConnected() || !secondary.isConnected()) {
+      return MechanismHealth.OFFLINE;
+    }
+    if (primary.getHealth() == MechanismHealth.FAULTED
+        || secondary.getHealth() == MechanismHealth.FAULTED) {
+      return MechanismHealth.FAULTED;
+    }
+    if (primary.getHealth() == MechanismHealth.DEGRADED
+        || secondary.getHealth() == MechanismHealth.DEGRADED) {
+      return MechanismHealth.DEGRADED;
+    }
+    return MechanismHealth.NOMINAL;
+  }
+
+  public String getControlModeName() {
+    if (primary.getControlMode() == ControlMode.OPEN_LOOP
+        || secondary.getControlMode() == ControlMode.OPEN_LOOP) {
+      return ControlMode.OPEN_LOOP.name();
+    }
+    return ControlMode.CLOSED_LOOP.name();
   }
 
   @Override
@@ -324,13 +354,13 @@ public class IntakePivotSubsystem extends SubsystemBase {
     Logger.recordOutput("IntakePivot/Zeroing/ConditionDetected", zeroConditionDetected);
   }
 
-  private static final class IntakePivotArm extends GenericPositionArmSystem<IntakePivotGoal> {
+  private static final class IntakePivotArm extends PositionArmMechanism<IntakePivotGoal> {
     private final Supplier<IntakePivotGoal> goalSupplier;
 
-    private IntakePivotArm(
-        String name, GenericArmSystemIO io, Supplier<IntakePivotGoal> goalSupplier) {
+    private IntakePivotArm(String name, MechanismArmIO io, Supplier<IntakePivotGoal> goalSupplier) {
       super(
           name,
+          sideDefinition(name),
           io,
           new ArmConfig(
               IntakePivotConstants.GAINS.kP(),
@@ -354,6 +384,20 @@ public class IntakePivotSubsystem extends SubsystemBase {
     @Override
     public IntakePivotGoal getGoal() {
       return goalSupplier.get();
+    }
+
+    private static MechanismDefinition sideDefinition(String name) {
+      MechanismDefinition base = RobotMechanismDefinitions.INTAKE_PIVOT;
+      String normalizedName = name.replaceAll("[^A-Za-z0-9]+", "");
+      String key = "intakePivot" + normalizedName;
+      return new MechanismDefinition(
+          key,
+          name,
+          base.mechanismType(),
+          base.config(),
+          base.telemetry(),
+          base.faultPolicy(),
+          base.simulation());
     }
   }
 }

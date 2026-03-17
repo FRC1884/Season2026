@@ -13,7 +13,6 @@ import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.FRONT_R
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.GYRO_TYPE;
 import static org.Griffins1884.frc2026.subsystems.vision.AprilTagVisionConstants.*;
 
-import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -29,9 +28,9 @@ import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.OI.DriverMap;
-import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
+import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardIOServer;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardTracker;
@@ -43,7 +42,6 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretIOKraken;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOSim;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.*;
-import org.Griffins1884.frc2026.util.AutoStartPoseProvider;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
@@ -68,18 +66,17 @@ public class RobotContainer {
   private final DriverMap driver = getDriverController();
 
   // Dashboard inputs
-  private final LoggedDashboardChooser<Command> autoChooser;
   private final LoggedDashboardChooser<Command> characterizationChooser;
-  private final Command autoIdleCommand;
   private final Command characterizationIdleCommand;
 
   private final Superstructure superstructure;
   private final Vision vision;
   private boolean autoAllianceZeroed = false;
-  private final AutoStartPoseProvider autoStartPoseProvider = new AutoStartPoseProvider();
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    // Validate the declarative mechanism catalog up front so config errors fail early.
+    RobotMechanismDefinitions.all();
     characterizationChooser = new LoggedDashboardChooser<>("Characterization/Diagnostics");
     characterizationIdleCommand = Commands.none();
     characterizationChooser.addDefaultOption("None", characterizationIdleCommand);
@@ -225,12 +222,6 @@ public class RobotContainer {
           drive.sysIdTurnDynamic(SysIdRoutine.Direction.kReverse).ignoringDisable(true));
     }
 
-    if (AUTONOMOUS_ENABLED) {
-      if (drive != null) {
-        AutoCommands.registerAutoCommands(superstructure, drive);
-      }
-    }
-
     SmartDashboard.putBoolean("drive/test", DriveCommands.getTest().get());
 
     superstructure.registerSuperstructureCharacterization(() -> characterizationChooser);
@@ -263,16 +254,8 @@ public class RobotContainer {
     // Configure the button bindings
     configureDriverButtonBindings();
 
-    // Register the auto commands
-    autoIdleCommand = Commands.none();
-    if (AUTONOMOUS_ENABLED) {
-      autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-      superstructure.setAutoStartPoseSupplier(this::getSelectedAutoStartPose);
-    } else {
-      autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-      autoChooser.addDefaultOption("Do Nothing", autoIdleCommand);
-    }
+    superstructure.setAutoStartPoseSupplier(
+        operatorBoard != null ? operatorBoard::getQueuedStartPose : Optional::empty);
   }
 
   /**
@@ -340,27 +323,14 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     if (!AUTONOMOUS_ENABLED) return null;
-    Command selected = autoChooser.get();
-    boolean doNothingSelected = selected == null || selected == autoIdleCommand;
-    superstructure.setAutonomousHoldEnabled(doNothingSelected);
-    return doNothingSelected ? null : selected;
+    Command selected = operatorBoard != null ? operatorBoard.getAutonomousCommand() : null;
+    superstructure.setAutonomousHoldEnabled(selected == null);
+    return selected;
   }
 
   public Command getCharacterizationCommand() {
     Command selected = characterizationChooser.get();
     return selected == characterizationIdleCommand ? null : selected;
-  }
-
-  private Optional<Pose2d> getSelectedAutoStartPose() {
-    if (autoChooser == null) {
-      return Optional.empty();
-    }
-    Command selected = autoChooser.get();
-    if (selected == null || selected == autoIdleCommand) {
-      return Optional.empty();
-    }
-    String autoName = selected.getName();
-    return autoStartPoseProvider.getStartPoseForAuto(autoName);
   }
 
   public Command getDriveSysIdCommand() {
