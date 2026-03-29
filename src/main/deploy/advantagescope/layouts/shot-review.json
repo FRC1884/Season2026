@@ -1,0 +1,27 @@
+{
+  "name": "Shot Review",
+  "description": "Combined shot review layout with field, video, and telemetry. Use shot-only-review.json if you do not want any robot CAD assumptions.",
+  "tabs": [
+    {
+      "type": "3d-field",
+      "title": "Field"
+    },
+    {
+      "type": "video",
+      "title": "Practice Video"
+    },
+    {
+      "type": "line-graph",
+      "title": "Shooter Telemetry",
+      "signals": [
+        "Superstructure/ShotModel/Rpm",
+        "Superstructure/ShotModel/PivotRotations",
+        "Superstructure/ShotModel/TurretYawDeg",
+        "ShotReview/PredictionErrorMeters",
+        "ShotReview/PredictionFlightTimeSec",
+        "FieldSimulation/ProjectileCount",
+        "FieldSimulation/ProjectileSpawnCount"
+      ]
+    }
+  ]
+}

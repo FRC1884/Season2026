@@ -27,3 +27,6 @@ src/main/java/org/Griffins1884/frc2026/util/LogRollover.java
 src/main/java/org/Griffins1884/frc2026/util/TurretUtil.java
 src/main/java/org/Griffins1884/frc2026/subsystems/swerve/Module.java
 src/main/java/org/Griffins1884/frc2026/util/RollingWPILOGWriter.java
+src/main/java/org/Griffins1884/frc2026/simulation/replay/ShotReviewEvents.java
+src/main/java/org/Griffins1884/frc2026/simulation/visualization/GamePiecePosePublisher.java
+src/main/java/org/Griffins1884/frc2026/simulation/visualization/RobotStateVisualizer.java

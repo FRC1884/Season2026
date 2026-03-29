@@ -35,6 +35,12 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
         scenario != null && scenario.robotVelocityMetersPerSecond() != null
             ? scenario.robotVelocityMetersPerSecond()
             : new Translation2d();
+    ShotModel.EntryWindow entryWindow =
+        scenario != null ? scenario.entryWindow() : ShotModel.EntryWindow.unconstrained();
+    ShotModel.ClearanceConstraint clearanceConstraint =
+        scenario != null
+            ? scenario.clearanceConstraint()
+            : ShotModel.ClearanceConstraint.unconstrained();
     double clampedWheelRpm = config.flywheel().clampWheelRpm(launchCommand.wheelRpm());
     double clampedAngleDegrees =
         config.pivotCalibration().clampLaunchAngleDegrees(launchCommand.launchAngleDegrees());
@@ -62,6 +68,7 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
           0.0,
           horizontalDistance,
           Double.POSITIVE_INFINITY,
+          Double.NEGATIVE_INFINITY,
           exitPosition,
           targetPosition,
           0.0,
@@ -94,6 +101,7 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
           intercept.turretYaw().getDegrees(),
           horizontalDistance,
           Double.POSITIVE_INFINITY,
+          Double.NEGATIVE_INFINITY,
           exitPosition,
           targetPosition,
           robotMotionComponents[0],
@@ -107,20 +115,22 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
     Translation3d initialVelocity =
         new Translation3d(
             fieldHorizontalVelocity.getX(), fieldHorizontalVelocity.getY(), initialVerticalSpeed);
-    TrajectoryPoint bestPoint =
-        simulateClosestApproach(exitPosition, initialVelocity, targetPosition);
+    TrajectoryAssessment assessment =
+        assessTrajectory(
+            exitPosition, initialVelocity, targetPosition, entryWindow, clearanceConstraint);
 
     return new ShotPrediction(
-        bestPoint.errorMeters() <= config.search().solutionToleranceMeters(),
-        bestPoint.timeSeconds(),
+        assessment.feasible(),
+        assessment.referenceTimeSeconds(),
         clampedAngleDegrees,
         launchMotorRotations,
         clampedWheelRpm,
         exitVelocity,
         turretYawDegrees,
         horizontalDistance,
-        bestPoint.errorMeters(),
-        bestPoint.positionMeters(),
+        assessment.errorMeters(),
+        assessment.clearanceMarginMeters(),
+        assessment.referencePositionMeters(),
         targetPosition,
         robotMotionComponents[0],
         robotMotionComponents[1]);
@@ -150,9 +160,13 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
     ShotCandidate best =
         candidates.stream()
             .min(
-                Comparator.comparingDouble(
-                        (ShotCandidate candidate) ->
-                            candidate.prediction().closestApproachErrorMeters())
+                Comparator.comparing(
+                        (ShotCandidate candidate) -> !candidate.prediction().feasible())
+                    .thenComparingDouble(
+                        candidate -> candidate.prediction().closestApproachErrorMeters())
+                    .thenComparingDouble(
+                        candidate -> -candidate.prediction().clearanceMarginMeters())
+                    .thenComparingDouble(candidate -> -candidate.prediction().launchAngleDegrees())
                     .thenComparingDouble(candidate -> candidate.prediction().timeOfFlightSeconds()))
             .orElseGet(
                 () ->
@@ -172,6 +186,23 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
   @Override
   public String name() {
     return "advanced-ballistics-shot-model";
+  }
+
+  private static boolean shouldPreferEntry(EntryPoint candidate, EntryPoint currentBest) {
+    if (currentBest == null) {
+      return true;
+    }
+    if (candidate.valid() != currentBest.valid()) {
+      return candidate.valid();
+    }
+    if (candidate.descending() != currentBest.descending()) {
+      return candidate.descending();
+    }
+    if (Math.abs(candidate.horizontalErrorMeters() - currentBest.horizontalErrorMeters())
+        > EPSILON) {
+      return candidate.horizontalErrorMeters() < currentBest.horizontalErrorMeters();
+    }
+    return candidate.timeSeconds() < currentBest.timeSeconds();
   }
 
   private InterceptSolution solveWithMovingExitGeometry(
@@ -297,26 +328,162 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
         .findFirst();
   }
 
-  private TrajectoryPoint simulateClosestApproach(
-      Translation3d initialPosition, Translation3d initialVelocity, Translation3d targetPosition) {
+  private TrajectoryAssessment assessTrajectory(
+      Translation3d initialPosition,
+      Translation3d initialVelocity,
+      Translation3d targetPosition,
+      ShotModel.EntryWindow entryWindow,
+      ShotModel.ClearanceConstraint clearanceConstraint) {
     double dt = config.search().integrationStepSeconds();
     double maxTime = config.search().maxSimulationTimeSeconds();
     State state = new State(initialPosition, initialVelocity);
     TrajectoryPoint best =
         new TrajectoryPoint(0.0, initialPosition, initialPosition.getDistance(targetPosition));
+    double targetZ = targetPosition.getZ();
+    double entryRadius = entryWindow.horizontalRadiusMeters();
+    double preferredUpperEntryZ = entryWindow.preferredUpperEntryHeightMeters();
+    double preferredUpperEntryRadius = entryWindow.preferredUpperEntryRadiusMeters();
+    boolean unconstrainedEntry = !Double.isFinite(entryRadius);
+    boolean requireDescending = entryWindow.requireDescendingAtEntry();
+    boolean requirePreferredUpperEntry =
+        entryWindow.requirePreferredUpperEntry() && Double.isFinite(preferredUpperEntryZ);
+    boolean unconstrainedClearance =
+        (clearanceConstraint.startRadiusMeters() <= EPSILON
+                && clearanceConstraint.endRadiusMeters() <= EPSILON)
+            || (!Double.isFinite(clearanceConstraint.startRadiusMeters())
+                && !Double.isFinite(clearanceConstraint.endRadiusMeters()));
+    boolean clearanceViolated = false;
+    double minClearanceMeters = Double.POSITIVE_INFINITY;
+    EntryPoint bestEntry = null;
+    EntryPoint bestUpperEntry = null;
+    State previousState = state;
+    double previousTime = 0.0;
 
     for (double time = 0.0; time <= maxTime + EPSILON; time += dt) {
       double error = state.position().getDistance(targetPosition);
       if (error < best.errorMeters()) {
         best = new TrajectoryPoint(time, state.position(), error);
       }
+      if (!unconstrainedClearance) {
+        double clearance = clearanceToEnvelope(state.position(), clearanceConstraint);
+        minClearanceMeters = Math.min(minClearanceMeters, clearance);
+        if (clearance < 0.0) {
+          clearanceViolated = true;
+        }
+      }
+
+      if (!unconstrainedEntry && time > 0.0) {
+        boolean crossedTargetPlaneDescending =
+            previousState.position().getZ() >= targetZ && state.position().getZ() <= targetZ;
+        if (crossedTargetPlaneDescending) {
+          double zDelta = previousState.position().getZ() - state.position().getZ();
+          double interpolation =
+              Math.abs(zDelta) <= EPSILON
+                  ? 0.0
+                  : (previousState.position().getZ() - targetZ) / zDelta;
+          interpolation = clamp01(interpolation);
+          Translation3d entryPosition =
+              interpolate(previousState.position(), state.position(), interpolation);
+          Translation3d entryVelocity =
+              interpolate(previousState.velocity(), state.velocity(), interpolation);
+          double entryTime = previousTime + ((time - previousTime) * interpolation);
+          double horizontalError =
+              entryPosition.toTranslation2d().getDistance(targetPosition.toTranslation2d());
+          boolean descending = entryVelocity.getZ() < 0.0;
+          boolean validEntry = horizontalError <= entryRadius && (!requireDescending || descending);
+          EntryPoint candidate =
+              new EntryPoint(entryTime, entryPosition, horizontalError, validEntry, descending);
+          if (shouldPreferEntry(candidate, bestEntry)) {
+            bestEntry = candidate;
+          }
+        }
+      }
+      if (requirePreferredUpperEntry && time > 0.0) {
+        boolean crossedUpperPlaneDescending =
+            previousState.position().getZ() >= preferredUpperEntryZ
+                && state.position().getZ() <= preferredUpperEntryZ;
+        if (crossedUpperPlaneDescending) {
+          double zDelta = previousState.position().getZ() - state.position().getZ();
+          double interpolation =
+              Math.abs(zDelta) <= EPSILON
+                  ? 0.0
+                  : (previousState.position().getZ() - preferredUpperEntryZ) / zDelta;
+          interpolation = clamp01(interpolation);
+          Translation3d upperEntryPosition =
+              interpolate(previousState.position(), state.position(), interpolation);
+          Translation3d upperEntryVelocity =
+              interpolate(previousState.velocity(), state.velocity(), interpolation);
+          double upperEntryTime = previousTime + ((time - previousTime) * interpolation);
+          double horizontalError =
+              upperEntryPosition.toTranslation2d().getDistance(targetPosition.toTranslation2d());
+          boolean descending = upperEntryVelocity.getZ() < 0.0;
+          boolean validUpperEntry = horizontalError <= preferredUpperEntryRadius && descending;
+          EntryPoint candidate =
+              new EntryPoint(
+                  upperEntryTime, upperEntryPosition, horizontalError, validUpperEntry, descending);
+          if (shouldPreferEntry(candidate, bestUpperEntry)) {
+            bestUpperEntry = candidate;
+          }
+        }
+      }
       if (state.position().getZ() < 0.0 && state.velocity().getZ() <= 0.0 && time > 0.0) {
         break;
       }
+      previousState = state;
+      previousTime = time;
       state = integrate(state, dt);
     }
 
-    return best;
+    if (unconstrainedEntry) {
+      double clearancePenalty = clearanceViolated ? Math.abs(minClearanceMeters) : 0.0;
+      double errorMeters = best.errorMeters() + clearancePenalty;
+      boolean feasible =
+          !clearanceViolated && best.errorMeters() <= config.search().solutionToleranceMeters();
+      return new TrajectoryAssessment(
+          feasible,
+          best.timeSeconds(),
+          errorMeters,
+          best.positionMeters(),
+          minClearanceMeters,
+          best,
+          bestEntry);
+    }
+
+    double entryPenalty =
+        bestEntry != null
+            ? Math.max(0.0, bestEntry.horizontalErrorMeters() - entryRadius)
+            : best.errorMeters();
+    if (bestEntry == null) {
+      entryPenalty = Math.max(entryPenalty, best.errorMeters());
+    }
+    double preferredUpperEntryPenalty = 0.0;
+    if (requirePreferredUpperEntry) {
+      preferredUpperEntryPenalty =
+          bestUpperEntry != null
+              ? Math.max(0.0, bestUpperEntry.horizontalErrorMeters() - preferredUpperEntryRadius)
+              : best.errorMeters();
+      if (bestUpperEntry == null) {
+        preferredUpperEntryPenalty = Math.max(preferredUpperEntryPenalty, best.errorMeters());
+      }
+    }
+    double clearancePenalty = clearanceViolated ? Math.abs(minClearanceMeters) : 0.0;
+    double errorMeters = preferredUpperEntryPenalty + entryPenalty + clearancePenalty;
+    boolean feasible =
+        bestEntry != null
+            && bestEntry.valid()
+            && (!requirePreferredUpperEntry || (bestUpperEntry != null && bestUpperEntry.valid()))
+            && !clearanceViolated;
+    double referenceTime = bestEntry != null ? bestEntry.timeSeconds() : best.timeSeconds();
+    Translation3d referencePosition =
+        bestEntry != null ? bestEntry.positionMeters() : best.positionMeters();
+    return new TrajectoryAssessment(
+        feasible,
+        referenceTime,
+        errorMeters,
+        referencePosition,
+        minClearanceMeters,
+        best,
+        bestEntry);
   }
 
   private State integrate(State state, double dt) {
@@ -389,12 +556,65 @@ public final class AdvancedBallisticsShotModel implements ShotModel {
     return new Translation3d(value.getX() * scalar, value.getY() * scalar, value.getZ() * scalar);
   }
 
+  private static Translation3d interpolate(Translation3d a, Translation3d b, double t) {
+    return new Translation3d(
+        a.getX() + ((b.getX() - a.getX()) * t),
+        a.getY() + ((b.getY() - a.getY()) * t),
+        a.getZ() + ((b.getZ() - a.getZ()) * t));
+  }
+
+  private static double clearanceToEnvelope(
+      Translation3d position, ShotModel.ClearanceConstraint constraint) {
+    Translation3d start = constraint.startMeters();
+    Translation3d end = constraint.endMeters();
+    Translation3d axis = end.minus(start);
+    double axisLengthSquared =
+        (axis.getX() * axis.getX()) + (axis.getY() * axis.getY()) + (axis.getZ() * axis.getZ());
+
+    if (axisLengthSquared <= EPSILON) {
+      return position.getDistance(start) - constraint.startRadiusMeters();
+    }
+
+    Translation3d offset = position.minus(start);
+    double projection =
+        ((offset.getX() * axis.getX())
+                + (offset.getY() * axis.getY())
+                + (offset.getZ() * axis.getZ()))
+            / axisLengthSquared;
+    double t = clamp01(projection);
+    Translation3d closestPoint = interpolate(start, end, t);
+    double radius =
+        constraint.startRadiusMeters()
+            + ((constraint.endRadiusMeters() - constraint.startRadiusMeters()) * t);
+    return position.getDistance(closestPoint) - radius;
+  }
+
+  private static double clamp01(double value) {
+    return Math.max(0.0, Math.min(1.0, value));
+  }
+
   private record State(Translation3d position, Translation3d velocity) {}
 
   private record Derivative(Translation3d positionRate, Translation3d velocityRate) {}
 
   private record TrajectoryPoint(
       double timeSeconds, Translation3d positionMeters, double errorMeters) {}
+
+  private record EntryPoint(
+      double timeSeconds,
+      Translation3d positionMeters,
+      double horizontalErrorMeters,
+      boolean valid,
+      boolean descending) {}
+
+  private record TrajectoryAssessment(
+      boolean feasible,
+      double referenceTimeSeconds,
+      double errorMeters,
+      Translation3d referencePositionMeters,
+      double clearanceMarginMeters,
+      TrajectoryPoint closestApproach,
+      EntryPoint bestEntry) {}
 
   private record InterceptSolution(
       boolean hasValidHorizontalSolution,

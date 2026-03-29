@@ -31,6 +31,7 @@ import org.Griffins1884.frc2026.OI.DriverMap;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.simulation.visualization.RobotStateVisualizer;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardIOServer;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardTracker;
@@ -71,6 +72,7 @@ public class RobotContainer {
 
   private final Superstructure superstructure;
   private final Vision vision;
+  private final RobotStateVisualizer robotStateVisualizer;
   private boolean autoAllianceZeroed = false;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -191,6 +193,8 @@ public class RobotContainer {
     } else {
       operatorBoard = null;
     }
+
+    robotStateVisualizer = new RobotStateVisualizer(drive, turret, superstructure);
 
     if (drive != null) {
       drive.setOdometryResetListener(this::handleOdometryReset);
@@ -357,6 +361,7 @@ public class RobotContainer {
     driveSimulation.setSimulationWorldPose(new Pose2d(3, 3, new Rotation2d()));
     drive.resetOdometry(driveSimulation.getSimulatedDriveTrainPose());
     SimulatedArena.getInstance().resetFieldForAuto();
+    robotStateVisualizer.reset();
   }
 
   /** Auto-zero gyro/odometry once when disabled and alliance is known. */
@@ -385,26 +390,13 @@ public class RobotContainer {
   }
 
   public void displaySimFieldToAdvantageScope() {
-    Logger.recordOutput(
-        "FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
-    if (turret != null) {
-      Pose2d robotPose = driveSimulation.getSimulatedDriveTrainPose();
-      Translation2d turretTranslation =
-          robotPose
-              .getTranslation()
-              .plus(TurretConstants.MOUNT_OFFSET_METERS.rotateBy(robotPose.getRotation()));
-      Rotation2d turretRotation =
-          robotPose.getRotation().plus(Rotation2d.fromRadians(turret.getPositionRad()));
+    if (drive != null && turret != null && MODE == RobotMode.SIM) {
       Translation2d turretTarget =
-          MODE == RobotMode.SIM
-              ? TurretCommands.predictShootingWhileMoving(
-                  drive::getPose,
-                  TurretConstants::getSimTarget,
-                  drive::getFieldVelocity,
-                  drive::getFieldAcceleration)
-              : TurretConstants.getSimTarget();
-      Logger.recordOutput(
-          "FieldSimulation/TurretPose", new Pose2d(turretTranslation, turretRotation));
+          TurretCommands.predictShootingWhileMoving(
+              drive::getPose,
+              TurretConstants::getSimTarget,
+              drive::getFieldVelocity,
+              drive::getFieldAcceleration);
       Logger.recordOutput(
           "FieldSimulation/TurretTarget", new Pose2d(turretTarget, new Rotation2d()));
     }
@@ -413,5 +405,9 @@ public class RobotContainer {
   public void setTeleopState() {
     superstructure.setAutonomousHoldEnabled(false);
     superstructure.setAutoStateEnabled(true);
+  }
+
+  public void periodic() {
+    robotStateVisualizer.periodic();
   }
 }

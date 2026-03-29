@@ -263,6 +263,21 @@ public class Superstructure extends SubsystemBase {
     autoStartPoseSupplier = supplier != null ? supplier : Optional::empty;
   }
 
+  public SuperstructureOutcome getLatestOutcome() {
+    return new SuperstructureOutcome(
+        currentState,
+        requestedState,
+        lastIntakeGoal,
+        lastIndexerGoal,
+        lastShooterTargetVelocityRpm,
+        lastIntakePivotGoal,
+        lastShooterPivotGoal,
+        lastShooterPivotManual,
+        lastShooterPivotPosition,
+        lastTurretAction,
+        lastTurretTarget);
+  }
+
   private Optional<Pose2d> getAutoStartPose() {
     return autoStartPoseSupplier.get();
   }
@@ -943,6 +958,12 @@ public class Superstructure extends SubsystemBase {
             .toTranslation2d()
             .minus(pose.getTranslation())
             .rotateBy(robotHeading.unaryMinus());
+    Translation3d fieldConeTop = getHubConeTopPosition3d();
+    Translation2d robotRelativeConeTop =
+        fieldConeTop
+            .toTranslation2d()
+            .minus(pose.getTranslation())
+            .rotateBy(robotHeading.unaryMinus());
     Translation2d robotRelativeVelocity =
         sanitizeVector(drive.getFieldVelocity()).rotateBy(robotHeading.unaryMinus());
 
@@ -950,8 +971,35 @@ public class Superstructure extends SubsystemBase {
         new ShotModel.ShotScenario(
             new Translation3d(
                 robotRelativeTarget.getX(), robotRelativeTarget.getY(), fieldTarget.getZ()),
-            robotRelativeVelocity);
+            robotRelativeVelocity,
+            new ShotModel.EntryWindow(
+                GlobalConstants.FieldConstants.Hub.innerOpeningRadius,
+                true,
+                fieldConeTop.getZ(),
+                GlobalConstants.FieldConstants.Hub.topOpeningRadius,
+                true),
+            new ShotModel.ClearanceConstraint(
+                new Translation3d(
+                    robotRelativeTarget.getX(), robotRelativeTarget.getY(), fieldTarget.getZ()),
+                0.0,
+                new Translation3d(
+                    robotRelativeConeTop.getX(), robotRelativeConeTop.getY(), fieldConeTop.getZ()),
+                GlobalConstants.FieldConstants.Hub.coneClearanceMargin));
     Logger.recordOutput("Superstructure/ShotModel/RobotTarget", scenario.targetPositionMeters());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/RobotClearanceStart",
+        scenario.clearanceConstraint().startMeters());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/RobotClearanceEnd", scenario.clearanceConstraint().endMeters());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/EntryRadiusMeters",
+        scenario.entryWindow().horizontalRadiusMeters());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/ConeClearanceStartMeters",
+        scenario.clearanceConstraint().startRadiusMeters());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/ConeClearanceEndMeters",
+        scenario.clearanceConstraint().endRadiusMeters());
     Logger.recordOutput(
         "Superstructure/ShotModel/RobotVelocity", scenario.robotVelocityMetersPerSecond());
     return HUB_SHOT_MODEL.solve(scenario);
@@ -969,6 +1017,20 @@ public class Superstructure extends SubsystemBase {
                 - GlobalConstants.FieldConstants.Hub.innerCenterPoint.getX(),
             GlobalConstants.FieldConstants.Hub.innerCenterPoint.getY(),
             GlobalConstants.FieldConstants.Hub.innerCenterPoint.getZ());
+  }
+
+  private Translation3d getHubConeTopPosition3d() {
+    Pose2d pose = drive != null ? drive.getPose() : null;
+    boolean isBlue =
+        AllianceFlipUtil.resolveAlliance(pose).orElseGet(() -> inferAllianceFromPose(pose))
+            == DriverStation.Alliance.Blue;
+    return isBlue
+        ? GlobalConstants.FieldConstants.Hub.topCenterPoint
+        : new Translation3d(
+            GlobalConstants.FieldConstants.fieldLength
+                - GlobalConstants.FieldConstants.Hub.topCenterPoint.getX(),
+            GlobalConstants.FieldConstants.Hub.topCenterPoint.getY(),
+            GlobalConstants.FieldConstants.Hub.topCenterPoint.getZ());
   }
 
   private static Translation2d sanitizeVector(Translation2d vector) {
