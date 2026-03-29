@@ -1,0 +1,31 @@
+{
+  "name": "Shot Only Review",
+  "description": "Shot-only AdvantageScope layout for ballistic arc, impact markers, active projectiles, and telemetry without requiring robot CAD assets.",
+  "tabs": [
+    {
+      "type": "3d-field",
+      "title": "Shot Field"
+    },
+    {
+      "type": "line-graph",
+      "title": "Shot Telemetry",
+      "signals": [
+        "Superstructure/ShotModel/Rpm",
+        "Superstructure/ShotModel/PivotRotations",
+        "Superstructure/ShotModel/TurretYawDeg",
+        "ShotReview/PredictionFeasible",
+        "ShotReview/PredictionErrorMeters",
+        "ShotReview/PredictionFlightTimeSec",
+        "ShotReview/Released",
+        "ShotReview/ReleaseCount",
+        "ShotReview/LastReleaseTimestampSec",
+        "FieldSimulation/ProjectileCount",
+        "FieldSimulation/ProjectileSpawnCount"
+      ]
+    },
+    {
+      "type": "video",
+      "title": "Practice Video"
+    }
+  ]
+}

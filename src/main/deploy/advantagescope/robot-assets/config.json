@@ -1,0 +1,24 @@
+{
+  "name": "Season2026 Robot",
+  "description": "Optional AdvantageScope robot asset config. Replace mesh paths only if you want robot CAD rendering alongside the shot-only workflow.",
+  "robot": {
+    "mesh": "robot.glb"
+  },
+  "components": [
+    {
+      "name": "turret",
+      "mesh": "turret.glb",
+      "logKey": "FieldSimulation/TurretComponentPose3d"
+    },
+    {
+      "name": "shooterPivot",
+      "mesh": "shooter-pivot.glb",
+      "logKey": "FieldSimulation/ShooterPivotComponentPose3d"
+    },
+    {
+      "name": "shooterExit",
+      "mesh": "shooter-exit.glb",
+      "logKey": "FieldSimulation/ShooterExitPose3d"
+    }
+  ]
+}

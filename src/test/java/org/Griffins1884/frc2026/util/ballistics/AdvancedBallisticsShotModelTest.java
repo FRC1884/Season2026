@@ -1,6 +1,7 @@
 package org.Griffins1884.frc2026.util.ballistics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -59,5 +60,58 @@ class AdvancedBallisticsShotModelTest {
     assertTrue(solution.evaluations() > 0);
     assertTrue(solution.prediction().closestApproachErrorMeters() < 0.75);
     assertTrue(solution.prediction().timeOfFlightSeconds() > 0.0);
+  }
+
+  @Test
+  void solverUsesDescendingEntryWindowWhenProvided() {
+    AdvancedBallisticsShotModel model =
+        new AdvancedBallisticsShotModel(ShotModelConfig.defaultConfig());
+    Translation3d target = new Translation3d(4.0, 0.0, 2.05);
+    ShotModel.ShotScenario scenario =
+        new ShotModel.ShotScenario(
+            target,
+            new Translation2d(),
+            new ShotModel.EntryWindow(2.0, true, 2.45, 2.0, true),
+            ShotModel.ClearanceConstraint.unconstrained());
+
+    ShotModel.ShotSolution solution = model.solve(scenario);
+
+    assertTrue(solution.prediction().feasible());
+    assertEquals(target.getZ(), solution.prediction().closestApproachPositionMeters().getZ(), 1e-6);
+    assertTrue(solution.prediction().timeOfFlightSeconds() > 0.0);
+  }
+
+  @Test
+  void solverRejectsShotWhenPreferredUpperEntryCannotBeReached() {
+    AdvancedBallisticsShotModel model =
+        new AdvancedBallisticsShotModel(ShotModelConfig.defaultConfig());
+    Translation3d target = new Translation3d(4.0, 0.0, 2.05);
+    ShotModel.ShotScenario scenario =
+        new ShotModel.ShotScenario(
+            target,
+            new Translation2d(),
+            new ShotModel.EntryWindow(2.0, true, 100.0, 0.5, true),
+            ShotModel.ClearanceConstraint.unconstrained());
+
+    ShotModel.ShotSolution solution = model.solve(scenario);
+
+    assertFalse(solution.prediction().feasible());
+  }
+
+  @Test
+  void solverRejectsShotWhenClearanceConstraintBlocksHubEntry() {
+    AdvancedBallisticsShotModel model =
+        new AdvancedBallisticsShotModel(ShotModelConfig.defaultConfig());
+    Translation3d target = new Translation3d(4.0, 0.0, 2.05);
+    ShotModel.ShotScenario scenario =
+        new ShotModel.ShotScenario(
+            target,
+            new Translation2d(),
+            new ShotModel.EntryWindow(0.35, true),
+            new ShotModel.ClearanceConstraint(target, 0.5, new Translation3d(4.0, 0.0, 2.45), 0.5));
+
+    ShotModel.ShotSolution solution = model.solve(scenario);
+
+    assertFalse(solution.prediction().feasible());
   }
 }

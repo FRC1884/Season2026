@@ -135,6 +135,12 @@ public final class GlobalConstants {
           Units.inchesToMeters(72.0); // includes the catcher at the top
       public static final double innerWidth = Units.inchesToMeters(41.7);
       public static final double innerHeight = Units.inchesToMeters(56.5);
+      public static final double gamePieceDiameter = Units.inchesToMeters(5.91);
+      public static final double gamePieceRadius = gamePieceDiameter / 2.0;
+      public static final double innerOpeningRadius =
+          Math.max(0.0, (innerWidth / 2.0) - gamePieceRadius);
+      public static final double topOpeningRadius = Math.max(0.0, (width / 2.0) - gamePieceRadius);
+      public static final double coneClearanceMargin = gamePieceRadius * 3.0;
 
       // Relevant reference points on alliance side
       public static final Translation3d topCenterPoint =
