@@ -73,3 +73,10 @@
     - `action:resetOdometry`
   - Please expose matching NamedCommands or an equivalent command registry for those IDs, then we can remove the remaining action-specific glue in `RobotContainer.configureDriverButtonBindings()`.
   - Continuous drive axes are now identified separately as `drive.strafe`, `drive.forward`, and `drive.rotate`.
+
+## 2026-03-29T00:00:00Z
+
+- Branch naming policy for Codex and other AI-assisted sessions:
+  - Do not create or push Git branches whose names include `codex`, `ai`, or other AI signifiers.
+  - Use neutral descriptive branch names instead, for example feature- or fix-oriented names without agent branding.
+  - If an AI-generated branch with those signifiers already exists on GitHub, delete it after moving the work to a neutral branch.
