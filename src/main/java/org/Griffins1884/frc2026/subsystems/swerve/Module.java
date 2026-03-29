@@ -117,6 +117,10 @@ public class Module {
     Logger.recordOutput("Swerve/Module" + index + "/SpeedRatio", speedRatio);
     Logger.recordOutput("Swerve/Module" + index + "/DesiredAngleRad", desiredAngle.getRadians());
     Logger.recordOutput("Swerve/Module" + index + "/ActualAngleRad", getAngle().getRadians());
+    Logger.recordOutput(
+        "Swerve/Module" + index + "/AbsoluteAngleRad", inputs.turnAbsolutePosition.getRadians());
+    Logger.recordOutput(
+        "Swerve/Module" + index + "/ZeroTrimRotations", inputs.turnZeroTrimRotations);
     Logger.recordOutput("Swerve/Module" + index + "/AngleErrorRad", angleErrorRad);
     Logger.recordOutput("Swerve/Module" + index + "/LastAngleDeltaRad", lastAngleDeltaRad);
     Logger.recordOutput("Swerve/Module" + index + "/AngleJumpDetected", angleJumpDetected);
@@ -126,7 +130,9 @@ public class Module {
     int sampleCount = inputs.odometryTimestamps.length; // All signals are sampled together
     odometryPositions = new SwerveModulePosition[sampleCount];
     for (int i = 0; i < sampleCount; i++) {
-      double positionMeters = inputs.odometryDrivePositionsRad[i] * WHEEL_RADIUS;
+      double positionMeters =
+          getCompensatedDrivePositionRad(inputs.odometryDrivePositionsRad[i], i)
+              * getWheelRadiusMeters();
       Rotation2d angle = inputs.odometryTurnPositions[i];
       odometryPositions[i] = new SwerveModulePosition(positionMeters, angle);
     }
@@ -141,7 +147,7 @@ public class Module {
     desiredSpeedMetersPerSec = state.speedMetersPerSecond;
     desiredAngle = state.angle;
     // Mechanical Advantage-style control for full Kraken modules
-    double speedRadPerSec = state.speedMetersPerSecond / WHEEL_RADIUS;
+    double speedRadPerSec = state.speedMetersPerSecond / getWheelRadiusMeters();
     io.setDriveVelocity(speedRadPerSec, krakenFfModel.calculate(speedRadPerSec));
     if (Math.abs(state.angle.minus(getAngle()).getDegrees()) < TURN_DEADBAND_DEGREES) {
       io.setTurnOpenLoop(0.0);
@@ -181,12 +187,13 @@ public class Module {
 
   /** Returns the current drive position of the module in meters. */
   public double getPositionMeters() {
-    return inputs.drivePositionRad * WHEEL_RADIUS;
+    return getCompensatedDrivePositionRad(inputs.drivePositionRad) * getWheelRadiusMeters();
   }
 
   /** Returns the current drive velocity of the module in meters per second. */
   public double getVelocityMetersPerSec() {
-    return inputs.driveVelocityRadPerSec * WHEEL_RADIUS;
+    return getCompensatedDriveVelocityRadPerSec(inputs.driveVelocityRadPerSec)
+        * getWheelRadiusMeters();
   }
 
   /** Returns the module position (turn angle and drive position). */
@@ -206,7 +213,7 @@ public class Module {
 
   /** Returns the module position in radians. */
   public double getWheelRadiusCharacterizationPosition() {
-    return inputs.drivePositionRad;
+    return getCompensatedDrivePositionRad(inputs.drivePositionRad);
   }
 
   /** Returns the module velocity in rad/sec. */
@@ -266,5 +273,46 @@ public class Module {
 
   public int getAngleJumpCount() {
     return angleJumpCount;
+  }
+
+  public Rotation2d getAbsoluteAngle() {
+    return inputs.turnAbsolutePosition;
+  }
+
+  public void captureZeroTrim() {
+    io.captureZeroTrim();
+  }
+
+  public void clearZeroTrim() {
+    io.clearZeroTrim();
+  }
+
+  public double getZeroTrimRotations() {
+    return inputs.turnZeroTrimRotations;
+  }
+
+  private double getWheelRadiusMeters() {
+    return SwerveConstants.getWheelRadiusMeters();
+  }
+
+  private double getCompensatedDrivePositionRad(double rawDrivePositionRad) {
+    return getCompensatedDrivePositionRad(rawDrivePositionRad, -1);
+  }
+
+  private double getCompensatedDrivePositionRad(double rawDrivePositionRad, int sampleIndex) {
+    double steerPositionRotations =
+        sampleIndex >= 0 && sampleIndex < inputs.odometryTurnPositionsRotations.length
+            ? inputs.odometryTurnPositionsRotations[sampleIndex]
+            : inputs.turnPositionRotations;
+    return rawDrivePositionRad
+        - steerPositionRotations
+            * 2.0
+            * Math.PI
+            * SwerveConstants.getCouplingWheelRadiansPerSteerRadian();
+  }
+
+  private double getCompensatedDriveVelocityRadPerSec(double rawDriveVelocityRadPerSec) {
+    return rawDriveVelocityRadPerSec
+        - inputs.turnVelocityRadPerSec * SwerveConstants.getCouplingWheelRadiansPerSteerRadian();
   }
 }

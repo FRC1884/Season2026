@@ -46,13 +46,16 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
   private final PoseHistory poseHistory;
   @Setter private boolean useVision = true;
   private final DoubleSupplier yawRateRadPerSecSupplier;
+  private final DoubleSupplier translationalSpeedMetersPerSecSupplier;
   private Integer exclusiveTagId = null;
   private double ignoreVisionUntilTimestamp = 0.0;
   private boolean anyCameraHasAcceptedPose = false;
+  private double referenceOdometryFom = 0.0;
+  private double lastReferenceOdometryTimestampSec = Double.NaN;
 
   /** Creates a Vision system with one or more camera IO instances. */
   public Vision(VisionConsumer consumer, VisionIO... io) {
-    this(consumer, null, null, io);
+    this(consumer, null, null, null, io);
   }
 
   /**
@@ -68,6 +71,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       VisionConsumer consumer,
       Supplier<Pose2d> poseSupplier,
       DoubleSupplier yawRateRadPerSecSupplier,
+      DoubleSupplier translationalSpeedMetersPerSecSupplier,
       VisionIO... io) {
     this.consumer = consumer;
     this.io = io;
@@ -77,6 +81,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             ? new PoseHistory(HISTORY_WINDOW_SEC, poseSupplier, yawRateRadPerSecSupplier)
             : null;
     this.yawRateRadPerSecSupplier = yawRateRadPerSecSupplier;
+    this.translationalSpeedMetersPerSecSupplier = translationalSpeedMetersPerSecSupplier;
 
     this.inputs = new VisionIOInputsAutoLogged[io.length];
     for (int i = 0; i < inputs.length; i++) {
@@ -190,6 +195,8 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
 
   private void periodicLimelight() {
     double startTime = Timer.getFPGATimestamp();
+    double odometryFom = updateReferenceOdometryFom(startTime);
+    Logger.recordOutput("Vision/Reference/OdometryFom", odometryFom);
     if (poseHistory != null) {
       poseHistory.update(startTime);
     }
@@ -208,7 +215,7 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
             : 0.0;
     Logger.recordOutput("Vision/yawRateDegPerSec", yawRateDegPerSec);
 
-    List<Optional<VisionFieldPoseEstimate>> estimates = new ArrayList<>();
+    List<ReferenceCameraEstimate> acceptedEstimates = new ArrayList<>();
 
     for (int i = 0; i < io.length; i++) {
       io[i].updateInputs(inputs[i]);
@@ -223,7 +230,18 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       if (GlobalConstants.isDebugMode()) {
         logLimelightDiagnostics(cameraLabel, inputs[i]);
       }
-      estimates.add(buildLimelightEstimate(i, cameraLabel, inputs[i]));
+      final int cameraIndex = i;
+      final VisionIO.VisionIOInputs cameraInputs = inputs[i];
+      buildLimelightEstimate(cameraIndex, cameraLabel, cameraInputs)
+          .ifPresent(
+              estimate ->
+                  acceptedEstimates.add(
+                      new ReferenceCameraEstimate(
+                          cameraIndex,
+                          cameraLabel,
+                          estimate,
+                          getPrimaryTagDistanceMeters(cameraInputs),
+                          getReferenceStdDevScore(cameraInputs))));
 
       boolean isOutlier =
           inputs[i].rejectReason == VisionIO.RejectReason.LARGE_TRANSLATION_RESIDUAL
@@ -241,28 +259,41 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
       return;
     }
 
-    Optional<VisionFieldPoseEstimate> accepted = Optional.empty();
-    for (Optional<VisionFieldPoseEstimate> estimate : estimates) {
-      if (estimate.isEmpty()) {
-        continue;
-      }
-      if (accepted.isEmpty()) {
-        accepted = estimate;
-      } else {
-        accepted = Optional.of(fuseEstimates(accepted.get(), estimate.get()));
-      }
-    }
+    Optional<ReferenceCameraEstimate> bestEstimate = selectBestReferenceEstimate(acceptedEstimates);
+    double cameraFom = computeReferenceCameraFom();
+    Logger.recordOutput("Vision/Reference/CameraFom", cameraFom);
+    Logger.recordOutput(
+        "Vision/Reference/BestCamera",
+        bestEstimate.map(ReferenceCameraEstimate::cameraLabel).orElse("none"));
+    Logger.recordOutput(
+        "Vision/Reference/BestCameraTagDistanceMeters",
+        bestEstimate.map(ReferenceCameraEstimate::primaryTagDistanceMeters).orElse(Double.NaN));
+    Logger.recordOutput(
+        "Vision/Reference/BestCameraStdDevScore",
+        bestEstimate.map(ReferenceCameraEstimate::stdDevScore).orElse(Double.NaN));
 
-    boolean hasAccepted = accepted.isPresent();
+    boolean hasAccepted =
+        bestEstimate.isPresent()
+            && shouldAcceptReferenceObservation(cameraFom, odometryFom, bestEstimate.get());
     anyCameraHasAcceptedPose = hasAccepted;
     Logger.recordOutput("Vision/usingVision", hasAccepted);
-    Logger.recordOutput("Vision/rejectReason", hasAccepted ? "ACCEPTED" : "NO_ACCEPTED_ESTIMATE");
+    Logger.recordOutput(
+        "Vision/rejectReason",
+        hasAccepted
+            ? "ACCEPTED"
+            : bestEstimate.isPresent() ? "ODOMETRY_PREFERRED" : "NO_ACCEPTED_ESTIMATE");
 
-    accepted.ifPresent(
-        est -> {
-          Logger.recordOutput("Vision/fusedAccepted", est.visionRobotPoseMeters());
+    bestEstimate.ifPresent(
+        selected -> {
+          if (!shouldAcceptReferenceObservation(cameraFom, odometryFom, selected)) {
+            return;
+          }
+          referenceOdometryFom = cameraFom;
+          Logger.recordOutput("Vision/fusedAccepted", selected.estimate().visionRobotPoseMeters());
           consumer.accept(
-              est.visionRobotPoseMeters(), est.timestampSeconds(), est.visionMeasurementStdDevs());
+              selected.estimate().visionRobotPoseMeters(),
+              selected.estimate().timestampSeconds(),
+              selected.estimate().visionMeasurementStdDevs());
         });
 
     Logger.recordOutput("Vision/latencyPeriodicSec", Timer.getFPGATimestamp() - startTime);
@@ -409,6 +440,35 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     double time = b.timestampSeconds();
 
     return new VisionFieldPoseEstimate(fusedPose, time, fusedStdDev, numTags);
+  }
+
+  private Optional<ReferenceCameraEstimate> selectBestReferenceEstimate(
+      List<ReferenceCameraEstimate> estimates) {
+    if (estimates.isEmpty()) {
+      return Optional.empty();
+    }
+
+    ReferenceCameraEstimate best = estimates.get(0);
+    for (int i = 1; i < estimates.size(); i++) {
+      ReferenceCameraEstimate candidate = estimates.get(i);
+      if (candidate.primaryTagDistanceMeters() < best.primaryTagDistanceMeters()) {
+        best = candidate;
+      } else if (Math.abs(candidate.primaryTagDistanceMeters() - best.primaryTagDistanceMeters())
+              < 1e-9
+          && candidate.stdDevScore() < best.stdDevScore()) {
+        best = candidate;
+      }
+    }
+    return Optional.of(best);
+  }
+
+  private boolean shouldAcceptReferenceObservation(
+      double cameraFom, double odometryFom, ReferenceCameraEstimate estimate) {
+    if (estimate == null) {
+      return false;
+    }
+    return cameraFom <= odometryFom
+        || cameraFom <= odometryFom + AprilTagVisionConstants.getReferenceCameraAcceptMargin();
   }
 
   private boolean isTimestampInOrder(int cameraIndex, double timestampSeconds) {
@@ -802,6 +862,85 @@ public class Vision extends SubsystemBase implements VisionTargetProvider {
     }
     return false;
   }
+
+  private double updateReferenceOdometryFom(double nowSec) {
+    if (!Double.isFinite(lastReferenceOdometryTimestampSec)) {
+      lastReferenceOdometryTimestampSec = nowSec;
+      return referenceOdometryFom;
+    }
+    double deltaSec = Math.max(0.0, nowSec - lastReferenceOdometryTimestampSec);
+    lastReferenceOdometryTimestampSec = nowSec;
+    referenceOdometryFom +=
+        AprilTagVisionConstants.getReferenceOdometryDisplacementCoefficient()
+            * Math.abs(getRobotSpeedMetersPerSecond())
+            * deltaSec;
+    return referenceOdometryFom;
+  }
+
+  private double computeReferenceCameraFom() {
+    return (getRobotSpeedMetersPerSecond()
+            * AprilTagVisionConstants.getReferenceCameraSpeedFomCoefficient()
+            * 2.0)
+        + (Math.abs(getYawRateRadPerSec())
+            * AprilTagVisionConstants.getReferenceCameraRotationFomCoefficient());
+  }
+
+  private double getRobotSpeedMetersPerSecond() {
+    if (translationalSpeedMetersPerSecSupplier == null) {
+      return 0.0;
+    }
+    double speed = translationalSpeedMetersPerSecSupplier.getAsDouble();
+    return Double.isFinite(speed) ? speed : 0.0;
+  }
+
+  private double getYawRateRadPerSec() {
+    if (yawRateRadPerSecSupplier == null) {
+      return 0.0;
+    }
+    double yawRate = yawRateRadPerSecSupplier.getAsDouble();
+    return Double.isFinite(yawRate) ? yawRate : 0.0;
+  }
+
+  private double getPrimaryTagDistanceMeters(VisionIO.VisionIOInputs cam) {
+    if (cam == null) {
+      return Double.POSITIVE_INFINITY;
+    }
+    if (cam.fiducialObservations != null) {
+      double minDistance = Double.POSITIVE_INFINITY;
+      for (FiducialObservation fiducial : cam.fiducialObservations) {
+        if (fiducial == null || !Double.isFinite(fiducial.distanceToCameraMeters())) {
+          continue;
+        }
+        minDistance = Math.min(minDistance, fiducial.distanceToCameraMeters());
+      }
+      if (Double.isFinite(minDistance)) {
+        return minDistance;
+      }
+    }
+    if (cam.megatagPoseEstimate != null && Double.isFinite(cam.megatagPoseEstimate.avgTagDist())) {
+      return cam.megatagPoseEstimate.avgTagDist();
+    }
+    return Double.POSITIVE_INFINITY;
+  }
+
+  private double getReferenceStdDevScore(VisionIO.VisionIOInputs cam) {
+    if (cam == null || cam.megatagPoseEstimate == null) {
+      return Double.POSITIVE_INFINITY;
+    }
+    int tagCount = Math.max(1, cam.megatagPoseEstimate.fiducialIds().length);
+    double bestDistance = getPrimaryTagDistanceMeters(cam);
+    if (!Double.isFinite(bestDistance)) {
+      return Double.POSITIVE_INFINITY;
+    }
+    return (bestDistance * bestDistance) / tagCount;
+  }
+
+  private record ReferenceCameraEstimate(
+      int cameraIndex,
+      String cameraLabel,
+      VisionFieldPoseEstimate estimate,
+      double primaryTagDistanceMeters,
+      double stdDevScore) {}
 
   private record Sample(double timestampSeconds, Pose2d pose, double yawRateRadPerSec) {}
 }

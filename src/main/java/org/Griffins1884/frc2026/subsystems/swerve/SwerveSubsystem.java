@@ -335,6 +335,16 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/FieldMotionSampleValid", fieldMotionSampleValid);
     Logger.recordOutput("Swerve/FieldMotionSampleDtSec", fieldMotionSampleDtSec);
     Logger.recordOutput("Swerve/FieldMotionSampleAgeSec", getFieldMotionSampleAgeSec());
+    Logger.recordOutput(
+        "Swerve/Calibration/WheelRadiusMeters", SwerveConstants.getWheelRadiusMeters());
+    for (int i = 0; i < modules.length; i++) {
+      Logger.recordOutput(
+          "Swerve/Calibration/Module" + i + "/AbsoluteAngleDeg",
+          modules[i].getAbsoluteAngle().getDegrees());
+      Logger.recordOutput(
+          "Swerve/Calibration/Module" + i + "/ZeroTrimRotations",
+          modules[i].getZeroTrimRotations());
+    }
 
     if (!krakenVelocityMode) {
       krakenCurrentSetpoint = new SwerveSetpoint(getChassisSpeeds(), getModuleStates());
@@ -966,6 +976,32 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   /** Registers a callback to run after any odometry reset. */
   public void setOdometryResetListener(Runnable odometryResetListener) {
     this.odometryResetListener = odometryResetListener != null ? odometryResetListener : () -> {};
+  }
+
+  public void captureModuleZeroOffsets() {
+    for (var module : modules) {
+      module.captureZeroTrim();
+    }
+  }
+
+  public void captureModuleZeroOffset(int moduleIndex) {
+    if (moduleIndex < 0 || moduleIndex >= modules.length) {
+      return;
+    }
+    modules[moduleIndex].captureZeroTrim();
+  }
+
+  public void clearModuleZeroOffsets() {
+    for (var module : modules) {
+      module.clearZeroTrim();
+    }
+  }
+
+  public void clearModuleZeroOffset(int moduleIndex) {
+    if (moduleIndex < 0 || moduleIndex >= modules.length) {
+      return;
+    }
+    modules[moduleIndex].clearZeroTrim();
   }
 
   /**

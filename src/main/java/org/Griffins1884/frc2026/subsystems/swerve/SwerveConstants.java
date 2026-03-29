@@ -179,7 +179,10 @@ public final class SwerveConstants {
           BRR_ENCODER_INVERTED);
 
   /** Meters */
-  public static final double WHEEL_RADIUS = Units.inchesToMeters(2);
+  public static final double NOMINAL_WHEEL_RADIUS = Units.inchesToMeters(2);
+
+  /** Wheel rotations induced per full steering rotation at the motor sensor. */
+  public static final double KRAKEN_STEER_DRIVE_COUPLING_RATIO = 4.5;
 
   /** Meters per second */
   public static final double MAX_LINEAR_SPEED = (ROBOT == RobotType.COMPBOT) ? 5.4804 : 8.0;
@@ -317,6 +320,14 @@ public final class SwerveConstants {
                       MAPLE_SIM_WHEEL_FRICTION_COEFF, // Clamp for sim stability
                       2) // Medium Gear ratio
                   .get());
+
+  public static double getWheelRadiusMeters() {
+    return SwerveCalibration.getWheelRadiusMeters(NOMINAL_WHEEL_RADIUS);
+  }
+
+  public static double getCouplingWheelRadiansPerSteerRadian() {
+    return KRAKEN_STEER_DRIVE_COUPLING_RATIO / KRAKEN_DRIVE_GEAR_RATIO;
+  }
 
   public record ClosedLoopGains(double kP, double kI, double kD) {}
 }

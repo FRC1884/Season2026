@@ -169,6 +169,14 @@ public final class AprilTagVisionConstants {
       new LoggedTunableNumber("AprilTagVision/Limelight/MaxTranslationResidualMetersLL3", 1.0);
   public static final LoggedTunableNumber LIMELIGHT_REJECT_OUTLIERS =
       new LoggedTunableNumber("AprilTagVision/Limelight/RejectOutliers", 1.0);
+  private static final LoggedTunableNumber REFERENCE_CAMERA_SPEED_FOM_COEFFICIENT =
+      new LoggedTunableNumber("AprilTagVision/Reference/CameraSpeedFomCoefficient", 0.1);
+  private static final LoggedTunableNumber REFERENCE_CAMERA_ROTATION_FOM_COEFFICIENT =
+      new LoggedTunableNumber("AprilTagVision/Reference/CameraRotationFomCoefficient", 3.0);
+  private static final LoggedTunableNumber REFERENCE_ODOMETRY_DISPLACEMENT_COEFFICIENT =
+      new LoggedTunableNumber("AprilTagVision/Reference/OdometryDisplacementCoefficient", 0.04);
+  private static final LoggedTunableNumber REFERENCE_CAMERA_ACCEPT_MARGIN =
+      new LoggedTunableNumber("AprilTagVision/Reference/CameraAcceptMargin", 0.2);
 
   public static Matrix<N3, N1> getVisionMeasurementStdDevs() {
     return MatBuilder.fill(
@@ -300,5 +308,21 @@ public final class AprilTagVisionConstants {
 
   public static VisionIO.LimelightProfile getLimelightProfileOverride() {
     return LimelightProfileResolver.fromOverrideValue(LIMELIGHT_PROFILE_OVERRIDE.get());
+  }
+
+  public static double getReferenceCameraSpeedFomCoefficient() {
+    return REFERENCE_CAMERA_SPEED_FOM_COEFFICIENT.get();
+  }
+
+  public static double getReferenceCameraRotationFomCoefficient() {
+    return REFERENCE_CAMERA_ROTATION_FOM_COEFFICIENT.get();
+  }
+
+  public static double getReferenceOdometryDisplacementCoefficient() {
+    return REFERENCE_ODOMETRY_DISPLACEMENT_COEFFICIENT.get();
+  }
+
+  public static double getReferenceCameraAcceptMargin() {
+    return REFERENCE_CAMERA_ACCEPT_MARGIN.get();
   }
 }

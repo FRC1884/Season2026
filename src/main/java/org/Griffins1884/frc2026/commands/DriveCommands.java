@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import org.Griffins1884.frc2026.subsystems.swerve.SwerveCalibration;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.util.AllianceFlipUtil;
@@ -185,6 +186,11 @@ public class DriveCommands {
 
   /** Measures the robot's wheel radius by spinning in a circle. */
   public static Command wheelRadiusCharacterization(SwerveSubsystem drive) {
+    return wheelRadiusCharacterization(drive, false);
+  }
+
+  /** Measures the robot's wheel radius by spinning in a circle and optionally saves the result. */
+  public static Command wheelRadiusCharacterization(SwerveSubsystem drive, boolean saveResult) {
     SlewRateLimiter limiter =
         new SlewRateLimiter(
             AlignConstants.Characterization.WHEEL_RADIUS_RAMP_RATE_RAD_PER_SEC2.get());
@@ -255,7 +261,60 @@ public class DriveCommands {
                               + " meters, "
                               + formatter.format(Units.metersToInches(wheelRadius))
                               + " inches");
+                      if (saveResult && Double.isFinite(wheelRadius) && wheelRadius > 0.0) {
+                        SwerveCalibration.setWheelRadiusMeters(wheelRadius);
+                        RobotLogging.debug(
+                            "\tSaved Wheel Radius: " + formatter.format(wheelRadius) + " meters");
+                      }
                     })));
+  }
+
+  public static Command captureModuleZeroOffsets(SwerveSubsystem drive) {
+    return Commands.runOnce(
+        () -> {
+          drive.captureModuleZeroOffsets();
+          RobotLogging.debug(
+              "Captured current module steering positions as persistent zero trims.");
+        },
+        drive);
+  }
+
+  public static Command captureModuleZeroOffset(
+      SwerveSubsystem drive, int moduleIndex, String label) {
+    return Commands.runOnce(
+        () -> {
+          drive.captureModuleZeroOffset(moduleIndex);
+          RobotLogging.debug(
+              "Captured current steering position as persistent zero trim for " + label + ".");
+        },
+        drive);
+  }
+
+  public static Command clearModuleZeroOffsets(SwerveSubsystem drive) {
+    return Commands.runOnce(
+        () -> {
+          drive.clearModuleZeroOffsets();
+          RobotLogging.debug("Cleared saved module steering zero trims.");
+        },
+        drive);
+  }
+
+  public static Command clearModuleZeroOffset(
+      SwerveSubsystem drive, int moduleIndex, String label) {
+    return Commands.runOnce(
+        () -> {
+          drive.clearModuleZeroOffset(moduleIndex);
+          RobotLogging.debug("Cleared saved module steering zero trim for " + label + ".");
+        },
+        drive);
+  }
+
+  public static Command clearSavedWheelRadius() {
+    return Commands.runOnce(
+        () -> {
+          SwerveCalibration.clearWheelRadiusMeters();
+          RobotLogging.debug("Cleared saved wheel radius override.");
+        });
   }
 
   private static class WheelRadiusCharacterizationState {

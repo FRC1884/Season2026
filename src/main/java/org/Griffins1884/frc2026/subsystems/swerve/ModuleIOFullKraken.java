@@ -40,7 +40,9 @@ public class ModuleIOFullKraken implements ModuleIO {
   private final Rotation2d zeroRotation;
   private final Rotation2d encoderOffset;
   private final boolean hasCancoder;
+  private final String calibrationKey;
   private static final double RADIANS_PER_ROTATION = TWO_PI;
+  private double softwareZeroTrimRotations;
 
   private final TalonFXConfiguration driveConfig = new TalonFXConfiguration();
   private final TalonFXConfiguration turnConfig = new TalonFXConfiguration();
@@ -78,6 +80,8 @@ public class ModuleIOFullKraken implements ModuleIO {
     zeroRotation = moduleConstants.zeroRotation();
     hasCancoder = moduleConstants.cancoderID() >= 0;
     encoderOffset = hasCancoder ? new Rotation2d() : zeroRotation;
+    calibrationKey = SwerveCalibration.moduleKey(moduleConstants.name());
+    softwareZeroTrimRotations = SwerveCalibration.getModuleZeroTrimRotations(calibrationKey);
     driveMotor = new TalonFX(moduleConstants.driveID(), SwerveConstants.canBus);
     turnMotor = new TalonFX(moduleConstants.rotatorID(), SwerveConstants.canBus);
     turnEncoder = hasCancoder ? new CANcoder(moduleConstants.cancoderID()) : null;
@@ -242,16 +246,33 @@ public class ModuleIOFullKraken implements ModuleIO {
 
     // Update Turn inputs
     StatusCode turnStatus =
-        BaseStatusSignal.refreshAll(
-            turnPosition,
-            turnVelocity,
-            turnAppliedVolts,
-            turnSupplyCurrentAmps,
-            turnTorqueCurrentAmps);
+        turnAbsolutePosition != null
+            ? BaseStatusSignal.refreshAll(
+                turnPosition,
+                turnAbsolutePosition,
+                turnVelocity,
+                turnAppliedVolts,
+                turnSupplyCurrentAmps,
+                turnTorqueCurrentAmps)
+            : BaseStatusSignal.refreshAll(
+                turnPosition,
+                turnVelocity,
+                turnAppliedVolts,
+                turnSupplyCurrentAmps,
+                turnTorqueCurrentAmps);
 
     inputs.turnConnected = turnStatus.equals(StatusCode.OK);
-    inputs.turnPosition =
-        new Rotation2d(turnPosition.getValueAsDouble() * RADIANS_PER_ROTATION).minus(encoderOffset);
+    double correctedTurnPositionRotations =
+        turnPosition.getValueAsDouble() - softwareZeroTrimRotations;
+    inputs.turnPositionRotations = correctedTurnPositionRotations;
+    inputs.turnPosition = Rotation2d.fromRotations(correctedTurnPositionRotations);
+    double correctedAbsolutePositionRotations =
+        turnAbsolutePosition != null
+            ? turnAbsolutePosition.getValueAsDouble() - softwareZeroTrimRotations
+            : correctedTurnPositionRotations;
+    inputs.turnAbsolutePosition = Rotation2d.fromRotations(correctedAbsolutePositionRotations);
+    inputs.turnAbsolutePositionRotations = correctedAbsolutePositionRotations;
+    inputs.turnZeroTrimRotations = softwareZeroTrimRotations;
     inputs.turnVelocityRadPerSec = turnVelocity.getValueAsDouble() * TWO_PI;
     inputs.turnAppliedVolts = turnAppliedVolts.getValueAsDouble();
     inputs.turnCurrentAmps = turnSupplyCurrentAmps.getValueAsDouble();
@@ -261,10 +282,13 @@ public class ModuleIOFullKraken implements ModuleIO {
         timestampQueue.stream().mapToDouble((Double value) -> value).toArray();
     inputs.odometryDrivePositionsRad =
         drivePositionQueue.stream().mapToDouble((Double value) -> value * TWO_PI).toArray();
+    inputs.odometryTurnPositionsRotations =
+        turnPositionQueue.stream()
+            .mapToDouble((Double value) -> value - softwareZeroTrimRotations)
+            .toArray();
     inputs.odometryTurnPositions =
         turnPositionQueue.stream()
-            .map(
-                (Double value) -> new Rotation2d(value * RADIANS_PER_ROTATION).minus(encoderOffset))
+            .map((Double value) -> Rotation2d.fromRotations(value - softwareZeroTrimRotations))
             .toArray(Rotation2d[]::new);
 
     timestampQueue.clear();
@@ -276,6 +300,7 @@ public class ModuleIOFullKraken implements ModuleIO {
       inputs.odometryTimestamps = new double[] {timestamp};
       inputs.odometryDrivePositionsRad = new double[] {inputs.drivePositionRad};
       inputs.odometryTurnPositions = new Rotation2d[] {inputs.turnPosition};
+      inputs.odometryTurnPositionsRotations = new double[] {correctedTurnPositionRotations};
     }
   }
 
@@ -323,6 +348,19 @@ public class ModuleIOFullKraken implements ModuleIO {
     turnConfig.Slot0.kI = kI;
     turnConfig.Slot0.kD = kD;
     tryUntilOk(5, () -> turnMotor.getConfigurator().apply(turnConfig, 0.25));
+  }
+
+  @Override
+  public void captureZeroTrim() {
+    BaseStatusSignal.refreshAll(turnPosition);
+    softwareZeroTrimRotations += turnPosition.getValueAsDouble() - softwareZeroTrimRotations;
+    SwerveCalibration.setModuleZeroTrimRotations(calibrationKey, softwareZeroTrimRotations);
+  }
+
+  @Override
+  public void clearZeroTrim() {
+    softwareZeroTrimRotations = 0.0;
+    SwerveCalibration.clearModuleZeroTrimRotations(calibrationKey);
   }
 
   @Override

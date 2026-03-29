@@ -16,6 +16,10 @@ public interface ModuleIO {
 
     public boolean turnConnected = false;
     public Rotation2d turnPosition = new Rotation2d();
+    public double turnPositionRotations = 0.0;
+    public Rotation2d turnAbsolutePosition = new Rotation2d();
+    public double turnAbsolutePositionRotations = 0.0;
+    public double turnZeroTrimRotations = 0.0;
     public double turnVelocityRadPerSec = 0.0;
     public double turnAppliedVolts = 0.0;
     public double turnCurrentAmps = 0.0;
@@ -23,6 +27,7 @@ public interface ModuleIO {
     public double[] odometryTimestamps = new double[] {};
     public double[] odometryDrivePositionsRad = new double[] {};
     public Rotation2d[] odometryTurnPositions = new Rotation2d[] {};
+    public double[] odometryTurnPositionsRotations = new double[] {};
   }
 
   /** Updates the set of loggable inputs. */
@@ -56,4 +61,10 @@ public interface ModuleIO {
 
   /** Add Kraken instruments to an Orchestra list if supported. */
   public default void addOrchestraInstruments(List<TalonFX> instruments) {}
+
+  /** Saves the current steering angle as the new zero trim. */
+  public default void captureZeroTrim() {}
+
+  /** Clears any saved steering zero trim. */
+  public default void clearZeroTrim() {}
 }
