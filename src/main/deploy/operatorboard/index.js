@@ -779,10 +779,6 @@ function activateTab(tabName) {
       renderField();
     });
   }
-  if (target === "joystick") {
-    renderJoystickEditor();
-    renderJoystickLiveInputs();
-  }
   if (target === "systems") {
     renderSystemsCatalog();
     renderStorageInventory();
@@ -795,7 +791,7 @@ function normalizeTabName(tabName) {
     .trim()
     .toLowerCase();
   if (normalized === "joystick" || normalized === "controls") {
-    return "joystick";
+    return "teleop";
   }
   if (normalized === "systems" || normalized === "system") {
     return "systems";
@@ -1093,23 +1089,11 @@ function updateMusicVolumeUi(value) {
 }
 
 async function loadPersistedOperatorBoardData(showToastOnSuccess = false) {
-  const [joystickMappings, subsystemDescriptions, storageInventory, latestDiagnosticBundle] =
-    await Promise.all([
-      fetchJsonDocument("./api/joystick-mappings"),
-      fetchJsonDocument("./api/subsystem-descriptions"),
-      fetchJsonDocument("./api/storage/inventory"),
-      fetchJsonDocument("./api/diagnostics/latest"),
-    ]);
-
-  if (joystickMappings) {
-    state.joystickMappings = normalizeJoystickMappingsDocument(joystickMappings);
-    state.joystickMappingsBaseline = cloneJson(state.joystickMappings);
-    const availableProfiles = Array.isArray(state.joystickMappings.profiles) ? state.joystickMappings.profiles : [];
-    const existingProfile = availableProfiles.find((entry) => entry.id === state.selectedJoystickProfileId);
-    state.selectedJoystickProfileId = existingProfile
-      ? existingProfile.id
-      : state.joystickMappings.activeProfileId || availableProfiles[0]?.id || "";
-  }
+  const [subsystemDescriptions, storageInventory, latestDiagnosticBundle] = await Promise.all([
+    fetchJsonDocument("./api/subsystem-descriptions"),
+    fetchJsonDocument("./api/storage/inventory"),
+    fetchJsonDocument("./api/diagnostics/latest"),
+  ]);
   if (subsystemDescriptions) {
     state.subsystemDescriptions = subsystemDescriptions;
   }
@@ -1120,8 +1104,6 @@ async function loadPersistedOperatorBoardData(showToastOnSuccess = false) {
     state.latestDiagnosticBundle = latestDiagnosticBundle;
   }
 
-  renderJoystickEditor();
-  renderJoystickLiveInputs();
   renderSystemsCatalog();
   renderStorageInventory();
   renderDiagnosticBundleSummary();
