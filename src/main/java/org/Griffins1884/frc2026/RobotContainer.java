@@ -162,6 +162,10 @@ public class RobotContainer {
                     drive,
                     drive::getPose,
                     () -> Math.toRadians(drive.getYawRateDegreesPerSec()),
+                    () -> {
+                      var speeds = drive.getRobotRelativeSpeeds();
+                      return Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+                    },
                     LEFT_CAM_ENABLED
                         ? (IS_LIMELIGHT
                             ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
@@ -206,6 +210,42 @@ public class RobotContainer {
       characterizationChooser.addOption(
           "Drive | Wheel Radius Characterization",
           DriveCommands.wheelRadiusCharacterization(drive).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Wheel Radius Characterization + Save",
+          DriveCommands.wheelRadiusCharacterization(drive, true).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Clear Saved Wheel Radius",
+          DriveCommands.clearSavedWheelRadius().ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Capture Module Zero Offsets",
+          DriveCommands.captureModuleZeroOffsets(drive).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Capture FL Zero Offset",
+          DriveCommands.captureModuleZeroOffset(drive, 0, "FL").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Capture FR Zero Offset",
+          DriveCommands.captureModuleZeroOffset(drive, 1, "FR").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Capture BL Zero Offset",
+          DriveCommands.captureModuleZeroOffset(drive, 2, "BL").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Capture BR Zero Offset",
+          DriveCommands.captureModuleZeroOffset(drive, 3, "BR").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Clear Module Zero Offsets",
+          DriveCommands.clearModuleZeroOffsets(drive).ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Clear FL Zero Offset",
+          DriveCommands.clearModuleZeroOffset(drive, 0, "FL").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Clear FR Zero Offset",
+          DriveCommands.clearModuleZeroOffset(drive, 1, "FR").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Clear BL Zero Offset",
+          DriveCommands.clearModuleZeroOffset(drive, 2, "BL").ignoringDisable(true));
+      characterizationChooser.addOption(
+          "Drive | Clear BR Zero Offset",
+          DriveCommands.clearModuleZeroOffset(drive, 3, "BR").ignoringDisable(true));
       characterizationChooser.addOption(
           "Drive | Feedforward Characterization",
           DriveCommands.feedforwardCharacterization(drive).ignoringDisable(true));

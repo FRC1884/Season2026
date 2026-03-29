@@ -24,6 +24,17 @@
 - Match/practice verification checklist: `docs/ROBOT_FUNCTIONALITY_CHECKLIST.md`
 - Includes a dedicated gyro failover + odometry-reset hardening validation block (Pigeon2 -> NavX fallback and vision suppression after resets)
 
+## Protocols and Reference Docs
+
+- Swerve odometry, drift causes, wheel-radius save flow, and pod zeroing protocol: `docs/SWERVE_ODOMETRY_AND_CALIBRATION.md`
+- AprilTag vision pose flow, acceptance rules, and pose consumers: `docs/VISION_POSE_USAGE.md`
+- Persistence model and deploy-preserve rules: `docs/PERSISTENCE_ARCHITECTURE.md`
+- Northstar and Limelight setup notes: `docs/NORTHSTAR_LIMELIGHT_SETUP.md`
+- PathPlanA integration contract: `docs/PATHPLANA_INTEGRATION.md`
+- PathPlanA protocol details: `docs/PATHPLANA_CONTRACT.md`
+- NetworkTables audit and dashboard notes: `docs/NETWORKTABLES_AUDIT.md`
+- Performance validation notes: `docs/PERFORMANCE_VALIDATION.md`
+
 ## Getting Started
 
 1. **Tools** – Install WPILib 2026 beta, JDK 17, and AdvantageScope.

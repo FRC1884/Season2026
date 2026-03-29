@@ -228,7 +228,8 @@ public class AprilTagVisionIONorthstar implements VisionIO {
                         observation.targetObservation().tx().getRadians(),
                         observation.targetObservation().ty().getRadians(),
                         selection.ambiguity(),
-                        Double.NaN))
+                        Double.NaN,
+                        observation.distanceMeters()))
             .toArray(FiducialObservation[]::new);
 
     double avgTagDist =
