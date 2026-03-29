@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.RobotBase;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -37,7 +38,7 @@ public final class OperatorBoardPersistence {
 
   public OperatorBoardPersistence() {
     this.projectRoot = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
-    this.runtimeRoot = projectRoot.resolve("operatorboard-data");
+    this.runtimeRoot = resolveRuntimeRoot(projectRoot);
     this.backupsRoot = runtimeRoot.resolve("backups");
     this.diagnosticsRoot = runtimeRoot.resolve("diagnostics");
     this.diagnosticBundlesRoot = diagnosticsRoot.resolve("bundles");
@@ -45,6 +46,13 @@ public final class OperatorBoardPersistence {
         Filesystem.getDeployDirectory().toPath().resolve("operatorboard").resolve("default-data");
     this.pathPlanAutosRoot =
         Filesystem.getDeployDirectory().toPath().resolve("pathplana").resolve("autos");
+  }
+
+  private static Path resolveRuntimeRoot(Path projectRoot) {
+    if (RobotBase.isReal()) {
+      return Path.of("/home/lvuser/operatorboard-data");
+    }
+    return projectRoot.resolve("operatorboard-data").toAbsolutePath().normalize();
   }
 
   public synchronized void initialize() {
