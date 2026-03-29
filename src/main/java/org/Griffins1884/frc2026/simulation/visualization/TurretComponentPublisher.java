@@ -6,16 +6,15 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
-import org.Griffins1884.frc2026.util.ballistics.ShotModelConfig;
+import org.Griffins1884.frc2026.simulation.shooter.ShotSimulationConfig;
 
 /** Builds field-space turret component poses for AdvantageScope visualization. */
 public final class TurretComponentPublisher {
   private TurretComponentPublisher() {}
 
   public static Pose2d createPose2d(
-      Pose2d robotPose, Rotation2d turretYaw, ShotModelConfig config) {
-    Translation3d mount =
-        config != null ? config.turretMount().toTranslation3d() : new Translation3d();
+      Pose2d robotPose, Rotation2d turretYaw, ShotSimulationConfig config) {
+    Translation3d mount = config != null ? config.turretMountMeters() : new Translation3d();
     Translation2d fieldTranslation =
         new Translation2d(mount.getX(), mount.getY())
             .rotateBy(robotPose.getRotation())
@@ -24,9 +23,8 @@ public final class TurretComponentPublisher {
   }
 
   public static Pose3d createPose3d(
-      Pose2d robotPose, Rotation2d turretYaw, ShotModelConfig config) {
-    Translation3d mount =
-        config != null ? config.turretMount().toTranslation3d() : new Translation3d();
+      Pose2d robotPose, Rotation2d turretYaw, ShotSimulationConfig config) {
+    Translation3d mount = config != null ? config.turretMountMeters() : new Translation3d();
     Translation3d fieldTranslation = rotateIntoField(robotPose, mount);
     return new Pose3d(
         fieldTranslation,

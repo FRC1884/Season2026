@@ -14,9 +14,9 @@
       "type": "line-graph",
       "title": "Shooter Telemetry",
       "signals": [
-        "Superstructure/ShotModel/Rpm",
-        "Superstructure/ShotModel/PivotRotations",
-        "Superstructure/ShotModel/TurretYawDeg",
+        "Superstructure/ShotMath/Rpm",
+        "Superstructure/ShotMath/PivotRotations",
+        "Superstructure/ShotMath/TurretYawDeg",
         "ShotReview/PredictionErrorMeters",
         "ShotReview/PredictionFlightTimeSec",
         "FieldSimulation/ProjectileCount",

@@ -5,15 +5,14 @@ import edu.wpi.first.wpilibj.Timer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.Griffins1884.frc2026.util.ballistics.ShotModelConfig;
 
 /** Owns active simulated projectiles and advances them over time. */
 public final class ProjectileManager {
-  private final ShotModelConfig.PhysicsConfig physics;
+  private final ShotSimulationConfig.PhysicsConfig physics;
   private final List<ProjectileState> activeProjectiles = new ArrayList<>();
   private int spawnedCount = 0;
 
-  public ProjectileManager(ShotModelConfig.PhysicsConfig physics) {
+  public ProjectileManager(ShotSimulationConfig.PhysicsConfig physics) {
     this.physics = physics;
   }
 

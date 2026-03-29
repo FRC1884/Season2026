@@ -13,6 +13,7 @@ import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem;
+import org.Griffins1884.frc2026.util.ShotMath;
 import org.littletonrobotics.junction.Logger;
 
 public class ShooterCommands {
@@ -79,7 +80,9 @@ public class ShooterCommands {
   }
 
   public static double getShooterRpm(double distanceMeters) {
-    return lookupInterpolated(getActiveRpmTable(), distanceMeters) + 30;
+    return ShooterConstants.SHOT_LOOKUP_MODE == ShooterConstants.ShotLookupMode.BALLISTIC_MODEL
+        ? lookupInterpolated(getActiveRpmTable(), distanceMeters)
+        : ShotMath.getShooterRpm(distanceMeters);
   }
 
   public static double getPivotAngleDegrees(double distanceMeters) {
@@ -94,7 +97,9 @@ public class ShooterCommands {
   }
 
   public static double getPivotAngleOutput(double distanceMeters) {
-    return lookupInterpolated(getActiveAngleTable(), distanceMeters);
+    return ShooterConstants.SHOT_LOOKUP_MODE == ShooterConstants.ShotLookupMode.BALLISTIC_MODEL
+        ? lookupInterpolated(getActiveAngleTable(), distanceMeters)
+        : ShotMath.getPivotPosition(distanceMeters);
   }
 
   public static double getPivotAngleRad(double distanceMeters) {

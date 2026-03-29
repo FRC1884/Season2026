@@ -11,6 +11,7 @@ import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.simulation.replay.ShotReviewEvents;
 import org.Griffins1884.frc2026.simulation.shooter.ProjectileManager;
 import org.Griffins1884.frc2026.simulation.shooter.ShotReleaseDetector;
+import org.Griffins1884.frc2026.simulation.shooter.ShotSimulationConfig;
 import org.Griffins1884.frc2026.simulation.shooter.ShotSimulator;
 import org.Griffins1884.frc2026.simulation.shooter.SimulatedShot;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
@@ -19,8 +20,7 @@ import org.Griffins1884.frc2026.subsystems.Superstructure.SuperstructureOutcome;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem.IndexerGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
-import org.Griffins1884.frc2026.util.ballistics.AdvancedBallisticsShotModel;
-import org.Griffins1884.frc2026.util.ballistics.ShotModelConfig;
+import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 
 /** Publishes robot components, predicted arcs, and active projectiles for AdvantageScope. */
@@ -28,11 +28,10 @@ public final class RobotStateVisualizer {
   private final SwerveSubsystem drive;
   private final TurretSubsystem turret;
   private final Superstructure superstructure;
-  private final ShotModelConfig shotModelConfig = ShotModelConfig.defaultConfig();
-  private final ShotSimulator shotSimulator =
-      new ShotSimulator(new AdvancedBallisticsShotModel(shotModelConfig));
+  private final ShotSimulationConfig shotSimulationConfig = ShotSimulationConfig.defaultConfig();
+  private final ShotSimulator shotSimulator = new ShotSimulator(shotSimulationConfig);
   private final ProjectileManager projectileManager =
-      new ProjectileManager(shotModelConfig.physics());
+      new ProjectileManager(shotSimulationConfig.physics());
   private final ShotReleaseDetector shotReleaseDetector = new ShotReleaseDetector();
   private final GamePiecePosePublisher gamePiecePublisher = new GamePiecePosePublisher();
   private final ShotReviewEvents shotReviewEvents = new ShotReviewEvents();
@@ -61,18 +60,18 @@ public final class RobotStateVisualizer {
 
     Pose3d shooterExitPose3d =
         ShooterComponentPublisher.createExitPose(
-            robotPose, turretYaw, shooterPivotRotations, shotModelConfig);
+            robotPose, turretYaw, shooterPivotRotations, shotSimulationConfig);
     Pose3d turretPose3d =
-        TurretComponentPublisher.createPose3d(robotPose, turretYaw, shotModelConfig);
+        TurretComponentPublisher.createPose3d(robotPose, turretYaw, shotSimulationConfig);
     Pose3d shooterPivotPose3d =
         ShooterComponentPublisher.createPivotPose(
-            robotPose, turretYaw, shooterPivotRotations, shotModelConfig);
+            robotPose, turretYaw, shooterPivotRotations, shotSimulationConfig);
 
     Logger.recordOutput("FieldSimulation/RobotPosition", robotPose);
     Logger.recordOutput("FieldSimulation/RobotPose3d", new Pose3d(robotPose));
     Logger.recordOutput(
         "FieldSimulation/TurretPose",
-        TurretComponentPublisher.createPose2d(robotPose, turretYaw, shotModelConfig));
+        TurretComponentPublisher.createPose2d(robotPose, turretYaw, shotSimulationConfig));
     Logger.recordOutput("FieldSimulation/TurretComponentPose3d", new Pose3d[] {turretPose3d});
     Logger.recordOutput(
         "FieldSimulation/ShooterPivotComponentPose3d", new Pose3d[] {shooterPivotPose3d});
@@ -82,12 +81,24 @@ public final class RobotStateVisualizer {
         new Pose3d[] {turretPose3d, shooterPivotPose3d, shooterExitPose3d});
 
     SimulatedShot predictedShot = null;
-    if (superstructure != null && superstructure.isInAllianceZone()) {
+    SuperstructureOutcome outcome =
+        superstructure != null ? superstructure.getLatestOutcome() : null;
+    if (superstructure != null && superstructure.isInAllianceZone() && outcome != null) {
+      Translation2d turretTarget = outcome.turretTarget();
+      Rotation2d commandedTurretYaw =
+          turretTarget != null
+              ? Rotation2d.fromRadians(TurretUtil.turretAngleToTarget(robotPose, turretTarget))
+              : turretYaw;
+      double predictedPivotRotations =
+          outcome.shooterPivotManual() ? outcome.shooterPivotPosition() : shooterPivotRotations;
       predictedShot =
           shotSimulator
               .solveHubShot(
                   robotPose,
                   sanitize(drive != null ? drive.getFieldVelocity() : null),
+                  commandedTurretYaw,
+                  predictedPivotRotations,
+                  outcome.shooterTargetVelocityRpm(),
                   getHubTarget(robotPose),
                   getHubConeTop(robotPose),
                   GlobalConstants.FieldConstants.Hub.innerOpeningRadius,
@@ -106,8 +117,8 @@ public final class RobotStateVisualizer {
           predictedShot.releasePose(), predictedShot.predictedImpactPose(), targetPose);
       shotReviewEvents.recordShotPrediction(
           predictedShot.feasible(),
-          predictedShot.solution().prediction().closestApproachErrorMeters(),
-          predictedShot.solution().prediction().timeOfFlightSeconds());
+          predictedShot.closestApproachErrorMeters(),
+          predictedShot.timeOfFlightSeconds());
     } else {
       clearPredictionOutputs();
       shotReviewEvents.recordShotPrediction(false, Double.NaN, Double.NaN);
@@ -115,7 +126,6 @@ public final class RobotStateVisualizer {
 
     boolean released = false;
     if (superstructure != null) {
-      SuperstructureOutcome outcome = superstructure.getLatestOutcome();
       boolean shooterReady =
           superstructure.getRollers().shooter == null
               || superstructure.getRollers().shooter.isAtGoal();

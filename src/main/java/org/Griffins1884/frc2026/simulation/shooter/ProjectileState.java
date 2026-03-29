@@ -3,7 +3,6 @@ package org.Griffins1884.frc2026.simulation.shooter;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Translation3d;
-import org.Griffins1884.frc2026.util.ballistics.ShotModelConfig;
 
 /** Mutable projectile state used for predicted trajectories and live simulated shots. */
 public final class ProjectileState {
@@ -47,7 +46,7 @@ public final class ProjectileState {
     active = false;
   }
 
-  public void advance(ShotModelConfig.PhysicsConfig physics, double dtSeconds) {
+  public void advance(ShotSimulationConfig.PhysicsConfig physics, double dtSeconds) {
     if (!active || physics == null || dtSeconds <= 0.0) {
       return;
     }
@@ -64,7 +63,7 @@ public final class ProjectileState {
     }
   }
 
-  private Translation3d accelerationFor(ShotModelConfig.PhysicsConfig physics) {
+  private Translation3d accelerationFor(ShotSimulationConfig.PhysicsConfig physics) {
     double speed = velocityMetersPerSecond.getNorm();
     Translation3d drag =
         velocityMetersPerSecond

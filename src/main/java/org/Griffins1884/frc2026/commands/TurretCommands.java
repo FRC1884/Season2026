@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.RobotLogging;
+import org.Griffins1884.frc2026.util.ShotMath;
 import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 
@@ -140,64 +141,23 @@ public final class TurretCommands {
       boolean logOutputs) {
     Pose2d currentPose = robotPoseSupplier.get();
     Translation2d target = targetSupplier.get();
-    if (currentPose == null || target == null || shotTimeEstimator == null) {
+    if (currentPose == null || target == null) {
       return new Translation2d();
     }
-    Translation2d currentTranslation = currentPose.getTranslation();
-    Rotation2d angle = new Rotation2d(0);
-
     Translation2d fieldVelocity =
         sanitizeVector(fieldVelocitySupplier != null ? fieldVelocitySupplier.get() : null);
-    Translation2d fieldAcceleration =
-        sanitizeVector(fieldAccelerationSupplier != null ? fieldAccelerationSupplier.get() : null);
-    double latency = BASE_LATENCY_SECONDS.getAsDouble();
-    double kV = KV.getAsDouble();
-    double kS = KS.getAsDouble();
-
-    Translation2d robotTranslateExit =
-        fieldVelocity.times(latency).plus(fieldAcceleration.times(0.5 * latency * latency));
-    Translation2d robotFuturePose = currentTranslation.plus(robotTranslateExit);
-    Translation2d robotVelocityExit = fieldVelocity.plus(fieldAcceleration.times(latency));
-    Translation2d baseVectorFromExit = target.minus(robotFuturePose);
-
-    Translation2d aimVector = baseVectorFromExit;
-    double dist = baseVectorFromExit.getNorm();
-    double tof = shotTimeEstimator.applyAsDouble(dist);
-    if (!Double.isFinite(tof) || tof <= 1e-4) {
-      return target;
-    }
-    double tEff = tof + latency;
-    double tofToleranceFraction = Math.max(1e-4, Math.max(0.0, TOF_TOLERANCE_FRACTION.get()));
-
-    for (int i = 0; i < 8; i++) {
-      Translation2d lead = robotVelocityExit.times(tof * (kV + (dist * kS)));
-      aimVector = baseVectorFromExit.minus(lead);
-
-      double newDist = aimVector.getNorm();
-      double newTOF = shotTimeEstimator.applyAsDouble(newDist);
-      if (!Double.isFinite(newTOF) || newTOF <= 1e-4) break;
-
-      double oldTEff = tEff;
-      double newTEff = newTOF + latency;
-      double check = Math.abs(newTEff - oldTEff) / Math.max(oldTEff, 1e-6);
-      dist = newDist;
-      tof = newTOF;
-      tEff = newTEff;
-      angle = new Rotation2d(aimVector.getX(), aimVector.getY());
-
-      if (check <= tofToleranceFraction) {
-        break;
-      }
-    }
-
-    Translation2d aimPoint = currentTranslation.plus(robotTranslateExit).plus(aimVector);
+    Translation2d aimPoint = ShotMath.compensateTarget(currentPose, target, fieldVelocity);
     if (logOutputs && RobotLogging.isDebugMode("turret")) {
-      Logger.recordOutput("Turret/AutoAim/ShotTime", tof);
-      Logger.recordOutput("Turret/AutoAim/Distance", dist);
-      Logger.recordOutput("Turret/AutoAim/FuturePose", robotFuturePose);
+      double distance = currentPose.getTranslation().getDistance(aimPoint);
+      Rotation2d angle =
+          new Rotation2d(
+              aimPoint.getX() - currentPose.getX(), aimPoint.getY() - currentPose.getY());
+      Logger.recordOutput("Turret/AutoAim/ShotTime", ShotMath.getTimeOfFlightSeconds(distance));
+      Logger.recordOutput("Turret/AutoAim/Distance", distance);
       Logger.recordOutput(
-          "Turret/AutoAim/FutureTarget",
-          new Pose2d(robotFuturePose.plus(aimVector), new Rotation2d()));
+          "Turret/AutoAim/FuturePose",
+          new Pose2d(currentPose.getTranslation(), currentPose.getRotation()));
+      Logger.recordOutput("Turret/AutoAim/FutureTarget", new Pose2d(aimPoint, new Rotation2d()));
       Logger.recordOutput("Turret/AutoAim/AngleToTarget", angle);
     }
     return aimPoint;
@@ -246,6 +206,9 @@ public final class TurretCommands {
   }
 
   public static double estimateShotTimeSeconds(double distanceMeters) {
+    if (ShooterConstants.SHOT_LOOKUP_MODE == ShooterConstants.ShotLookupMode.LOOKUP_TABLE) {
+      return ShotMath.getTimeOfFlightSeconds(distanceMeters);
+    }
 
     ShooterCommands.ShotTimeEstimate estimate =
         estimateShotTimeDetailed(
