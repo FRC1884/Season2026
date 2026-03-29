@@ -3,10 +3,7 @@ package org.Griffins1884.frc2026;
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
 import org.Griffins1884.frc2026.OI.DriverMap;
-import org.Griffins1884.frc2026.OI.PS5DriverMap;
-import org.Griffins1884.frc2026.OI.PS5ProDriverMap;
-import org.Griffins1884.frc2026.OI.SimXboxUniversalMap;
-import org.Griffins1884.frc2026.OI.XboxDriverMap;
+import org.Griffins1884.frc2026.OI.ProfiledDriverMap;
 
 public final class Config {
 
@@ -38,6 +35,7 @@ public final class Config {
   public static final class Controllers {
     public enum DriverControllerType {
       XBOX,
+      PS4,
       PS5,
       PS5_PRO,
       SIM_XBOX_UNIVERSAL
@@ -50,19 +48,22 @@ public final class Config {
         DriverControllerType.SIM_XBOX_UNIVERSAL;
 
     public static DriverMap getDriverController() {
+      return new ProfiledDriverMap(profileType(resolveFallbackControllerType()), DRIVER_PORT);
+    }
+
+    private static DriverControllerType resolveFallbackControllerType() {
       return switch (ROBOT) {
-        case COMPBOT -> createDriverController(COMPBOT_DRIVER);
-        case DBOT -> createDriverController(DBOT_DRIVER);
-        case SIMBOT -> createDriverController(SIMBOT_DRIVER);
+        case COMPBOT -> COMPBOT_DRIVER;
+        case DBOT -> DBOT_DRIVER;
+        case SIMBOT -> SIMBOT_DRIVER;
       };
     }
 
-    private static DriverMap createDriverController(DriverControllerType type) {
+    private static String profileType(DriverControllerType type) {
       return switch (type) {
-        case XBOX -> new XboxDriverMap(DRIVER_PORT);
-        case PS5 -> new PS5DriverMap(DRIVER_PORT);
-        case PS5_PRO -> new PS5ProDriverMap(DRIVER_PORT);
-        case SIM_XBOX_UNIVERSAL -> new SimXboxUniversalMap(DRIVER_PORT);
+        case XBOX, SIM_XBOX_UNIVERSAL -> "xbox";
+        case PS4 -> "ps4";
+        case PS5, PS5_PRO -> "ps5-pro";
       };
     }
   }

@@ -6,7 +6,9 @@ import static org.Griffins1884.frc2026.GlobalConstants.MODE;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -39,6 +41,9 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.TurretUtil;
+import org.Griffins1884.frc2026.util.ballistics.AdvancedBallisticsShotModel;
+import org.Griffins1884.frc2026.util.ballistics.ShotModel;
+import org.Griffins1884.frc2026.util.ballistics.ShotModelConfig;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -117,6 +122,8 @@ public class Superstructure extends SubsystemBase {
   @Getter private final Elevators elevators = new Elevators();
   @Getter private final Arms arms = new Arms();
   private static final double SYS_ID_IDLE_WAIT_SECONDS = 0.5;
+  private static final AdvancedBallisticsShotModel HUB_SHOT_MODEL =
+      new AdvancedBallisticsShotModel(ShotModelConfig.defaultConfig());
 
   public Superstructure(SwerveSubsystem drive) {
     this.drive = drive;
@@ -466,13 +473,15 @@ public class Superstructure extends SubsystemBase {
 
   private void applyTeleopControl() {
     boolean inAllianceZone = isInAllianceZone();
-    Translation2d target = inAllianceZone ? getHubTarget() : getFerryingTarget();
-
     boolean shooterShouldSpin = inAllianceZone || shootEnabled;
 
     setIntakePivotGoal(intakeDeployed ? IntakePivotGoal.PICKUP : IntakePivotGoal.IDLING);
     setIntakeGoal(resolveIntakeGoal(false));
-    applyAimingAndShooterSolution(target, shooterShouldSpin);
+    if (inAllianceZone) {
+      applyHubShotModelSolution(getHubTargetPosition3d(), shooterShouldSpin);
+    } else {
+      applyLegacyAimingAndShooterSolution(getFerryingTarget(), shooterShouldSpin);
+    }
 
     boolean indexerActive = shouldEnableIndexer(shootEnabled, shooterShouldSpin);
     setIndexerGoal(indexerActive ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
@@ -693,25 +702,17 @@ public class Superstructure extends SubsystemBase {
   }
 
   private void applyShooting(Translation2d target, boolean indexerRequested) {
-    final Translation2d oldTarget = target;
-    target =
-        TurretCommands.shootingWhileMoving(
-            drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
     setIntakeGoal(IntakeGoal.IDLING);
     setIntakePivotGoal(IntakePivotGoal.IDLING);
-    applyAimingAndShooterSolution(target, true);
+    applyHubShotModelSolution(getHubTargetPosition3d(), true);
     boolean indexerActive = shouldEnableIndexer(indexerRequested, true);
     setIndexerGoal(indexerActive ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
   }
 
   private void applyShootingAndIntaking(Translation2d target, boolean indexerRequested) {
-    final Translation2d oldTarget = target;
-    target =
-        TurretCommands.shootingWhileMoving(
-            drive::getPose, () -> oldTarget, drive::getFieldVelocity, drive::getFieldAcceleration);
     setIntakeGoal(IntakeGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
-    applyAimingAndShooterSolution(target, true);
+    applyHubShotModelSolution(getHubTargetPosition3d(), true);
     boolean indexerActive = shouldEnableIndexer(indexerRequested, true);
     setIndexerGoal(indexerActive ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
   }
@@ -720,7 +721,7 @@ public class Superstructure extends SubsystemBase {
     Translation2d target = getFerryingTarget();
     setIntakeGoal(IntakeGoal.FORWARD);
     setIntakePivotGoal(IntakePivotGoal.PICKUP);
-    applyAimingAndShooterSolution(target, true);
+    applyLegacyAimingAndShooterSolution(target, true);
     boolean indexerActive = shouldEnableIndexer(indexerRequested, true);
     setIndexerGoal(indexerActive ? IndexerGoal.FORWARD : IndexerGoal.IDLING);
   }
@@ -821,7 +822,7 @@ public class Superstructure extends SubsystemBase {
     lastTurretTarget = target;
   }
 
-  private void applyAimingAndShooterSolution(
+  private void applyLegacyAimingAndShooterSolution(
       Translation2d target, boolean shooterEnabledForTarget) {
     aimTurretAt(target);
 
@@ -862,6 +863,126 @@ public class Superstructure extends SubsystemBase {
     arms.shooterPivot.setGoalPosition(targetAngle);
 
     setShooterTargetVelocity(targetRpm);
+  }
+
+  private void applyHubShotModelSolution(
+      Translation3d fieldTarget, boolean shooterEnabledForTarget) {
+    Translation2d target = fieldTarget != null ? fieldTarget.toTranslation2d() : null;
+    if (!isTurretExternallyControlled()) {
+      aimTurretAt(target);
+    } else {
+      lastTurretAction = "EXTERNAL";
+      lastTurretTarget = null;
+    }
+
+    if (rollers.shooter == null) {
+      return;
+    }
+
+    if (!shooterEnabledForTarget) {
+      setShooterTargetVelocity(0.0);
+      setShooterPivotGoal(ShooterPivotGoal.IDLING, false, 0.0);
+      return;
+    }
+
+    if (arms.shooterPivot == null || drive == null || fieldTarget == null) {
+      setShooterTargetVelocity(ShooterConstants.TARGET_RPM);
+      return;
+    }
+    if (isShooterPivotExternallyControlled()) {
+      setShooterTargetVelocity(ShooterConstants.TARGET_RPM);
+      return;
+    }
+
+    Pose2d pose = drive.getPose();
+    if (!isValidPose(pose)) {
+      setShooterTargetVelocity(ShooterConstants.TARGET_RPM);
+      return;
+    }
+
+    ShotModel.ShotSolution solution = solveHubShotModel(fieldTarget, pose);
+    ShotModel.ShotPrediction prediction = solution.prediction();
+    Logger.recordOutput("Superstructure/ShotModel/Feasible", prediction.feasible());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/ErrorMeters", prediction.closestApproachErrorMeters());
+    Logger.recordOutput("Superstructure/ShotModel/TurretYawDeg", prediction.turretYawDegrees());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/PivotRotations", prediction.launchMotorRotations());
+    Logger.recordOutput("Superstructure/ShotModel/Rpm", solution.launchCommand().wheelRpm());
+
+    if (!prediction.feasible()) {
+      applyLegacyAimingAndShooterSolution(target, true);
+      return;
+    }
+
+    if (isTurretExternallyControlled()) {
+      lastTurretAction = "EXTERNAL";
+      lastTurretTarget = null;
+    } else if (turret != null) {
+      turret.setGoalRad(Math.toRadians(prediction.turretYawDegrees()));
+      lastTurretAction = "AIM_SHOT_MODEL";
+      lastTurretTarget = target;
+    } else {
+      lastTurretAction = "AIM_SHOT_MODEL";
+      lastTurretTarget = target;
+    }
+
+    lastShooterPivotGoal = ShooterPivotGoal.IDLING;
+    lastShooterPivotManual = true;
+    lastShooterPivotPosition = prediction.launchMotorRotations();
+
+    arms.shooterPivot.setGoal(ShooterPivotGoal.IDLING);
+    arms.shooterPivot.setGoalPosition(prediction.launchMotorRotations());
+    setShooterTargetVelocity(solution.launchCommand().wheelRpm());
+  }
+
+  private ShotModel.ShotSolution solveHubShotModel(Translation3d fieldTarget, Pose2d pose) {
+    Rotation2d robotHeading = pose.getRotation();
+    Translation2d robotRelativeTarget =
+        fieldTarget
+            .toTranslation2d()
+            .minus(pose.getTranslation())
+            .rotateBy(robotHeading.unaryMinus());
+    Translation2d robotRelativeVelocity =
+        sanitizeVector(drive.getFieldVelocity()).rotateBy(robotHeading.unaryMinus());
+
+    ShotModel.ShotScenario scenario =
+        new ShotModel.ShotScenario(
+            new Translation3d(
+                robotRelativeTarget.getX(), robotRelativeTarget.getY(), fieldTarget.getZ()),
+            robotRelativeVelocity);
+    Logger.recordOutput("Superstructure/ShotModel/RobotTarget", scenario.targetPositionMeters());
+    Logger.recordOutput(
+        "Superstructure/ShotModel/RobotVelocity", scenario.robotVelocityMetersPerSecond());
+    return HUB_SHOT_MODEL.solve(scenario);
+  }
+
+  private Translation3d getHubTargetPosition3d() {
+    Pose2d pose = drive != null ? drive.getPose() : null;
+    boolean isBlue =
+        AllianceFlipUtil.resolveAlliance(pose).orElseGet(() -> inferAllianceFromPose(pose))
+            == DriverStation.Alliance.Blue;
+    return isBlue
+        ? GlobalConstants.FieldConstants.Hub.innerCenterPoint
+        : new Translation3d(
+            GlobalConstants.FieldConstants.fieldLength
+                - GlobalConstants.FieldConstants.Hub.innerCenterPoint.getX(),
+            GlobalConstants.FieldConstants.Hub.innerCenterPoint.getY(),
+            GlobalConstants.FieldConstants.Hub.innerCenterPoint.getZ());
+  }
+
+  private static Translation2d sanitizeVector(Translation2d vector) {
+    if (vector == null || !Double.isFinite(vector.getX()) || !Double.isFinite(vector.getY())) {
+      return new Translation2d();
+    }
+    return vector;
+  }
+
+  private static boolean isValidPose(Pose2d pose) {
+    return pose != null
+        && Double.isFinite(pose.getX())
+        && Double.isFinite(pose.getY())
+        && Double.isFinite(pose.getRotation().getRadians());
   }
 
   public boolean isInAllianceZone() {

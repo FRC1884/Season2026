@@ -161,13 +161,24 @@ public class RobotContainer {
                     drive::getPose,
                     () -> Math.toRadians(drive.getYawRateDegreesPerSec()),
                     LEFT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
+                        ? (IS_LIMELIGHT
+                            ? new AprilTagVisionIOLimelight(LEFT_CAM_CONSTANTS, drive)
+                            : new AprilTagVisionIONorthstar(
+                                LEFT_CAM_CONSTANTS, LEFT_CAM_NORTHSTAR_CONFIG, drive))
                         : new VisionIO() {},
                     RIGHT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
+                        ? (IS_LIMELIGHT
+                            ? new AprilTagVisionIOLimelight(RIGHT_CAM_CONSTANTS, drive)
+                            : new AprilTagVisionIONorthstar(
+                                RIGHT_CAM_CONSTANTS, RIGHT_CAM_NORTHSTAR_CONFIG, drive))
                         : new VisionIO() {},
                     MIDDLE_RIGHT_CAM_ENABLED
-                        ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
+                        ? (IS_LIMELIGHT
+                            ? new AprilTagVisionIOLimelight(MIDDLE_RIGHT_CAM_CONSTANTS, drive)
+                            : new AprilTagVisionIONorthstar(
+                                MIDDLE_RIGHT_CAM_CONSTANTS,
+                                MIDDLE_RIGHT_CAM_NORTHSTAR_CONFIG,
+                                drive))
                         : new VisionIO() {});
             default -> new Vision(drive, new VisionIO() {}, new VisionIO() {});
           };

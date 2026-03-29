@@ -82,6 +82,14 @@ task(replayWatch, type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
 }
 
+tasks.register("exportShotSweep", JavaExec) {
+    group = "analysis"
+    description = "Exports configurable raw and solved shot-model sweeps for offline analysis."
+    mainClass = "org.Griffins1884.frc2026.util.ballistics.ShotSweepExporterMain"
+    classpath = sourceSets.main.runtimeClasspath
+    args "--output-dir", "${buildDir}/reports/ballistics"
+}
+
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 4.
 dependencies {

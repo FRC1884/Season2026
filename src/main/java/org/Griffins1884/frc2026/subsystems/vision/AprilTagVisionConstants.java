@@ -14,11 +14,18 @@ import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class AprilTagVisionConstants {
-  public static final boolean IS_LIMELIGHT = true;
+  public enum VisionBackend {
+    LIMELIGHT,
+    NORTHSTAR
+  }
+
+  public static final VisionBackend BACKEND = VisionBackend.LIMELIGHT;
+  public static final boolean IS_LIMELIGHT = BACKEND == VisionBackend.LIMELIGHT;
   private static final VisionIO.CameraType LIMELIGHT_TYPE_HINT = VisionIO.CameraType.LIMELIGHT;
+  private static final VisionIO.CameraType NORTHSTAR_TYPE_HINT = VisionIO.CameraType.OV2311;
 
   private static VisionIO.CameraType getPrimaryCameraType() {
-    return IS_LIMELIGHT ? LIMELIGHT_TYPE_HINT : VisionIO.CameraType.OV9281;
+    return IS_LIMELIGHT ? LIMELIGHT_TYPE_HINT : NORTHSTAR_TYPE_HINT;
   }
 
   public static final boolean LEFT_CAM_ENABLED = true;
@@ -35,6 +42,9 @@ public final class AprilTagVisionConstants {
                         degreesToRadians(180), degreesToRadians(15), degreesToRadians(20))),
                 getPrimaryCameraType());
       };
+  public static final VisionIO.NorthstarConfig LEFT_CAM_NORTHSTAR_CONFIG =
+      new VisionIO.NorthstarConfig(
+          "northstar_0", "http://limelight-left.local:5800/stream.mjpg", 1280, 960, 1, 0, 0.0, 0.0);
 
   public static final boolean RIGHT_CAM_ENABLED = true;
   public static final VisionIO.CameraConstants RIGHT_CAM_CONSTANTS =
@@ -50,6 +60,16 @@ public final class AprilTagVisionConstants {
                         degreesToRadians(180), degreesToRadians(15), degreesToRadians(-20))),
                 getPrimaryCameraType());
       };
+  public static final VisionIO.NorthstarConfig RIGHT_CAM_NORTHSTAR_CONFIG =
+      new VisionIO.NorthstarConfig(
+          "northstar_1",
+          "http://limelight-right.local:5800/stream.mjpg",
+          1280,
+          960,
+          1,
+          0,
+          0.0,
+          0.0);
 
   public static final boolean MIDDLE_RIGHT_CAM_ENABLED =
       GlobalConstants.ROBOT != GlobalConstants.RobotType.DBOT;
@@ -66,6 +86,9 @@ public final class AprilTagVisionConstants {
                         degreesToRadians(180), degreesToRadians(0), degreesToRadians(90))),
                 getPrimaryCameraType());
       };
+  public static final VisionIO.NorthstarConfig MIDDLE_RIGHT_CAM_NORTHSTAR_CONFIG =
+      new VisionIO.NorthstarConfig(
+          "northstar_2", "http://limelight-side.local:5800/stream.mjpg", 1280, 960, 1, 0, 0.0, 0.0);
 
   private static final LoggedTunableNumber VISION_STDDEV_X =
       new LoggedTunableNumber("AprilTagVision/StdDev/X", 2.0);

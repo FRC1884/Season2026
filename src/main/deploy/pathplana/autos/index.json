@@ -5,16 +5,16 @@
     {
       "id": "hub-cycle-upper",
       "name": "Hub Cycle Upper",
-      "folder": "UpperCycles",
+      "folder": "Cycle Autos",
       "relativePath": "hub-cycle-upper/auto.json",
-      "updatedAt": 1773705600000
+      "updatedAt": 1773822406277
     },
     {
       "id": "hub-cycle-lower",
       "name": "Hub Cycle Lower",
-      "folder": "LowerCycles",
+      "folder": "Cycle Autos",
       "relativePath": "hub-cycle-lower/auto.json",
-      "updatedAt": 1773705600000
+      "updatedAt": 1773754965522
     }
   ]
 }

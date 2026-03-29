@@ -4,12 +4,13 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import org.Griffins1884.frc2026.BuildConstants;
+import org.Griffins1884.frc2026.OI.DriverBindingTargets;
 import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 
 public final class OperatorBoardDataModels {
-  public static final String SCHEMA_VERSION = "2026.03";
+  public static final String SCHEMA_VERSION = "2026.04";
 
   private OperatorBoardDataModels() {}
 
@@ -47,35 +48,56 @@ public final class OperatorBoardDataModels {
     }
     targets.add(
         new JoystickTarget(
-            "action:shootToggle",
+            DriverBindingTargets.DRIVE_STRAFE,
+            "Drive Strafe",
+            "axis",
+            "swerve",
+            "Continuous left/right drivetrain translation request."));
+    targets.add(
+        new JoystickTarget(
+            DriverBindingTargets.DRIVE_FORWARD,
+            "Drive Forward/Reverse",
+            "axis",
+            "swerve",
+            "Continuous forward/reverse drivetrain translation request."));
+    targets.add(
+        new JoystickTarget(
+            DriverBindingTargets.DRIVE_ROTATE,
+            "Drive Rotate",
+            "axis",
+            "swerve",
+            "Continuous drivetrain rotation request."));
+    targets.add(
+        new JoystickTarget(
+            DriverBindingTargets.ACTION_SHOOT_TOGGLE,
             "Shoot Toggle",
             "action",
             "superstructure",
             "Toggle shoot enable gate."));
     targets.add(
         new JoystickTarget(
-            "action:intakeRollersHold",
+            DriverBindingTargets.ACTION_INTAKE_ROLLERS_HOLD,
             "Intake Rollers Hold",
             "action",
             "superstructure",
             "Hold intake rollers while the input remains active."));
     targets.add(
         new JoystickTarget(
-            "action:intakeDeployToggle",
+            DriverBindingTargets.ACTION_INTAKE_DEPLOY_TOGGLE,
             "Intake Deploy Toggle",
             "action",
             "superstructure",
             "Toggle intake deploy state."));
     targets.add(
         new JoystickTarget(
-            "action:resetOdometry",
+            DriverBindingTargets.ACTION_RESET_ODOMETRY,
             "Reset Odometry",
             "action",
             "swerve",
             "Reset field pose reference."));
     targets.add(
         new JoystickTarget(
-            "action:alignWithBall",
+            DriverBindingTargets.ACTION_ALIGN_WITH_BALL,
             "Align With Fuel",
             "action",
             "vision",
@@ -98,82 +120,204 @@ public final class OperatorBoardDataModels {
     return new JoystickMappingsDocument(
         SCHEMA_VERSION,
         metadata("joystickMappings", "joystick-mappings", "Joystick Mappings"),
-        "default-driver",
+        "ps5-pro-driver",
         targets,
         List.of(
             new JoystickProfile(
-                "default-driver",
-                "Default Driver",
-                "Generic Gamepad",
+                "xbox-driver",
+                "Xbox Driver",
+                "xbox",
+                0,
                 "Driver Controller",
                 true,
                 List.of(
-                    new JoystickBinding(
-                        "axis",
+                    axisBinding(
                         "left-x",
                         "Left Stick X",
-                        "action",
-                        "drive.strafe",
+                        DriverBindingTargets.DRIVE_STRAFE,
                         "Drive Strafe",
-                        true,
                         "Continuous axis input used by the drivetrain command."),
-                    new JoystickBinding(
-                        "axis",
+                    axisBinding(
                         "left-y",
                         "Left Stick Y",
-                        "action",
-                        "drive.forward",
+                        DriverBindingTargets.DRIVE_FORWARD,
                         "Drive Forward/Reverse",
-                        true,
                         "Continuous axis input used by the drivetrain command."),
-                    new JoystickBinding(
-                        "axis",
+                    axisBinding(
                         "right-x",
                         "Right Stick X",
-                        "action",
-                        "drive.rotate",
+                        DriverBindingTargets.DRIVE_ROTATE,
                         "Drive Rotate",
-                        true,
                         "Continuous axis input used by the drivetrain command."),
-                    new JoystickBinding(
-                        "button",
+                    axisBinding(
+                        "l2",
+                        "Left Trigger",
+                        DriverBindingTargets.ACTION_ALIGN_WITH_BALL,
+                        "Align With Fuel",
+                        "Hold to run assisted alignment."),
+                    axisBinding(
+                        "r2",
+                        "Right Trigger",
+                        DriverBindingTargets.ACTION_SHOOT_TOGGLE,
+                        "Shoot Toggle",
+                        "Hold to enable the shoot gate."),
+                    buttonBinding(
                         "r1",
                         "Right Bumper",
-                        "action",
-                        "action:shootToggle",
-                        "Shoot Toggle",
-                        true,
-                        "Matches the current high-level shoot gate workflow."),
-                    new JoystickBinding(
-                        "button",
+                        DriverBindingTargets.ACTION_INTAKE_ROLLERS_HOLD,
+                        "Intake Rollers Hold",
+                        "Hold to keep intake rollers active."),
+                    buttonBinding(
                         "l1",
                         "Left Bumper",
-                        "action",
-                        "action:intakeRollersHold",
-                        "Intake Rollers Hold",
-                        true,
-                        "Hold to keep intake rollers active."),
-                    new JoystickBinding(
-                        "button",
-                        "cross",
-                        "Cross / A",
-                        "action",
-                        "action:intakeDeployToggle",
+                        DriverBindingTargets.ACTION_INTAKE_DEPLOY_TOGGLE,
                         "Intake Deploy Toggle",
-                        true,
                         "Toggle deploy/stow for intake handling."),
-                    new JoystickBinding(
-                        "button",
-                        "options",
-                        "Options / Menu",
-                        "action",
-                        "action:resetOdometry",
+                    disabledButtonBinding(
+                        "back",
+                        "View / Back",
+                        DriverBindingTargets.ACTION_RESET_ODOMETRY,
                         "Reset Odometry",
-                        false,
                         "Disabled by default to prevent accidental field resets.")),
                 List.of(
-                    "Mappings persist now, but the robot-side driver binding path still uses hard-coded DriverMap classes.",
-                    "Use this profile as the authoritative saved configuration for dashboard, deployment sync, and future command-binding integration."))));
+                    "The robot hot-reloads the saved active profile and controller port at runtime.",
+                    "Button targets currently resolve through saved operator-board action IDs; NamedCommands integration is intended to replace the last hard-coded action wiring.")),
+            new JoystickProfile(
+                "ps4-driver",
+                "PS4 Driver",
+                "ps4",
+                0,
+                "Driver Controller",
+                true,
+                List.of(
+                    axisBinding(
+                        "left-x",
+                        "Left Stick X",
+                        DriverBindingTargets.DRIVE_STRAFE,
+                        "Drive Strafe",
+                        "Continuous axis input used by the drivetrain command."),
+                    axisBinding(
+                        "left-y",
+                        "Left Stick Y",
+                        DriverBindingTargets.DRIVE_FORWARD,
+                        "Drive Forward/Reverse",
+                        "Continuous axis input used by the drivetrain command."),
+                    axisBinding(
+                        "right-x",
+                        "Right Stick X",
+                        DriverBindingTargets.DRIVE_ROTATE,
+                        "Drive Rotate",
+                        "Continuous axis input used by the drivetrain command."),
+                    buttonBinding(
+                        "east",
+                        "Circle",
+                        DriverBindingTargets.ACTION_ALIGN_WITH_BALL,
+                        "Align With Fuel",
+                        "Hold to run assisted alignment."),
+                    buttonBinding(
+                        "south",
+                        "Cross",
+                        DriverBindingTargets.ACTION_SHOOT_TOGGLE,
+                        "Shoot Toggle",
+                        "Hold to enable the shoot gate."),
+                    buttonBinding(
+                        "r1",
+                        "R1",
+                        DriverBindingTargets.ACTION_INTAKE_ROLLERS_HOLD,
+                        "Intake Rollers Hold",
+                        "Hold to keep intake rollers active."),
+                    buttonBinding(
+                        "north",
+                        "Triangle",
+                        DriverBindingTargets.ACTION_INTAKE_DEPLOY_TOGGLE,
+                        "Intake Deploy Toggle",
+                        "Toggle deploy/stow for intake handling."),
+                    disabledButtonBinding(
+                        "menu",
+                        "Options",
+                        DriverBindingTargets.ACTION_RESET_ODOMETRY,
+                        "Reset Odometry",
+                        "Disabled by default to prevent accidental field resets.")),
+                List.of(
+                    "The robot hot-reloads the saved active profile and controller port at runtime.",
+                    "Button targets currently resolve through saved operator-board action IDs; NamedCommands integration is intended to replace the last hard-coded action wiring.")),
+            new JoystickProfile(
+                "ps5-pro-driver",
+                "PS5 Pro Driver",
+                "ps5-pro",
+                0,
+                "Driver Controller",
+                true,
+                List.of(
+                    axisBinding(
+                        "left-x",
+                        "Left Stick X",
+                        DriverBindingTargets.DRIVE_STRAFE,
+                        "Drive Strafe",
+                        "Continuous axis input used by the drivetrain command."),
+                    axisBinding(
+                        "left-y",
+                        "Left Stick Y",
+                        DriverBindingTargets.DRIVE_FORWARD,
+                        "Drive Forward/Reverse",
+                        "Continuous axis input used by the drivetrain command."),
+                    axisBinding(
+                        "right-x",
+                        "Right Stick X",
+                        DriverBindingTargets.DRIVE_ROTATE,
+                        "Drive Rotate",
+                        "Continuous axis input used by the drivetrain command."),
+                    axisBinding(
+                        "l2",
+                        "L2",
+                        DriverBindingTargets.ACTION_ALIGN_WITH_BALL,
+                        "Align With Fuel",
+                        "Hold to run assisted alignment."),
+                    axisBinding(
+                        "r2",
+                        "R2",
+                        DriverBindingTargets.ACTION_SHOOT_TOGGLE,
+                        "Shoot Toggle",
+                        "Hold to enable the shoot gate."),
+                    buttonBinding(
+                        "r1",
+                        "R1",
+                        DriverBindingTargets.ACTION_INTAKE_ROLLERS_HOLD,
+                        "Intake Rollers Hold",
+                        "Hold to keep intake rollers active."),
+                    buttonBinding(
+                        "l1",
+                        "L1",
+                        DriverBindingTargets.ACTION_INTAKE_DEPLOY_TOGGLE,
+                        "Intake Deploy Toggle",
+                        "Toggle deploy/stow for intake handling."),
+                    disabledButtonBinding(
+                        "menu",
+                        "Options",
+                        DriverBindingTargets.ACTION_RESET_ODOMETRY,
+                        "Reset Odometry",
+                        "Disabled by default to prevent accidental field resets.")),
+                List.of(
+                    "The robot hot-reloads the saved active profile and controller port at runtime.",
+                    "Button targets currently resolve through saved operator-board action IDs; NamedCommands integration is intended to replace the last hard-coded action wiring."))));
+  }
+
+  private static JoystickBinding axisBinding(
+      String inputId, String displayLabel, String targetId, String targetLabel, String notes) {
+    return new JoystickBinding(
+        "axis", inputId, displayLabel, "axis", targetId, targetLabel, true, notes);
+  }
+
+  private static JoystickBinding buttonBinding(
+      String inputId, String displayLabel, String targetId, String targetLabel, String notes) {
+    return new JoystickBinding(
+        "button", inputId, displayLabel, "action", targetId, targetLabel, true, notes);
+  }
+
+  private static JoystickBinding disabledButtonBinding(
+      String inputId, String displayLabel, String targetId, String targetLabel, String notes) {
+    return new JoystickBinding(
+        "button", inputId, displayLabel, "action", targetId, targetLabel, false, notes);
   }
 
   public static SubsystemDescriptionsDocument emptyDefaultSubsystemDescriptions() {
@@ -357,6 +501,7 @@ public final class OperatorBoardDataModels {
       String id,
       String name,
       String controllerType,
+      int controllerPort,
       String deviceName,
       boolean enabled,
       List<JoystickBinding> bindings,

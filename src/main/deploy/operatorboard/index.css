@@ -1317,6 +1317,173 @@ body.body--match-alert::before {
   font-weight: 800;
 }
 
+.mapping-row__target {
+  font-weight: 800;
+}
+
+.mapping-row__clear {
+  justify-self: start;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.joystick-workbench {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.controller-preview-shell {
+  margin-top: 12px;
+}
+
+.controller-preview {
+  position: relative;
+  min-height: 540px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.12), transparent 38%),
+    linear-gradient(180deg, rgba(7, 10, 15, 0.9), rgba(19, 24, 34, 0.96));
+  overflow: hidden;
+}
+
+.controller-preview::before {
+  content: "";
+  position: absolute;
+  inset: 7% 8% 6%;
+  border-radius: 36% 36% 30% 30% / 26% 26% 44% 44%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.controller-preview--xbox::before {
+  border-radius: 42% 42% 34% 34% / 28% 28% 52% 52%;
+}
+
+.controller-preview--ps4::before {
+  border-radius: 32% 32% 26% 26% / 22% 22% 48% 48%;
+}
+
+.controller-preview--ps5-pro::before {
+  border-radius: 34% 34% 28% 28% / 24% 24% 52% 52%;
+}
+
+.controller-slot {
+  position: absolute;
+  width: 112px;
+  min-height: 58px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(7, 10, 15, 0.64);
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 4px;
+  z-index: 1;
+}
+
+.controller-slot--face,
+.controller-slot--center {
+  width: 92px;
+}
+
+.controller-slot--trigger,
+.controller-slot--shoulder {
+  width: 88px;
+}
+
+.controller-slot--paddle {
+  width: 96px;
+}
+
+.controller-slot.is-bound {
+  border-style: solid;
+  border-color: rgba(57, 217, 138, 0.42);
+  box-shadow: 0 0 0 1px rgba(57, 217, 138, 0.14) inset;
+}
+
+.controller-slot.is-disabled {
+  opacity: 0.66;
+}
+
+.controller-slot.is-drop-target {
+  border-color: rgba(255, 209, 102, 0.92);
+  background: rgba(255, 209, 102, 0.12);
+}
+
+.controller-slot__name {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.controller-slot__assignment {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.controller-slot__clear {
+  justify-self: start;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(255, 90, 118, 0.18);
+  color: #ffd5df;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.joystick-target-library {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  max-height: 540px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.joystick-target-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: grab;
+  display: grid;
+  gap: 4px;
+}
+
+.joystick-target-card__type {
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  color: var(--muted);
+}
+
+.joystick-target-card__label {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.joystick-target-card__detail {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .systems-catalog {
   display: grid;
   gap: 12px;
@@ -1502,6 +1669,10 @@ body.body--match-alert::before {
   .field {
     min-height: 520px;
   }
+
+  .controller-preview {
+    min-height: 500px;
+  }
 }
 
 @media (max-width: 820px) {
@@ -1544,5 +1715,23 @@ body.body--match-alert::before {
 
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .controller-preview {
+    min-height: 440px;
+  }
+
+  .controller-slot {
+    width: 92px;
+    min-height: 52px;
+    padding: 7px 8px;
+  }
+
+  .controller-slot--face,
+  .controller-slot--center,
+  .controller-slot--trigger,
+  .controller-slot--shoulder,
+  .controller-slot--paddle {
+    width: 84px;
   }
 }

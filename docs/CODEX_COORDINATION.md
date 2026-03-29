@@ -26,3 +26,50 @@
   - `build.gradle`
   - `README.md`
 - New implementation files were added for persistence, diagnostic bundles, deploy-preserve scripts, and default seeded JSON assets.
+
+## 2026-03-17T12:05:00Z
+
+- Agent: GPT-5 Codex session starting ballistics groundwork for configurable shot geometry and offline sweep export.
+- Intended shared-file touch points:
+  - `build.gradle`
+- Strategy:
+  - Avoid changing live shooter/turret behavior in this pass.
+  - Add new ballistics model/export files under a dedicated package.
+  - Use a standalone Gradle task for offline export so other in-flight robot changes are unaffected.
+
+## 2026-03-17T14:20:00Z
+
+- Shared files actually touched in this pass:
+  - `build.gradle`
+- New files added:
+  - `src/main/java/org/Griffins1884/frc2026/util/ballistics/ShotModel.java`
+  - `src/main/java/org/Griffins1884/frc2026/util/ballistics/ShotModelConfig.java`
+  - `src/main/java/org/Griffins1884/frc2026/util/ballistics/AdvancedBallisticsShotModel.java`
+  - `src/main/java/org/Griffins1884/frc2026/util/ballistics/ShotSweepExporterMain.java`
+  - `src/test/java/org/Griffins1884/frc2026/util/ballistics/AdvancedBallisticsShotModelTest.java`
+- Notes for other agents:
+  - Live turret/shooter command paths were intentionally left unchanged.
+  - Offline export currently writes to `build/reports/ballistics/`.
+  - Unrelated `src/main/deploy/pathplana/autos/*` changes were observed and intentionally left alone.
+
+## 2026-03-28T00:00:00Z
+
+- Agent: GPT-5 Codex session reworking operator-board controller profiles, preview-driven joystick mapping, and runtime driver-profile consumption.
+- Shared files touched in this pass:
+  - `src/main/deploy/operatorboard/index.html`
+  - `src/main/deploy/operatorboard/index.css`
+  - `src/main/deploy/operatorboard/index.js`
+  - `src/main/deploy/operatorboard/default-data/joystick-mappings.json`
+  - `operatorboard-data/joystick-mappings.json`
+  - `src/main/java/org/Griffins1884/frc2026/Config.java`
+  - `src/main/java/org/Griffins1884/frc2026/OI/*`
+  - `src/main/java/org/Griffins1884/frc2026/subsystems/objectivetracker/OperatorBoardDataModels.java`
+- Notes for the parallel NamedCommands work:
+  - The operator board now treats these saved target IDs as the authoritative button-action identifiers:
+    - `action:alignWithBall`
+    - `action:shootToggle`
+    - `action:intakeRollersHold`
+    - `action:intakeDeployToggle`
+    - `action:resetOdometry`
+  - Please expose matching NamedCommands or an equivalent command registry for those IDs, then we can remove the remaining action-specific glue in `RobotContainer.configureDriverButtonBindings()`.
+  - Continuous drive axes are now identified separately as `drive.strafe`, `drive.forward`, and `drive.rotate`.

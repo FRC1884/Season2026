@@ -113,4 +113,26 @@ public interface VisionIO {
    */
   public static record CameraConstants(
       String cameraName, Transform3d robotToCamera, CameraType cameraType) {}
+
+  /**
+   * Describes the remote config values the robot publishes to a Northstar instance.
+   *
+   * @param deviceId NT client ID for the Northstar process
+   * @param cameraId capture source identifier consumed by OpenCV/Pylon/etc.
+   * @param width requested frame width
+   * @param height requested frame height
+   * @param autoExposure capture auto exposure mode
+   * @param exposure capture exposure value
+   * @param gain capture gain value
+   * @param denoise capture denoise value
+   */
+  public static record NorthstarConfig(
+      String deviceId,
+      String cameraId,
+      int width,
+      int height,
+      int autoExposure,
+      int exposure,
+      double gain,
+      double denoise) {}
 }

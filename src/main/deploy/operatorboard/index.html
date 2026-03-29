@@ -266,13 +266,61 @@
       <section class="tab-page" data-tab-page="joystick">
         <div class="layout layout--joystick">
           <section class="panel">
-            <div class="panel__title">Joystick Profiles</div>
+            <div class="panel__title">Controller Profiles</div>
             <div class="queue-card queue-card--compact">
-              <div class="queue-meta">
-                <div class="queue-meta__item">
-                  <div class="queue-meta__k">Profile</div>
+              <div class="queue-form queue-form--two-col">
+                <label>
+                  <div class="queue-form__label">Active Profile</div>
                   <select id="joystick-profile-select" class="queue-inline-select"></select>
-                </div>
+                </label>
+                <label>
+                  <div class="queue-form__label">Profile Name</div>
+                  <input
+                    id="joystick-profile-name"
+                    class="queue-form__control"
+                    type="text"
+                    placeholder="Driver Profile"
+                  />
+                </label>
+                <label>
+                  <div class="queue-form__label">Controller Type</div>
+                  <select id="joystick-controller-type" class="queue-inline-select"></select>
+                </label>
+                <label>
+                  <div class="queue-form__label">Driver Station Port</div>
+                  <select id="joystick-controller-port" class="queue-inline-select"></select>
+                </label>
+              </div>
+              <div class="queue-actions">
+                <button id="joystick-profile-new-button" class="state-button" type="button">
+                  New Profile
+                </button>
+                <button id="joystick-profile-duplicate-button" class="state-button" type="button">
+                  Duplicate
+                </button>
+                <button
+                  id="joystick-profile-delete-button"
+                  class="state-button state-button--danger"
+                  type="button"
+                >
+                  Delete
+                </button>
+                <button id="joystick-save-button" class="state-button state-button--auto" type="button">
+                  Save Profile
+                </button>
+              </div>
+              <div class="queue-actions">
+                <button id="joystick-reload-button" class="state-button" type="button">
+                  Reload
+                </button>
+                <button id="joystick-reset-button" class="state-button" type="button">
+                  Reset
+                </button>
+                <button id="joystick-export-button" class="state-button" type="button">
+                  Export JSON
+                </button>
+              </div>
+              <div class="queue-meta">
                 <div class="queue-meta__item">
                   <div class="queue-meta__k">Status</div>
                   <div id="joystick-profile-status" class="queue-meta__v">Loading...</div>
@@ -290,20 +338,6 @@
                   <div id="joystick-conflict-status" class="queue-meta__v">--</div>
                 </div>
               </div>
-              <div class="queue-actions">
-                <button id="joystick-save-button" class="state-button state-button--auto" type="button">
-                  Save Profile
-                </button>
-                <button id="joystick-reload-button" class="state-button" type="button">
-                  Reload
-                </button>
-                <button id="joystick-reset-button" class="state-button" type="button">
-                  Reset
-                </button>
-                <button id="joystick-export-button" class="state-button" type="button">
-                  Export JSON
-                </button>
-              </div>
               <div id="joystick-warning-list" class="checks-list">
                 <div class="checks-list__empty">Loading profile warnings...</div>
               </div>
@@ -311,21 +345,46 @@
           </section>
 
           <section class="panel">
-            <div class="panel__title">Mapping Editor</div>
-            <div class="mapping-table__header">
-              <div>Input</div>
-              <div>Target</div>
-              <div>Enabled</div>
-            </div>
-            <div id="joystick-binding-table" class="mapping-table">
-              <div class="checks-list__empty">Loading bindings...</div>
+            <div class="panel__title">Controller Preview</div>
+            <div class="joystick-workbench">
+              <div class="queue-card">
+                <div class="queue-card__title">2D Layout</div>
+                <div class="queue-form__note">
+                  Drag a saved command onto a slot to assign it. Switching the active profile writes
+                  the new live controller immediately.
+                </div>
+                <div id="joystick-controller-preview" class="controller-preview-shell">
+                  <div class="checks-list__empty">Loading controller preview...</div>
+                </div>
+              </div>
+              <div class="queue-card">
+                <div class="queue-card__title">Named Commands</div>
+                <div id="joystick-target-library" class="joystick-target-library">
+                  <div class="checks-list__empty">Loading assignable commands...</div>
+                </div>
+              </div>
             </div>
           </section>
 
           <section class="panel">
-            <div class="panel__title">Live Inputs</div>
-            <div id="joystick-live-inputs" class="checks-list">
-              <div class="checks-list__empty">Connect a controller to inspect live input data.</div>
+            <div class="panel__title">Assignments &amp; Live Inputs</div>
+            <div class="mapping-table__header">
+              <div>Slot</div>
+              <div>Assignment</div>
+              <div>Status</div>
+            </div>
+            <div id="joystick-binding-table" class="mapping-table">
+              <div class="checks-list__empty">Loading bindings...</div>
+            </div>
+            <div class="queue-card">
+              <div class="queue-card__title">Live Inputs</div>
+              <div class="queue-form__note">
+                The board listens to the selected profile port first, then falls back to the first
+                connected browser gamepad if needed.
+              </div>
+              <div id="joystick-live-inputs" class="checks-list">
+                <div class="checks-list__empty">Connect a controller to inspect live input data.</div>
+              </div>
             </div>
           </section>
         </div>
