@@ -4,23 +4,32 @@ import static edu.wpi.first.units.Units.RadiansPerSecond;
 
 import edu.wpi.first.math.util.Units;
 import org.Griffins1884.frc2026.util.SparkUtil;
-import org.ironmaple.simulation.drivesims.GyroSimulation;
+import org.griffins1884.sim3d.TerrainAwareSwerveSimulation;
+import org.griffins1884.sim3d.TerrainSample;
 
 public class GyroIOSim implements GyroIO {
-  private final GyroSimulation gyroSimulation;
+  private final TerrainAwareSwerveSimulation simulation;
 
-  public GyroIOSim(GyroSimulation gyroSimulation) {
-    this.gyroSimulation = gyroSimulation;
+  public GyroIOSim(TerrainAwareSwerveSimulation simulation) {
+    this.simulation = simulation;
   }
 
   @Override
   public void updateInputs(GyroIOInputs inputs) {
+    TerrainSample terrainSample = simulation.getTerrainSample();
     inputs.connected = true;
-    inputs.yawPosition = gyroSimulation.getGyroReading();
+    inputs.yawPosition = simulation.getGyroSimulation().getGyroReading();
+    inputs.pitchPosition =
+        edu.wpi.first.math.geometry.Rotation2d.fromRadians(terrainSample.pitchRadians());
+    inputs.rollPosition =
+        edu.wpi.first.math.geometry.Rotation2d.fromRadians(terrainSample.rollRadians());
     inputs.yawVelocityRadPerSec =
-        Units.degreesToRadians(gyroSimulation.getMeasuredAngularVelocity().in(RadiansPerSecond));
+        Units.degreesToRadians(
+            simulation.getGyroSimulation().getMeasuredAngularVelocity().in(RadiansPerSecond));
+    inputs.pitchVelocityRadPerSec = simulation.getPitchRateRadPerSec();
+    inputs.rollVelocityRadPerSec = simulation.getRollRateRadPerSec();
 
     inputs.odometryYawTimestamps = SparkUtil.getSimulationOdometryTimeStamps();
-    inputs.odometryYawPositions = gyroSimulation.getCachedGyroReadings();
+    inputs.odometryYawPositions = simulation.getGyroSimulation().getCachedGyroReadings();
   }
 }

@@ -1,7 +1,7 @@
 {
   "fileName": "GriffinSim.json",
   "name": "GriffinSim",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "frcYear": "2026",
   "uuid": "e6c83fe7-7e05-47a8-acd3-b4b167e6c0f6",
   "mavenUrls": [
@@ -10,12 +10,12 @@
     "https://frcmaven.wpi.edu/artifactory/release/",
     "https://repo1.maven.org/maven2"
   ],
-  "jsonUrl": "https://github.com/FRC1884/GriffinSim/releases/download/v0.1.1/GriffinSim.json",
+  "jsonUrl": "https://github.com/FRC1884/GriffinSim/releases/download/v0.1.2/GriffinSim.json",
   "javaDependencies": [
     {
       "groupId": "org.griffins1884",
       "artifactId": "GriffinSim",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "groupId": "org.ironmaple",

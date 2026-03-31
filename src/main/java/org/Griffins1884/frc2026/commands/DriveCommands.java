@@ -17,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
+import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveCalibration;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
@@ -54,6 +55,14 @@ public class DriveCommands {
         .getTranslation();
   }
 
+  private static double getAngularVelocityCommand(double rawOmegaInput) {
+    double omega = MathUtil.applyDeadband(rawOmegaInput, AlignConstants.Manual.DEADBAND.get());
+    if (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM) {
+      return omega * 1.25;
+    }
+    return Math.copySign(omega * omega, omega);
+  }
+
   /**
    * Field relative drive command using two joysticks (controlling linear and angular velocities).
    */
@@ -67,11 +76,7 @@ public class DriveCommands {
         getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
 
     // Apply rotation deadband
-    double omega =
-        MathUtil.applyDeadband(omegaSupplier.getAsDouble(), AlignConstants.Manual.DEADBAND.get());
-
-    // Square rotation value for more precise control
-    omega = Math.copySign(omega * omega, omega);
+    double omega = getAngularVelocityCommand(omegaSupplier.getAsDouble());
 
     // Convert to field relative speeds & send command
     ChassisSpeeds speeds =
@@ -108,10 +113,7 @@ public class DriveCommands {
           Translation2d linearVelocity =
               getLinearVelocityFromJoysticks(xSupplier.getAsDouble(), ySupplier.getAsDouble());
 
-          double omega =
-              MathUtil.applyDeadband(
-                  omegaSupplier.getAsDouble(), AlignConstants.Manual.DEADBAND.get());
-          omega = Math.copySign(omega * omega, omega);
+          double omega = getAngularVelocityCommand(omegaSupplier.getAsDouble());
 
           drive.runVelocity(
               new ChassisSpeeds(

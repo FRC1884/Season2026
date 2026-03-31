@@ -7,7 +7,9 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.wpilibj.DriverStation;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.commands.AlignConstants;
+import org.Griffins1884.frc2026.simulation.maple.Rebuilt2026FieldModel;
 import org.Griffins1884.frc2026.simulation.replay.ShotReviewEvents;
 import org.Griffins1884.frc2026.simulation.shooter.ProjectileManager;
 import org.Griffins1884.frc2026.simulation.shooter.ShotReleaseDetector;
@@ -58,17 +60,22 @@ public final class RobotStateVisualizer {
             ? superstructure.getArms().shooterPivot.getPosition()
             : 0.0;
 
+    boolean simTerrainEnabled = GlobalConstants.MODE == RobotMode.SIM;
+    Pose3d robotPose3d =
+        simTerrainEnabled
+            ? Rebuilt2026FieldModel.terrainAdjustedRobotPose(robotPose)
+            : new Pose3d(robotPose);
     Pose3d shooterExitPose3d =
         ShooterComponentPublisher.createExitPose(
-            robotPose, turretYaw, shooterPivotRotations, shotSimulationConfig);
+            robotPose3d, turretYaw, shooterPivotRotations, shotSimulationConfig);
     Pose3d turretPose3d =
-        TurretComponentPublisher.createPose3d(robotPose, turretYaw, shotSimulationConfig);
+        TurretComponentPublisher.createPose3d(robotPose3d, turretYaw, shotSimulationConfig);
     Pose3d shooterPivotPose3d =
         ShooterComponentPublisher.createPivotPose(
-            robotPose, turretYaw, shooterPivotRotations, shotSimulationConfig);
+            robotPose3d, turretYaw, shooterPivotRotations, shotSimulationConfig);
 
     Logger.recordOutput("FieldSimulation/RobotPosition", robotPose);
-    Logger.recordOutput("FieldSimulation/RobotPose3d", new Pose3d(robotPose));
+    Logger.recordOutput("FieldSimulation/RobotPose3d", robotPose3d);
     Logger.recordOutput(
         "FieldSimulation/TurretPose",
         TurretComponentPublisher.createPose2d(robotPose, turretYaw, shotSimulationConfig));
@@ -79,6 +86,19 @@ public final class RobotStateVisualizer {
     Logger.recordOutput(
         "FieldSimulation/RobotComponentPoses",
         new Pose3d[] {turretPose3d, shooterPivotPose3d, shooterExitPose3d});
+    Logger.recordOutput(
+        "FieldSimulation/FieldMarkers3d",
+        simTerrainEnabled ? Rebuilt2026FieldModel.staticFieldMarkers() : new Pose3d[] {});
+    Logger.recordOutput(
+        "FieldSimulation/BumpHeightMeters",
+        simTerrainEnabled
+            ? Rebuilt2026FieldModel.bumpHeightMeters(robotPose.getTranslation())
+            : 0.0);
+    Logger.recordOutput(
+        "FieldSimulation/BumpPitchRadians",
+        simTerrainEnabled
+            ? Rebuilt2026FieldModel.bumpPitchRadians(robotPose.getTranslation())
+            : 0.0);
 
     SimulatedShot predictedShot = null;
     SuperstructureOutcome outcome =

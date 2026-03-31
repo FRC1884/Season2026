@@ -261,7 +261,7 @@ public final class SwerveConstants {
   static final Gains ROTATOR_GAINS =
       switch (ROBOT) {
         case COMPBOT, DBOT -> new Gains("Swerve/Rotator/Compbot", 2.0, 0.0, 0.0);
-        case SIMBOT -> new Gains("Swerve/Rotator/Simbot", 8.0, 0.0, 0.0);
+        case SIMBOT -> new Gains("Swerve/Rotator/Simbot", 12.0, 0.0, 0.2);
       };
   // Torque-current gains for Kraken turn control (amps-based, per-radian units)
   static final Gains KRAKEN_TURN_TORQUE_GAINS =
