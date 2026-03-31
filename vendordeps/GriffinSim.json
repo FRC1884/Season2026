@@ -1,0 +1,38 @@
+{
+  "fileName": "GriffinSim.json",
+  "name": "GriffinSim",
+  "version": "0.1.1",
+  "frcYear": "2026",
+  "uuid": "e6c83fe7-7e05-47a8-acd3-b4b167e6c0f6",
+  "mavenUrls": [
+    "https://raw.githubusercontent.com/FRC1884/GriffinSim/main/maven-repo",
+    "https://shenzhen-robotics-alliance.github.io/maple-sim/vendordep/repos/releases",
+    "https://frcmaven.wpi.edu/artifactory/release/",
+    "https://repo1.maven.org/maven2"
+  ],
+  "jsonUrl": "https://github.com/FRC1884/GriffinSim/releases/download/v0.1.1/GriffinSim.json",
+  "javaDependencies": [
+    {
+      "groupId": "org.griffins1884",
+      "artifactId": "GriffinSim",
+      "version": "0.1.1"
+    },
+    {
+      "groupId": "org.ironmaple",
+      "artifactId": "maplesim-java",
+      "version": "0.3.14"
+    },
+    {
+      "groupId": "org.dyn4j",
+      "artifactId": "dyn4j",
+      "version": "5.0.2"
+    },
+    {
+      "groupId": "us.hebi.quickbuf",
+      "artifactId": "quickbuf-runtime",
+      "version": "1.4"
+    }
+  ],
+  "jniDependencies": [],
+  "cppDependencies": []
+}
