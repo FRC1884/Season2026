@@ -1432,7 +1432,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         }
         String requestPath = exchange.getRequestURI().getPath();
         String suffix = requestPath.replaceFirst("^/planner-autos", "");
-        if (suffix.isBlank() || "/".equals(suffix)) {
+        if (suffix.isBlank() || "/".equals(suffix) || "/index.json".equals(suffix)) {
           sendJson(exchange, 200, deployAutoLibrary.buildManifestJson());
           return;
         }
