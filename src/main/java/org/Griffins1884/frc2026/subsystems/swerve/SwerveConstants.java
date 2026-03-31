@@ -1,7 +1,9 @@
 package org.Griffins1884.frc2026.subsystems.swerve;
 
+import static edu.wpi.first.units.Units.KilogramSquareMeters;
 import static edu.wpi.first.units.Units.Kilograms;
 import static edu.wpi.first.units.Units.Meters;
+import static edu.wpi.first.units.Units.Volts;
 import static java.lang.Math.PI;
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
@@ -15,6 +17,7 @@ import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.util.swerve.ModuleLimits;
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
+import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
 
 public final class SwerveConstants {
   // Gyro
@@ -185,25 +188,25 @@ public final class SwerveConstants {
   public static final double KRAKEN_STEER_DRIVE_COUPLING_RATIO = 4.5;
 
   /** Meters per second */
-  public static final double MAX_LINEAR_SPEED = (ROBOT == RobotType.COMPBOT) ? 5.4804 : 8.0;
+  public static final double MAX_LINEAR_SPEED = (ROBOT == RobotType.COMPBOT) ? 5.4804 : 5.3;
 
   /** Radians per second */
   public static final double MAX_ANGULAR_SPEED = (0.5 * MAX_LINEAR_SPEED) / DRIVE_BASE_RADIUS;
 
   /** Meters per second squared */
-  public static final double MAX_LINEAR_ACCELERATION = 22.0;
+  public static final double MAX_LINEAR_ACCELERATION = 12.0;
 
   /** Radians per second */
   public static final double MAX_STEERING_VELOCITY = Units.degreesToRadians(1080.0);
 
   public static final double WHEEL_FRICTION_COEFF = COTS.WHEELS.SLS_PRINTED_WHEELS.cof;
-  private static final double MAPLE_SIM_WHEEL_FRICTION_COEFF = Math.min(WHEEL_FRICTION_COEFF, 1.5);
+  private static final double MAPLE_SIM_WHEEL_FRICTION_COEFF = Math.min(WHEEL_FRICTION_COEFF, 1.35);
 
   /** Kilograms per square meter */
   public static final double ROBOT_INERTIA = 6.883;
 
   /** Kilograms */
-  public static final double ROBOT_MASS = 45;
+  public static final double ROBOT_MASS = Units.lbsToKilograms(135.0);
 
   // Drive motor configuration
   public static final DCMotor DRIVE_GEARBOX = DCMotor.getKrakenX60(1);
@@ -245,7 +248,7 @@ public final class SwerveConstants {
   static final double DRIVE_ENCODER_VELOCITY_FACTOR = (2 * Math.PI) / 60.0 / DRIVE_GEAR_RATIO;
 
   // Rotator motor configuration
-  public static final DCMotor TURN_GEARBOX = DCMotor.getNeo550(1);
+  public static final DCMotor TURN_GEARBOX = DCMotor.getKrakenX60(1);
 
   public static final double ROTATOR_GEAR_RATIO = 9424.0 / 203.0;
   public static final double KRAKEN_ROTATOR_GEAR_RATIO = 287.0 / 11.0;
@@ -314,11 +317,16 @@ public final class SwerveConstants {
             case ADIS -> COTS.ofGenericGyro();
           },
           () ->
-              COTS.ofMAXSwerve(
-                      DRIVE_GEARBOX, // Drive motor is a Neo Vortex
-                      TURN_GEARBOX, // Steer motor is a Neo 550
-                      MAPLE_SIM_WHEEL_FRICTION_COEFF, // Clamp for sim stability
-                      2) // Medium Gear ratio
+              new SwerveModuleSimulationConfig(
+                      DRIVE_GEARBOX,
+                      TURN_GEARBOX,
+                      KRAKEN_DRIVE_GEAR_RATIO,
+                      KRAKEN_ROTATOR_GEAR_RATIO,
+                      Volts.of(0.15),
+                      Volts.of(0.20),
+                      Meters.of(NOMINAL_WHEEL_RADIUS),
+                      KilogramSquareMeters.of(0.03),
+                      MAPLE_SIM_WHEEL_FRICTION_COEFF)
                   .get());
 
   public static double getWheelRadiusMeters() {
