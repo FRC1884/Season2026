@@ -60,7 +60,7 @@ It reads back:
 - `/OperatorBoard/v1/ToDashboard/RuntimeProfileState`
 - `/OperatorBoard/v1/ToDashboard/RuntimeProfileStatus`
 
-The auto tab reads deployed PathPlanA autos from `/planner-autos/index.json` and publishes a single auto-selection topic:
+The auto tab reads deployed PathPlanner autos from `/planner-autos/index.json` and publishes a single auto-selection topic:
 
 - `/OperatorBoard/v1/ToRobot/SelectedAutoId`
 

@@ -61,6 +61,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   private final OperatorBoardWebServer webServer;
   private final RebuiltSpotLibrary spotLibrary;
   private final RebuiltAutoQueue autoQueue;
+  private final DeployAutoLibrary deployAutoLibrary;
   private final OperatorBoardPersistence persistence;
   private final OperatorBoardDiagnosticBundleWriter diagnosticBundleWriter;
 
@@ -127,13 +128,10 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     this.diagnosticBundleWriter = new OperatorBoardDiagnosticBundleWriter(persistence);
     this.lastSubsystemDescriptionsJson = writeJson(persistence.readSubsystemDescriptions());
     this.spotLibrary = new RebuiltSpotLibrary();
-    this.autoQueue =
-        new RebuiltAutoQueue(
-            spotLibrary,
-            superstructure,
-            drive,
-            new PathPlanAAutoLibrary(
-                Filesystem.getDeployDirectory().toPath().resolve("pathplana").resolve("autos")));
+    this.deployAutoLibrary =
+        new DeployAutoLibrary(
+            Filesystem.getDeployDirectory().toPath().resolve("pathplanner").resolve("autos"));
+    this.autoQueue = new RebuiltAutoQueue(spotLibrary, superstructure, drive, deployAutoLibrary);
     this.webServer = maybeStartWebServer();
     if (superstructure != null) {
       lastRequestedState = superstructure.getRequestedState().name();
@@ -149,7 +147,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       OperatorBoardWebServer server =
           new OperatorBoardWebServer(
               deployDir.resolve("operatorboard"),
-              deployDir.resolve("pathplana").resolve("autos"),
+              deployAutoLibrary,
               deployDir.resolve("music"),
               Config.WebUIConfig.BIND_ADDRESS,
               Config.WebUIConfig.PORT);
@@ -1319,17 +1317,20 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
 
   private final class OperatorBoardWebServer implements AutoCloseable {
     private final Path webRoot;
-    private final Path plannerAutosRoot;
+    private final DeployAutoLibrary deployAutoLibrary;
     private final Path musicDir;
     private final HttpServer server;
     private final ExecutorService executor;
 
     OperatorBoardWebServer(
-        Path webRoot, Path plannerAutosRoot, Path musicDir, String bindAddress, int port)
+        Path webRoot,
+        DeployAutoLibrary deployAutoLibrary,
+        Path musicDir,
+        String bindAddress,
+        int port)
         throws IOException {
       this.webRoot = Objects.requireNonNull(webRoot, "webRoot").toAbsolutePath().normalize();
-      this.plannerAutosRoot =
-          Objects.requireNonNull(plannerAutosRoot, "plannerAutosRoot").toAbsolutePath().normalize();
+      this.deployAutoLibrary = Objects.requireNonNull(deployAutoLibrary, "deployAutoLibrary");
       this.musicDir = Objects.requireNonNull(musicDir, "musicDir").toAbsolutePath().normalize();
       String bind = (bindAddress == null || bindAddress.isBlank()) ? "0.0.0.0" : bindAddress;
       this.server = HttpServer.create(new InetSocketAddress(bind, port), 0);
@@ -1432,19 +1433,18 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         String requestPath = exchange.getRequestURI().getPath();
         String suffix = requestPath.replaceFirst("^/planner-autos", "");
         if (suffix.isBlank() || "/".equals(suffix)) {
-          suffix = "/index.json";
+          sendJson(exchange, 200, deployAutoLibrary.buildManifestJson());
+          return;
         }
-        Path target =
-            plannerAutosRoot.resolve(suffix.replaceFirst("^/", "")).normalize().toAbsolutePath();
-        if (!target.startsWith(plannerAutosRoot)
-            || !Files.exists(target)
-            || Files.isDirectory(target)) {
+        Optional<String> previewJson =
+            deployAutoLibrary.loadAutoPreviewJson(suffix.replaceFirst("^/", ""));
+        if (previewJson.isEmpty()) {
           exchange.sendResponseHeaders(404, -1);
           return;
         }
-        byte[] bytes = Files.readAllBytes(target);
+        byte[] bytes = previewJson.get().getBytes(StandardCharsets.UTF_8);
         Headers headers = exchange.getResponseHeaders();
-        headers.add("Content-Type", inferredContentType(target));
+        headers.add("Content-Type", "application/json; charset=utf-8");
         headers.add("Cache-Control", "no-store");
         exchange.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
@@ -1541,7 +1541,10 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     }
 
     private void sendJson(HttpExchange exchange, int statusCode, Object value) throws IOException {
-      byte[] response = OperatorBoardPersistence.JSON.writeValueAsBytes(value);
+      byte[] response =
+          value instanceof String stringValue
+              ? stringValue.getBytes(StandardCharsets.UTF_8)
+              : OperatorBoardPersistence.JSON.writeValueAsBytes(value);
       Headers headers = exchange.getResponseHeaders();
       headers.set("Content-Type", "application/json; charset=utf-8");
       headers.set("Cache-Control", "no-store");

@@ -24,6 +24,9 @@ import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.RobotLogging;
 
 public class DriveCommands {
+  private static final Pose2d DEPOT_ALIGN_POSE = new Pose2d(0.7, 5.94, Rotation2d.fromDegrees(0.0));
+  private static final Pose2d HP_ALIGN_POSE = new Pose2d(3.0, 2.4, Rotation2d.fromDegrees(45.0));
+
   private DriveCommands() {}
 
   private static boolean test = false;
@@ -117,6 +120,20 @@ public class DriveCommands {
                   -omega * drive.getMaxAngularSpeedRadPerSec()));
         },
         drive);
+  }
+
+  public static Command alignToDepot(SwerveSubsystem drive) {
+    if (drive == null) {
+      return Commands.none();
+    }
+    return new AutoAlignToPoseCommand(drive, DEPOT_ALIGN_POSE);
+  }
+
+  public static Command alignToHPd(SwerveSubsystem drive) {
+    if (drive == null) {
+      return Commands.none();
+    }
+    return new AutoAlignToPoseCommand(drive, HP_ALIGN_POSE);
   }
 
   /**

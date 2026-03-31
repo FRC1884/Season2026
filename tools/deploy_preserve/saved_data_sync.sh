@@ -5,7 +5,7 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  saved_data_sync.sh <pull|backup|push|verify> --robot-host HOST --robot-data-root PATH --robot-autos-root PATH --local-data-root PATH --local-autos-root PATH --cache-root PATH
+  saved_data_sync.sh <pull|backup|push|verify> --robot-host HOST --robot-data-root PATH --local-data-root PATH --cache-root PATH
 EOF
 }
 
@@ -14,9 +14,7 @@ shift || true
 
 ROBOT_HOST=""
 ROBOT_DATA_ROOT=""
-ROBOT_AUTOS_ROOT=""
 LOCAL_DATA_ROOT=""
-LOCAL_AUTOS_ROOT=""
 CACHE_ROOT=""
 
 while [[ $# -gt 0 ]]; do
@@ -29,16 +27,8 @@ while [[ $# -gt 0 ]]; do
       ROBOT_DATA_ROOT="$2"
       shift 2
       ;;
-    --robot-autos-root)
-      ROBOT_AUTOS_ROOT="$2"
-      shift 2
-      ;;
     --local-data-root)
       LOCAL_DATA_ROOT="$2"
-      shift 2
-      ;;
-    --local-autos-root)
-      LOCAL_AUTOS_ROOT="$2"
       shift 2
       ;;
     --cache-root)
@@ -58,7 +48,7 @@ if [[ -z "${ACTION}" ]]; then
   exit 2
 fi
 
-if [[ -z "${CACHE_ROOT}" || -z "${LOCAL_DATA_ROOT}" || -z "${LOCAL_AUTOS_ROOT}" ]]; then
+if [[ -z "${CACHE_ROOT}" || -z "${LOCAL_DATA_ROOT}" ]]; then
   echo "Missing required local paths" >&2
   usage
   exit 2
@@ -95,13 +85,12 @@ sync_to_remote() {
 
 case "${ACTION}" in
   pull)
-    if [[ -z "${ROBOT_HOST}" || -z "${ROBOT_DATA_ROOT}" || -z "${ROBOT_AUTOS_ROOT}" ]]; then
-      echo "Pull requires robot host and remote roots" >&2
+    if [[ -z "${ROBOT_HOST}" || -z "${ROBOT_DATA_ROOT}" ]]; then
+      echo "Pull requires robot host and remote data root" >&2
       exit 2
     fi
     mkdir -p "${ROBOT_CACHE_ROOT}"
     sync_from_remote "${ROBOT_DATA_ROOT}" "${ROBOT_CACHE_ROOT}/operatorboard-data"
-    sync_from_remote "${ROBOT_AUTOS_ROOT}" "${ROBOT_CACHE_ROOT}/pathplana-autos"
     ;;
   backup)
     timestamp="$(date -u +%Y%m%d-%H%M%S)"
@@ -109,30 +98,25 @@ case "${ACTION}" in
     if [[ -d "${LOCAL_DATA_ROOT}" ]]; then
       cp -R "${LOCAL_DATA_ROOT}" "${BACKUP_ROOT}/local-operatorboard-data-${timestamp}"
     fi
-    if [[ -d "${LOCAL_AUTOS_ROOT}" ]]; then
-      cp -R "${LOCAL_AUTOS_ROOT}" "${BACKUP_ROOT}/local-pathplana-autos-${timestamp}"
-    fi
     ;;
   push)
-    if [[ -z "${ROBOT_HOST}" || -z "${ROBOT_DATA_ROOT}" || -z "${ROBOT_AUTOS_ROOT}" ]]; then
-      echo "Push requires robot host and remote roots" >&2
+    if [[ -z "${ROBOT_HOST}" || -z "${ROBOT_DATA_ROOT}" ]]; then
+      echo "Push requires robot host and remote data root" >&2
       exit 2
     fi
-    mkdir -p "${LOCAL_DATA_ROOT}" "${LOCAL_AUTOS_ROOT}"
+    mkdir -p "${LOCAL_DATA_ROOT}"
     sync_to_remote "${LOCAL_DATA_ROOT}" "${ROBOT_DATA_ROOT}"
-    sync_to_remote "${LOCAL_AUTOS_ROOT}" "${ROBOT_AUTOS_ROOT}"
     ;;
   verify)
-    if [[ -z "${ROBOT_HOST}" || -z "${ROBOT_DATA_ROOT}" || -z "${ROBOT_AUTOS_ROOT}" ]]; then
-      echo "Verify requires robot host and remote roots" >&2
+    if [[ -z "${ROBOT_HOST}" || -z "${ROBOT_DATA_ROOT}" ]]; then
+      echo "Verify requires robot host and remote data root" >&2
       exit 2
     fi
     ssh "${ROBOT_HOST}" "\
       set -euo pipefail; \
       test -d '${ROBOT_DATA_ROOT}'; \
       test -f '${ROBOT_DATA_ROOT}/joystick-mappings.json'; \
-      test -f '${ROBOT_DATA_ROOT}/subsystem-descriptions.json'; \
-      test -d '${ROBOT_AUTOS_ROOT}'"
+      test -f '${ROBOT_DATA_ROOT}/subsystem-descriptions.json'"
     ;;
   *)
     echo "Unknown action: ${ACTION}" >&2

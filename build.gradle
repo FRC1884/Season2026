@@ -11,6 +11,29 @@ java {
     }
 }
 
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+            exclude '**/tools/**'
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+            exclude '**/tools/**'
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+            exclude '**/tools/**'
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+            exclude '**/tools/**'
+        }
+    }
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.release = 17   // ensures major version 61 output
     options.compilerArgs.add '-XDstringConcat=inline'
@@ -51,7 +74,9 @@ deploy {
 
                 // Static files artifact
                 frcStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
-                    files = project.fileTree('src/main/deploy')
+                    files = project.fileTree('src/main/deploy') {
+                        exclude '**/tools/**'
+                    }
                     directory = '/home/lvuser/deploy'
                     // Change to true to delete files on roboRIO that no
                     // longer exist in deploy directory on roboRIO
@@ -65,9 +90,7 @@ deploy {
 def deployArtifact = deploy.targets.roborio.artifacts.frcJava
 def deployPreserveRobotHost = findProperty("robotHost") ?: "roborio-1884-frc.local"
 def deployPreserveRobotDataRoot = findProperty("robotDataRoot") ?: "/home/lvuser/operatorboard-data"
-def deployPreserveRobotAutosRoot = findProperty("robotAutosRoot") ?: "/home/lvuser/deploy/pathplana/autos"
 def deployPreserveLocalDataRoot = "${projectDir}/operatorboard-data"
-def deployPreserveLocalAutosRoot = "${projectDir}/src/main/deploy/pathplana/autos"
 def deployPreserveCacheRoot = "${buildDir}/deploy-preserve"
 
 // Set to true to use debug for JNI.
@@ -217,6 +240,7 @@ jar {
         }
     }
     from sourceSets.main.allSource
+    exclude 'tools/**'
     manifest edu.wpi.first.gradlerio.GradleRIOPlugin.javaManifest(ROBOT_MAIN_CLASS)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
@@ -233,9 +257,7 @@ tasks.register("pullRobotSavedData", Exec) {
             "pull",
             "--robot-host", deployPreserveRobotHost,
             "--robot-data-root", deployPreserveRobotDataRoot,
-            "--robot-autos-root", deployPreserveRobotAutosRoot,
             "--local-data-root", deployPreserveLocalDataRoot,
-            "--local-autos-root", deployPreserveLocalAutosRoot,
             "--cache-root", deployPreserveCacheRoot
 }
 
@@ -245,7 +267,6 @@ tasks.register("backupLocalSavedData", Exec) {
     commandLine "bash", "${projectDir}/tools/deploy_preserve/saved_data_sync.sh",
             "backup",
             "--local-data-root", deployPreserveLocalDataRoot,
-            "--local-autos-root", deployPreserveLocalAutosRoot,
             "--cache-root", deployPreserveCacheRoot
 }
 
@@ -254,7 +275,6 @@ tasks.register("mergeSavedData", Exec) {
     description = "Merge local and pulled roboRIO saved data according to the documented conflict policy."
     commandLine "python3", "${projectDir}/tools/deploy_preserve/merge_saved_data.py",
             "--local-data-root", deployPreserveLocalDataRoot,
-            "--local-autos-root", deployPreserveLocalAutosRoot,
             "--cache-root", deployPreserveCacheRoot
 }
 
@@ -265,9 +285,7 @@ tasks.register("pushRobotSavedData", Exec) {
             "push",
             "--robot-host", deployPreserveRobotHost,
             "--robot-data-root", deployPreserveRobotDataRoot,
-            "--robot-autos-root", deployPreserveRobotAutosRoot,
             "--local-data-root", deployPreserveLocalDataRoot,
-            "--local-autos-root", deployPreserveLocalAutosRoot,
             "--cache-root", deployPreserveCacheRoot
 }
 
@@ -278,9 +296,7 @@ tasks.register("verifyRobotSavedData", Exec) {
             "verify",
             "--robot-host", deployPreserveRobotHost,
             "--robot-data-root", deployPreserveRobotDataRoot,
-            "--robot-autos-root", deployPreserveRobotAutosRoot,
             "--local-data-root", deployPreserveLocalDataRoot,
-            "--local-autos-root", deployPreserveLocalAutosRoot,
             "--cache-root", deployPreserveCacheRoot
 }
 

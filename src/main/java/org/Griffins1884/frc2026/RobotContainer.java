@@ -13,6 +13,10 @@ import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.FRONT_R
 import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.GYRO_TYPE;
 import static org.Griffins1884.frc2026.subsystems.vision.AprilTagVisionConstants.*;
 
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -24,10 +28,12 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
+import java.io.IOException;
 import java.util.Optional;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.OI.DriverMap;
+import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
@@ -45,6 +51,7 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.*;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.json.simple.parser.ParseException;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -308,6 +315,7 @@ public class RobotContainer {
 
     // Configure the button bindings
     configureDriverButtonBindings();
+    configurePathPlannerAutonomous();
 
     superstructure.setAutoStartPoseSupplier(
         operatorBoard != null ? operatorBoard::getQueuedStartPose : Optional::empty);
@@ -368,6 +376,28 @@ public class RobotContainer {
           .intakeDeployToggle()
           .onTrue(Commands.runOnce(() -> superstructure.setIntakeDeployed(true)))
           .onFalse(Commands.runOnce(() -> superstructure.setIntakeDeployed(false)));
+    }
+  }
+
+  private void configurePathPlannerAutonomous() {
+    AutoCommands.registerAutoCommands(superstructure, drive);
+    if (drive == null) {
+      return;
+    }
+    try {
+      RobotConfig robotConfig = RobotConfig.fromGUISettings();
+      AutoBuilder.configure(
+          drive::getPose,
+          drive::resetOdometry,
+          drive::getRobotRelativeSpeeds,
+          drive::runVelocity,
+          new PPHolonomicDriveController(new PIDConstants(5.0), new PIDConstants(5.0)),
+          robotConfig,
+          () -> DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Red,
+          drive);
+    } catch (IOException | ParseException ex) {
+      DriverStation.reportError(
+          "Failed to configure PathPlanner autonomous: " + ex.getMessage(), ex.getStackTrace());
     }
   }
 

@@ -1,0 +1,25 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RMiddleOverBump"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "RightHalfCollect"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": "Rebuilt Paths",
+  "choreoAuto": true
+}

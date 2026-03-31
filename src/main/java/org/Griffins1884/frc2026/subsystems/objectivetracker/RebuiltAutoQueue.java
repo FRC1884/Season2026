@@ -30,7 +30,7 @@ final class RebuiltAutoQueue {
   private final RebuiltSpotLibrary spotLibrary;
   private final Superstructure superstructure;
   private final SwerveSubsystem drive;
-  private final PathPlanAAutoLibrary autoLibrary;
+  private final DeployAutoLibrary autoLibrary;
 
   private final List<QueueStep> queueSteps = new ArrayList<>();
   private final List<NoGoZone> noGoZones = new ArrayList<>();
@@ -40,7 +40,7 @@ final class RebuiltAutoQueue {
   private QueuePhase phase = QueuePhase.IDLE;
   private Command activeCommand;
   private String activeLabel = "";
-  private String queueMessage = "Select a deployed PathPlanA auto to preview and run.";
+  private String queueMessage = "Select a deployed PathPlanner auto to preview and run.";
   private String lastQueueStateJson = "";
   private String lastQuickRunStateJson = "";
   private SelectedAutoState selectedAutoState =
@@ -52,13 +52,13 @@ final class RebuiltAutoQueue {
           "QUEUE_INIT",
           true,
           "Queue initialized.",
-          "Select a deployed PathPlanA auto to preview and run.");
+          "Select a deployed PathPlanner auto to preview and run.");
 
   RebuiltAutoQueue(
       RebuiltSpotLibrary spotLibrary,
       Superstructure superstructure,
       SwerveSubsystem drive,
-      PathPlanAAutoLibrary autoLibrary) {
+      DeployAutoLibrary autoLibrary) {
     this.spotLibrary = spotLibrary;
     this.superstructure = superstructure;
     this.drive = drive;
@@ -134,19 +134,39 @@ final class RebuiltAutoQueue {
   }
 
   Command createAutonomousCommand() {
-    if (queueSteps.isEmpty()) {
+    if (autoLibrary == null || selectedAutoState.id().isBlank()) {
       return null;
     }
-    return Commands.sequence(
-        Commands.runOnce(
+    Optional<Command> selectedAutoCommand = autoLibrary.buildAutoCommand(selectedAutoState.id());
+    if (selectedAutoCommand.isEmpty()) {
+      phase = QueuePhase.ERROR;
+      queueRunning = false;
+      activeLabel = "";
+      queueMessage = "Selected auto could not be built.";
+      recordAction("AUTO_BUILD", false, queueMessage);
+      return null;
+    }
+    return selectedAutoCommand
+        .get()
+        .beforeStarting(
             () -> {
-              if (drive == null) {
-                return;
-              }
-              getQueuedStartPose().ifPresent(drive::resetOdometry);
-            }),
-        Commands.runOnce(this::startQueue),
-        Commands.waitUntil(() -> !queueRunning && activeCommand == null));
+              queueRunning = true;
+              phase = QueuePhase.RUNNING;
+              activeLabel = selectedAutoState.name();
+              queueMessage = "Running " + selectedAutoState.name() + ".";
+              recordAction("AUTO_RUN", true, queueMessage);
+            })
+        .finallyDo(
+            interrupted -> {
+              queueRunning = false;
+              activeLabel = "";
+              phase = interrupted ? QueuePhase.READY : QueuePhase.COMPLETE;
+              queueMessage =
+                  interrupted
+                      ? "Autonomous was interrupted."
+                      : "Completed " + selectedAutoState.name() + ".";
+              recordAction("AUTO_RUN", !interrupted, queueMessage);
+            });
   }
 
   private void applyQueueSpec(String raw) {
@@ -326,7 +346,7 @@ final class RebuiltAutoQueue {
       recordAction("AUTO_SELECT", false, "Auto library unavailable.");
       return;
     }
-    Optional<PathPlanAAutoLibrary.LoadedAuto> loadedAuto = autoLibrary.loadAuto(normalizedId);
+    Optional<DeployAutoLibrary.LoadedAuto> loadedAuto = autoLibrary.loadAuto(normalizedId);
     if (loadedAuto.isEmpty()) {
       selectedAutoState =
           new SelectedAutoState(
@@ -347,13 +367,13 @@ final class RebuiltAutoQueue {
     loadSelectedAuto(loadedAuto.get());
   }
 
-  private void loadSelectedAuto(PathPlanAAutoLibrary.LoadedAuto loadedAuto) {
+  private void loadSelectedAuto(DeployAutoLibrary.LoadedAuto loadedAuto) {
     queueSteps.clear();
     noGoZones.clear();
-    for (PathPlanAAutoLibrary.StepSpec step : loadedAuto.steps()) {
+    for (DeployAutoLibrary.StepSpec step : loadedAuto.steps()) {
       queueSteps.add(QueueStep.fromLibrary(step));
     }
-    for (PathPlanAAutoLibrary.ZoneSpec zone : loadedAuto.customZones()) {
+    for (DeployAutoLibrary.ZoneSpec zone : loadedAuto.customZones()) {
       noGoZones.add(NoGoZone.fromLibrary(zone));
     }
     queuedStartPose = PoseSpec.fromLibrary(loadedAuto.startPose()).orElse(null);
@@ -817,7 +837,7 @@ final class RebuiltAutoQueue {
     return value == null ? "" : value;
   }
 
-  private static String defaultAutoName(PathPlanAAutoLibrary.LoadedAuto loadedAuto) {
+  private static String defaultAutoName(DeployAutoLibrary.LoadedAuto loadedAuto) {
     if (loadedAuto.name() != null && !loadedAuto.name().isBlank()) {
       return loadedAuto.name();
     }
@@ -885,7 +905,7 @@ final class RebuiltAutoQueue {
       return Optional.of(new PoseSpec(xMeters, yMeters, headingDeg == null ? 0.0 : headingDeg));
     }
 
-    static Optional<PoseSpec> fromLibrary(PathPlanAAutoLibrary.PoseSpec pose) {
+    static Optional<PoseSpec> fromLibrary(DeployAutoLibrary.PoseSpec pose) {
       if (pose == null) {
         return Optional.empty();
       }
@@ -989,9 +1009,9 @@ final class RebuiltAutoQueue {
               List.copyOf(routeWaypoints)));
     }
 
-    static QueueStep fromLibrary(PathPlanAAutoLibrary.StepSpec step) {
+    static QueueStep fromLibrary(DeployAutoLibrary.StepSpec step) {
       ArrayList<PoseSpec> routeWaypoints = new ArrayList<>();
-      for (PathPlanAAutoLibrary.PoseSpec waypoint : step.routeWaypoints()) {
+      for (DeployAutoLibrary.PoseSpec waypoint : step.routeWaypoints()) {
         PoseSpec.fromLibrary(waypoint).ifPresent(routeWaypoints::add);
       }
       return new QueueStep(
@@ -1103,7 +1123,7 @@ final class RebuiltAutoQueue {
               blankToNull(dto.id), blankToNull(dto.label), xMin, yMin, xMax, yMax, dto.locked));
     }
 
-    static NoGoZone fromLibrary(PathPlanAAutoLibrary.ZoneSpec zone) {
+    static NoGoZone fromLibrary(DeployAutoLibrary.ZoneSpec zone) {
       return new NoGoZone(
           blankToNull(zone.id()),
           blankToNull(zone.label()),

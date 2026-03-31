@@ -1,0 +1,247 @@
+{
+ "name":"ChoreoPaths26",
+ "version":2,
+ "type":"Swerve",
+ "variables":{
+  "expressions":{
+   "FieldWidth":{
+    "dimension":"Length",
+    "var":{
+     "exp":"8.0518 m",
+     "val":8.0518
+    }
+   },
+   "FullSpeed":{
+    "dimension":"LinVel",
+    "var":{
+     "exp":"3.6 m / s",
+     "val":3.6
+    }
+   },
+   "IntakingSpeed":{
+    "dimension":"LinVel",
+    "var":{
+     "exp":"1.1 m / s",
+     "val":1.1
+    }
+   },
+   "NearFullSpeed":{
+    "dimension":"LinVel",
+    "var":{
+     "exp":"3 m / s",
+     "val":3.0
+    }
+   },
+   "Slow":{
+    "dimension":"LinVel",
+    "var":{
+     "exp":"0.9 m / s",
+     "val":0.9
+    }
+   },
+   "StartPosOffset":{
+    "dimension":"Length",
+    "var":{
+     "exp":"0.5 m",
+     "val":0.5
+    }
+   },
+   "ToCollectSpeed":{
+    "dimension":"LinVel",
+    "var":{
+     "exp":"1.4 m / s",
+     "val":1.4
+    }
+   }
+  },
+  "poses":{
+   "CollectEnd":{
+    "x":{
+     "exp":"7.7 m",
+     "val":7.7
+    },
+    "y":{
+     "exp":"0.9 m",
+     "val":0.9
+    },
+    "heading":{
+     "exp":"0 rad",
+     "val":0.0
+    }
+   },
+   "CollectStart":{
+    "x":{
+     "exp":"7.7 m",
+     "val":7.7
+    },
+    "y":{
+     "exp":"6 m",
+     "val":6.0
+    },
+    "heading":{
+     "exp":"90 deg",
+     "val":1.5707963267948966
+    }
+   },
+   "DepotC":{
+    "x":{
+     "exp":"0.7 m",
+     "val":0.7
+    },
+    "y":{
+     "exp":"5.94 m",
+     "val":5.94
+    },
+    "heading":{
+     "exp":"0 rad",
+     "val":0.0
+    }
+   },
+   "LeftCollect":{
+    "x":{
+     "exp":"7.1 m",
+     "val":7.1
+    },
+    "y":{
+     "exp":"6.5 m",
+     "val":6.5
+    },
+    "heading":{
+     "exp":"135 deg",
+     "val":2.356194490192345
+    }
+   },
+   "LeftStart":{
+    "x":{
+     "exp":"3.5 m",
+     "val":3.5
+    },
+    "y":{
+     "exp":"5.6 m",
+     "val":5.6
+    },
+    "heading":{
+     "exp":"45 deg",
+     "val":0.7853981633974483
+    }
+   },
+   "MiddleStart":{
+    "x":{
+     "exp":"3.6 m",
+     "val":3.6
+    },
+    "y":{
+     "exp":"4 m",
+     "val":4.0
+    },
+    "heading":{
+     "exp":"180 deg",
+     "val":3.141592653589793
+    }
+   },
+   "RightCollect":{
+    "x":{
+     "exp":"7.1 m",
+     "val":7.1
+    },
+    "y":{
+     "exp":"1.6 m",
+     "val":1.6
+    },
+    "heading":{
+     "exp":"-135 degrees",
+     "val":-2.356194490192345
+    }
+   },
+   "RightStart":{
+    "x":{
+     "exp":"3.5 m",
+     "val":3.5
+    },
+    "y":{
+     "exp":"2.4 m",
+     "val":2.4
+    },
+    "heading":{
+     "exp":"140 degrees",
+     "val":2.443460952792061
+    }
+   }
+  }
+ },
+ "config":{
+  "frontLeft":{
+   "x":{
+    "exp":"12.375 in",
+    "val":0.31432499999999997
+   },
+   "y":{
+    "exp":"12.375 in",
+    "val":0.31432499999999997
+   }
+  },
+  "backLeft":{
+   "x":{
+    "exp":"-12.375 in",
+    "val":-0.31432499999999997
+   },
+   "y":{
+    "exp":"12.375 in",
+    "val":0.31432499999999997
+   }
+  },
+  "mass":{
+   "exp":"135 lbs",
+   "val":61.23496995
+  },
+  "inertia":{
+   "exp":"6 kg m ^ 2",
+   "val":6.0
+  },
+  "gearing":{
+   "exp":"5.08",
+   "val":5.08
+  },
+  "radius":{
+   "exp":"1.5 in",
+   "val":0.038099999999999995
+  },
+  "vmax":{
+   "exp":"6784 RPM",
+   "val":710.4188187317718
+  },
+  "tmax":{
+   "exp":"0.61 N * m",
+   "val":0.61
+  },
+  "cof":{
+   "exp":"1.2",
+   "val":1.2
+  },
+  "bumper":{
+   "front":{
+    "exp":"17 in",
+    "val":0.4318
+   },
+   "side":{
+    "exp":"17 in",
+    "val":0.4318
+   },
+   "back":{
+    "exp":"17 in",
+    "val":0.4318
+   }
+  },
+  "differentialTrackWidth":{
+   "exp":"22 in",
+   "val":0.5588
+  }
+ },
+ "generationFeatures":[],
+ "codegen":{
+  "root":"",
+  "genVars":true,
+  "genTrajData":true,
+  "useChoreoLib":true
+ }
+}

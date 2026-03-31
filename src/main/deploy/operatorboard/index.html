@@ -516,8 +516,9 @@
                     </button>
                   </div>
                   <div class="queue-form__note">
-                    Reads PathPlanA autos from `/deploy/pathplana/autos`. Preview here, select one,
-                    and that selection is what autonomous will run.
+                    Reads PathPlanner autos from `/deploy/pathplanner/autos` and follows choreo
+                    trajectories referenced by those autos. Preview on the left, choose one, then
+                    enable autonomous to run that selected auto.
                   </div>
                   <div id="planner-autos-import-status" class="queue-form__note">Loading deploy autos...</div>
                   <div id="preset-empty-state" class="queue-empty-state queue-empty-state--small">
@@ -539,7 +540,8 @@
                     </div>
                   </div>
                   <div class="queue-form__note">
-                    Blue-side authored autos are mirrored for red automatically at runtime.
+                    The highlighted card on the left is the previewed auto. The selected auto here is
+                    what the robot will run in autonomous.
                   </div>
                   <div class="queue-actions">
                     <button id="select-selected-auto-button" class="state-button state-button--auto" type="button">

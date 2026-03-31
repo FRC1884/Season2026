@@ -97,32 +97,6 @@ def merge_config(local_root: Path, robot_root: Path, conflicts_root: Path) -> No
             copy_with_conflict(robot_path, local_path, conflicts_root, "config-replaced")
 
 
-def merge_autos(local_root: Path, robot_root: Path, conflicts_root: Path) -> None:
-    local_root.mkdir(parents=True, exist_ok=True)
-    if not robot_root.exists():
-        return
-    for robot_file in robot_root.rglob("*"):
-        if robot_file.is_dir():
-            continue
-        relative = robot_file.relative_to(robot_root)
-        local_file = local_root / relative
-        ensure_parent(local_file)
-        if not local_file.exists():
-            shutil.copy2(robot_file, local_file)
-            continue
-        if local_file.read_bytes() == robot_file.read_bytes():
-            continue
-        if robot_file.stat().st_mtime > local_file.stat().st_mtime:
-            conflict_copy = conflicts_root / "autos-replaced" / relative
-            ensure_parent(conflict_copy)
-            shutil.copy2(local_file, conflict_copy)
-            shutil.copy2(robot_file, local_file)
-        else:
-            conflict_copy = conflicts_root / "autos-robot-older" / relative
-            ensure_parent(conflict_copy)
-            shutil.copy2(robot_file, conflict_copy)
-
-
 def merge_diagnostics(local_root: Path, robot_root: Path, conflicts_root: Path) -> None:
     local_bundles = local_root / "diagnostics" / "bundles"
     robot_bundles = robot_root / "diagnostics" / "bundles"
@@ -147,20 +121,16 @@ def merge_diagnostics(local_root: Path, robot_root: Path, conflicts_root: Path) 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--local-data-root", required=True)
-    parser.add_argument("--local-autos-root", required=True)
     parser.add_argument("--cache-root", required=True)
     args = parser.parse_args()
 
     local_data_root = Path(args.local_data_root).resolve()
-    local_autos_root = Path(args.local_autos_root).resolve()
     cache_root = Path(args.cache_root).resolve()
     robot_data_root = cache_root / "robot" / "operatorboard-data"
-    robot_autos_root = cache_root / "robot" / "pathplana-autos"
     conflicts_root = cache_root / "conflicts"
     conflicts_root.mkdir(parents=True, exist_ok=True)
 
     merge_config(local_data_root, robot_data_root, conflicts_root)
-    merge_autos(local_autos_root, robot_autos_root, conflicts_root)
     merge_diagnostics(local_data_root, robot_data_root, conflicts_root)
 
 

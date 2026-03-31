@@ -33,7 +33,6 @@ public final class OperatorBoardPersistence {
   private final Path diagnosticsRoot;
   private final Path diagnosticBundlesRoot;
   private final Path deployDefaultsRoot;
-  private final Path pathPlanAutosRoot;
 
   public OperatorBoardPersistence() {
     this.projectRoot = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
@@ -43,8 +42,6 @@ public final class OperatorBoardPersistence {
     this.diagnosticBundlesRoot = diagnosticsRoot.resolve("bundles");
     this.deployDefaultsRoot =
         Filesystem.getDeployDirectory().toPath().resolve("operatorboard").resolve("default-data");
-    this.pathPlanAutosRoot =
-        Filesystem.getDeployDirectory().toPath().resolve("pathplana").resolve("autos");
   }
 
   private static Path resolveRuntimeRoot(Path projectRoot) {
@@ -117,18 +114,6 @@ public final class OperatorBoardPersistence {
                 true,
                 true,
                 "Subsystem and state descriptions shown in the operator board."),
-            new OperatorBoardDataModels.StoredAsset(
-                "pathPlanAAutos",
-                "auto-paths",
-                "json-package",
-                "local-canonical-with-roborio-mirror",
-                "pull robot copy before deploy, then merge missing files by path",
-                pathPlanAutosRoot.toString(),
-                "/home/lvuser/deploy/pathplana/autos",
-                pathPlanAutosRoot.toString(),
-                false,
-                true,
-                "Autonomous path packages served by the operator board."),
             new OperatorBoardDataModels.StoredAsset(
                 "diagnosticBundles",
                 "diagnostics",

@@ -1088,6 +1088,11 @@ body.body--match-alert::before {
   box-shadow: 0 0 0 1px rgba(57, 217, 138, 0.18) inset;
 }
 
+.preset.is-selected-for-robot {
+  border-color: rgba(255, 209, 102, 0.92);
+  box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.24) inset;
+}
+
 .preset__title {
   font-weight: 800;
 }
