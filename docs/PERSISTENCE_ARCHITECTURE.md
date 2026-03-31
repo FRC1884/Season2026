@@ -6,7 +6,6 @@ This phase treats dashboard-created artifacts as first-class robot assets, not t
 
 Managed assets:
 
-- `joystick-mappings.json`
 - `subsystem-descriptions.json`
 - `diagnostics/bundles/*`
 - `src/main/deploy/pathplana/autos/*`
@@ -25,12 +24,10 @@ roboRIO runtime copy:
 
 Deployment-bundle seed copy:
 
-- `src/main/deploy/operatorboard/default-data/joystick-mappings.json`
 - `src/main/deploy/operatorboard/default-data/subsystem-descriptions.json`
 
 ## Authority Rules
 
-- Joystick mappings: local canonical copy with roboRIO mirror.
 - Subsystem descriptions: local canonical copy with roboRIO mirror.
 - PathPlanA autos: local canonical copy with roboRIO mirror, but robot-side edits must be pulled before deploy.
 - Diagnostic bundles: roboRIO-authoritative append-only history with local mirror.
@@ -69,7 +66,6 @@ Saved JSON documents carry:
 
 The roboRIO-hosted operator board now exposes:
 
-- `GET/PUT /api/joystick-mappings`
 - `GET/PUT /api/subsystem-descriptions`
 - `GET /api/storage/inventory`
 - `GET /api/diagnostics/latest`
@@ -78,5 +74,4 @@ The roboRIO-hosted operator board now exposes:
 
 ## Notes
 
-- The joystick tab persists profiles now, but the active robot driver binding path still originates from the hard-coded `DriverMap` implementations. The saved profile is authoritative for dashboard UX, deploy-sync, and future command-binding integration.
 - System checks now emit a durable diagnostic bundle instead of remaining UI-only state.

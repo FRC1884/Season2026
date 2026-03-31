@@ -24,7 +24,6 @@ public final class OperatorBoardPersistence {
   private static final DateTimeFormatter BACKUP_TIME =
       DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
 
-  private static final String JOYSTICK_MAPPINGS_FILE = "joystick-mappings.json";
   private static final String SUBSYSTEM_DESCRIPTIONS_FILE = "subsystem-descriptions.json";
   private static final String LATEST_DIAGNOSTIC_MANIFEST_FILE = "latest-diagnostic.json";
 
@@ -61,43 +60,12 @@ public final class OperatorBoardPersistence {
       Files.createDirectories(backupsRoot);
       Files.createDirectories(diagnosticBundlesRoot);
       seedIfMissing(
-          joystickMappingsPath(),
-          deployDefaultsRoot.resolve(JOYSTICK_MAPPINGS_FILE),
-          OperatorBoardDataModels.emptyDefaultJoystickMappings());
-      seedIfMissing(
           subsystemDescriptionsPath(),
           deployDefaultsRoot.resolve(SUBSYSTEM_DESCRIPTIONS_FILE),
           OperatorBoardDataModels.emptyDefaultSubsystemDescriptions());
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }
-  }
-
-  public synchronized OperatorBoardDataModels.JoystickMappingsDocument readJoystickMappings() {
-    initialize();
-    try {
-      return JSON.readValue(
-          joystickMappingsPath().toFile(), OperatorBoardDataModels.JoystickMappingsDocument.class);
-    } catch (IOException ex) {
-      DriverStation.reportError(
-          "Failed to read joystick mappings: " + ex.getMessage(), ex.getStackTrace());
-      return OperatorBoardDataModels.emptyDefaultJoystickMappings();
-    }
-  }
-
-  public synchronized OperatorBoardDataModels.JoystickMappingsDocument saveJoystickMappings(
-      OperatorBoardDataModels.JoystickMappingsDocument document) {
-    initialize();
-    OperatorBoardDataModels.JoystickMappingsDocument normalized =
-        new OperatorBoardDataModels.JoystickMappingsDocument(
-            OperatorBoardDataModels.SCHEMA_VERSION,
-            OperatorBoardDataModels.metadata(
-                "joystickMappings", "joystick-mappings", "Joystick Mappings"),
-            document.activeProfileId(),
-            document.targets(),
-            document.profiles());
-    writeWithBackup(joystickMappingsPath(), normalized);
-    return normalized;
   }
 
   public synchronized OperatorBoardDataModels.SubsystemDescriptionsDocument
@@ -137,18 +105,6 @@ public final class OperatorBoardPersistence {
         OperatorBoardDataModels.metadata(
             "storageInventory", "storage-inventory", "Storage Inventory"),
         List.of(
-            new OperatorBoardDataModels.StoredAsset(
-                "joystickMappings",
-                "dashboard-config",
-                "json",
-                "local-canonical-with-roborio-mirror",
-                "newer timestamp wins unless schema version differs",
-                joystickMappingsPath().toString(),
-                robotPath + "/" + JOYSTICK_MAPPINGS_FILE,
-                deployPath + "/" + JOYSTICK_MAPPINGS_FILE,
-                true,
-                true,
-                "Persistent joystick/controller bindings edited from the dashboard."),
             new OperatorBoardDataModels.StoredAsset(
                 "subsystemDescriptions",
                 "dashboard-docs",
@@ -193,12 +149,7 @@ public final class OperatorBoardPersistence {
                 "If both sides changed and schema versions match, prefer the newer metadata timestamp and preserve the older copy in backups.",
                 "If schema versions differ, do not auto-merge. Keep both files and mark the sync result for manual review.",
                 "Diagnostic bundles append; they do not participate in destructive merge."),
-            List.of(
-                "timestamp",
-                "buildVersion",
-                "gitSha",
-                "gitBranch",
-                "driver/operator profile name when present")));
+            List.of("timestamp", "buildVersion", "gitSha", "gitBranch")));
   }
 
   public synchronized Optional<OperatorBoardDataModels.DiagnosticBundleManifest>
@@ -303,10 +254,6 @@ public final class OperatorBoardPersistence {
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }
-  }
-
-  private Path joystickMappingsPath() {
-    return runtimeRoot.resolve(JOYSTICK_MAPPINGS_FILE);
   }
 
   private Path subsystemDescriptionsPath() {

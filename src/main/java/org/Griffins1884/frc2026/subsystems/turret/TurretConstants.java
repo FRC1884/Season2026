@@ -4,6 +4,7 @@ import static java.lang.Math.PI;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class TurretConstants {
@@ -16,6 +17,8 @@ public final class TurretConstants {
   public static final int TURRET_ID = 25;
   public static final boolean INVERTED = false;
   public static final int CURRENT_LIMIT_AMPS = 40;
+  public static final MechanismDefinition.KrakenFeatureConfig KRAKEN_FEATURES =
+      new MechanismDefinition.KrakenFeatureConfig(true, true, false, 100, true);
   public static final boolean BRAKE_MODE = true;
 
   public static final double GEAR_RATIO = 42;

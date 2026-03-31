@@ -15,6 +15,7 @@ public class ShooterPivotIOKraken extends MechanismArmIOKraken implements Shoote
         ShooterPivotConstants.CAN_BUS,
         ShooterPivotConstants.MOTION_MAGIC_CRUISE_VEL.get(),
         ShooterPivotConstants.MOTION_MAGIC_ACCEL.get(),
-        ShooterPivotConstants.MOTION_MAGIC_JERK.get());
+        ShooterPivotConstants.MOTION_MAGIC_JERK.get(),
+        ShooterPivotConstants.KRAKEN_FEATURES);
   }
 }

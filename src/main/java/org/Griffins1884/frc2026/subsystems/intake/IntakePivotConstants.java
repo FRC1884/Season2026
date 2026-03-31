@@ -3,6 +3,7 @@ package org.Griffins1884.frc2026.subsystems.intake;
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.RobotType;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class IntakePivotConstants {
@@ -24,6 +25,12 @@ public final class IntakePivotConstants {
   public static final int[] MOTOR_ID = {19, 20};
   public static final boolean[] INVERTED = {false, true};
   public static final int CURRENT_LIMIT_AMPS = 40;
+  public static final MechanismDefinition.KrakenFeatureConfig KRAKEN_FEATURES =
+      switch (MOTOR_CONTROLLER) {
+        case KRAKEN_X60, KRAKEN_X40 ->
+            new MechanismDefinition.KrakenFeatureConfig(true, true, false, 100, true);
+        case SPARK_MAX, SPARK_FLEX -> MechanismDefinition.KrakenFeatureConfig.disabled();
+      };
   public static final boolean BRAKE_MODE = true;
   public static final ZeroingDetectionMode ZEROING_DETECTION_MODE =
       ZeroingDetectionMode.CURRENT_SPIKE;

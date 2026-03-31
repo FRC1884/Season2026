@@ -9,6 +9,8 @@ public class TurretIOKraken extends MechanismTurretIOKraken implements TurretIO 
         TurretConstants.CURRENT_LIMIT_AMPS,
         TurretConstants.INVERTED,
         TurretConstants.BRAKE_MODE,
-        TurretConstants.GEAR_RATIO);
+        TurretConstants.GEAR_RATIO,
+        new com.ctre.phoenix6.CANBus("rio"),
+        TurretConstants.KRAKEN_FEATURES);
   }
 }

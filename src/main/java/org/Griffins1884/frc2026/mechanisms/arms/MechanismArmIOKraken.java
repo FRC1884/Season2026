@@ -8,13 +8,16 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.GravityTypeValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 
 public class MechanismArmIOKraken implements MechanismArmIO {
   private final TalonFX[] motors;
@@ -25,7 +28,12 @@ public class MechanismArmIOKraken implements MechanismArmIO {
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
   private final MotionMagicTorqueCurrentFOC motionMagicRequest =
       new MotionMagicTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
+  private final PositionVoltage positionVoltageRequest =
+      new PositionVoltage(0.0).withUpdateFreqHz(0);
+  private final MotionMagicVoltage motionMagicVoltageRequest =
+      new MotionMagicVoltage(0.0).withUpdateFreqHz(0);
   private final double positionCoefficient;
+  private final MechanismDefinition.KrakenFeatureConfig krakenFeatures;
   private boolean useMotionMagic;
   private double lastMotionMagicCruise = Double.NaN;
   private double lastMotionMagicAccel = Double.NaN;
@@ -62,7 +70,8 @@ public class MechanismArmIOKraken implements MechanismArmIO {
         canBus,
         0.0,
         0.0,
-        0.0);
+        0.0,
+        new MechanismDefinition.KrakenFeatureConfig(true, true, false, 0, false));
   }
 
   public MechanismArmIOKraken(
@@ -77,7 +86,39 @@ public class MechanismArmIOKraken implements MechanismArmIO {
       double motionMagicCruiseVelocity,
       double motionMagicAcceleration,
       double motionMagicJerk) {
+    this(
+        ids,
+        currentLimitAmps,
+        brake,
+        forwardSoftLimit,
+        reverseSoftLimit,
+        positionCoefficient,
+        inverted,
+        canBus,
+        motionMagicCruiseVelocity,
+        motionMagicAcceleration,
+        motionMagicJerk,
+        new MechanismDefinition.KrakenFeatureConfig(true, true, false, 0, false));
+  }
+
+  public MechanismArmIOKraken(
+      int[] ids,
+      int currentLimitAmps,
+      boolean brake,
+      double forwardSoftLimit,
+      double reverseSoftLimit,
+      double positionCoefficient,
+      boolean[] inverted,
+      CANBus canBus,
+      double motionMagicCruiseVelocity,
+      double motionMagicAcceleration,
+      double motionMagicJerk,
+      MechanismDefinition.KrakenFeatureConfig krakenFeatures) {
     this.positionCoefficient = positionCoefficient;
+    this.krakenFeatures =
+        krakenFeatures != null
+            ? krakenFeatures
+            : MechanismDefinition.KrakenFeatureConfig.disabled();
     this.useMotionMagic = false;
 
     motors = new TalonFX[ids.length];
@@ -94,6 +135,7 @@ public class MechanismArmIOKraken implements MechanismArmIO {
     config.TorqueCurrent.PeakForwardTorqueCurrent = currentLimitAmps;
     config.TorqueCurrent.PeakReverseTorqueCurrent = -currentLimitAmps;
     config.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.02;
+    config.ClosedLoopRamps.VoltageClosedLoopRampPeriod = 0.02;
     config.Slot0.kP = 0.0;
     config.Slot0.kI = 0.0;
     config.Slot0.kD = 0.0;
@@ -134,6 +176,20 @@ public class MechanismArmIOKraken implements MechanismArmIO {
     supplyCurrentSignal = leader.getSupplyCurrent();
     torqueCurrentSignal = leader.getTorqueCurrent();
     tempSignal = leader.getDeviceTemp();
+
+    if (this.krakenFeatures.statusSignalHz() > 0) {
+      BaseStatusSignal.setUpdateFrequencyForAll(
+          this.krakenFeatures.statusSignalHz(),
+          positionSignal,
+          velocitySignal,
+          appliedVoltageSignal,
+          supplyCurrentSignal,
+          torqueCurrentSignal,
+          tempSignal);
+      for (TalonFX motor : motors) {
+        motor.optimizeBusUtilization();
+      }
+    }
   }
 
   @Override
@@ -187,9 +243,17 @@ public class MechanismArmIOKraken implements MechanismArmIO {
       lastKG = kG;
     }
     if (useMotionMagic) {
-      leader.setControl(motionMagicRequest.withPosition(position / positionCoefficient));
+      if (krakenFeatures.enabled() && krakenFeatures.useFoc()) {
+        leader.setControl(motionMagicRequest.withPosition(position / positionCoefficient));
+      } else {
+        leader.setControl(motionMagicVoltageRequest.withPosition(position / positionCoefficient));
+      }
     } else {
-      leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
+      if (krakenFeatures.enabled() && krakenFeatures.useFoc()) {
+        leader.setControl(positionTorqueRequest.withPosition(position / positionCoefficient));
+      } else {
+        leader.setControl(positionVoltageRequest.withPosition(position / positionCoefficient));
+      }
     }
   }
 

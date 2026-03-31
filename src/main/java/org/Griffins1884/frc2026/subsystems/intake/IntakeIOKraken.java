@@ -10,6 +10,8 @@ public class IntakeIOKraken extends MechanismRollerIOKraken implements IntakeIO 
         IntakeConstants.INTAKE_INVERTED,
         IntakeConstants.BRAKE_MODE,
         IntakeConstants.REDUCTION,
-        IntakeConstants.CAN_BUS);
+        IntakeConstants.CAN_BUS,
+        0.02,
+        IntakeConstants.KRAKEN_FEATURES);
   }
 }

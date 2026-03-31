@@ -51,7 +51,7 @@
 - roboRIO runtime saved data lives in `/home/lvuser/operatorboard-data`.
 - Deploy-seeded defaults live in `src/main/deploy/operatorboard/default-data/`.
 - PathPlanA autos are preserved across deploys through the `deployPreserve` workflow.
-- The operator board now exposes a joystick-mapping tab, a subsystem/state description tab, and diagnostic bundle export endpoints.
+- The operator board exposes subsystem/state descriptions and diagnostic bundle export endpoints.
 
 See `docs/PERSISTENCE_ARCHITECTURE.md` for the full file inventory, sync rules, and conflict policy.
 

@@ -7,11 +7,13 @@ import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
+import com.ctre.phoenix6.controls.PositionVoltage;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.util.Units;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 
 public class MechanismTurretIOKraken implements MechanismTurretIO {
   private static final double TICKS_PER_ROTATION = 2048.0;
@@ -20,7 +22,10 @@ public class MechanismTurretIOKraken implements MechanismTurretIO {
   private final VoltageOut voltageRequest = new VoltageOut(0.0);
   private final PositionTorqueCurrentFOC positionRequest =
       new PositionTorqueCurrentFOC(0.0).withUpdateFreqHz(0);
+  private final PositionVoltage positionVoltageRequest =
+      new PositionVoltage(0.0).withUpdateFreqHz(0);
   private final double gearRatio;
+  private final MechanismDefinition.KrakenFeatureConfig krakenFeatures;
   private double lastKP = Double.NaN;
   private double lastKI = Double.NaN;
   private double lastKD = Double.NaN;
@@ -35,7 +40,14 @@ public class MechanismTurretIOKraken implements MechanismTurretIO {
 
   public MechanismTurretIOKraken(
       int id, int currentLimitAmps, boolean invert, boolean brake, double gearRatio) {
-    this(id, currentLimitAmps, invert, brake, gearRatio, new CANBus("rio"));
+    this(
+        id,
+        currentLimitAmps,
+        invert,
+        brake,
+        gearRatio,
+        new CANBus("rio"),
+        new MechanismDefinition.KrakenFeatureConfig(true, true, false, 0, false));
   }
 
   public MechanismTurretIOKraken(
@@ -45,7 +57,29 @@ public class MechanismTurretIOKraken implements MechanismTurretIO {
       boolean brake,
       double gearRatio,
       CANBus canBus) {
+    this(
+        id,
+        currentLimitAmps,
+        invert,
+        brake,
+        gearRatio,
+        canBus,
+        new MechanismDefinition.KrakenFeatureConfig(true, true, false, 0, false));
+  }
+
+  public MechanismTurretIOKraken(
+      int id,
+      int currentLimitAmps,
+      boolean invert,
+      boolean brake,
+      double gearRatio,
+      CANBus canBus,
+      MechanismDefinition.KrakenFeatureConfig krakenFeatures) {
     this.gearRatio = gearRatio;
+    this.krakenFeatures =
+        krakenFeatures != null
+            ? krakenFeatures
+            : MechanismDefinition.KrakenFeatureConfig.disabled();
     motor = new TalonFX(id, canBus);
 
     config.MotorOutput.NeutralMode = brake ? NeutralModeValue.Brake : NeutralModeValue.Coast;
@@ -58,6 +92,7 @@ public class MechanismTurretIOKraken implements MechanismTurretIO {
     config.TorqueCurrent.PeakForwardTorqueCurrent = currentLimitAmps;
     config.TorqueCurrent.PeakReverseTorqueCurrent = -currentLimitAmps;
     config.ClosedLoopRamps.TorqueClosedLoopRampPeriod = 0.02;
+    config.ClosedLoopRamps.VoltageClosedLoopRampPeriod = 0.02;
     config.Slot0.kP = 0.0;
     config.Slot0.kI = 0.0;
     config.Slot0.kD = 0.0;
@@ -73,6 +108,18 @@ public class MechanismTurretIOKraken implements MechanismTurretIO {
     supplyCurrentSignal = motor.getSupplyCurrent();
     torqueCurrentSignal = motor.getTorqueCurrent();
     tempSignal = motor.getDeviceTemp();
+
+    if (this.krakenFeatures.statusSignalHz() > 0) {
+      BaseStatusSignal.setUpdateFrequencyForAll(
+          this.krakenFeatures.statusSignalHz(),
+          positionSignal,
+          velocitySignal,
+          appliedVoltageSignal,
+          supplyCurrentSignal,
+          torqueCurrentSignal,
+          tempSignal);
+      motor.optimizeBusUtilization();
+    }
   }
 
   @Override
@@ -130,7 +177,11 @@ public class MechanismTurretIOKraken implements MechanismTurretIO {
     }
     double positionRotations = (positionRad / (2.0 * Math.PI)) * gearRatio;
     lastPositionSetpointRotations = positionRotations;
-    motor.setControl(positionRequest.withPosition(positionRotations));
+    if (krakenFeatures.enabled() && krakenFeatures.useFoc()) {
+      motor.setControl(positionRequest.withPosition(positionRotations));
+    } else {
+      motor.setControl(positionVoltageRequest.withPosition(positionRotations));
+    }
   }
 
   @Override

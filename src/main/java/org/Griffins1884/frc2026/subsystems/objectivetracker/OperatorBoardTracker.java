@@ -70,7 +70,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   private String lastRuntimeProfileSpecJson =
       RuntimeProfileCodec.toJson(RuntimeModeManager.getActiveProfile());
   private String lastRuntimeProfileStatus = "READY";
-  private String lastJoystickMappingsJson = "{}";
   private String lastSubsystemDescriptionsJson = "{}";
   private OperatorBoardDiagnosticBundleWriter.OperatorBoardDiagnosticSnapshot
       lastDiagnosticSnapshot;
@@ -126,7 +125,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     this.persistence = new OperatorBoardPersistence();
     this.persistence.initialize();
     this.diagnosticBundleWriter = new OperatorBoardDiagnosticBundleWriter(persistence);
-    this.lastJoystickMappingsJson = writeJson(persistence.readJoystickMappings());
     this.lastSubsystemDescriptionsJson = writeJson(persistence.readSubsystemDescriptions());
     this.spotLibrary = new RebuiltSpotLibrary();
     this.autoQueue =
@@ -635,7 +633,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         runtimeProfileStateJson,
         selectedAutoStateJson,
         autoQueueStateJson,
-        lastJoystickMappingsJson,
         lastSubsystemDescriptionsJson);
   }
 
@@ -1350,7 +1347,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       server.createContext("/planner-autos", new PlannerAutosHandler());
       server.createContext("/music-upload", new MusicUploadHandler());
       server.createContext("/api/storage/inventory", new StorageInventoryHandler());
-      server.createContext("/api/joystick-mappings", new JoystickMappingsHandler());
       server.createContext("/api/subsystem-descriptions", new SubsystemDescriptionsHandler());
       server.createContext("/api/diagnostics/latest", new LatestDiagnosticHandler());
       server.createContext("/api/diagnostics/export", new DiagnosticExportHandler());
@@ -1465,33 +1461,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
           return;
         }
         sendJson(exchange, 200, persistence.buildStorageInventory());
-      }
-    }
-
-    private final class JoystickMappingsHandler implements HttpHandler {
-      @Override
-      public void handle(HttpExchange exchange) throws IOException {
-        if ("GET".equalsIgnoreCase(exchange.getRequestMethod())) {
-          sendJson(exchange, 200, persistence.readJoystickMappings());
-          return;
-        }
-        if (!"PUT".equalsIgnoreCase(exchange.getRequestMethod())
-            && !"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
-          exchange.sendResponseHeaders(405, -1);
-          return;
-        }
-        try {
-          OperatorBoardDataModels.JoystickMappingsDocument request =
-              OperatorBoardPersistence.JSON.readValue(
-                  exchange.getRequestBody(),
-                  OperatorBoardDataModels.JoystickMappingsDocument.class);
-          OperatorBoardDataModels.JoystickMappingsDocument saved =
-              persistence.saveJoystickMappings(request);
-          lastJoystickMappingsJson = writeJson(saved);
-          sendJson(exchange, 200, saved);
-        } catch (IOException ex) {
-          sendText(exchange, 400, "Invalid joystick mapping payload");
-        }
       }
     }
 

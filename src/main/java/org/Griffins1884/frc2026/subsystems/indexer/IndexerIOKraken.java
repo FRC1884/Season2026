@@ -10,6 +10,8 @@ public class IndexerIOKraken extends MechanismRollerIOKraken implements IndexerI
         IndexerConstants.INDEXER_INVERTED,
         IndexerConstants.BRAKE_MODE,
         IndexerConstants.REDUCTION,
-        IndexerConstants.CAN_BUS);
+        IndexerConstants.CAN_BUS,
+        0.02,
+        IndexerConstants.KRAKEN_FEATURES);
   }
 }

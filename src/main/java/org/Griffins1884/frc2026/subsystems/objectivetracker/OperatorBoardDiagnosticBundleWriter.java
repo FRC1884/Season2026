@@ -69,13 +69,11 @@ public final class OperatorBoardDiagnosticBundleWriter {
               snapshot.runtimeProfile(),
               snapshot.selectedAuto(),
               snapshot.autoQueue(),
-              snapshot.joystickProfile(),
               snapshot.subsystemDescriptions()));
       writeRawJson(bundleDir.resolve("networktables_snapshot.json"), snapshot.ntDiagnostics());
       writeRawJson(bundleDir.resolve("subsystems.json"), snapshot.mechanismStatus());
       writeRawJson(bundleDir.resolve("alerts.json"), snapshot.systemCheck());
       writeRawJson(bundleDir.resolve("auto_context.json"), snapshot.autoCheck());
-      writeRawJson(bundleDir.resolve("joystick_profile.json"), snapshot.joystickProfile());
       writeRawJson(
           bundleDir.resolve("subsystem_descriptions.json"), snapshot.subsystemDescriptions());
       Files.writeString(
@@ -89,7 +87,6 @@ public final class OperatorBoardDiagnosticBundleWriter {
               "subsystems.json",
               "alerts.json",
               "auto_context.json",
-              "joystick_profile.json",
               "subsystem_descriptions.json",
               "report.md");
       OperatorBoardDataModels.DiagnosticBundleManifest manifest =
@@ -146,8 +143,6 @@ public final class OperatorBoardDiagnosticBundleWriter {
     lines.add(
         "- Compare `networktables_snapshot.json` against expected mode, queue, and health state.");
     lines.add(
-        "- Use `joystick_profile.json` to confirm the active controller mapping during the check.");
-    lines.add(
         "- Use `subsystem_descriptions.json` to compare expected subsystem motion with the observed report.");
     return String.join("\n", lines);
   }
@@ -168,7 +163,6 @@ public final class OperatorBoardDiagnosticBundleWriter {
       String runtimeProfile,
       String selectedAuto,
       String autoQueue,
-      String joystickProfile,
       String subsystemDescriptions) {
 
     public String fingerprint() {
@@ -189,7 +183,6 @@ public final class OperatorBoardDiagnosticBundleWriter {
           normalize(runtimeProfile),
           normalize(selectedAuto),
           normalize(autoQueue),
-          normalize(joystickProfile),
           normalize(subsystemDescriptions));
     }
 

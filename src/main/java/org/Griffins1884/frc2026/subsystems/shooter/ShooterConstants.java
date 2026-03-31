@@ -2,7 +2,7 @@ package org.Griffins1884.frc2026.subsystems.shooter;
 
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
-import org.Griffins1884.frc2026.mechanisms.rollers.MechanismRollerIOKraken;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class ShooterConstants {
@@ -17,8 +17,8 @@ public final class ShooterConstants {
   public static final boolean[] SHOOTER_INVERTED = {false, true};
   public static final int CURRENT_LIMIT_AMPS = 40;
   public static final double CLOSED_LOOP_RAMP_SECONDS = 0.01;
-  public static final MechanismRollerIOKraken.VelocityControlRequest VELOCITY_CONTROL_REQUEST =
-      MechanismRollerIOKraken.VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC;
+  public static final MechanismDefinition.KrakenFeatureConfig KRAKEN_FEATURES =
+      new MechanismDefinition.KrakenFeatureConfig(true, true, true, 100, true);
   public static final boolean BRAKE_MODE = false;
   public static final double REDUCTION = 1.0;
 

@@ -15,6 +15,7 @@ public class IntakePivotIOKraken extends MechanismArmIOKraken implements IntakeP
         IntakePivotConstants.CAN_BUS,
         IntakePivotConstants.MOTION_MAGIC_CRUISE_VEL.get(),
         IntakePivotConstants.MOTION_MAGIC_ACCEL.get(),
-        IntakePivotConstants.MOTION_MAGIC_JERK.get());
+        IntakePivotConstants.MOTION_MAGIC_JERK.get(),
+        IntakePivotConstants.KRAKEN_FEATURES);
   }
 }

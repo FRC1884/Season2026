@@ -2,6 +2,7 @@ package org.Griffins1884.frc2026.subsystems.indexer;
 
 import com.ctre.phoenix6.CANBus;
 import org.Griffins1884.frc2026.GlobalConstants;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 
 public final class IndexerConstants {
@@ -11,6 +12,8 @@ public final class IndexerConstants {
   public static final boolean[] INDEXER_INVERTED = {false};
 
   public static final int CURRENT_LIMIT_AMPS = 40;
+  public static final MechanismDefinition.KrakenFeatureConfig KRAKEN_FEATURES =
+      new MechanismDefinition.KrakenFeatureConfig(true, true, false, 100, true);
   public static final boolean BRAKE_MODE = false;
   public static final double REDUCTION = 1.0;
   public static final double MAX_VOLTAGE = 12.0;

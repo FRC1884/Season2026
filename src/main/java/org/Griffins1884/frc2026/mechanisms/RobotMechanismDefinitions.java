@@ -54,7 +54,7 @@ public final class RobotMechanismDefinitions {
                       0.0,
                       IntakeConstants.VELOCITY_TOLERANCE,
                       IntakeConstants.MAX_VOLTAGE),
-                  MechanismDefinition.KrakenFeatureConfig.disabled()))
+                  IntakeConstants.KRAKEN_FEATURES))
           .telemetry(fullTelemetry())
           .simulation(simulation(IntakeConstants.REDUCTION, 0.0, false))
           .build();
@@ -84,7 +84,7 @@ public final class RobotMechanismDefinitions {
                       0.0,
                       IndexerConstants.VELOCITY_TOLERANCE,
                       IndexerConstants.MAX_VOLTAGE),
-                  MechanismDefinition.KrakenFeatureConfig.disabled()))
+                  IndexerConstants.KRAKEN_FEATURES))
           .telemetry(fullTelemetry())
           .simulation(simulation(IndexerConstants.REDUCTION, 0.0, false))
           .build();
@@ -119,7 +119,7 @@ public final class RobotMechanismDefinitions {
                       0.0,
                       ShooterConstants.VELOCITY_TOLERANCE,
                       ShooterConstants.MAX_VOLTAGE),
-                  new MechanismDefinition.KrakenFeatureConfig(true, true, true, 100, true)))
+                  ShooterConstants.KRAKEN_FEATURES))
           .telemetry(fullTelemetry())
           .simulation(simulation(ShooterConstants.REDUCTION, 0.0, false))
           .build();
@@ -162,7 +162,7 @@ public final class RobotMechanismDefinitions {
                           IntakePivotConstants.MOTION_MAGIC_CRUISE_VEL.get(),
                           IntakePivotConstants.MOTION_MAGIC_ACCEL.get(),
                           IntakePivotConstants.MOTION_MAGIC_JERK.get())),
-                  krakenFeaturesFor(motorController(IntakePivotConstants.MOTOR_CONTROLLER))))
+                  IntakePivotConstants.KRAKEN_FEATURES))
           .telemetry(fullTelemetry())
           .simulation(simulation(IntakePivotConstants.POSITION_COEFFICIENT, 0.0, true))
           .build();
@@ -200,7 +200,7 @@ public final class RobotMechanismDefinitions {
                           ShooterPivotConstants.MOTION_MAGIC_CRUISE_VEL.get(),
                           ShooterPivotConstants.MOTION_MAGIC_ACCEL.get(),
                           ShooterPivotConstants.MOTION_MAGIC_JERK.get())),
-                  krakenFeaturesFor(motorController(ShooterPivotConstants.MOTOR_CONTROLLER))))
+                  ShooterPivotConstants.KRAKEN_FEATURES))
           .telemetry(fullTelemetry())
           .simulation(simulation(ShooterPivotConstants.POSITION_COEFFICIENT, 0.0, true))
           .build();
@@ -243,7 +243,7 @@ public final class RobotMechanismDefinitions {
                           TurretConstants.MAX_VELOCITY_RAD_PER_SEC,
                           TurretConstants.MAX_ACCEL_RAD_PER_SEC2,
                           0.0)),
-                  krakenFeaturesFor(motorController(TurretConstants.MOTOR_CONTROLLER))))
+                  TurretConstants.KRAKEN_FEATURES))
           .telemetry(fullTelemetry())
           .simulation(simulation(TurretConstants.GEAR_RATIO, TurretConstants.SIM_MOI, false))
           .build();
@@ -416,14 +416,6 @@ public final class RobotMechanismDefinitions {
       double reduction, double momentOfInertia, boolean gravityAware) {
     return new MechanismDefinition.SimulationConfig(
         true, reduction, momentOfInertia, gravityAware, true);
-  }
-
-  private static MechanismDefinition.KrakenFeatureConfig krakenFeaturesFor(
-      MechanismDefinition.MotorControllerType controllerType) {
-    if (!controllerType.supportsKrakenExtensions()) {
-      return MechanismDefinition.KrakenFeatureConfig.disabled();
-    }
-    return new MechanismDefinition.KrakenFeatureConfig(true, true, false, 100, true);
   }
 
   private static MechanismDefinition.MotorControllerType motorController(

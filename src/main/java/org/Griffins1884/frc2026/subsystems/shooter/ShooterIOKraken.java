@@ -12,6 +12,6 @@ public class ShooterIOKraken extends MechanismRollerIOKraken implements ShooterI
         ShooterConstants.REDUCTION,
         ShooterConstants.CAN_BUS,
         ShooterConstants.CLOSED_LOOP_RAMP_SECONDS,
-        ShooterConstants.VELOCITY_CONTROL_REQUEST);
+        ShooterConstants.KRAKEN_FEATURES);
   }
 }

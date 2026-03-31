@@ -15,6 +15,7 @@ import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import edu.wpi.first.math.util.Units;
+import org.Griffins1884.frc2026.mechanisms.MechanismDefinition;
 
 public class MechanismRollerIOKraken implements MechanismRollerIO {
   private static final double DEFAULT_CLOSED_LOOP_RAMP_SECONDS = 0.02;
@@ -32,6 +33,7 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
   private final VelocityTorqueCurrentFOC velocityTorqueCurrentRequest =
       new VelocityTorqueCurrentFOC(0.0).withSlot(0).withUpdateFreqHz(0);
   private final VelocityControlRequest velocityControlRequest;
+  private final MechanismDefinition.KrakenFeatureConfig krakenFeatures;
   private int velocityControlSlot = 0;
   private final double reduction;
 
@@ -83,7 +85,7 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
         reduction,
         canBus,
         DEFAULT_CLOSED_LOOP_RAMP_SECONDS,
-        VelocityControlRequest.VELOCITY_VOLTAGE);
+        MechanismDefinition.KrakenFeatureConfig.disabled());
   }
 
   public MechanismRollerIOKraken(
@@ -101,7 +103,7 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
         reduction,
         canBus,
         DEFAULT_CLOSED_LOOP_RAMP_SECONDS,
-        VelocityControlRequest.VELOCITY_VOLTAGE);
+        MechanismDefinition.KrakenFeatureConfig.disabled());
   }
 
   public MechanismRollerIOKraken(
@@ -120,7 +122,28 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
         reduction,
         canBus,
         closedLoopRampPeriodSeconds,
-        VelocityControlRequest.VELOCITY_VOLTAGE);
+        MechanismDefinition.KrakenFeatureConfig.disabled());
+  }
+
+  public MechanismRollerIOKraken(
+      int[] ids,
+      int currentLimitAmps,
+      boolean[] inverted,
+      boolean brake,
+      double reduction,
+      CANBus canBus,
+      double closedLoopRampPeriodSeconds,
+      MechanismDefinition.KrakenFeatureConfig krakenFeatures) {
+    this(
+        ids,
+        currentLimitAmps,
+        inverted,
+        brake,
+        reduction,
+        canBus,
+        closedLoopRampPeriodSeconds,
+        velocityControlRequestFor(krakenFeatures),
+        krakenFeatures);
   }
 
   public MechanismRollerIOKraken(
@@ -132,8 +155,34 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
       CANBus canBus,
       double closedLoopRampPeriodSeconds,
       VelocityControlRequest velocityControlRequest) {
+    this(
+        ids,
+        currentLimitAmps,
+        inverted,
+        brake,
+        reduction,
+        canBus,
+        closedLoopRampPeriodSeconds,
+        velocityControlRequest,
+        krakenFeaturesFor(velocityControlRequest));
+  }
+
+  private MechanismRollerIOKraken(
+      int[] ids,
+      int currentLimitAmps,
+      boolean[] inverted,
+      boolean brake,
+      double reduction,
+      CANBus canBus,
+      double closedLoopRampPeriodSeconds,
+      VelocityControlRequest velocityControlRequest,
+      MechanismDefinition.KrakenFeatureConfig krakenFeatures) {
     this.reduction = reduction;
     this.velocityControlRequest = velocityControlRequest;
+    this.krakenFeatures =
+        krakenFeatures != null
+            ? krakenFeatures
+            : MechanismDefinition.KrakenFeatureConfig.disabled();
 
     motors = new TalonFX[ids.length];
     leader = motors[0] = new TalonFX(ids[0], canBus);
@@ -158,6 +207,20 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
     supplyCurrentSignal = leader.getSupplyCurrent();
     torqueCurrentSignal = leader.getTorqueCurrent();
     tempSignal = leader.getDeviceTemp();
+
+    if (this.krakenFeatures.statusSignalHz() > 0) {
+      BaseStatusSignal.setUpdateFrequencyForAll(
+          this.krakenFeatures.statusSignalHz(),
+          positionSignal,
+          velocitySignal,
+          appliedVoltageSignal,
+          supplyCurrentSignal,
+          torqueCurrentSignal,
+          tempSignal);
+      for (TalonFX motor : motors) {
+        motor.optimizeBusUtilization();
+      }
+    }
   }
 
   @Override
@@ -300,5 +363,22 @@ public class MechanismRollerIOKraken implements MechanismRollerIO {
       return 2;
     }
     return slot;
+  }
+
+  private static VelocityControlRequest velocityControlRequestFor(
+      MechanismDefinition.KrakenFeatureConfig krakenFeatures) {
+    if (krakenFeatures != null
+        && krakenFeatures.enabled()
+        && krakenFeatures.useTorqueCurrentVelocity()) {
+      return VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC;
+    }
+    return VelocityControlRequest.VELOCITY_VOLTAGE;
+  }
+
+  private static MechanismDefinition.KrakenFeatureConfig krakenFeaturesFor(
+      VelocityControlRequest velocityControlRequest) {
+    return velocityControlRequest == VelocityControlRequest.VELOCITY_TORQUE_CURRENT_FOC
+        ? new MechanismDefinition.KrakenFeatureConfig(true, true, true, 0, false)
+        : MechanismDefinition.KrakenFeatureConfig.disabled();
   }
 }
