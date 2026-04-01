@@ -51,9 +51,11 @@ import org.Griffins1884.frc2026.subsystems.turret.TurretIOKraken;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOSim;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.*;
+import org.griffins1884.sim3d.CommandableDriveSimulationAdapter;
+import org.griffins1884.sim3d.DriveSimulationAdapter;
 import org.griffins1884.sim3d.SwerveCorner;
 import org.griffins1884.sim3d.TerrainAwareSwerveSimulation;
-import org.griffins1884.sim3d.maple.MapleSwerveDriveBackend;
+import org.griffins1884.sim3d.integration.DriveSimulationFactories;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.json.simple.parser.ParseException;
@@ -71,7 +73,8 @@ public class RobotContainer {
 
   // Subsystems
   private final SwerveSubsystem drive;
-  private TerrainAwareSwerveSimulation driveSimulation;
+  private CommandableDriveSimulationAdapter driveSimulation;
+  private TerrainAwareSwerveSimulation mapleDriveSimulation;
   private final TurretSubsystem turret;
   private final OperatorBoardTracker operatorBoard;
 
@@ -112,31 +115,38 @@ public class RobotContainer {
                   new ModuleIOFullKraken(BACK_RIGHT));
             case SIM:
               MapleArenaSetup.ensure2026RebuiltArena();
-              // Create a maple-sim swerve drive simulation instance
               this.driveSimulation =
-                  new TerrainAwareSwerveSimulation(
-                      new MapleSwerveDriveBackend(
+                  requireCommandableDriveSimulation(
+                      DriveSimulationFactories.mapleTerrainAware(
                           new SwerveDriveSimulation(
-                              SwerveConstants.MAPLE_SIM_CONFIG,
-                              new Pose2d(3, 3, new Rotation2d()))),
-                      Rebuilt2026FieldModel.contactModel(),
-                      Rebuilt2026FieldModel.CHASSIS_FOOTPRINT,
-                      Rebuilt2026FieldModel.CHASSIS_MASS_PROPERTIES);
+                              SwerveConstants.MAPLE_SIM_CONFIG, new Pose2d(3, 3, new Rotation2d())),
+                          Rebuilt2026FieldModel.contactModel(),
+                          Rebuilt2026FieldModel.CHASSIS_FOOTPRINT,
+                          Rebuilt2026FieldModel.CHASSIS_MASS_PROPERTIES));
+              this.mapleDriveSimulation = requireMapleTerrainAwareSimulation(driveSimulation);
               // Add the simulated drivetrain to the simulation field
               SimulatedArena.getInstance()
-                  .addDriveTrainSimulation(driveSimulation.mapleSimulation());
+                  .addDriveTrainSimulation(mapleDriveSimulation.mapleSimulation());
 
               // Sim robot, instantiate physics sim IO implementations
               yield new SwerveSubsystem(
-                  new GyroIOSim(driveSimulation),
+                  new GyroIOSim(mapleDriveSimulation),
                   new ModuleIOSim(
-                      driveSimulation, SwerveCorner.FRONT_LEFT, driveSimulation.getModules()[0]),
+                      mapleDriveSimulation,
+                      SwerveCorner.FRONT_LEFT,
+                      mapleDriveSimulation.getModules()[0]),
                   new ModuleIOSim(
-                      driveSimulation, SwerveCorner.FRONT_RIGHT, driveSimulation.getModules()[1]),
+                      mapleDriveSimulation,
+                      SwerveCorner.FRONT_RIGHT,
+                      mapleDriveSimulation.getModules()[1]),
                   new ModuleIOSim(
-                      driveSimulation, SwerveCorner.REAR_LEFT, driveSimulation.getModules()[2]),
+                      mapleDriveSimulation,
+                      SwerveCorner.REAR_LEFT,
+                      mapleDriveSimulation.getModules()[2]),
                   new ModuleIOSim(
-                      driveSimulation, SwerveCorner.REAR_RIGHT, driveSimulation.getModules()[3]));
+                      mapleDriveSimulation,
+                      SwerveCorner.REAR_RIGHT,
+                      mapleDriveSimulation.getModules()[3]));
 
             default:
               // Replayed robot, disable IO implementations
@@ -443,10 +453,10 @@ public class RobotContainer {
   }
 
   public void resetSimulationField() {
-    if (MODE != RobotMode.SIM) return;
+    if (MODE != RobotMode.SIM || driveSimulation == null || drive == null) return;
 
-    driveSimulation.setSimulationWorldPose(new Pose2d(3, 3, new Rotation2d()));
-    drive.resetOdometry(driveSimulation.getSimulatedDriveTrainPose());
+    driveSimulation.resetPose(new Pose2d(3, 3, new Rotation2d()));
+    drive.resetOdometry(driveSimulation.getPose2d());
     SimulatedArena.getInstance().resetFieldForAuto();
     robotStateVisualizer.reset();
   }
@@ -496,5 +506,22 @@ public class RobotContainer {
 
   public void periodic() {
     robotStateVisualizer.periodic();
+  }
+
+  private static CommandableDriveSimulationAdapter requireCommandableDriveSimulation(
+      DriveSimulationAdapter driveSimulation) {
+    if (driveSimulation instanceof CommandableDriveSimulationAdapter commandableDriveSimulation) {
+      return commandableDriveSimulation;
+    }
+    throw new IllegalStateException("Selected GriffinSim backend does not expose command hooks.");
+  }
+
+  private static TerrainAwareSwerveSimulation requireMapleTerrainAwareSimulation(
+      DriveSimulationAdapter driveSimulation) {
+    if (driveSimulation instanceof TerrainAwareSwerveSimulation terrainAwareDriveSimulation) {
+      return terrainAwareDriveSimulation;
+    }
+    throw new IllegalStateException(
+        "Current SIM IO wiring still requires the Maple-backed TerrainAwareSwerveSimulation.");
   }
 }
