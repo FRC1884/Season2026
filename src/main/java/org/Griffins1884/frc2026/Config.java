@@ -11,17 +11,20 @@ import org.Griffins1884.frc2026.OI.XboxDriverMap;
 public final class Config {
 
   public static final class Subsystems {
+    private static final boolean DRIVEBASE_ONLY_ROBOT =
+        ROBOT == GlobalConstants.RobotType.DBOT || ROBOT == GlobalConstants.RobotType.ECLAIR;
+
     public static final boolean DRIVETRAIN_ENABLED = true;
     public static final boolean AUTONOMOUS_ENABLED = true;
-    public static final boolean VISION_ENABLED = true;
-    public static final boolean LEDS_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean VISION_ENABLED = ROBOT != GlobalConstants.RobotType.ECLAIR;
+    public static final boolean LEDS_ENABLED = !DRIVEBASE_ONLY_ROBOT;
     public static final boolean WEBUI_ENABLED = true;
-    public static final boolean TURRET_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
-    public static final boolean SHOOTER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
-    public static final boolean SHOOTER_PIVOT_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
-    public static final boolean INTAKE_PIVOT_ENABLED = true;
-    public static final boolean INTAKE_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
-    public static final boolean INDEXER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
+    public static final boolean TURRET_ENABLED = !DRIVEBASE_ONLY_ROBOT;
+    public static final boolean SHOOTER_ENABLED = !DRIVEBASE_ONLY_ROBOT;
+    public static final boolean SHOOTER_PIVOT_ENABLED = !DRIVEBASE_ONLY_ROBOT;
+    public static final boolean INTAKE_PIVOT_ENABLED = !DRIVEBASE_ONLY_ROBOT;
+    public static final boolean INTAKE_ENABLED = !DRIVEBASE_ONLY_ROBOT;
+    public static final boolean INDEXER_ENABLED = !DRIVEBASE_ONLY_ROBOT;
     public static final boolean TOOTH_ROLLOUT_ENABLED = false;
     public static final boolean SPINDEXER_ENABLED = false;
   }
@@ -47,6 +50,7 @@ public final class Config {
     public static final int DRIVER_PORT = 0;
     public static final DriverControllerType COMPBOT_DRIVER = DriverControllerType.PS5_PRO;
     public static final DriverControllerType DBOT_DRIVER = DriverControllerType.PS5_PRO;
+    public static final DriverControllerType ECLAIR_DRIVER = DriverControllerType.PS5_PRO;
     public static final DriverControllerType SIMBOT_DRIVER =
         DriverControllerType.SIM_XBOX_UNIVERSAL;
 
@@ -58,6 +62,7 @@ public final class Config {
       return switch (ROBOT) {
         case COMPBOT -> COMPBOT_DRIVER;
         case DBOT -> DBOT_DRIVER;
+        case ECLAIR -> ECLAIR_DRIVER;
         case SIMBOT -> SIMBOT_DRIVER;
       };
     }

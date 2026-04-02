@@ -43,6 +43,7 @@ public final class GlobalConstants {
   public static enum RobotType {
     COMPBOT,
     DBOT,
+    ECLAIR,
     SIMBOT
   }
 

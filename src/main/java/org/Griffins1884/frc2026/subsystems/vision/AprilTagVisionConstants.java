@@ -28,10 +28,10 @@ public final class AprilTagVisionConstants {
     return IS_LIMELIGHT ? LIMELIGHT_TYPE_HINT : NORTHSTAR_TYPE_HINT;
   }
 
-  public static final boolean LEFT_CAM_ENABLED = true;
+  public static final boolean LEFT_CAM_ENABLED = ROBOT != GlobalConstants.RobotType.ECLAIR;
   public static final VisionIO.CameraConstants LEFT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case COMPBOT, DBOT, SIMBOT ->
+        case COMPBOT, DBOT, ECLAIR, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-left" : "lefttagcam",
                 new Transform3d(
@@ -46,10 +46,10 @@ public final class AprilTagVisionConstants {
       new VisionIO.NorthstarConfig(
           "northstar_0", "http://limelight-left.local:5800/stream.mjpg", 1280, 960, 1, 0, 0.0, 0.0);
 
-  public static final boolean RIGHT_CAM_ENABLED = true;
+  public static final boolean RIGHT_CAM_ENABLED = ROBOT != GlobalConstants.RobotType.ECLAIR;
   public static final VisionIO.CameraConstants RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case COMPBOT, DBOT, SIMBOT ->
+        case COMPBOT, DBOT, ECLAIR, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-right" : "righttagcam",
                 new Transform3d(
@@ -72,10 +72,11 @@ public final class AprilTagVisionConstants {
           0.0);
 
   public static final boolean MIDDLE_RIGHT_CAM_ENABLED =
-      GlobalConstants.ROBOT != GlobalConstants.RobotType.DBOT;
+      GlobalConstants.ROBOT != GlobalConstants.RobotType.DBOT
+          && GlobalConstants.ROBOT != GlobalConstants.RobotType.ECLAIR;
   public static final VisionIO.CameraConstants MIDDLE_RIGHT_CAM_CONSTANTS =
       switch (ROBOT) {
-        case COMPBOT, DBOT, SIMBOT ->
+        case COMPBOT, DBOT, ECLAIR, SIMBOT ->
             new VisionIO.CameraConstants(
                 (IS_LIMELIGHT) ? "limelight-side" : "middlerighttagcam",
                 new Transform3d(

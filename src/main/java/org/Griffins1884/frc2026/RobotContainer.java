@@ -17,9 +17,12 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.util.PPLibTelemetry;
+import com.pathplanner.lib.util.PathPlannerLogging;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -343,6 +346,7 @@ public class RobotContainer {
     // Configure the button bindings
     configureDriverButtonBindings();
     configurePathPlannerAutonomous();
+    configurePathPlannerTelemetry();
 
     superstructure.setAutoStartPoseSupplier(
         operatorBoard != null ? operatorBoard::getQueuedStartPose : Optional::empty);
@@ -392,7 +396,7 @@ public class RobotContainer {
         .shootToggle()
         .onTrue(Commands.runOnce(() -> superstructure.setShootEnabled(true)))
         .onFalse(Commands.runOnce(() -> superstructure.setShootEnabled(false)));
-    if (GlobalConstants.ROBOT != RobotType.DBOT) {
+    if (GlobalConstants.ROBOT != RobotType.DBOT && GlobalConstants.ROBOT != RobotType.ECLAIR) {
       driver
           .intakeRollersHold()
           .onTrue(Commands.runOnce(() -> superstructure.setIntakeRollersHeld(true)))
@@ -415,7 +419,7 @@ public class RobotContainer {
       RobotConfig robotConfig = RobotConfig.fromGUISettings();
       AutoBuilder.configure(
           drive::getPose,
-          drive::resetOdometry,
+          pose -> resetRobotToPose(pose, MODE == RobotMode.SIM),
           drive::getRobotRelativeSpeeds,
           drive::runVelocity,
           new PPHolonomicDriveController(new PIDConstants(5.0), new PIDConstants(5.0)),
@@ -428,6 +432,19 @@ public class RobotContainer {
     }
   }
 
+  private void configurePathPlannerTelemetry() {
+    if (drive == null) {
+      return;
+    }
+
+    PathPlannerLogging.setLogCurrentPoseCallback(
+        pose -> Logger.recordOutput("PathPlanner/CurrentPose", pose));
+    PathPlannerLogging.setLogTargetPoseCallback(
+        pose -> Logger.recordOutput("PathPlanner/TargetPose", pose));
+    PathPlannerLogging.setLogActivePathCallback(
+        poses -> Logger.recordOutput("PathPlanner/ActivePath", poses.toArray(Pose2d[]::new)));
+  }
+
   /**
    * Use this to pass the autonomwous command to the main {@link Robot} class.
    *
@@ -438,6 +455,19 @@ public class RobotContainer {
     Command selected = operatorBoard != null ? operatorBoard.getAutonomousCommand() : null;
     superstructure.setAutonomousHoldEnabled(selected == null);
     return selected;
+  }
+
+  public void applyQueuedAutonomousStartPose() {
+    if (!AUTONOMOUS_ENABLED || drive == null) {
+      return;
+    }
+
+    getQueuedAutonomousStartPose()
+        .ifPresent(
+            pose -> {
+              resetRobotToPose(pose, MODE == RobotMode.SIM);
+              Logger.recordOutput("Autonomous/QueuedStartPoseApplied", pose);
+            });
   }
 
   public Command getCharacterizationCommand() {
@@ -455,10 +485,7 @@ public class RobotContainer {
   public void resetSimulationField() {
     if (MODE != RobotMode.SIM || driveSimulation == null || drive == null) return;
 
-    driveSimulation.resetPose(new Pose2d(3, 3, new Rotation2d()));
-    drive.resetOdometry(driveSimulation.getPose2d());
-    SimulatedArena.getInstance().resetFieldForAuto();
-    robotStateVisualizer.reset();
+    resetRobotToPose(new Pose2d(3, 3, new Rotation2d()), true);
   }
 
   /** Auto-zero gyro/odometry once when disabled and alliance is known. */
@@ -505,7 +532,28 @@ public class RobotContainer {
   }
 
   public void periodic() {
+    if (drive != null && MODE != RobotMode.REPLAY) {
+      PPLibTelemetry.setCurrentPose(drive.getPose());
+    }
     robotStateVisualizer.periodic();
+  }
+
+  private Optional<Pose2d> getQueuedAutonomousStartPose() {
+    return operatorBoard != null ? operatorBoard.getQueuedStartPose() : Optional.empty();
+  }
+
+  private void resetRobotToPose(Pose2d pose, boolean resetSimulationField) {
+    if (drive == null || pose == null) {
+      return;
+    }
+
+    if (resetSimulationField && MODE == RobotMode.SIM && driveSimulation != null) {
+      driveSimulation.resetState(pose, new ChassisSpeeds());
+      SimulatedArena.getInstance().resetFieldForAuto();
+      robotStateVisualizer.reset();
+    }
+
+    drive.resetOdometry(pose, true);
   }
 
   private static CommandableDriveSimulationAdapter requireCommandableDriveSimulation(
