@@ -7,7 +7,7 @@
 - **Operator Board UI** - Lightweight tablet web app served by the robot for state requests and at-a-glance telemetry.
 - **Drive + Turn SysId** - Separate drivetrain and steer characterization routines so pit-side retuning does not require code edits.
 - **State-first subsystems** - AdvantageKit logging, IO abstraction, and command-based verbs are used throughout the robot stack.
-- **Simulation readiness** - GriffinSim and maple-sim support terrain-aware simulation before the full robot is wired.
+- **Simulation runtime** - The active SIM path now uses repo-local deterministic drivetrain physics, terrain response, replay logs, and a socket-backed authoritative engine.
 
 ## Start Here
 
@@ -17,6 +17,39 @@
 - Vision pose acceptance and consumers: [Vision][vision-doc]
 - Persistence and deploy-preserve behavior: [Persistence][persistence-doc]
 - Simulation design docs: [Sim Arch][sim-arch], [Sim Review][sim-review], [CAD Pipeline][sim-cad]
+
+## SIM Architecture And Invariants
+
+- There is exactly one authoritative world state: the local deterministic physics world in active SIM.
+- No secondary or parallel truth sources are allowed for robot, terrain, field, or gamepiece state.
+- Actuator outputs flow only through staged SIM IO into the authoritative world step.
+- SIM IO must never read raw world state directly; it must read staged deterministic sensor outputs.
+- All sensor outputs must come from seeded, latency-aware deterministic pipelines.
+- All randomness must be seeded and reproducible.
+- All ordering must be stable for bodies, contacts, articulated constraints, sensor releases, and replay records.
+- Replay must include all authoritative state required for deterministic diffing.
+- Predictive and visual overlays must never feed back into world stepping, sensors, or replay truth.
+
+## Maintenance Checklist
+
+- Required validation before merging:
+  - `./gradlew test verifyDeterministicShotReplay`
+  - targeted physics tests
+  - targeted sensor and vision tests
+  - targeted replay/transport tests
+- Verify before merging:
+  - determinism hash did not change unexpectedly
+  - no new truth path bypasses the authoritative world
+  - no SIM IO reads raw world state directly
+  - no snapshot fields needed for replay diffing were omitted
+- High-risk files:
+  - `simulation/engine/PhysicsWorld.java`
+  - `simulation/engine/CollisionSystem.java`
+  - `simulation/engine/SequentialImpulseSolver.java`
+  - `simulation/engine/ArticulatedModuleAssembly.java`
+  - `simulation/sensors/LocalSwerveSensorModel.java`
+  - `simulation/contracts/FrameBinaryCodec.java`
+  - `simulation/replay/PhysicsSnapshotFactory.java`
 
 ## Repository Guide
 
@@ -28,7 +61,7 @@
 | Superstructure + mechanisms | `src/main/java/org/Griffins1884/frc2026/subsystems`<br>`src/main/java/org/Griffins1884/frc2026/mechanisms` | Coordinated state machine behavior, reusable mechanism definitions, roller/arm/turret composition. | [Mechanisms][mechanism-doc], [Phase Report][phase-doc] |
 | Operator board + persistence | `src/main/deploy/operatorboard`<br>`operatorboard-data`<br>`src/main/java/org/Griffins1884/frc2026/subsystems/objectivetracker` | Served dashboard assets, persisted requests/state, runtime diagnostics, web-backed operator workflows. | [Persistence][persistence-doc], [NT Audit][nt-doc] |
 | Autonomous + path tooling | `src/main/deploy/pathplanner`<br>`src/main/deploy/choreo`<br>`tools/pathplana_contract` | PathPlanner/Choreo assets, auto definitions, PathPlanA contracts and schema tooling. | [PathPlanA Integration][pathplana-int], [PathPlanA Contract][pathplana-contract] |
-| Simulation | `src/main/java/org/Griffins1884/frc2026/simulation`<br>`docs/simulation` | GriffinSim/maple adapters, replay hooks, visualization, field contact models, sim review flow. | [Sim Arch][sim-arch], [Sim Review][sim-review], [CAD Pipeline][sim-cad], [Field CAD][field-cad-doc] |
+| Simulation | `src/main/java/org/Griffins1884/frc2026/simulation`<br>`docs/simulation` | Local deterministic physics, lockstep/replay tooling, visualization, terrain model, and sim review flow. | [Sim Arch][sim-arch], [Sim Review][sim-review], [CAD Pipeline][sim-cad], [Field CAD][field-cad-doc] |
 | Deploy assets + AdvantageScope | `src/main/deploy/advantagescope`<br>`src/main/deploy/music` | Layouts, robot assets, visualization support files, and deploy-time resources used by tools and demos. | [Architecture][arch], [Performance][performance-doc] |
 | Tests + verification | `src/test/java/org/Griffins1884/frc2026`<br>`config/logging` | Unit/integration coverage for control logic plus logging policy checks wired into Gradle. | [Checklist][checklist], [Performance][performance-doc] |
 | Vendor deps + support tools | `vendordeps`<br>`tools/deploy_preserve`<br>`tools/northstar` | Pinned vendor libraries, deploy-preserve scripts, and camera bring-up tooling. | [Persistence][persistence-doc], [Northstar/Limelight][northstar-doc], [Northstar Tooling][northstar-tool-doc] |
@@ -61,10 +94,34 @@
 2. **Clone** - `git clone https://github.com/frc1884/season2026.git`
 3. **Build** - `./gradlew build`
 4. **Sim** - `./gradlew simulateJava`
-5. **Deploy** - `./gradlew deploy`
-6. **Deploy + preserve saved data** - `./gradlew deployPreserve`
-7. **Operator Board UI** - Browse to `http://<roboRIO>:5805`
-8. **Remote tablets** - Append `?ntHost=<robot-ip>` and optionally `&ntPort=<port>` when hosting the UI elsewhere
+5. **Deterministic replay verification** - `./gradlew verifyDeterministicShotReplay`
+6. **Headless engine server** - `./gradlew runDeterministicShotEngineServer`
+7. **Replay diff** - `./gradlew replayDiff --args="<left-log> <right-log>"`
+8. **Deploy** - `./gradlew deploy`
+9. **Deploy + preserve saved data** - `./gradlew deployPreserve`
+10. **Operator Board UI** - Browse to `http://<roboRIO>:5805`
+11. **Remote tablets** - Append `?ntHost=<robot-ip>` and optionally `&ntPort=<port>` when hosting the UI elsewhere
+
+## Simulation Truth Path
+
+1. Commanded module targets are staged through `ModuleIOSim`.
+2. `RobotContainer.simulationPeriodic()` advances the authoritative local physics world.
+3. Articulated module bodies, wheel-ground forces, field collisions, and gamepieces are solved in one fixed-step world.
+4. Deterministic sensor models stage gyro/module outputs with seeded noise and latency before SIM IO reads them.
+5. Simulated vision samples the same world with fixed cadence, deterministic latency, frustum gating, and occlusion checks.
+6. Replay snapshots and server/tooling snapshots are serialized from the same authoritative world state.
+
+## Authoritative vs Predictive
+
+- Authoritative:
+  - articulated robot world state
+  - field and gamepiece collision state
+  - staged sensor outputs
+  - replay snapshots
+- Predictive only:
+  - shot arc overlays
+  - impact marker overlays
+  - targeting preview overlays
 
 ## Persistent Data
 
@@ -83,8 +140,6 @@ There are way too many people to thank and the list gets longer virtually every 
 Libraries and vendors used here:
 
 - Team 6328 Mechanical Advantage (AdvantageKit, AdvantageScope, URCL)
-- Team 1884 Griffins (GriffinSim)
-- Team 5516 Iron Maple (maple-sim)
 - CTR Electronics (Phoenix)
 - PhotonVision (PhotonVision, PhotonLib)
 - REV Robotics (REVLib)

@@ -1,7 +1,5 @@
 package org.Griffins1884.frc2026.util;
 
-import static edu.wpi.first.units.Units.Seconds;
-
 import com.revrobotics.REVLibError;
 import com.revrobotics.spark.SparkBase;
 import edu.wpi.first.wpilibj.Timer;
@@ -9,7 +7,7 @@ import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
-import org.ironmaple.simulation.SimulatedArena;
+import org.Griffins1884.frc2026.simulation.physics.LocalSwervePhysicsSimulation;
 
 public class SparkUtil {
   /** Stores whether any error was has been detected by other utility methods. */
@@ -52,10 +50,13 @@ public class SparkUtil {
   }
 
   public static double[] getSimulationOdometryTimeStamps() {
-    final double[] odometryTimeStamps = new double[SimulatedArena.getSimulationSubTicksIn1Period()];
+    final double[] odometryTimeStamps =
+        new double[LocalSwervePhysicsSimulation.SUBTICKS_PER_PERIOD];
     for (int i = 0; i < odometryTimeStamps.length; i++) {
       odometryTimeStamps[i] =
-          Timer.getFPGATimestamp() - 0.02 + i * SimulatedArena.getSimulationDt().in(Seconds);
+          Timer.getFPGATimestamp()
+              - LocalSwervePhysicsSimulation.LOOP_PERIOD_SECONDS
+              + ((i + 1) * LocalSwervePhysicsSimulation.SUBTICK_SECONDS);
     }
 
     return odometryTimeStamps;

@@ -1,9 +1,5 @@
 package org.Griffins1884.frc2026.subsystems.swerve;
 
-import static edu.wpi.first.units.Units.KilogramSquareMeters;
-import static edu.wpi.first.units.Units.Kilograms;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.Volts;
 import static java.lang.Math.PI;
 import static org.Griffins1884.frc2026.GlobalConstants.ROBOT;
 
@@ -15,9 +11,6 @@ import edu.wpi.first.math.util.Units;
 import org.Griffins1884.frc2026.GlobalConstants.Gains;
 import org.Griffins1884.frc2026.GlobalConstants.RobotType;
 import org.Griffins1884.frc2026.util.swerve.ModuleLimits;
-import org.ironmaple.simulation.drivesims.COTS;
-import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
-import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
 
 public final class SwerveConstants {
   // Gyro
@@ -270,8 +263,7 @@ public final class SwerveConstants {
   /** Radians per second */
   public static final double MAX_STEERING_VELOCITY = Units.degreesToRadians(1080.0);
 
-  public static final double WHEEL_FRICTION_COEFF = COTS.WHEELS.SLS_PRINTED_WHEELS.cof;
-  private static final double MAPLE_SIM_WHEEL_FRICTION_COEFF = Math.min(WHEEL_FRICTION_COEFF, 1.35);
+  public static final double WHEEL_FRICTION_COEFF = 1.25;
 
   /** Kilograms per square meter */
   public static final double ROBOT_INERTIA = 6.883;
@@ -375,31 +367,6 @@ public final class SwerveConstants {
   // Mechanical Advantage-style module limits (used for FULLKRACKENS)
   public static final ModuleLimits KRAKEN_MODULE_LIMITS_FREE =
       new ModuleLimits(MAX_LINEAR_SPEED, MAX_LINEAR_ACCELERATION, MAX_STEERING_VELOCITY);
-
-  public static final DriveTrainSimulationConfig MAPLE_SIM_CONFIG =
-      new DriveTrainSimulationConfig(
-          Kilograms.of(ROBOT_MASS),
-          Meters.of(BUMPER_LENGTH),
-          Meters.of(BUMPER_WIDTH),
-          Meters.of(WHEEL_BASE),
-          Meters.of(TRACK_WIDTH),
-          switch (GYRO_TYPE) {
-            case PIGEON -> COTS.ofPigeon2();
-            case NAVX -> COTS.ofNav2X();
-            case ADIS -> COTS.ofGenericGyro();
-          },
-          () ->
-              new SwerveModuleSimulationConfig(
-                      DRIVE_GEARBOX,
-                      TURN_GEARBOX,
-                      KRAKEN_DRIVE_GEAR_RATIO,
-                      KRAKEN_ROTATOR_GEAR_RATIO,
-                      Volts.of(0.15),
-                      Volts.of(0.20),
-                      Meters.of(NOMINAL_WHEEL_RADIUS),
-                      KilogramSquareMeters.of(0.03),
-                      MAPLE_SIM_WHEEL_FRICTION_COEFF)
-                  .get());
 
   public static double getWheelRadiusMeters() {
     return SwerveCalibration.getWheelRadiusMeters(NOMINAL_WHEEL_RADIUS);

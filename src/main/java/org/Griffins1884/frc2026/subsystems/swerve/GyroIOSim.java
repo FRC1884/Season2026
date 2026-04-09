@@ -1,35 +1,30 @@
 package org.Griffins1884.frc2026.subsystems.swerve;
 
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-
-import edu.wpi.first.math.util.Units;
-import org.Griffins1884.frc2026.util.SparkUtil;
-import org.griffins1884.sim3d.TerrainAwareSwerveSimulation;
-import org.griffins1884.sim3d.TerrainSample;
+import edu.wpi.first.math.geometry.Rotation2d;
+import org.Griffins1884.frc2026.simulation.physics.LocalSwervePhysicsSimulation;
 
 public class GyroIOSim implements GyroIO {
-  private final TerrainAwareSwerveSimulation simulation;
+  private final LocalSwervePhysicsSimulation simulation;
 
-  public GyroIOSim(TerrainAwareSwerveSimulation simulation) {
+  public GyroIOSim(LocalSwervePhysicsSimulation simulation) {
     this.simulation = simulation;
   }
 
   @Override
   public void updateInputs(GyroIOInputs inputs) {
-    TerrainSample terrainSample = simulation.getTerrainSample();
     inputs.connected = true;
-    inputs.yawPosition = simulation.getGyroSimulation().getGyroReading();
-    inputs.pitchPosition =
-        edu.wpi.first.math.geometry.Rotation2d.fromRadians(terrainSample.pitchRadians());
-    inputs.rollPosition =
-        edu.wpi.first.math.geometry.Rotation2d.fromRadians(terrainSample.rollRadians());
-    inputs.yawVelocityRadPerSec =
-        Units.degreesToRadians(
-            simulation.getGyroSimulation().getMeasuredAngularVelocity().in(RadiansPerSecond));
+    inputs.yawPosition = simulation.getYawRotation();
+    inputs.pitchPosition = simulation.getPitchRotation();
+    inputs.rollPosition = simulation.getRollRotation();
+    inputs.yawVelocityRadPerSec = simulation.getYawRateRadPerSec();
     inputs.pitchVelocityRadPerSec = simulation.getPitchRateRadPerSec();
     inputs.rollVelocityRadPerSec = simulation.getRollRateRadPerSec();
+    inputs.odometryYawTimestamps = simulation.getCachedTimestamps();
+    inputs.odometryYawPositions = simulation.getCachedYawPositions();
+  }
 
-    inputs.odometryYawTimestamps = SparkUtil.getSimulationOdometryTimeStamps();
-    inputs.odometryYawPositions = simulation.getGyroSimulation().getCachedGyroReadings();
+  @Override
+  public void resetYaw(double yawDegrees) {
+    simulation.resetYaw(Rotation2d.fromDegrees(yawDegrees));
   }
 }

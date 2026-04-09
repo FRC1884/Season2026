@@ -113,6 +113,26 @@ tasks.register("exportShotSweep", JavaExec) {
     args "--output-dir", "${buildDir}/reports/ballistics"
 }
 
+tasks.register("verifyDeterministicShotReplay") {
+    group = "verification"
+    description = "Runs the local deterministic replay verifier for the reconstructed simulation contract."
+    dependsOn(tasks.named("test"))
+}
+
+tasks.register("runDeterministicShotEngineServer", JavaExec) {
+    group = "simulation"
+    description = "Starts the socket-backed deterministic shot engine server."
+    mainClass = "org.Griffins1884.frc2026.simulation.apps.DeterministicShotEngineServerMain"
+    classpath = sourceSets.main.runtimeClasspath
+}
+
+tasks.register("replayDiff", JavaExec) {
+    group = "verification"
+    description = "Compares two deterministic replay logs."
+    mainClass = "org.Griffins1884.frc2026.simulation.apps.ReplayDiffMain"
+    classpath = sourceSets.main.runtimeClasspath
+}
+
 // Defining my dependencies. In this case, WPILib (+ friends), and vendor libraries.
 // Also defines JUnit 4.
 dependencies {

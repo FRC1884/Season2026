@@ -10,6 +10,7 @@ import org.Griffins1884.frc2026.GlobalConstants;
 import org.Griffins1884.frc2026.GlobalConstants.RobotMode;
 import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.simulation.maple.Rebuilt2026FieldModel;
+import org.Griffins1884.frc2026.simulation.physics.LocalSwervePhysicsSimulation;
 import org.Griffins1884.frc2026.simulation.replay.ShotReviewEvents;
 import org.Griffins1884.frc2026.simulation.shooter.ProjectileManager;
 import org.Griffins1884.frc2026.simulation.shooter.ShotReleaseDetector;
@@ -30,6 +31,7 @@ public final class RobotStateVisualizer {
   private final SwerveSubsystem drive;
   private final TurretSubsystem turret;
   private final Superstructure superstructure;
+  private final LocalSwervePhysicsSimulation driveSimulation;
   private final ShotSimulationConfig shotSimulationConfig = ShotSimulationConfig.defaultConfig();
   private final ShotSimulator shotSimulator = new ShotSimulator(shotSimulationConfig);
   private final ProjectileManager projectileManager =
@@ -39,10 +41,14 @@ public final class RobotStateVisualizer {
   private final ShotReviewEvents shotReviewEvents = new ShotReviewEvents();
 
   public RobotStateVisualizer(
-      SwerveSubsystem drive, TurretSubsystem turret, Superstructure superstructure) {
+      SwerveSubsystem drive,
+      TurretSubsystem turret,
+      Superstructure superstructure,
+      LocalSwervePhysicsSimulation driveSimulation) {
     this.drive = drive;
     this.turret = turret;
     this.superstructure = superstructure;
+    this.driveSimulation = driveSimulation;
   }
 
   public void periodic() {
@@ -62,9 +68,11 @@ public final class RobotStateVisualizer {
 
     boolean simTerrainEnabled = GlobalConstants.MODE == RobotMode.SIM;
     Pose3d robotPose3d =
-        simTerrainEnabled
-            ? Rebuilt2026FieldModel.terrainAdjustedRobotPose(robotPose)
-            : new Pose3d(robotPose);
+        simTerrainEnabled && driveSimulation != null
+            ? driveSimulation.getPose3d()
+            : simTerrainEnabled
+                ? Rebuilt2026FieldModel.terrainAdjustedRobotPose(robotPose)
+                : new Pose3d(robotPose);
     Pose3d shooterExitPose3d =
         ShooterComponentPublisher.createExitPose(
             robotPose3d, turretYaw, shooterPivotRotations, shotSimulationConfig);
@@ -92,12 +100,23 @@ public final class RobotStateVisualizer {
     Logger.recordOutput(
         "FieldSimulation/BumpHeightMeters",
         simTerrainEnabled
-            ? Rebuilt2026FieldModel.bumpHeightMeters(robotPose.getTranslation())
+            ? (driveSimulation != null
+                ? driveSimulation.getHeightMeters()
+                : Rebuilt2026FieldModel.bumpHeightMeters(robotPose.getTranslation()))
             : 0.0);
     Logger.recordOutput(
         "FieldSimulation/BumpPitchRadians",
         simTerrainEnabled
-            ? Rebuilt2026FieldModel.bumpPitchRadians(robotPose.getTranslation())
+            ? (driveSimulation != null
+                ? driveSimulation.getPitchRadians()
+                : Rebuilt2026FieldModel.bumpPitchRadians(robotPose.getTranslation()))
+            : 0.0);
+    Logger.recordOutput(
+        "FieldSimulation/BumpRollRadians",
+        simTerrainEnabled
+            ? (driveSimulation != null
+                ? driveSimulation.getRollRadians()
+                : Rebuilt2026FieldModel.bumpRollRadians(robotPose.getTranslation()))
             : 0.0);
 
     SimulatedShot predictedShot = null;
@@ -161,15 +180,37 @@ public final class RobotStateVisualizer {
                   || outcome.state() == SuperState.FERRYING);
       released = shotReleaseDetector.update(armed);
       if (released) {
-        projectileManager.spawn(predictedShot);
+        if (driveSimulation != null && predictedShot != null) {
+          driveSimulation.spawnGamePiece(
+              predictedShot.releasePose(),
+              new org.Griffins1884.frc2026.simulation.engine.PhysicsMath.Vec3(
+                  predictedShot.initialVelocityMetersPerSecond().getX(),
+                  predictedShot.initialVelocityMetersPerSecond().getY(),
+                  predictedShot.initialVelocityMetersPerSecond().getZ()));
+        } else {
+          projectileManager.spawn(predictedShot);
+        }
       }
     }
 
-    projectileManager.update(AlignConstants.LOOP_PERIOD_SEC);
-    gamePiecePublisher.publishActiveProjectiles(projectileManager.activeProjectilePoses());
+    if (driveSimulation != null) {
+      gamePiecePublisher.publishActiveProjectiles(
+          driveSimulation.getGamePiecePoses().toArray(Pose3d[]::new));
+    } else {
+      projectileManager.update(AlignConstants.LOOP_PERIOD_SEC);
+      gamePiecePublisher.publishActiveProjectiles(projectileManager.activeProjectilePoses());
+    }
     shotReviewEvents.recordShotRelease(released);
-    Logger.recordOutput("FieldSimulation/ProjectileCount", projectileManager.activeCount());
-    Logger.recordOutput("FieldSimulation/ProjectileSpawnCount", projectileManager.spawnedCount());
+    Logger.recordOutput(
+        "FieldSimulation/ProjectileCount",
+        driveSimulation != null
+            ? driveSimulation.getGamePiecePoses().size()
+            : projectileManager.activeCount());
+    Logger.recordOutput(
+        "FieldSimulation/ProjectileSpawnCount",
+        driveSimulation != null
+            ? driveSimulation.getGamePiecePoses().size()
+            : projectileManager.spawnedCount());
   }
 
   public void reset() {

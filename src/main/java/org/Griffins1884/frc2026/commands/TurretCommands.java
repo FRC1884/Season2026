@@ -2,7 +2,6 @@ package org.Griffins1884.frc2026.commands;
 
 import static org.Griffins1884.frc2026.commands.AlignConstants.TurretAutoAim.*;
 import static org.Griffins1884.frc2026.commands.ShooterCommands.getShooterRpm;
-import static org.ironmaple.simulation.gamepieces.GamePieceProjectile.GRAVITY;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -21,6 +20,8 @@ import org.Griffins1884.frc2026.util.TurretUtil;
 import org.littletonrobotics.junction.Logger;
 
 public final class TurretCommands {
+  private static final double PROJECTILE_GRAVITY_METERS_PER_SECOND_SQUARED = 9.80665;
+
   private TurretCommands() {}
 
   public static Command turretToZero(TurretSubsystem turret) {
@@ -198,7 +199,7 @@ public final class TurretCommands {
     double predictedHeight =
         shooterExitHeightMeters
             + exitVelocity * Math.sin(hoodAngleRad) * timeSeconds
-            - 0.5 * GRAVITY * timeSeconds * timeSeconds;
+            - 0.5 * PROJECTILE_GRAVITY_METERS_PER_SECOND_SQUARED * timeSeconds * timeSeconds;
     double heightError = targetHeightMeters - predictedHeight;
     boolean feasible = !Double.isNaN(timeSeconds) && timeSeconds > 0.0;
     return new ShooterCommands.ShotTimeEstimate(
