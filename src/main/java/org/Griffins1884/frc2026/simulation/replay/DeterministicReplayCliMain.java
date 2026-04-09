@@ -1,5 +1,6 @@
 package org.Griffins1884.frc2026.simulation.replay;
 
+import java.io.PrintWriter;
 import org.Griffins1884.frc2026.simulation.contracts.SimulationProtocolVersion;
 
 /** Command-line entry point for deterministic replay verification. */
@@ -15,10 +16,11 @@ public final class DeterministicReplayCliMain {
     DeterministicReplayVerifier.VerificationResult result =
         DeterministicReplayVerifier.compare(first, second);
 
-    System.out.println("schema=" + SimulationProtocolVersion.SCHEMA_ID);
-    System.out.println("expectedHash=" + result.expectedHash());
-    System.out.println("actualHash=" + result.actualHash());
-    System.out.println("detail=" + result.detail());
+    PrintWriter writer = new PrintWriter(System.out, true);
+    writer.println("schema=" + SimulationProtocolVersion.SCHEMA_ID);
+    writer.println("expectedHash=" + result.expectedHash());
+    writer.println("actualHash=" + result.actualHash());
+    writer.println("detail=" + result.detail());
 
     if (!result.identical()) {
       throw new IllegalStateException(

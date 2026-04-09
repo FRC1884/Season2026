@@ -1,5 +1,6 @@
 package org.Griffins1884.frc2026.simulation.apps;
 
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import org.Griffins1884.frc2026.simulation.runtime.ReplayDiff;
 
@@ -13,9 +14,10 @@ public final class ReplayDiffMain {
     }
     ReplayDiff replayDiff = new ReplayDiff();
     var result = replayDiff.compare(Path.of(args[0]), Path.of(args[1]));
-    System.out.println("expectedHash=" + result.expectedHash());
-    System.out.println("actualHash=" + result.actualHash());
-    System.out.println("detail=" + result.detail());
+    PrintWriter writer = new PrintWriter(System.out, true);
+    writer.println("expectedHash=" + result.expectedHash());
+    writer.println("actualHash=" + result.actualHash());
+    writer.println("detail=" + result.detail());
     if (!result.identical()) {
       throw new IllegalStateException("Replay logs differ: " + result.detail());
     }
