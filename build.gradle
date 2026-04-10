@@ -153,6 +153,298 @@ test {
     systemProperty 'junit.jupiter.extensions.autodetection.enabled', 'true'
 }
 
+tasks.register("bumpJumpRegression") {
+    group = "verification"
+    description = "Runs the aggressive bump-jump simulation and fails if bump physics regresses."
+    dependsOn("simulateJavaRelease")
+
+    doLast {
+        def traceFile = layout.buildDirectory.file("sim-validation/simulatejava-trace.json").get().asFile
+        if (!traceFile.exists()) {
+            throw new GradleException("Missing bump validation trace at ${traceFile}")
+        }
+
+        def json = new groovy.json.JsonSlurper().parse(traceFile)
+        def summary = json.summary
+        if (summary.overallConclusion != "SUPPORTED_DYNAMIC_CLIMB_ONLY") {
+            throw new GradleException("Expected SUPPORTED_DYNAMIC_CLIMB_ONLY, got ${summary.overallConclusion}")
+        }
+
+        def variants = [:]
+        summary.variants.each { variant -> variants[variant.name] = variant }
+
+        def requireVariant = { String name ->
+            def variant = variants[name]
+            if (variant == null) {
+                throw new GradleException("Missing bump validation variant '${name}'")
+            }
+            return variant
+        }
+
+        def medium = requireVariant("medium_speed")
+        def high = requireVariant("high_speed")
+        def maxPractical = requireVariant("max_practical")
+        def highFlat = requireVariant("high_speed_flat_control")
+        def maxFlat = requireVariant("max_practical_flat_control")
+
+        def mediumVerdict = medium.jumpVerdict
+        if (mediumVerdict.classification != "SUPPORTED_DYNAMIC_CLIMB"
+                || mediumVerdict.supportLossObserved
+                || mediumVerdict.actualAirborneObserved
+                || mediumVerdict.maxBodyBottomGapMeters != 0.0d
+                || !mediumVerdict.renderedPoseMatchesPhysics) {
+            throw new GradleException("medium_speed regression: expected supported dynamic climb without support loss or gap, got ${mediumVerdict}")
+        }
+
+        def highVerdict = high.jumpVerdict
+        if (highVerdict.classification != "SUPPORTED_DYNAMIC_CLIMB"
+                || highVerdict.supportLossObserved
+                || highVerdict.actualAirborneObserved
+                || highVerdict.maxBodyBottomGapMeters != 0.0d
+                || highVerdict.maxRenderedBodyBottomGapMeters != 0.0d
+                || !highVerdict.renderedPoseMatchesPhysics
+                || highVerdict.peakZMeters <= mediumVerdict.peakZMeters) {
+            throw new GradleException("high_speed regression: expected supported dynamic climb with higher bump rise than medium_speed, got ${highVerdict}")
+        }
+
+        def maxVerdict = maxPractical.jumpVerdict
+        if (maxVerdict.classification != "SUPPORTED_DYNAMIC_CLIMB"
+                || maxVerdict.supportLossObserved
+                || maxVerdict.actualAirborneObserved
+                || maxVerdict.maxBodyBottomGapMeters != 0.0d
+                || maxVerdict.maxRenderedBodyBottomGapMeters != 0.0d
+                || !maxVerdict.renderedPoseMatchesPhysics
+                || maxVerdict.peakZMeters < highVerdict.peakZMeters - 0.01d) {
+            throw new GradleException("max_practical regression: expected supported dynamic climb with peakZ within 1 cm of high_speed or greater, got ${maxVerdict}")
+        }
+
+        [highFlat, maxFlat].each { variant ->
+            def verdict = variant.jumpVerdict
+            if (verdict.classification != "SUPPORTED_DYNAMIC_CLIMB"
+                    || verdict.supportLossObserved
+                    || verdict.actualAirborneObserved
+                    || verdict.maxBodyBottomGapMeters != 0.0d
+                    || !verdict.renderedPoseMatchesPhysics
+                    || verdict.visitedBumpFeature) {
+                throw new GradleException("${variant.name} regression: expected flat-ground control without bump interaction, got ${verdict}")
+            }
+        }
+
+        def trace = json.trace
+        def phaseSamples = { String variantName, String phaseName ->
+            trace.findAll { sample -> sample.variant == variantName && sample.phase == phaseName }
+        }
+        def sampleAtRelativeOffset = { List samples, double offsetSec ->
+            if (samples.isEmpty()) {
+                throw new GradleException("Missing samples for relative offset lookup")
+            }
+            double start = samples.first().elapsedSeconds as double
+            return samples.min { sample -> Math.abs(((sample.elapsedSeconds as double) - start) - offsetSec) }
+        }
+        def averageDriveVolts = { sample ->
+            def modules = sample.modules ?: []
+            if (modules.isEmpty()) {
+                return 0.0d
+            }
+            return modules.collect { module -> module.driveVoltage as double }.sum() / modules.size()
+        }
+        def assertWindowEnvelope = { String bumpName, String flatName ->
+            def bumpApproach = phaseSamples(bumpName, "APPROACH_BUMP")
+            def flatApproach = phaseSamples(flatName, "APPROACH_BUMP")
+            def bumpCoast = phaseSamples(bumpName, "COAST_AFTER_BUMP")
+            def flatCoast = phaseSamples(flatName, "COAST_AFTER_BUMP")
+            if (bumpApproach.isEmpty() || flatApproach.isEmpty() || bumpCoast.isEmpty() || flatCoast.isEmpty()) {
+                throw new GradleException("Missing phase samples for ${bumpName}/${flatName} longitudinal comparison")
+            }
+
+            def bumpEntry = bumpApproach.find { sample -> (sample.terrainFeature ?: "").contains("BUMP") }
+            if (bumpEntry == null) {
+                throw new GradleException("Missing bump-entry sample for ${bumpName}")
+            }
+            double entryOffset = (bumpEntry.elapsedSeconds as double) - (bumpApproach.first().elapsedSeconds as double)
+            def flatEntry = sampleAtRelativeOffset(flatApproach, entryOffset)
+
+            def bumpCrest = bumpApproach.max { sample -> sample.terrainHeightMeters as double }
+            double crestOffset = (bumpCrest.elapsedSeconds as double) - (bumpApproach.first().elapsedSeconds as double)
+            def flatCrest = sampleAtRelativeOffset(flatApproach, crestOffset)
+
+            def bumpPostStart = bumpCoast.first()
+            def flatPostStart = flatCoast.first()
+            def bumpPost020 = sampleAtRelativeOffset(bumpCoast, 0.20d)
+            def flatPost020 = sampleAtRelativeOffset(flatCoast, 0.20d)
+
+            [
+                [label: "entry", bump: bumpEntry, flat: flatEntry],
+                [label: "crest", bump: bumpCrest, flat: flatCrest],
+                [label: "postStart", bump: bumpPostStart, flat: flatPostStart],
+                [label: "post020", bump: bumpPost020, flat: flatPost020],
+            ].each { window ->
+                double bumpSpeed = window.bump.forwardSpeedMetersPerSecond as double
+                double flatSpeed = window.flat.forwardSpeedMetersPerSecond as double
+                double bumpKe = window.bump.translationalKineticEnergyJoules as double
+                double flatKe = window.flat.translationalKineticEnergyJoules as double
+                if (bumpSpeed > flatSpeed + 0.20d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: bump speed ${bumpSpeed} exceeds flat speed ${flatSpeed} by more than 0.20 m/s")
+                }
+                if (bumpSpeed < flatSpeed - 0.35d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: bump speed ${bumpSpeed} is more than 0.35 m/s below flat speed ${flatSpeed}")
+                }
+                if (bumpKe > flatKe + 30.0d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: bump KE ${bumpKe} exceeds flat KE ${flatKe} by more than 30 J")
+                }
+                if (averageDriveVolts(window.bump) > averageDriveVolts(window.flat) + 1.0d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: bump drive volts exceed flat by more than 1 V")
+                }
+            }
+        }
+
+        assertWindowEnvelope("high_speed", "high_speed_flat_control")
+        assertWindowEnvelope("max_practical", "max_practical_flat_control")
+
+        def assertFinite = { String label, Number value, String variantName ->
+            if (value == null || !Double.isFinite(value.doubleValue())) {
+                throw new GradleException("${variantName} has non-finite ${label}: ${value}")
+            }
+        }
+
+        summary.variants.each { variant ->
+            def verdict = variant.jumpVerdict
+            assertFinite("peakZMeters", verdict.peakZMeters, variant.name)
+            assertFinite("zTravelMeters", verdict.zTravelMeters, variant.name)
+            assertFinite("maxBodyBottomGapMeters", verdict.maxBodyBottomGapMeters, variant.name)
+            assertFinite("maxRenderedBodyBottomGapMeters", verdict.maxRenderedBodyBottomGapMeters, variant.name)
+            assertFinite("peakVerticalSpeedMetersPerSecond", verdict.peakVerticalSpeedMetersPerSecond, variant.name)
+            assertFinite("peakVerticalAccelerationMetersPerSecondSq", verdict.peakVerticalAccelerationMetersPerSecondSq, variant.name)
+
+            if (Math.abs(verdict.peakZMeters as double) >= 0.5d) {
+                throw new GradleException("${variant.name} peakZ out of range: ${verdict.peakZMeters}")
+            }
+            if (Math.abs(verdict.peakVerticalSpeedMetersPerSecond as double) >= 5.0d) {
+                throw new GradleException("${variant.name} peak vertical speed out of range: ${verdict.peakVerticalSpeedMetersPerSecond}")
+            }
+            if (Math.abs(verdict.peakVerticalAccelerationMetersPerSecondSq as double) >= 2000.0d) {
+                throw new GradleException("${variant.name} peak vertical acceleration out of range: ${verdict.peakVerticalAccelerationMetersPerSecondSq}")
+            }
+        }
+    }
+}
+
+tasks.register("turningBumpRegression") {
+    group = "verification"
+    description = "Runs the turning-over-bump simulation variants and checks them against matched flat controls."
+    dependsOn("simulateJavaRelease")
+
+    doLast {
+        def traceFile = layout.buildDirectory.file("sim-validation/simulatejava-trace.json").get().asFile
+        if (!traceFile.exists()) {
+            throw new GradleException("Missing turning bump validation trace at ${traceFile}")
+        }
+
+        def json = new groovy.json.JsonSlurper().parse(traceFile)
+        def trace = json.trace
+
+        def phaseSamples = { String variantName, String phaseName ->
+            trace.findAll { sample -> sample.variant == variantName && sample.phase == phaseName }
+        }
+        def sampleAtRelativeOffset = { List samples, double offsetSec ->
+            if (samples.isEmpty()) {
+                throw new GradleException("Missing samples for relative offset lookup")
+            }
+            double start = samples.first().elapsedSeconds as double
+            return samples.min { sample -> Math.abs(((sample.elapsedSeconds as double) - start) - offsetSec) }
+        }
+        def turningPairs = [
+            [
+                "turn_moderate",
+                "turn_moderate_flat_control"
+            ],
+            [
+                "turn_aggressive",
+                "turn_aggressive_flat_control"
+            ],
+            [
+                "diagonal_turn",
+                "diagonal_turn_flat_control"
+            ],
+        ]
+
+        turningPairs.each { pair ->
+            String bumpName = pair[0]
+            String flatName = pair[1]
+            def bumpApproach = phaseSamples(bumpName, "APPROACH_BUMP")
+            def flatApproach = phaseSamples(flatName, "APPROACH_BUMP")
+            def bumpCoast = phaseSamples(bumpName, "COAST_AFTER_BUMP")
+            def flatCoast = phaseSamples(flatName, "COAST_AFTER_BUMP")
+            if (bumpApproach.isEmpty() || flatApproach.isEmpty() || bumpCoast.isEmpty() || flatCoast.isEmpty()) {
+                throw new GradleException("Missing phase samples for ${bumpName}/${flatName}")
+            }
+
+            def bumpContactSamples = bumpApproach.findAll { sample -> (sample.terrainFeature ?: "").contains("BUMP") }
+            if (bumpContactSamples.isEmpty()) {
+                throw new GradleException("${bumpName} never encountered the bump while turning")
+            }
+            if (flatApproach.any { sample -> (sample.terrainFeature ?: "").contains("BUMP") }) {
+                throw new GradleException("${flatName} unexpectedly visited bump terrain")
+            }
+
+            def bumpEntry = bumpContactSamples.first()
+            double entryOffset = (bumpEntry.elapsedSeconds as double) - (bumpApproach.first().elapsedSeconds as double)
+            def flatEntry = sampleAtRelativeOffset(flatApproach, entryOffset)
+
+            def bumpCrest = bumpContactSamples.max { sample -> sample.terrainHeightMeters as double }
+            double crestOffset = (bumpCrest.elapsedSeconds as double) - (bumpApproach.first().elapsedSeconds as double)
+            def flatCrest = sampleAtRelativeOffset(flatApproach, crestOffset)
+
+            def bumpCoastStart = bumpCoast.first()
+            def flatCoastStart = flatCoast.first()
+            def bumpCoast020 = sampleAtRelativeOffset(bumpCoast, 0.20d)
+            def flatCoast020 = sampleAtRelativeOffset(flatCoast, 0.20d)
+
+            [
+                [label: "entry", bump: bumpEntry, flat: flatEntry],
+                [label: "crest", bump: bumpCrest, flat: flatCrest],
+                [label: "coastStart", bump: bumpCoastStart, flat: flatCoastStart],
+                [label: "coast020", bump: bumpCoast020, flat: flatCoast020],
+            ].each { window ->
+                double bumpSpeed = window.bump.forwardSpeedMetersPerSecond as double
+                double flatSpeed = window.flat.forwardSpeedMetersPerSecond as double
+                double bumpYaw = window.bump.yawRateDegreesPerSecond as double
+                double flatYaw = window.flat.yawRateDegreesPerSecond as double
+                double bumpHeading = window.bump.headingRadians as double
+                double flatHeading = window.flat.headingRadians as double
+                double bumpActualModule = window.bump.averageActualModuleSpeedMetersPerSecond as double
+                double flatActualModule = window.flat.averageActualModuleSpeedMetersPerSecond as double
+                double bumpDriveScale = window.bump.averageDriveAuthorityScale as double
+                double flatDriveScale = window.flat.averageDriveAuthorityScale as double
+
+                if (Math.abs(bumpSpeed - flatSpeed) > 0.25d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: speed delta ${bumpSpeed - flatSpeed} exceeds 0.25 m/s")
+                }
+                if (Math.abs(bumpYaw - flatYaw) > 0.20d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: yaw-rate delta ${bumpYaw - flatYaw} exceeds 0.20")
+                }
+                if (Math.abs(bumpHeading - flatHeading) > 0.20d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: heading delta ${bumpHeading - flatHeading} exceeds 0.20 rad")
+                }
+                if (Math.abs(bumpActualModule - flatActualModule) > 0.30d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: module-speed delta ${bumpActualModule - flatActualModule} exceeds 0.30 m/s")
+                }
+                if (bumpDriveScale > flatDriveScale + 0.05d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: bump drive scale exceeds flat by more than 0.05")
+                }
+                if (bumpDriveScale < flatDriveScale - 0.25d) {
+                    throw new GradleException("${bumpName}/${flatName} ${window.label}: bump drive scale is more than 0.25 below flat")
+                }
+            }
+        }
+    }
+}
+
+tasks.named("test") {
+    dependsOn(tasks.named("bumpJumpRegression"))
+    dependsOn(tasks.named("turningBumpRegression"))
+}
+
 def recordOutputAllowlistFile = file("config/logging/recordoutput-allowlist.txt")
 
 tasks.register("checkLoggingPolicy") {
@@ -229,6 +521,79 @@ tasks.named("check") {
 // is the standard WPILib behavior).
 wpi.sim.addGui().defaultEnabled = true
 wpi.sim.addDriverstation()
+def griffinSimNativeExtension = wpi.sim.addDep(
+        "GriffinSim Native HALSIM Extension",
+        "org.griffins1884",
+        "griffinsim-halsim-extension")
+griffinSimNativeExtension.version.set("0.2.0-SNAPSHOT")
+griffinSimNativeExtension.defaultEnabled.set(true)
+
+[
+    "simulateJavaRelease",
+    "simulateJavaDebug"
+].each { simTaskName ->
+    tasks.named(simTaskName) {
+        doFirst {
+            def requestedTasks = gradle.startParameter.taskNames
+            def shotValidationRequested = requestedTasks.any {
+                it == "shotValidation" || it.endsWith(":shotValidation")
+            }
+            def validationMode =
+                    (findProperty("season2026SimValidationMode")
+                    ?: (shotValidationRequested ? "shot" : "bump")).toString()
+            def validationOutputDir =
+                    validationMode == "shot"
+                    ? layout.buildDirectory.dir("shot-validation").get().asFile.absolutePath
+                    : layout.buildDirectory.dir("sim-validation").get().asFile.absolutePath
+            jvmArgs = jvmArgs.findAll {
+                !it.toString().startsWith("-Dseason2026.simValidation.")
+            }
+            jvmArgs += [
+                "-Dseason2026.simValidation.enabled=true",
+                "-Dseason2026.simValidation.mode=${validationMode}",
+                "-Dseason2026.simValidation.outputDir=${validationOutputDir}"
+            ]
+        }
+    }
+}
+
+tasks.register("shotValidation") {
+    group = "verification"
+    description = "Runs unattended shot-arc validation through the real simulateJava release path."
+    dependsOn("simulateJavaRelease")
+
+    doLast {
+        def traceFile = layout.buildDirectory.file("shot-validation/shot-validation-trace.json").get().asFile
+        if (!traceFile.exists()) {
+            throw new GradleException("Missing shot validation trace at ${traceFile}")
+        }
+
+        def json = new groovy.json.JsonSlurper().parse(traceFile)
+        def summary = json.summary
+        if (summary.status != "COMPLETE_PHYSICALLY_BELIEVABLE_AND_SCORING_VALID") {
+            throw new GradleException("Shot validation did not complete cleanly: ${summary}")
+        }
+        json.cases.each { shotCase ->
+            if (!shotCase.completed) {
+                throw new GradleException("Shot case did not complete: ${shotCase.caseName} -> ${shotCase.status}")
+            }
+            def assessment = shotCase.assessment
+            if (!assessment.physicallyBelievable
+                    || !assessment.scoringArcValid
+                    || !assessment.clearsTop
+                    || !assessment.descendsIntoBottom
+                    || !shotCase.shot.predictionFeasible
+                    || !assessment.forwardMonotonic
+                    || !assessment.clearApexThenDescent
+                    || !assessment.gravityPlausible
+                    || !assessment.timeOfFlightPlausible
+                    || !assessment.impactPlausible
+                    || !assessment.noDiscontinuousTrajectory) {
+                throw new GradleException("Shot case failed physical sanity envelopes: ${shotCase.caseName} -> ${assessment}")
+            }
+        }
+    }
+}
 
 // Setting up my Jar File. In this case, adding all libraries into the main jar ('fat jar')
 // in order to make them all available at runtime. Also adding the manifest so WPILib

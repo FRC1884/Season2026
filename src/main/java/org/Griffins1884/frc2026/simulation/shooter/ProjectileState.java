@@ -6,20 +6,39 @@ import edu.wpi.first.math.geometry.Translation3d;
 
 /** Mutable projectile state used for predicted trajectories and live simulated shots. */
 public final class ProjectileState {
+  private final int id;
   private final double spawnTimestampSec;
+  private double ageSeconds;
   private Translation3d positionMeters;
   private Translation3d velocityMetersPerSecond;
   private boolean active;
+  private boolean impacted;
+  private double impactTimestampSec = Double.NaN;
+  private Translation3d impactPositionMeters = null;
+  private Translation3d impactVelocityMetersPerSecond = null;
 
   public ProjectileState(
       Translation3d positionMeters,
       Translation3d velocityMetersPerSecond,
       double spawnTimestampSec) {
+    this(0, positionMeters, velocityMetersPerSecond, spawnTimestampSec);
+  }
+
+  public ProjectileState(
+      int id,
+      Translation3d positionMeters,
+      Translation3d velocityMetersPerSecond,
+      double spawnTimestampSec) {
+    this.id = id;
     this.positionMeters = positionMeters != null ? positionMeters : new Translation3d();
     this.velocityMetersPerSecond =
         velocityMetersPerSecond != null ? velocityMetersPerSecond : new Translation3d();
     this.spawnTimestampSec = spawnTimestampSec;
     active = true;
+  }
+
+  public int id() {
+    return id;
   }
 
   public Translation3d positionMeters() {
@@ -34,8 +53,28 @@ public final class ProjectileState {
     return spawnTimestampSec;
   }
 
+  public double ageSeconds() {
+    return ageSeconds;
+  }
+
   public boolean active() {
     return active;
+  }
+
+  public boolean impacted() {
+    return impacted;
+  }
+
+  public double impactTimestampSec() {
+    return impactTimestampSec;
+  }
+
+  public Translation3d impactPositionMeters() {
+    return impactPositionMeters;
+  }
+
+  public Translation3d impactVelocityMetersPerSecond() {
+    return impactVelocityMetersPerSecond;
   }
 
   public Pose3d pose() {
@@ -47,6 +86,11 @@ public final class ProjectileState {
   }
 
   public void advance(ShotSimulationConfig.PhysicsConfig physics, double dtSeconds) {
+    advance(physics, dtSeconds, Double.NaN);
+  }
+
+  public void advance(
+      ShotSimulationConfig.PhysicsConfig physics, double dtSeconds, double currentTimestampSec) {
     if (!active || physics == null || dtSeconds <= 0.0) {
       return;
     }
@@ -57,8 +101,14 @@ public final class ProjectileState {
             .plus(velocityMetersPerSecond.times(dtSeconds))
             .plus(acceleration.times(0.5 * dtSeconds * dtSeconds));
     velocityMetersPerSecond = velocityMetersPerSecond.plus(acceleration.times(dtSeconds));
+    ageSeconds += dtSeconds;
     if (positionMeters.getZ() <= 0.0 && velocityMetersPerSecond.getZ() <= 0.0) {
       positionMeters = new Translation3d(positionMeters.getX(), positionMeters.getY(), 0.0);
+      impacted = true;
+      impactTimestampSec =
+          Double.isFinite(currentTimestampSec) ? currentTimestampSec + dtSeconds : ageSeconds;
+      impactPositionMeters = positionMeters;
+      impactVelocityMetersPerSecond = velocityMetersPerSecond;
       active = false;
     }
   }

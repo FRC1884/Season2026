@@ -12,7 +12,7 @@ public class MechanismRollerIOSim implements MechanismRollerIO {
   private double appliedVoltage = 0.0;
 
   public MechanismRollerIOSim(DCMotor motorModel, double reduction, double moi) {
-    sim = new DCMotorSim(createDCMotorSystem(motorModel, reduction, moi), motorModel);
+    sim = new DCMotorSim(createDCMotorSystem(motorModel, moi, reduction), motorModel);
   }
 
   @Override

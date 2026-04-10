@@ -38,11 +38,19 @@ public final class ShooterConstants {
   public static final double VELOCITY_TOLERANCE = 100;
   public static final double MAX_VOLTAGE = 12.0;
 
-  public static final double FLYWHEEL_RADIUS_METERS = 0.05;
+  public static final double FLYWHEEL_RADIUS_METERS = 0.0508;
   public static final double FLYWHEEL_GEAR_RATIO = REDUCTION;
+  public static final double SIM_MOI_KG_METERS_SQUARED = 0.02;
   public static final LoggedTunableNumber SLIP_FACTOR =
-      new LoggedTunableNumber("Shooter/SlipFactor", 0.64);
+      new LoggedTunableNumber("Shooter/SlipFactor", 0.83);
   public static final double EXIT_HEIGHT_METERS = 0.587;
   public static final double TARGET_HEIGHT_METERS = GlobalConstants.FieldConstants.Hub.innerHeight;
-  public static final ShotLookupMode SHOT_LOOKUP_MODE = ShotLookupMode.LOOKUP_TABLE;
+  public static final double HUB_TOP_CLEARANCE_HEIGHT_METERS =
+      GlobalConstants.FieldConstants.Hub.height;
+  public static final double HUB_TOP_CLEARANCE_RADIUS_METERS =
+      Math.max(
+          0.0,
+          GlobalConstants.FieldConstants.Hub.topOpeningRadius
+              - GlobalConstants.FieldConstants.Hub.coneClearanceMargin);
+  public static final ShotLookupMode SHOT_LOOKUP_MODE = ShotLookupMode.BALLISTIC_MODEL;
 }

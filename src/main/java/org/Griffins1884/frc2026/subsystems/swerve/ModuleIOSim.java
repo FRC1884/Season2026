@@ -5,20 +5,20 @@ import static org.Griffins1884.frc2026.subsystems.swerve.SwerveConstants.*;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DriverStation;
 import java.util.Arrays;
+import org.Griffins1884.frc2026.simulation.drive.Season2026DriveSimulation;
+import org.Griffins1884.frc2026.simulation.drive.Season2026SwerveCorner;
 import org.Griffins1884.frc2026.util.LoggedTunableNumber;
 import org.Griffins1884.frc2026.util.SparkUtil;
-import org.griffins1884.sim3d.SwerveCorner;
-import org.griffins1884.sim3d.TerrainAwareSwerveSimulation;
-import org.griffins1884.sim3d.TerrainDriveLaws;
 import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
 import org.ironmaple.simulation.motorsims.SimulatedMotorController;
 
 /** Physics sim implementation of module IO. */
 public class ModuleIOSim implements ModuleIO {
   private final SwerveModuleSimulation moduleSimulation;
-  private final TerrainAwareSwerveSimulation terrainSimulation;
-  private final SwerveCorner tractionCorner;
+  private final Season2026DriveSimulation terrainSimulation;
+  private final Season2026SwerveCorner tractionCorner;
   private final SimulatedMotorController.GenericMotorController driveMotor;
   private final SimulatedMotorController.GenericMotorController turnMotor;
 
@@ -32,14 +32,17 @@ public class ModuleIOSim implements ModuleIO {
   private double driveFFVolts = 0.0;
   private double driveAppliedVolts = 0.0;
   private double turnAppliedVolts = 0.0;
+  private double lastDriveAuthorityScale = 1.0;
+  private double lastTurnAuthorityScale = 1.0;
+  private double lastSupportedDriveAuthorityScale = 1.0;
 
   public ModuleIOSim(SwerveModuleSimulation moduleSimulation) {
     this(null, null, moduleSimulation);
   }
 
   public ModuleIOSim(
-      TerrainAwareSwerveSimulation terrainSimulation,
-      SwerveCorner tractionCorner,
+      Season2026DriveSimulation terrainSimulation,
+      Season2026SwerveCorner tractionCorner,
       SwerveModuleSimulation moduleSimulation) {
     this.moduleSimulation = moduleSimulation;
     this.terrainSimulation = terrainSimulation;
@@ -73,20 +76,24 @@ public class ModuleIOSim implements ModuleIO {
         ROTATOR_GAINS.kD());
     // Run closed-loop control
     if (driveClosedLoop) {
+      lastDriveAuthorityScale = tractionDriveScale();
       driveAppliedVolts =
           driveFFVolts
               + driveController.calculate(
                   moduleSimulation.getDriveWheelFinalSpeed().in(RadiansPerSecond));
-      driveAppliedVolts *= tractionDriveScale();
+      driveAppliedVolts *= lastDriveAuthorityScale;
     } else {
       driveController.reset();
+      lastDriveAuthorityScale = 1.0;
     }
     if (turnClosedLoop) {
+      lastTurnAuthorityScale = turnAuthorityScale();
       turnAppliedVolts =
           turnController.calculate(moduleSimulation.getSteerAbsoluteFacing().getRadians())
-              * turnAuthorityScale();
+              * lastTurnAuthorityScale;
     } else {
       turnController.reset();
+      lastTurnAuthorityScale = 1.0;
     }
 
     // Update simulation state
@@ -99,6 +106,7 @@ public class ModuleIOSim implements ModuleIO {
     inputs.driveVelocityRadPerSec = moduleSimulation.getDriveWheelFinalSpeed().in(RadiansPerSecond);
     inputs.driveAppliedVolts = driveAppliedVolts;
     inputs.driveCurrentAmps = Math.abs(moduleSimulation.getDriveMotorStatorCurrent().in(Amps));
+    inputs.terrainDriveAuthorityScale = lastDriveAuthorityScale;
 
     // Update turn inputs
     inputs.turnConnected = true;
@@ -107,6 +115,7 @@ public class ModuleIOSim implements ModuleIO {
         moduleSimulation.getSteerAbsoluteEncoderSpeed().in(RadiansPerSecond);
     inputs.turnAppliedVolts = turnAppliedVolts;
     inputs.turnCurrentAmps = Math.abs(moduleSimulation.getSteerMotorStatorCurrent().in(Amps));
+    inputs.terrainTurnAuthorityScale = lastTurnAuthorityScale;
 
     // Update odometry inputs
     inputs.odometryTimestamps = SparkUtil.getSimulationOdometryTimeStamps();
@@ -145,22 +154,31 @@ public class ModuleIOSim implements ModuleIO {
   }
 
   private double tractionDriveScale() {
+    if (DriverStation.isAutonomousEnabled()) {
+      return 1.0;
+    }
     if (terrainSimulation == null || tractionCorner == null) {
       return 1.0;
     }
-    return TerrainDriveLaws.driveAuthorityScale(
-        terrainSimulation.getTractionState(),
-        tractionCorner,
-        terrainSimulation.getTerrainContactSample());
+    double driveScale = terrainSimulation.driveAuthorityScale(tractionCorner);
+    var supportDiagnostics = terrainSimulation.supportSnapshot();
+    if (supportDiagnostics.supportContactCount() > 0 && driveScale > 1e-6) {
+      lastSupportedDriveAuthorityScale = driveScale;
+      return driveScale;
+    }
+    if (supportDiagnostics.actualAirborne() || supportDiagnostics.supportContactCount() == 0) {
+      return lastSupportedDriveAuthorityScale;
+    }
+    return driveScale;
   }
 
   private double turnAuthorityScale() {
+    if (DriverStation.isAutonomousEnabled()) {
+      return 1.0;
+    }
     if (terrainSimulation == null || tractionCorner == null) {
       return 1.0;
     }
-    return TerrainDriveLaws.steerAuthorityScale(
-        terrainSimulation.getTractionState(),
-        tractionCorner,
-        terrainSimulation.getTerrainContactSample());
+    return terrainSimulation.steerAuthorityScale(tractionCorner);
   }
 }

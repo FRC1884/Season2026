@@ -50,6 +50,8 @@ import org.littletonrobotics.junction.Logger;
 public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable {
   private static final double TELEMETRY_PUBLISH_PERIOD_SEC = 0.05;
   private static final double DISABLED_TELEMETRY_PUBLISH_PERIOD_SEC = 0.10;
+  private static final double HEAVY_TELEMETRY_REFRESH_PERIOD_SEC = 0.25;
+  private static final double HEAVY_TELEMETRY_REFRESH_DISABLED_PERIOD_SEC = 0.50;
   private static final ObjectMapper JSON = new ObjectMapper();
 
   private final OperatorBoardIO io;
@@ -94,6 +96,13 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   private double sampledPublishBytesPerSec = 0.0;
   private double sampledPublishPeakRateHz = 0.0;
   private double sampledPublishPeakBytesPerSec = 0.0;
+  private double lastHeavyTelemetryRefreshTimestampSec = Double.NEGATIVE_INFINITY;
+  private String cachedSystemCheckStateJson = "{}";
+  private String cachedAutoCheckStateJson = "{}";
+  private String cachedAutoQuickRunStateJson = "{}";
+  private String cachedMechanismStatusStateJson = "{}";
+  private String cachedActionTraceStateJson = "{}";
+  private String cachedNtDiagnosticsStateJson = "{}";
 
   public OperatorBoardTracker(OperatorBoardIO io, Superstructure superstructure) {
     this(io, superstructure, null, null, null);
@@ -133,6 +142,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
             Filesystem.getDeployDirectory().toPath().resolve("pathplanner").resolve("autos"));
     this.autoQueue = new RebuiltAutoQueue(spotLibrary, superstructure, drive, deployAutoLibrary);
     this.webServer = maybeStartWebServer();
+    this.cachedActionTraceStateJson = writeJson(lastActionTraceState);
     if (superstructure != null) {
       lastRequestedState = superstructure.getRequestedState().name();
     }
@@ -400,7 +410,8 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
   }
 
   private void publishTelemetry() {
-    rollPublishWindow(Timer.getFPGATimestamp());
+    double nowSec = Timer.getFPGATimestamp();
+    rollPublishWindow(nowSec);
     String requestedState =
         !lastRequestedState.isBlank()
             ? lastRequestedState
@@ -442,11 +453,12 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
         queuePreviewPose.map(OperatorBoardTracker::toPoseArray).orElseGet(() -> new double[] {});
     String runtimeProfileStateJson =
         RuntimeProfileCodec.toJson(RuntimeModeManager.getActiveProfile());
-    String systemCheckStateJson = buildSystemCheckStateJson(queuePreviewPose);
-    String autoCheckStateJson = buildAutoCheckStateJson(queuePreviewPose);
-    String autoQuickRunStateJson = autoQueue.getQuickRunStateJson();
-    String mechanismStatusStateJson = buildMechanismStatusStateJson();
-    String actionTraceStateJson = writeJson(lastActionTraceState);
+    refreshHeavyTelemetryCaches(nowSec, queuePreviewPose);
+    String systemCheckStateJson = cachedSystemCheckStateJson;
+    String autoCheckStateJson = cachedAutoCheckStateJson;
+    String autoQuickRunStateJson = cachedAutoQuickRunStateJson;
+    String mechanismStatusStateJson = cachedMechanismStatusStateJson;
+    String actionTraceStateJson = cachedActionTraceStateJson;
 
     if (shouldPublishString(OperatorBoardContract.AUTO_QUEUE_STATE, autoQueueStateJson)) {
       trackPublish(OperatorBoardContract.AUTO_QUEUE_STATE, autoQueueStateJson);
@@ -491,7 +503,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
       io.setActionTraceState(actionTraceStateJson);
     }
 
-    String ntDiagnosticsStateJson = buildNtDiagnosticsStateJson();
+    String ntDiagnosticsStateJson = cachedNtDiagnosticsStateJson;
     if (shouldPublishString(OperatorBoardContract.NT_DIAGNOSTICS_STATE, ntDiagnosticsStateJson)) {
       trackPublish(OperatorBoardContract.NT_DIAGNOSTICS_STATE, ntDiagnosticsStateJson);
       io.setNtDiagnosticsState(ntDiagnosticsStateJson);
@@ -506,7 +518,6 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
             runtimeProfileStateJson,
             selectedAutoStateJson,
             autoQueueStateJson);
-    diagnosticBundleWriter.maybeWrite(lastDiagnosticSnapshot);
 
     io.setHasBall(superstructure != null && superstructure.hasBall());
 
@@ -573,6 +584,23 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
     }
     lastTelemetryPublishTimestampSec = now;
     return true;
+  }
+
+  private void refreshHeavyTelemetryCaches(double nowSec, Optional<Pose2d> queuePreviewPose) {
+    double refreshPeriod =
+        DriverStation.isDisabled()
+            ? HEAVY_TELEMETRY_REFRESH_DISABLED_PERIOD_SEC
+            : HEAVY_TELEMETRY_REFRESH_PERIOD_SEC;
+    if (nowSec - lastHeavyTelemetryRefreshTimestampSec < refreshPeriod) {
+      return;
+    }
+    lastHeavyTelemetryRefreshTimestampSec = nowSec;
+    cachedSystemCheckStateJson = buildSystemCheckStateJson(queuePreviewPose);
+    cachedAutoCheckStateJson = buildAutoCheckStateJson(queuePreviewPose);
+    cachedAutoQuickRunStateJson = autoQueue.getQuickRunStateJson();
+    cachedMechanismStatusStateJson = buildMechanismStatusStateJson();
+    cachedActionTraceStateJson = writeJson(lastActionTraceState);
+    cachedNtDiagnosticsStateJson = buildNtDiagnosticsStateJson();
   }
 
   private TargetSnapshot computeTargetSnapshot() {
@@ -707,6 +735,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
             queueActionTrace.detail(),
             superstructure != null ? superstructure.getRequestedState().name() : lastRequestedState,
             superstructure != null ? superstructure.getCurrentState().name() : "UNKNOWN");
+    cachedActionTraceStateJson = writeJson(lastActionTraceState);
   }
 
   private void recordActionTrace(String source, String action, boolean accepted, String detail) {
@@ -719,6 +748,7 @@ public class OperatorBoardTracker extends SubsystemBase implements AutoCloseable
             detail == null ? "" : detail,
             superstructure != null ? superstructure.getRequestedState().name() : lastRequestedState,
             superstructure != null ? superstructure.getCurrentState().name() : "UNKNOWN");
+    cachedActionTraceStateJson = writeJson(lastActionTraceState);
   }
 
   private String buildSystemCheckStateJson(Optional<Pose2d> queuePreviewPose) {

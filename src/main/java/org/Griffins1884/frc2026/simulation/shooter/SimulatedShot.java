@@ -11,4 +11,10 @@ public record SimulatedShot(
     Pose3d[] predictedSamplePoses,
     Pose3d predictedImpactPose,
     double closestApproachErrorMeters,
-    double timeOfFlightSeconds) {}
+    double timeOfFlightSeconds,
+    boolean clearsTop,
+    boolean descendsIntoBottom,
+    double topClearanceMeters,
+    double bottomEntryErrorMeters,
+    Pose3d topClearancePose,
+    Pose3d bottomEntryPose) {}

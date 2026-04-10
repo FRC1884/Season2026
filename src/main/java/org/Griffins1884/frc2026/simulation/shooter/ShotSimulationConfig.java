@@ -4,6 +4,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotConstants;
+import org.Griffins1884.frc2026.util.ballistics.ShotModelConfig;
 
 /** Geometry and simple projectile constants used by the shot-math visualizer. */
 public record ShotSimulationConfig(
@@ -26,14 +27,7 @@ public record ShotSimulationConfig(
         highAngleExitSample != null
             ? highAngleExitSample
             : new ExitSample(60.0, 0.010047, 0.0, 0.625973);
-    pivotCalibration =
-        pivotCalibration != null
-            ? pivotCalibration
-            : new PivotCalibration(
-                ShooterPivotConstants.SOFT_LIMIT_MIN,
-                ShooterPivotConstants.SOFT_LIMIT_MAX,
-                pivotPositionToLaunchAngleDegrees(ShooterPivotConstants.SOFT_LIMIT_MIN),
-                pivotPositionToLaunchAngleDegrees(ShooterPivotConstants.SOFT_LIMIT_MAX));
+    pivotCalibration = pivotCalibration != null ? pivotCalibration : defaultPivotCalibration();
     flywheelCalibration =
         flywheelCalibration != null
             ? flywheelCalibration
@@ -42,26 +36,26 @@ public record ShotSimulationConfig(
                 ShooterConstants.FLYWHEEL_GEAR_RATIO,
                 ShooterConstants.SLIP_FACTOR.get());
     physics = physics != null ? physics : new PhysicsConfig(9.80665, 0.0, 0.0);
-    integrationStepSeconds = integrationStepSeconds > 0.0 ? integrationStepSeconds : 0.05;
+    integrationStepSeconds = integrationStepSeconds > 0.0 ? integrationStepSeconds : 0.02;
     maxSimulationTimeSeconds = maxSimulationTimeSeconds > 0.0 ? maxSimulationTimeSeconds : 5.0;
   }
 
   public static ShotSimulationConfig defaultConfig() {
+    ShotModelConfig shotModelConfig = ShotModelConfig.defaultConfig();
     return new ShotSimulationConfig(
-        new Translation3d(-0.0177, 0.0, 0.0),
-        new ExitSample(27.0, 0.057400, 0.0, 0.670908),
-        new ExitSample(60.0, 0.010047, 0.0, 0.625973),
-        new PivotCalibration(
-            ShooterPivotConstants.SOFT_LIMIT_MIN,
-            ShooterPivotConstants.SOFT_LIMIT_MAX,
-            pivotPositionToLaunchAngleDegrees(ShooterPivotConstants.SOFT_LIMIT_MIN),
-            pivotPositionToLaunchAngleDegrees(ShooterPivotConstants.SOFT_LIMIT_MAX)),
+        shotModelConfig.turretMount().toTranslation3d(),
+        fromShotModelExitSample(shotModelConfig.exitGeometry().sampleB()),
+        fromShotModelExitSample(shotModelConfig.exitGeometry().sampleA()),
+        fromShotModelPivotCalibration(shotModelConfig.pivotCalibration()),
         new FlywheelCalibration(
-            ShooterConstants.FLYWHEEL_RADIUS_METERS,
-            ShooterConstants.FLYWHEEL_GEAR_RATIO,
-            ShooterConstants.SLIP_FACTOR.get()),
-        new PhysicsConfig(9.80665, 0.0, 0.0),
-        0.05,
+            shotModelConfig.flywheel().radiusMeters(),
+            shotModelConfig.flywheel().gearRatio(),
+            shotModelConfig.flywheel().slipFactor()),
+        new PhysicsConfig(
+            shotModelConfig.physics().gravityMetersPerSecondSquared(),
+            shotModelConfig.physics().linearDragPerSecond(),
+            shotModelConfig.physics().quadraticDragPerMeter()),
+        0.02,
         5.0);
   }
 
@@ -109,9 +103,25 @@ public record ShotSimulationConfig(
     return a + ((b - a) * t);
   }
 
-  private static double pivotPositionToLaunchAngleDegrees(double pivotPosition) {
-    double pivotDegreesFromVerticalDown = (11.875 * pivotPosition) + 18.0;
-    return 90.0 - pivotDegreesFromVerticalDown;
+  private static PivotCalibration defaultPivotCalibration() {
+    return new PivotCalibration(0.0, ShooterPivotConstants.SOFT_LIMIT_MAX, 60.0, 27.0);
+  }
+
+  private static ExitSample fromShotModelExitSample(ShotModelConfig.ExitSample sample) {
+    return new ExitSample(
+        sample.launchAngleDegrees(),
+        sample.localXMeters(),
+        sample.localYMeters(),
+        sample.localZMeters());
+  }
+
+  private static PivotCalibration fromShotModelPivotCalibration(
+      ShotModelConfig.PivotCalibration calibration) {
+    return new PivotCalibration(
+        calibration.minMotorRotations(),
+        calibration.maxMotorRotations(),
+        calibration.launchAngleAtMinMotorRotationsDegrees(),
+        calibration.launchAngleAtMaxMotorRotationsDegrees());
   }
 
   private static double clamp(double value, double min, double max) {

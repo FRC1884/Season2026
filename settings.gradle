@@ -29,3 +29,12 @@ pluginManagement {
 
 Properties props = System.getProperties();
 props.setProperty("org.gradle.internal.native.headers.unresolved.dependencies.ignore", "true");
+
+File griffinSimRepo = new File(settingsDir, "../GriffinSim").canonicalFile
+if (griffinSimRepo.exists()) {
+    includeBuild(griffinSimRepo) {
+        dependencySubstitution {
+            substitute module("org.griffins1884:GriffinSim") using project(":compat:legacy-griffinsim")
+        }
+    }
+}

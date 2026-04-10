@@ -307,6 +307,9 @@ public class ShooterCommands {
       if (!Double.isFinite(tof) || tof <= 0.0) {
         continue;
       }
+      if (!clearsHubTopBeforeBottom(distanceMeters, launchElevationRad, exitVelocity, tof)) {
+        continue;
+      }
 
       double score =
           (BALANCED_WEIGHT_RPM * (rpm / SOLVER_MAX_RPM))
@@ -317,6 +320,40 @@ public class ShooterCommands {
       }
     }
     return bestPoint;
+  }
+
+  private static boolean clearsHubTopBeforeBottom(
+      double distanceMeters,
+      double launchElevationRad,
+      double exitVelocityMetersPerSec,
+      double bottomTimeSeconds) {
+    double horizontalSpeed = exitVelocityMetersPerSec * Math.cos(launchElevationRad);
+    if (horizontalSpeed <= 1e-9) {
+      return false;
+    }
+
+    double topEntryDistance =
+        Math.max(0.0, distanceMeters - ShooterConstants.HUB_TOP_CLEARANCE_RADIUS_METERS);
+    double topEntryTimeSeconds = topEntryDistance / horizontalSpeed;
+    if (!Double.isFinite(topEntryTimeSeconds)
+        || topEntryTimeSeconds <= 0.0
+        || topEntryTimeSeconds >= bottomTimeSeconds) {
+      return false;
+    }
+
+    double topEntryHeightMeters =
+        heightAtTime(launchElevationRad, exitVelocityMetersPerSec, topEntryTimeSeconds);
+    double bottomVerticalVelocity =
+        (exitVelocityMetersPerSec * Math.sin(launchElevationRad)) - (GRAVITY * bottomTimeSeconds);
+    return topEntryHeightMeters >= ShooterConstants.HUB_TOP_CLEARANCE_HEIGHT_METERS
+        && bottomVerticalVelocity < 0.0;
+  }
+
+  private static double heightAtTime(
+      double launchElevationRad, double exitVelocityMetersPerSec, double timeSeconds) {
+    return ShooterConstants.EXIT_HEIGHT_METERS
+        + exitVelocityMetersPerSec * Math.sin(launchElevationRad) * timeSeconds
+        - 0.5 * GRAVITY * timeSeconds * timeSeconds;
   }
 
   private static Double solveRequiredExitVelocity(

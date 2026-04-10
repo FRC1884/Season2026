@@ -106,6 +106,10 @@ public class Robot extends LoggedRobot {
   /** This function is called periodically during all modes. */
   @Override
   public void robotPeriodic() {
+    if (MODE == GlobalConstants.RobotMode.SIM) {
+      robotContainer.applySimulationValidationInputs();
+    }
+
     // Switch thread to high priority to improve loop timing
     Threads.setCurrentThreadPriority(true, 99);
 
@@ -124,6 +128,9 @@ public class Robot extends LoggedRobot {
   /** This function is called once when the robot is disabled. */
   @Override
   public void disabledInit() {
+    if (Boolean.getBoolean("season2026.simValidation.enabled")) {
+      return;
+    }
     robotContainer.resetSimulationField();
   }
 
@@ -203,6 +210,7 @@ public class Robot extends LoggedRobot {
     if (MODE == GlobalConstants.RobotMode.SIM) {
       SimulatedArena.getInstance().simulationPeriodic();
       robotContainer.displaySimFieldToAdvantageScope();
+      robotContainer.captureSimulationValidationStep();
     }
   }
 

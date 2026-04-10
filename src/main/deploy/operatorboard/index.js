@@ -2277,9 +2277,17 @@ function renderQueueSteps() {
     detail.className = "queue-step__meta";
     const pose = resolveStepPose(step);
     const routeWaypoints = getStepRouteWaypoints(index, step);
+    const routeDetail =
+      step.type === "NAMED_COMMAND"
+        ? `command ${step.commandName || step.label || "hook"}`
+        : step.type === "WAIT"
+          ? `wait ${Number.isFinite(step.waitSeconds) ? step.waitSeconds.toFixed(2) : "0.00"}s`
+          : routeWaypoints.length > 0
+            ? `${routeWaypoints.length} waypoint${routeWaypoints.length === 1 ? "" : "s"}`
+            : "direct route";
     detail.innerText = [
       pose ? formatPose(pose, true) : "pose unavailable",
-      routeWaypoints.length > 0 ? `${routeWaypoints.length} waypoint${routeWaypoints.length === 1 ? "" : "s"}` : "direct route",
+      routeDetail,
     ].join(" • ");
 
     card.append(top, detail);
@@ -2653,6 +2661,9 @@ function buildPreviewSegments() {
 
   queueModel.steps.forEach((step, index) => {
     const currentStep = normalizeQueueStep(step);
+    if (currentStep.type && currentStep.type !== "PATH") {
+      return;
+    }
     const finalPose = resolveStepPose(currentStep);
     if (!finalPose || !previousPose) {
       return;
@@ -3323,7 +3334,11 @@ function loadDraft() {
       customZones: Array.isArray(parsed.customZones)
         ? parsed.customZones.map(normalizeNoGoZone).filter(Boolean)
         : [],
-      steps: Array.isArray(parsed.steps) ? parsed.steps.map(normalizeQueueStep).filter((step) => step.spotId) : [],
+      steps: Array.isArray(parsed.steps)
+        ? parsed.steps
+            .map(normalizeQueueStep)
+            .filter((step) => step.spotId || (Number.isFinite(step.xMeters) && Number.isFinite(step.yMeters)))
+        : [],
     };
   } catch (_err) {
     return null;
@@ -3373,7 +3388,9 @@ function syncQueueFromDashboard(queueState) {
     ? queueState.revision
     : queueModel.revision;
   queueModel.steps = queueState.steps.map((step) => ({
+    type: parseString(step.type) || "PATH",
     spotId: step.spotId,
+    commandName: sanitizePresetName(step.commandName) || "",
     label: step.label || "",
     requestedState: normalizeRequestedState(step.requestedState),
     status: normalizeQueueStatus(step.status),
@@ -3381,6 +3398,7 @@ function syncQueueFromDashboard(queueState) {
     xMeters: parseFiniteOrNull(step.xMeters),
     yMeters: parseFiniteOrNull(step.yMeters),
     headingDeg: parseFiniteOrNull(step.headingDeg),
+    waitSeconds: parseFiniteOrNull(step.waitSeconds),
     routeWaypoints: Array.isArray(step.routeWaypoints)
       ? step.routeWaypoints.map(normalizeAuthoringPose).filter(Boolean)
       : [],
@@ -4306,7 +4324,7 @@ function parseQueueState(value) {
       steps: Array.isArray(parsed.steps)
         ? parsed.steps
             .map(normalizeQueueStep)
-            .filter((step) => step.spotId)
+            .filter((step) => step.spotId || (Number.isFinite(step.xMeters) && Number.isFinite(step.yMeters)))
         : [],
     };
   } catch (_err) {
@@ -4986,6 +5004,7 @@ function getSpotById(spotId) {
 
 function normalizeQueueStep(step) {
   const normalized = {
+    type: parseString(step?.type) || "PATH",
     spotId: parseString(step?.spotId) || "",
     label: sanitizePresetName(step?.label) || "",
     commandName: sanitizePresetName(step?.commandName) || "",
@@ -4995,6 +5014,7 @@ function normalizeQueueStep(step) {
     xMeters: parseFiniteOrNull(step?.xMeters),
     yMeters: parseFiniteOrNull(step?.yMeters),
     headingDeg: parseFiniteOrNull(step?.headingDeg),
+    waitSeconds: parseFiniteOrNull(step?.waitSeconds),
     routeWaypoints: Array.isArray(step?.routeWaypoints)
       ? step.routeWaypoints.map(normalizeAuthoringPose).filter(Boolean)
       : [],
@@ -5019,6 +5039,7 @@ function stepFromSpot(spot, requestedState) {
 function serializeQueueStep(step, index) {
   const routeWaypoints = getStepRouteWaypoints(index, step);
   return {
+    type: step.type || "PATH",
     spotId: step.spotId,
     commandName: step.commandName || "",
     requestedState: step.requestedState || "",
@@ -5027,6 +5048,7 @@ function serializeQueueStep(step, index) {
     xMeters: parseFiniteOrNull(step.xMeters),
     yMeters: parseFiniteOrNull(step.yMeters),
     headingDeg: parseFiniteOrNull(step.headingDeg),
+    waitSeconds: parseFiniteOrNull(step.waitSeconds),
     routeWaypoints: routeWaypoints.map(serializePose),
   };
 }

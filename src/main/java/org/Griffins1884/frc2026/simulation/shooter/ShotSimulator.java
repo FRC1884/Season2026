@@ -52,7 +52,7 @@ public final class ShotSimulator {
     double launchAngleRadians = Math.toRadians(config.launchAngleDegrees(pivotMotorRotations));
     double horizontalSpeed = exitVelocityMetersPerSecond * Math.cos(launchAngleRadians);
     Translation2d robotRelativeLaunchVelocity =
-        new Translation2d(horizontalSpeed, 0.0).rotateBy(turretYaw);
+        new Translation2d(0.0, horizontalSpeed).rotateBy(turretYaw.unaryMinus());
     Translation2d fieldLaunchVelocity =
         robotRelativeLaunchVelocity.rotateBy(robotHeading).plus(sanitizedVelocity);
     Translation3d initialFieldVelocity =
@@ -83,7 +83,13 @@ public final class ShotSimulator {
             samples,
             impactPose,
             metrics.closestApproachErrorMeters(),
-            metrics.timeOfFlightSeconds()));
+            metrics.timeOfFlightSeconds(),
+            metrics.clearsTop(),
+            metrics.descendsIntoBottom(),
+            metrics.topClearanceMeters(),
+            metrics.bottomEntryErrorMeters(),
+            metrics.topClearancePose(),
+            metrics.bottomEntryPose()));
   }
 
   private Pose3d[] sampleTrajectory(
@@ -113,18 +119,20 @@ public final class ShotSimulator {
       double topOpeningRadiusMeters,
       double coneClearanceMeters) {
     if (samples == null || samples.length == 0) {
-      return new PredictionMetrics(false, Double.NaN, Double.NaN);
+      return new PredictionMetrics(
+          false, Double.NaN, Double.NaN, false, false, Double.NaN, Double.NaN, null, null);
     }
 
     double bestDistance = Double.POSITIVE_INFINITY;
     double bestTimeSeconds = 0.0;
-    boolean feasible = false;
     double dtSeconds = config.integrationStepSeconds();
     double effectiveTopRadius =
         Math.max(0.0, topOpeningRadiusMeters - Math.max(0.0, coneClearanceMeters));
-    double lowerZ = fieldTargetPosition.getZ();
-    double upperZ = fieldConeTopPosition.getZ();
-    double zSpan = Math.max(upperZ - lowerZ, 1e-9);
+    TopClearanceResult topClearance =
+        evaluateTopClearance(
+            samples, fieldTargetPosition, fieldConeTopPosition, effectiveTopRadius);
+    BottomEntryResult bottomEntry =
+        evaluateBottomEntry(samples, fieldTargetPosition, openingRadiusMeters);
 
     for (int i = 0; i < samples.length; i++) {
       Translation3d samplePoint = samples[i].getTranslation();
@@ -133,23 +141,105 @@ public final class ShotSimulator {
         bestDistance = distanceToCenter;
         bestTimeSeconds = i * dtSeconds;
       }
-
-      double z = samplePoint.getZ();
-      if (z < lowerZ || z > upperZ) {
-        continue;
-      }
-
-      double interpolation = (z - lowerZ) / zSpan;
-      double allowedRadius =
-          openingRadiusMeters + ((effectiveTopRadius - openingRadiusMeters) * interpolation);
-      double horizontalDistance =
-          samplePoint.toTranslation2d().getDistance(fieldTargetPosition.toTranslation2d());
-      if (horizontalDistance <= allowedRadius) {
-        feasible = true;
-      }
     }
 
-    return new PredictionMetrics(feasible, bestDistance, bestTimeSeconds);
+    boolean scoringValid =
+        topClearance.clearsTop()
+            && bottomEntry.descendsIntoBottom()
+            && topClearance.elapsedSeconds() < bottomEntry.elapsedSeconds();
+    return new PredictionMetrics(
+        scoringValid,
+        bestDistance,
+        bestTimeSeconds,
+        topClearance.clearsTop(),
+        bottomEntry.descendsIntoBottom(),
+        topClearance.clearanceMeters(),
+        bottomEntry.entryErrorMeters(),
+        topClearance.pose(),
+        bottomEntry.pose());
+  }
+
+  private TopClearanceResult evaluateTopClearance(
+      Pose3d[] samples,
+      Translation3d fieldTargetPosition,
+      Translation3d fieldConeTopPosition,
+      double effectiveTopRadiusMeters) {
+    Translation2d release = samples[0].getTranslation().toTranslation2d();
+    Translation2d target = fieldTargetPosition.toTranslation2d();
+    Translation2d releaseToTarget = target.minus(release);
+    double distance = releaseToTarget.getNorm();
+    if (distance <= 1e-9) {
+      Pose3d pose = samples[0];
+      return new TopClearanceResult(false, pose.getZ() - fieldConeTopPosition.getZ(), 0.0, pose);
+    }
+    Translation2d direction = releaseToTarget.div(distance);
+    double topEntryDistance = Math.max(0.0, distance - Math.max(0.0, effectiveTopRadiusMeters));
+    Pose3d pose = interpolateAtProgress(samples, direction, topEntryDistance).pose();
+    double elapsed = interpolateAtProgress(samples, direction, topEntryDistance).elapsedSeconds();
+    double clearance = pose.getZ() - fieldConeTopPosition.getZ();
+    return new TopClearanceResult(clearance >= 0.0, clearance, elapsed, pose);
+  }
+
+  private BottomEntryResult evaluateBottomEntry(
+      Pose3d[] samples, Translation3d fieldTargetPosition, double openingRadiusMeters) {
+    double dtSeconds = config.integrationStepSeconds();
+    for (int i = 1; i < samples.length; i++) {
+      Pose3d previous = samples[i - 1];
+      Pose3d current = samples[i];
+      double previousZ = previous.getZ();
+      double currentZ = current.getZ();
+      if (previousZ >= fieldTargetPosition.getZ() && currentZ <= fieldTargetPosition.getZ()) {
+        double denom = previousZ - currentZ;
+        double ratio =
+            Math.abs(denom) <= 1e-9 ? 0.0 : (previousZ - fieldTargetPosition.getZ()) / denom;
+        ratio = Math.max(0.0, Math.min(1.0, ratio));
+        Translation3d translation =
+            previous
+                .getTranslation()
+                .plus(current.getTranslation().minus(previous.getTranslation()).times(ratio));
+        Pose3d pose = new Pose3d(translation, new Rotation3d());
+        double error =
+            pose.getTranslation()
+                .toTranslation2d()
+                .getDistance(fieldTargetPosition.toTranslation2d());
+        double elapsedSeconds = (i - 1 + ratio) * dtSeconds;
+        return new BottomEntryResult(error <= openingRadiusMeters, error, elapsedSeconds, pose);
+      }
+    }
+    Pose3d last = samples[samples.length - 1];
+    double error =
+        last.getTranslation().toTranslation2d().getDistance(fieldTargetPosition.toTranslation2d());
+    return new BottomEntryResult(false, error, (samples.length - 1) * dtSeconds, last);
+  }
+
+  private InterpolatedPose interpolateAtProgress(
+      Pose3d[] samples, Translation2d direction, double targetProgressMeters) {
+    double dtSeconds = config.integrationStepSeconds();
+    Translation2d release = samples[0].getTranslation().toTranslation2d();
+    Pose3d previousPose = samples[0];
+    double previousProgress = 0.0;
+    for (int i = 1; i < samples.length; i++) {
+      Pose3d currentPose = samples[i];
+      Translation2d relative = currentPose.getTranslation().toTranslation2d().minus(release);
+      double currentProgress =
+          relative.getX() * direction.getX() + relative.getY() * direction.getY();
+      if (currentProgress >= targetProgressMeters) {
+        double span = currentProgress - previousProgress;
+        double ratio =
+            Math.abs(span) <= 1e-9 ? 0.0 : (targetProgressMeters - previousProgress) / span;
+        ratio = Math.max(0.0, Math.min(1.0, ratio));
+        Translation3d translation =
+            previousPose
+                .getTranslation()
+                .plus(
+                    currentPose.getTranslation().minus(previousPose.getTranslation()).times(ratio));
+        return new InterpolatedPose(
+            new Pose3d(translation, new Rotation3d()), (i - 1 + ratio) * dtSeconds);
+      }
+      previousPose = currentPose;
+      previousProgress = currentProgress;
+    }
+    return new InterpolatedPose(samples[samples.length - 1], (samples.length - 1) * dtSeconds);
   }
 
   private static Translation3d toFieldTranslation(
@@ -162,5 +252,21 @@ public final class ShotSimulator {
   }
 
   private record PredictionMetrics(
-      boolean feasible, double closestApproachErrorMeters, double timeOfFlightSeconds) {}
+      boolean feasible,
+      double closestApproachErrorMeters,
+      double timeOfFlightSeconds,
+      boolean clearsTop,
+      boolean descendsIntoBottom,
+      double topClearanceMeters,
+      double bottomEntryErrorMeters,
+      Pose3d topClearancePose,
+      Pose3d bottomEntryPose) {}
+
+  private record TopClearanceResult(
+      boolean clearsTop, double clearanceMeters, double elapsedSeconds, Pose3d pose) {}
+
+  private record BottomEntryResult(
+      boolean descendsIntoBottom, double entryErrorMeters, double elapsedSeconds, Pose3d pose) {}
+
+  private record InterpolatedPose(Pose3d pose, double elapsedSeconds) {}
 }

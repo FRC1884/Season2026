@@ -75,6 +75,8 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   private String observerLatchedIssue = "OK";
   private int observerLatchedModule = -1;
   private double observerHoldUntilSec = 0.0;
+  private String lastAutonomousObserverReport = "";
+  private double lastAutonomousObserverReportSec = Double.NEGATIVE_INFINITY;
 
   private SwerveDriveKinematics kinematics =
       new SwerveDriveKinematics(SwerveConstants.MODULE_TRANSLATIONS);
@@ -512,6 +514,54 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     Logger.recordOutput("Swerve/Observer/CandidateIssue", candidateIssue);
     Logger.recordOutput("Swerve/Observer/CandidateModule", candidateModule);
     Logger.recordOutput("Swerve/Observer/CandidateLoops", observerCandidateLoops);
+
+    maybeReportAutonomousObserverIssue(
+        nowSec,
+        issueActive,
+        commandedTranslationalMps,
+        measuredTranslationalMps,
+        overallSpeedRatio,
+        commandedOmega,
+        measuredOmega);
+  }
+
+  private void maybeReportAutonomousObserverIssue(
+      double nowSec,
+      boolean issueActive,
+      double commandedTranslationalMps,
+      double measuredTranslationalMps,
+      double overallSpeedRatio,
+      double commandedOmega,
+      double measuredOmega) {
+    if (!DriverStation.isAutonomousEnabled()) {
+      lastAutonomousObserverReport = "";
+      lastAutonomousObserverReportSec = Double.NEGATIVE_INFINITY;
+      return;
+    }
+    if (!issueActive) {
+      return;
+    }
+
+    String report =
+        String.format(
+            java.util.Locale.ROOT,
+            "%s module=%s req=%.2f cmd=%.2f meas=%.2f ratio=%.2f cmdOmega=%.2f measOmega=%.2f",
+            observerLatchedIssue,
+            moduleName(observerLatchedModule),
+            requestedTranslationalMps,
+            commandedTranslationalMps,
+            measuredTranslationalMps,
+            overallSpeedRatio,
+            commandedOmega,
+            measuredOmega);
+    if (report.equals(lastAutonomousObserverReport)
+        && nowSec - lastAutonomousObserverReportSec < 0.5) {
+      return;
+    }
+
+    lastAutonomousObserverReport = report;
+    lastAutonomousObserverReportSec = nowSec;
+    RobotLogging.warn("Auto drive observer: " + report);
   }
 
   /**
@@ -539,6 +589,18 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     }
 
     Logger.recordOutput("SwerveStates/SetpointsOptimized", setpointStates);
+  }
+
+  public ChassisSpeeds getCommandedRobotRelativeSpeeds() {
+    return krakenCurrentSetpoint.chassisSpeeds();
+  }
+
+  public double getRequestedTranslationalMps() {
+    return requestedTranslationalMps;
+  }
+
+  public double getRequestedOmegaRadPerSec() {
+    return requestedOmegaRadPerSec;
   }
 
   /** Runs the drive in a straight line with the specified drive output. */
@@ -950,6 +1012,25 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
     return Math.toDegrees(gyroInputs.yawVelocityRadPerSec);
   }
 
+  public ValidationModuleSample[] getValidationModuleSamples() {
+    ValidationModuleSample[] samples = new ValidationModuleSample[modules.length];
+    for (int index = 0; index < modules.length; index++) {
+      Module module = modules[index];
+      samples[index] =
+          new ValidationModuleSample(
+              module.getIndex(),
+              module.getDesiredSpeedMetersPerSec(),
+              module.getVelocityMetersPerSec(),
+              module.getDesiredAngle().getRadians(),
+              module.getAngle().getRadians(),
+              module.getDriveVoltage(),
+              module.getTurnVoltage(),
+              module.getTerrainDriveAuthorityScale(),
+              module.getTerrainTurnAuthorityScale());
+    }
+    return samples;
+  }
+
   /**
    * Zeros the gyro and odometry heading to the alliance wall.
    *
@@ -1015,7 +1096,12 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
       gyroIO.resetYaw(pose.getRotation().getDegrees());
       rawGyroRotation = pose.getRotation();
     }
-    poseEstimator.resetPosition(rawGyroRotation, getModulePositions(), pose);
+    SwerveModulePosition[] modulePositions = getModulePositions();
+    poseEstimator.resetPosition(rawGyroRotation, modulePositions, pose);
+    lastModulePositions =
+        java.util.Arrays.stream(modulePositions)
+            .map(position -> new SwerveModulePosition(position.distanceMeters, position.angle))
+            .toArray(SwerveModulePosition[]::new);
     odometryResetListener.run();
   }
 
@@ -1101,4 +1187,15 @@ public class SwerveSubsystem extends SubsystemBase implements Vision.VisionConsu
   public double getMaxAngularSpeedRadPerSec() {
     return SwerveConstants.MAX_ANGULAR_SPEED;
   }
+
+  public record ValidationModuleSample(
+      int index,
+      double desiredSpeedMetersPerSec,
+      double actualSpeedMetersPerSec,
+      double desiredAngleRadians,
+      double actualAngleRadians,
+      double driveVoltage,
+      double turnVoltage,
+      double terrainDriveAuthorityScale,
+      double terrainTurnAuthorityScale) {}
 }

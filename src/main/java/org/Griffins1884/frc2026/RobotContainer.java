@@ -26,6 +26,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -40,25 +41,23 @@ import org.Griffins1884.frc2026.commands.AutoCommands;
 import org.Griffins1884.frc2026.commands.DriveCommands;
 import org.Griffins1884.frc2026.commands.TurretCommands;
 import org.Griffins1884.frc2026.mechanisms.RobotMechanismDefinitions;
+import org.Griffins1884.frc2026.simulation.drive.Season2026DriveSimulation;
+import org.Griffins1884.frc2026.simulation.drive.Season2026SwerveCorner;
 import org.Griffins1884.frc2026.simulation.maple.MapleArenaSetup;
 import org.Griffins1884.frc2026.simulation.maple.Rebuilt2026FieldModel;
+import org.Griffins1884.frc2026.simulation.validation.SimulationValidationFactory;
+import org.Griffins1884.frc2026.simulation.validation.SimulationValidationRoutine;
 import org.Griffins1884.frc2026.simulation.visualization.RobotStateVisualizer;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardIOServer;
 import org.Griffins1884.frc2026.subsystems.objectivetracker.OperatorBoardTracker;
 import org.Griffins1884.frc2026.subsystems.shooter.*;
 import org.Griffins1884.frc2026.subsystems.swerve.*;
-import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIO;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOKraken;
 import org.Griffins1884.frc2026.subsystems.turret.TurretIOSim;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.subsystems.vision.*;
-import org.griffins1884.sim3d.CommandableDriveSimulationAdapter;
-import org.griffins1884.sim3d.DriveSimulationAdapter;
-import org.griffins1884.sim3d.SwerveCorner;
-import org.griffins1884.sim3d.TerrainAwareSwerveSimulation;
-import org.griffins1884.sim3d.integration.DriveSimulationFactories;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.json.simple.parser.ParseException;
@@ -76,8 +75,7 @@ public class RobotContainer {
 
   // Subsystems
   private final SwerveSubsystem drive;
-  private CommandableDriveSimulationAdapter driveSimulation;
-  private TerrainAwareSwerveSimulation mapleDriveSimulation;
+  private Season2026DriveSimulation driveSimulation;
   private final TurretSubsystem turret;
   private final OperatorBoardTracker operatorBoard;
 
@@ -91,6 +89,7 @@ public class RobotContainer {
   private final Superstructure superstructure;
   private final Vision vision;
   private final RobotStateVisualizer robotStateVisualizer;
+  private final SimulationValidationRoutine simulationValidationController;
   private boolean autoAllianceZeroed = false;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -119,37 +118,34 @@ public class RobotContainer {
             case SIM:
               MapleArenaSetup.ensure2026RebuiltArena();
               this.driveSimulation =
-                  requireCommandableDriveSimulation(
-                      DriveSimulationFactories.mapleTerrainAware(
-                          new SwerveDriveSimulation(
-                              SwerveConstants.MAPLE_SIM_CONFIG, new Pose2d(3, 3, new Rotation2d())),
-                          Rebuilt2026FieldModel.contactModel(),
-                          Rebuilt2026FieldModel.CHASSIS_FOOTPRINT,
-                          Rebuilt2026FieldModel.CHASSIS_MASS_PROPERTIES));
-              this.mapleDriveSimulation = requireMapleTerrainAwareSimulation(driveSimulation);
+                  Season2026DriveSimulation.mapleTerrainAware(
+                      new SwerveDriveSimulation(
+                          SwerveConstants.MAPLE_SIM_CONFIG, new Pose2d(3, 3, new Rotation2d())),
+                      Rebuilt2026FieldModel.contactModel(),
+                      Rebuilt2026FieldModel.CHASSIS_FOOTPRINT,
+                      Rebuilt2026FieldModel.CHASSIS_MASS_PROPERTIES,
+                      Timer::getFPGATimestamp);
               // Add the simulated drivetrain to the simulation field
               SimulatedArena.getInstance()
-                  .addDriveTrainSimulation(mapleDriveSimulation.mapleSimulation());
+                  .addDriveTrainSimulation(driveSimulation.mapleSimulation());
 
               // Sim robot, instantiate physics sim IO implementations
               yield new SwerveSubsystem(
-                  new GyroIOSim(mapleDriveSimulation),
+                  new GyroIOSim(driveSimulation),
                   new ModuleIOSim(
-                      mapleDriveSimulation,
-                      SwerveCorner.FRONT_LEFT,
-                      mapleDriveSimulation.getModules()[0]),
+                      driveSimulation,
+                      Season2026SwerveCorner.FRONT_LEFT,
+                      driveSimulation.module(0)),
                   new ModuleIOSim(
-                      mapleDriveSimulation,
-                      SwerveCorner.FRONT_RIGHT,
-                      mapleDriveSimulation.getModules()[1]),
+                      driveSimulation,
+                      Season2026SwerveCorner.FRONT_RIGHT,
+                      driveSimulation.module(1)),
                   new ModuleIOSim(
-                      mapleDriveSimulation,
-                      SwerveCorner.REAR_LEFT,
-                      mapleDriveSimulation.getModules()[2]),
+                      driveSimulation, Season2026SwerveCorner.REAR_LEFT, driveSimulation.module(2)),
                   new ModuleIOSim(
-                      mapleDriveSimulation,
-                      SwerveCorner.REAR_RIGHT,
-                      mapleDriveSimulation.getModules()[3]));
+                      driveSimulation,
+                      Season2026SwerveCorner.REAR_RIGHT,
+                      driveSimulation.module(3)));
 
             default:
               // Replayed robot, disable IO implementations
@@ -185,7 +181,7 @@ public class RobotContainer {
           TurretCommands.autoAimWhileMovingToTarget(
               turret,
               drive::getPose,
-              pose -> Optional.of(TurretConstants.getSimTarget()),
+              pose -> Optional.of(superstructure.getCurrentTurretTarget()),
               drive::getFieldVelocity,
               drive::getFieldAcceleration));
       superstructure.setTurretExternalControl(true);
@@ -235,7 +231,22 @@ public class RobotContainer {
       operatorBoard = null;
     }
 
-    robotStateVisualizer = new RobotStateVisualizer(drive, turret, superstructure);
+    robotStateVisualizer =
+        new RobotStateVisualizer(
+            drive,
+            turret,
+            superstructure,
+            MODE == RobotMode.SIM && driveSimulation != null ? driveSimulation::getPose3d : null);
+    simulationValidationController =
+        MODE == RobotMode.SIM && drive != null && driveSimulation != null
+            ? SimulationValidationFactory.createIfEnabled(
+                drive,
+                superstructure,
+                driveSimulation,
+                robotStateVisualizer::getRenderTelemetry,
+                robotStateVisualizer::getShotTelemetrySnapshot,
+                pose -> resetRobotToPose(pose, true))
+            : null;
 
     if (drive != null) {
       drive.setOdometryResetListener(this::handleOdometryReset);
@@ -514,11 +525,14 @@ public class RobotContainer {
   }
 
   public void displaySimFieldToAdvantageScope() {
+    if (MODE == RobotMode.SIM) {
+      robotStateVisualizer.periodic();
+    }
     if (drive != null && turret != null && MODE == RobotMode.SIM) {
       Translation2d turretTarget =
           TurretCommands.predictShootingWhileMoving(
               drive::getPose,
-              TurretConstants::getSimTarget,
+              superstructure::getCurrentTurretTarget,
               drive::getFieldVelocity,
               drive::getFieldAcceleration);
       Logger.recordOutput(
@@ -535,7 +549,21 @@ public class RobotContainer {
     if (drive != null && MODE != RobotMode.REPLAY) {
       PPLibTelemetry.setCurrentPose(drive.getPose());
     }
-    robotStateVisualizer.periodic();
+    if (MODE != RobotMode.SIM) {
+      robotStateVisualizer.periodic();
+    }
+  }
+
+  public void applySimulationValidationInputs() {
+    if (simulationValidationController != null) {
+      simulationValidationController.applyInputs();
+    }
+  }
+
+  public void captureSimulationValidationStep() {
+    if (simulationValidationController != null) {
+      simulationValidationController.captureStepAndMaybeExit();
+    }
   }
 
   private Optional<Pose2d> getQueuedAutonomousStartPose() {
@@ -554,22 +582,5 @@ public class RobotContainer {
     }
 
     drive.resetOdometry(pose, true);
-  }
-
-  private static CommandableDriveSimulationAdapter requireCommandableDriveSimulation(
-      DriveSimulationAdapter driveSimulation) {
-    if (driveSimulation instanceof CommandableDriveSimulationAdapter commandableDriveSimulation) {
-      return commandableDriveSimulation;
-    }
-    throw new IllegalStateException("Selected GriffinSim backend does not expose command hooks.");
-  }
-
-  private static TerrainAwareSwerveSimulation requireMapleTerrainAwareSimulation(
-      DriveSimulationAdapter driveSimulation) {
-    if (driveSimulation instanceof TerrainAwareSwerveSimulation terrainAwareDriveSimulation) {
-      return terrainAwareDriveSimulation;
-    }
-    throw new IllegalStateException(
-        "Current SIM IO wiring still requires the Maple-backed TerrainAwareSwerveSimulation.");
   }
 }

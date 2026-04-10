@@ -10,24 +10,25 @@ import org.griffins1884.sim3d.ChassisMassProperties;
 import org.griffins1884.sim3d.TerrainModel;
 import org.griffins1884.sim3d.TerrainSample;
 import org.griffins1884.sim3d.integration.FieldMarkerSample;
-import org.griffins1884.sim3d.seasonspecific.rebuilt2026.Rebuilt2026FieldContactModel;
-import org.griffins1884.sim3d.seasonspecific.rebuilt2026.Rebuilt2026RobotProfile;
 
 /** Terrain/marker helpers for the local 2026 field model used in simulation and AdvantageScope. */
 public final class Rebuilt2026FieldModel implements TerrainModel {
-  private static final Rebuilt2026FieldContactModel CONTACT_MODEL =
-      Rebuilt2026FieldContactModel.INSTANCE;
-  public static final ChassisFootprint CHASSIS_FOOTPRINT =
-      Rebuilt2026RobotProfile.DEFAULT_FOOTPRINT;
+  private static final Season2026FieldContactModel CONTACT_MODEL =
+      Season2026FieldContactModel.INSTANCE;
+  public static final ChassisFootprint CHASSIS_FOOTPRINT = Season2026RobotProfile.DEFAULT_FOOTPRINT;
   public static final ChassisMassProperties CHASSIS_MASS_PROPERTIES =
-      Rebuilt2026RobotProfile.DEFAULT_CHASSIS_MASS_PROPERTIES;
+      Season2026RobotProfile.DEFAULT_CHASSIS_MASS_PROPERTIES;
 
   public static final Rebuilt2026FieldModel INSTANCE = new Rebuilt2026FieldModel();
 
   private Rebuilt2026FieldModel() {}
 
-  public static Rebuilt2026FieldContactModel contactModel() {
+  public static Season2026FieldContactModel contactModel() {
     return CONTACT_MODEL;
+  }
+
+  public static void setValidationFlatTerrainOverride(boolean enabled) {
+    Season2026FieldContactModel.setValidationFlatTerrainOverride(enabled);
   }
 
   public static Pose3d terrainAdjustedRobotPose(Pose2d robotPose) {

@@ -34,7 +34,6 @@ import org.Griffins1884.frc2026.subsystems.leds.LEDSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterConstants;
 import org.Griffins1884.frc2026.subsystems.shooter.ShooterPivotSubsystem.ShooterPivotGoal;
 import org.Griffins1884.frc2026.subsystems.swerve.SwerveSubsystem;
-import org.Griffins1884.frc2026.subsystems.turret.TurretConstants;
 import org.Griffins1884.frc2026.subsystems.turret.TurretSubsystem;
 import org.Griffins1884.frc2026.util.AllianceFlipUtil;
 import org.Griffins1884.frc2026.util.ShotMath;
@@ -92,6 +91,7 @@ public class Superstructure extends SubsystemBase {
       new Debouncer(SuperstructureConstants.BALL_PRESENCE_DEBOUNCE_SEC.get(), DebounceType.kBoth);
   @Setter private boolean turretExternalControl = false;
   @Setter @Getter private boolean shootEnabled = false;
+  private Boolean simBallPresentOverride = null;
   @Getter private boolean intakeRollersHeld = false;
   @Getter private boolean intakeDeployed = false;
   @Getter private boolean intakeStowRollerActive = false;
@@ -246,6 +246,12 @@ public class Superstructure extends SubsystemBase {
 
   public boolean hasBall() {
     return isBallPresent();
+  }
+
+  public void setSimBallPresentOverride(Boolean present) {
+    if (MODE == GlobalConstants.RobotMode.SIM) {
+      simBallPresentOverride = present;
+    }
   }
 
   public Rollers getRollers() {
@@ -517,6 +523,9 @@ public class Superstructure extends SubsystemBase {
   }
 
   private boolean isTurretWithinFeedTolerance() {
+    if (MODE == GlobalConstants.RobotMode.SIM && turretExternalControl) {
+      return true;
+    }
     if (turret == null) {
       return true;
     }
@@ -817,8 +826,8 @@ public class Superstructure extends SubsystemBase {
 
   private void aimTurretAt(Translation2d target) {
     if (isTurretExternallyControlled()) {
-      lastTurretAction = "EXTERNAL";
-      lastTurretTarget = null;
+      lastTurretAction = "EXTERNAL_TARGET";
+      lastTurretTarget = target;
       return;
     }
     if (turret == null || drive == null || target == null) {
@@ -858,7 +867,15 @@ public class Superstructure extends SubsystemBase {
     }
 
     Translation2d fieldVelocity = sanitizeVector(drive.getFieldVelocity());
-    ShotMath.ShotSetpoint setpoint = ShotMath.solve(pose, target, fieldVelocity);
+    Translation2d aimPoint = ShotMath.compensateTarget(pose, target, fieldVelocity);
+    double distanceMeters = pose.getTranslation().getDistance(aimPoint);
+    ShotMath.ShotSetpoint setpoint =
+        new ShotMath.ShotSetpoint(
+            aimPoint,
+            distanceMeters,
+            ShooterCommands.getShooterRpm(distanceMeters),
+            ShooterCommands.getPivotAngleOutput(distanceMeters),
+            TurretCommands.estimateShotTimeSeconds(distanceMeters));
     double turretGoalRad = TurretUtil.turretAngleToTarget(pose, setpoint.aimPoint());
     double staticDistanceMeters = pose.getTranslation().getDistance(target);
     Translation2d targetLead = setpoint.aimPoint().minus(target);
@@ -939,14 +956,12 @@ public class Superstructure extends SubsystemBase {
   }
 
   public Translation2d getCurrentTurretTarget() {
+    Translation2d target = isInAllianceZone() ? getHubTarget() : getFerryingTarget();
     if (MODE == GlobalConstants.RobotMode.SIM && turretExternalControl && drive != null) {
       return TurretCommands.predictShootingWhileMoving(
-          drive::getPose,
-          TurretConstants::getSimTarget,
-          drive::getFieldVelocity,
-          drive::getFieldAcceleration);
+          drive::getPose, () -> target, drive::getFieldVelocity, drive::getFieldAcceleration);
     }
-    return isInAllianceZone() ? getHubTarget() : getFerryingTarget();
+    return target;
   }
 
   public Translation2d getFerryingTarget() {
@@ -986,12 +1001,19 @@ public class Superstructure extends SubsystemBase {
   }
 
   private boolean isBallPresent() {
+    if (MODE == GlobalConstants.RobotMode.SIM && simBallPresentOverride != null) {
+      Logger.recordOutput("Superstructure/BallCurrentAmps", Double.NaN);
+      Logger.recordOutput("Superstructure/BallPresent", simBallPresentOverride);
+      Logger.recordOutput("Superstructure/BallPresentSource", "SIM_VALIDATION_OVERRIDE");
+      return simBallPresentOverride;
+    }
     double currentAmps = getBallSenseCurrentAmps();
     boolean present =
         ballPresentDebouncer.calculate(
             currentAmps >= SuperstructureConstants.BALL_PRESENT_CURRENT_AMPS.get());
     Logger.recordOutput("Superstructure/BallCurrentAmps", currentAmps);
     Logger.recordOutput("Superstructure/BallPresent", present);
+    Logger.recordOutput("Superstructure/BallPresentSource", "CURRENT_SENSE");
     return present;
   }
 

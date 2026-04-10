@@ -61,6 +61,8 @@
 2. **Clone** - `git clone https://github.com/frc1884/season2026.git`
 3. **Build** - `./gradlew build`
 4. **Sim** - `./gradlew simulateJava`
+   - For the validated unattended drivetrain check, run `./gradlew simulateJava --console=plain`
+   - This writes a machine-readable phase trace to `build/sim-validation/simulatejava-trace.json`
 5. **Deploy** - `./gradlew deploy`
 6. **Deploy + preserve saved data** - `./gradlew deployPreserve`
 7. **Operator Board UI** - Browse to `http://<roboRIO>:5805`
@@ -75,6 +77,60 @@
 - The operator board exposes subsystem/state descriptions and diagnostic bundle export endpoints.
 
 See [Persistence][persistence-doc] for the full file inventory, sync rules, and conflict policy.
+
+## Sim Validation
+
+- Command: `./gradlew simulateJava --console=plain`
+- Trace output: `build/sim-validation/simulatejava-trace.json`
+- Validation path:
+  - runs the real `simulateJava` robot entrypoint
+  - injects deterministic teleop inputs through the Season2026 driver-controller path on port `0`
+  - records per-step drivetrain pose, velocity, angular velocity, commanded chassis motion, module samples, terrain/support state, and matched bump-vs-flat comparison telemetry
+- Flat-floor motion validation phases:
+  - idle
+  - forward
+  - settle
+  - rotate
+  - settle
+  - strafe
+  - stop
+- Aggressive bump validation variants:
+  - `medium_speed`
+  - `high_speed`
+  - `max_practical`
+- Matched flat-ground controls:
+  - `high_speed_flat_control`
+  - `max_practical_flat_control`
+- Bump-vs-flat methodology:
+  - uses the same start pose, heading, command profile, and phase timing as the bump variant
+  - flattens terrain only for the control variant so the comparison stays like-for-like
+  - compares aligned windows at bump entry, crest-equivalent time, coast start, and coast settle
+- Compared metrics:
+  - forward speed
+  - forward acceleration
+  - translational kinetic energy
+  - commanded drive volts
+  - drive-authority scale
+  - desired vs actual module speed
+- Accepted conclusion:
+  - the current bump traversal is physically believable relative to the matched flat-ground control baseline
+  - the bump path is not faster than flat at aligned windows
+  - on-bump drive authority is reduced, not boosted
+  - post-bump coast behavior stays close to flat afterward
+  - no remaining evidence of fake braking or fake boost from the bump logic itself
+- Regression coverage:
+  - `bumpJumpRegression` now checks both the scripted bump variants and the matched flat controls
+  - it includes longitudinal sanity-envelope checks so bump speed/energy cannot exceed the flat control by an implausible margin at aligned windows
+- What the flat-floor phases validate:
+  - `idle`: stationary stability and heading hold
+  - `forward`: forward displacement dominance over lateral drift and heading change
+  - `rotate`: in-place rotation with limited translation
+  - `strafe`: lateral planar response with limited unintended heading change
+  - `stop`: final linear/angular velocity settles to zero
+- Current known limitations:
+  - stop behavior is coast-to-settle, not active position hold
+  - startup console noise from logging/UI initialization is expected and separate from drivetrain validation
+  - the validation injector intentionally follows the current sim driver mapping and should be updated if that mapping changes
 
 ## Tech Stack
 

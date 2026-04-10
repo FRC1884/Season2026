@@ -25,6 +25,8 @@ public class AutoCommands {
 
     NamedCommands.registerCommand(
         "Intake", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
+    NamedCommands.registerCommand(
+        "Intaking", superstructure.setSuperStateCmd(Superstructure.SuperState.INTAKING));
 
     NamedCommands.registerCommand(
         "ShootIntake", superstructure.setSuperStateCmd(Superstructure.SuperState.SHOOT_INTAKE));

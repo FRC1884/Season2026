@@ -144,6 +144,8 @@ public class Module {
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */
   public void runSetpoint(SwerveModuleState state) {
+    state.optimize(getAngle());
+    state.cosineScale(getAngle());
     desiredSpeedMetersPerSec = state.speedMetersPerSecond;
     desiredAngle = state.angle;
     // Mechanical Advantage-style control for full Kraken modules
@@ -239,6 +241,14 @@ public class Module {
 
   public double getTurnVelocityRadPerSec() {
     return inputs.turnVelocityRadPerSec;
+  }
+
+  public double getTerrainDriveAuthorityScale() {
+    return inputs.terrainDriveAuthorityScale;
+  }
+
+  public double getTerrainTurnAuthorityScale() {
+    return inputs.terrainTurnAuthorityScale;
   }
 
   public int getIndex() {

@@ -3,6 +3,8 @@ package org.Griffins1884.frc2026.subsystems.objectivetracker;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pathplanner.lib.auto.NamedCommands;
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -15,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import org.Griffins1884.frc2026.commands.AlignConstants;
 import org.Griffins1884.frc2026.commands.AutoAlignToPoseCommand;
 import org.Griffins1884.frc2026.subsystems.Superstructure;
 import org.Griffins1884.frc2026.subsystems.Superstructure.SuperState;
@@ -26,6 +29,8 @@ final class RebuiltAutoQueue {
   private static final ObjectMapper JSON =
       new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   private static final double EPSILON_METERS = 1e-6;
+  private static final double FLOW_THROUGH_TOLERANCE_METERS = 0.2;
+  private static final double STOPPING_PATH_TOLERANCE_METERS = 0.14;
 
   private final RebuiltSpotLibrary spotLibrary;
   private final Superstructure superstructure;
@@ -33,6 +38,7 @@ final class RebuiltAutoQueue {
   private final DeployAutoLibrary autoLibrary;
 
   private final List<QueueStep> queueSteps = new ArrayList<>();
+  private final List<QueueStep> selectedAutoSteps = new ArrayList<>();
   private final List<NoGoZone> noGoZones = new ArrayList<>();
   private PoseSpec queuedStartPose;
   private int queueRevision = 0;
@@ -40,6 +46,10 @@ final class RebuiltAutoQueue {
   private QueuePhase phase = QueuePhase.IDLE;
   private Command activeCommand;
   private String activeLabel = "";
+  private String executionSource = "NONE";
+  private int activeSequenceIndex = -1;
+  private int activeRouteIndex = -1;
+  private String activeMarkerCommandName = "";
   private String queueMessage = "Select a deployed PathPlanner auto to preview and run.";
   private String lastQueueStateJson = "";
   private String lastQuickRunStateJson = "";
@@ -137,12 +147,16 @@ final class RebuiltAutoQueue {
     if (autoLibrary == null || selectedAutoState.id().isBlank()) {
       return null;
     }
-    Optional<Command> selectedAutoCommand = autoLibrary.buildAutoCommand(selectedAutoState.id());
+    Optional<Command> selectedAutoCommand = buildSelectedAutoCommand();
     if (selectedAutoCommand.isEmpty()) {
       phase = QueuePhase.ERROR;
       queueRunning = false;
       activeLabel = "";
-      queueMessage = "Selected auto could not be built.";
+      executionSource = "NONE";
+      queueMessage =
+          autoLibrary.getLastFailureMessage().isBlank()
+              ? "Selected auto could not be built."
+              : autoLibrary.getLastFailureMessage();
       recordAction("AUTO_BUILD", false, queueMessage);
       return null;
     }
@@ -153,6 +167,10 @@ final class RebuiltAutoQueue {
               queueRunning = true;
               phase = QueuePhase.RUNNING;
               activeLabel = selectedAutoState.name();
+              executionSource = "DEPLOY_AUTO_QUEUE";
+              activeSequenceIndex = -1;
+              activeRouteIndex = -1;
+              activeMarkerCommandName = "";
               queueMessage = "Running " + selectedAutoState.name() + ".";
               recordAction("AUTO_RUN", true, queueMessage);
             })
@@ -160,6 +178,10 @@ final class RebuiltAutoQueue {
             interrupted -> {
               queueRunning = false;
               activeLabel = "";
+              executionSource = "NONE";
+              activeSequenceIndex = -1;
+              activeRouteIndex = -1;
+              activeMarkerCommandName = "";
               phase = interrupted ? QueuePhase.READY : QueuePhase.COMPLETE;
               queueMessage =
                   interrupted
@@ -167,6 +189,38 @@ final class RebuiltAutoQueue {
                       : "Completed " + selectedAutoState.name() + ".";
               recordAction("AUTO_RUN", !interrupted, queueMessage);
             });
+  }
+
+  private Optional<Command> buildSelectedAutoCommand() {
+    if (selectedAutoSteps.isEmpty()) {
+      return Optional.empty();
+    }
+    ArrayList<Command> commands = new ArrayList<>();
+    Optional<Pose2d> stepStartPose = getQueuedStartPose();
+    for (int i = 0; i < selectedAutoSteps.size(); i++) {
+      QueueStep step = selectedAutoSteps.get(i);
+      Command built = buildCommand(step, i == selectedAutoSteps.size() - 1, stepStartPose);
+      if (built == null) {
+        return Optional.empty();
+      }
+      final int stepIndex = i;
+      String label = step.displayLabel(spotLibrary);
+      Command tracked =
+          built.beforeStarting(
+              () -> {
+                activeSequenceIndex = stepIndex;
+                activeLabel = label;
+                if (!step.isNamedCommand()) {
+                  activeMarkerCommandName = "";
+                }
+              });
+      commands.add(tracked);
+      Optional<Pose2d> nextStartPose = step.resolvePose(spotLibrary, getRuntimeAlliance());
+      if (nextStartPose.isPresent()) {
+        stepStartPose = nextStartPose;
+      }
+    }
+    return Optional.of(Commands.sequence(commands.toArray(new Command[0])));
   }
 
   private void applyQueueSpec(String raw) {
@@ -194,6 +248,10 @@ final class RebuiltAutoQueue {
       queueRevision = payload.revision != null ? payload.revision.intValue() : queueRevision + 1;
       cancelActiveCommand();
       queueRunning = false;
+      executionSource = "NONE";
+      activeSequenceIndex = -1;
+      activeRouteIndex = -1;
+      activeMarkerCommandName = "";
       phase = queueSteps.isEmpty() ? QueuePhase.IDLE : QueuePhase.READY;
       activeLabel = "";
       queueMessage =
@@ -280,6 +338,7 @@ final class RebuiltAutoQueue {
     }
     queueRunning = true;
     phase = QueuePhase.RUNNING;
+    executionSource = "MANUAL_QUEUE";
     queueMessage = "Executing queue.";
     if (activeCommand == null) {
       startNextStep();
@@ -290,6 +349,10 @@ final class RebuiltAutoQueue {
   private void stopQueue(String message) {
     queueRunning = false;
     cancelActiveCommand();
+    executionSource = "NONE";
+    activeSequenceIndex = -1;
+    activeRouteIndex = -1;
+    activeMarkerCommandName = "";
     phase = queueSteps.isEmpty() ? QueuePhase.IDLE : QueuePhase.READY;
     activeLabel = "";
     queueMessage = message;
@@ -311,6 +374,10 @@ final class RebuiltAutoQueue {
     queueRevision++;
     cancelActiveCommand();
     queueRunning = false;
+    executionSource = "NONE";
+    activeSequenceIndex = -1;
+    activeRouteIndex = -1;
+    activeMarkerCommandName = "";
     phase = QueuePhase.IDLE;
     activeLabel = "";
     queueMessage = message;
@@ -323,6 +390,7 @@ final class RebuiltAutoQueue {
     }
     if (normalizedId == null) {
       clearQueue("No auto selected.");
+      selectedAutoSteps.clear();
       selectedAutoState =
           new SelectedAutoState(
               "", "", "", "", false, "No auto selected.", false, 0, Timer.getFPGATimestamp(), null);
@@ -348,6 +416,11 @@ final class RebuiltAutoQueue {
     }
     Optional<DeployAutoLibrary.LoadedAuto> loadedAuto = autoLibrary.loadAuto(normalizedId);
     if (loadedAuto.isEmpty()) {
+      String failureMessage =
+          autoLibrary.getLastFailureMessage().isBlank()
+              ? "Selected auto was not found in deploy."
+              : autoLibrary.getLastFailureMessage();
+      selectedAutoSteps.clear();
       selectedAutoState =
           new SelectedAutoState(
               normalizedId,
@@ -355,13 +428,13 @@ final class RebuiltAutoQueue {
               "",
               "",
               false,
-              "Selected auto was not found in deploy.",
+              failureMessage,
               true,
               0,
               Timer.getFPGATimestamp(),
               null);
-      clearQueue("Selected auto was not found in deploy.");
-      recordAction("AUTO_SELECT", false, "Selected auto was not found in deploy.");
+      clearQueue(failureMessage);
+      recordAction("AUTO_SELECT", false, failureMessage);
       return;
     }
     loadSelectedAuto(loadedAuto.get());
@@ -369,9 +442,12 @@ final class RebuiltAutoQueue {
 
   private void loadSelectedAuto(DeployAutoLibrary.LoadedAuto loadedAuto) {
     queueSteps.clear();
+    selectedAutoSteps.clear();
     noGoZones.clear();
     for (DeployAutoLibrary.StepSpec step : loadedAuto.steps()) {
-      queueSteps.add(QueueStep.fromLibrary(step));
+      QueueStep queueStep = QueueStep.fromLibrary(step);
+      queueSteps.add(queueStep);
+      selectedAutoSteps.add(queueStep);
     }
     for (DeployAutoLibrary.ZoneSpec zone : loadedAuto.customZones()) {
       noGoZones.add(NoGoZone.fromLibrary(zone));
@@ -380,6 +456,10 @@ final class RebuiltAutoQueue {
     queueRevision++;
     cancelActiveCommand();
     queueRunning = false;
+    executionSource = "NONE";
+    activeSequenceIndex = -1;
+    activeRouteIndex = -1;
+    activeMarkerCommandName = "";
     phase = queueSteps.isEmpty() ? QueuePhase.IDLE : QueuePhase.READY;
     activeLabel = "";
     queueMessage =
@@ -437,6 +517,9 @@ final class RebuiltAutoQueue {
     }
     cancelActiveCommand();
     activeCommand = command;
+    activeSequenceIndex = 0;
+    activeRouteIndex = -1;
+    activeMarkerCommandName = "";
     activeLabel = step.displayLabel(spotLibrary);
     queueMessage = "Running " + activeLabel + ".";
     phase = QueuePhase.RUNNING;
@@ -465,6 +548,10 @@ final class RebuiltAutoQueue {
   private void finishQueue() {
     cancelActiveCommand();
     queueRunning = false;
+    executionSource = "NONE";
+    activeSequenceIndex = -1;
+    activeRouteIndex = -1;
+    activeMarkerCommandName = "";
     phase = QueuePhase.COMPLETE;
     activeLabel = "";
     queueMessage = "Queue complete.";
@@ -483,42 +570,81 @@ final class RebuiltAutoQueue {
 
   private Command buildCommand(
       QueueStep step, boolean finalStep, Optional<Pose2d> startingPoseOverride) {
+    if (step.isNamedCommand()) {
+      if (step.commandName == null || !NamedCommands.hasCommand(step.commandName)) {
+        return null;
+      }
+      return NamedCommands.getCommand(step.commandName)
+          .beforeStarting(
+              () -> {
+                activeRouteIndex = -1;
+                activeMarkerCommandName = step.commandName;
+              });
+    }
+    if (step.isWait()) {
+      double waitSeconds = step.waitSeconds != null ? Math.max(0.0, step.waitSeconds) : 0.0;
+      return Commands.waitSeconds(waitSeconds)
+          .beforeStarting(
+              () -> {
+                activeRouteIndex = -1;
+                activeMarkerCommandName = "";
+              });
+    }
+
     List<Pose2d> routePoses = resolveRoutePoses(step);
     if (routePoses.isEmpty() || drive == null || !isRouteSafe(startingPoseOverride, routePoses)) {
       return null;
     }
 
-    double alignConstraintFactor = RebuiltAutoConstants.QUEUE_ALIGN_CONSTRAINT_FACTOR.get();
+    double alignConstraintFactor =
+        deriveConstraintFactor(
+            step.maxVelocityMps, RebuiltAutoConstants.QUEUE_ALIGN_CONSTRAINT_FACTOR.get());
     double alignToleranceMeters = RebuiltAutoConstants.QUEUE_ALIGN_TOLERANCE_METERS.get();
-    double alignTimeoutSeconds = RebuiltAutoConstants.QUEUE_ALIGN_TIMEOUT_SEC.get();
+    double alignTimeoutSeconds =
+        deriveTimeoutSeconds(step.routeLengthMeters, step.maxVelocityMps, routePoses.size());
     double flowThroughEndVelocity = RebuiltAutoConstants.QUEUE_FLOW_THROUGH_END_VELOCITY_MPS.get();
     double stepConstraintFactor =
         step.constraintFactor != null
             ? Math.max(0.05, step.constraintFactor)
             : alignConstraintFactor;
+    boolean stepStopOnEnd = step.stopOnEnd == null ? finalStep : step.stopOnEnd.booleanValue();
     double stepToleranceMeters =
-        step.toleranceMeters != null ? Math.max(0.01, step.toleranceMeters) : alignToleranceMeters;
+        step.toleranceMeters != null
+            ? Math.max(0.01, step.toleranceMeters)
+            : derivePathToleranceMeters(step, alignToleranceMeters, stepStopOnEnd);
     double stepTimeoutSeconds =
         step.timeoutSeconds != null ? Math.max(0.05, step.timeoutSeconds) : alignTimeoutSeconds;
-    boolean stepStopOnEnd = step.stopOnEnd == null ? finalStep : step.stopOnEnd.booleanValue();
 
     ArrayList<Command> routeCommands = new ArrayList<>();
     for (int i = 0; i < routePoses.size(); i++) {
       boolean finalRoutePose = i == routePoses.size() - 1;
+      double routeToleranceMeters =
+          finalRoutePose && stepStopOnEnd
+              ? stepToleranceMeters
+              : Math.max(stepToleranceMeters, FLOW_THROUGH_TOLERANCE_METERS);
       double endVelocity =
-          step.endVelocityMps != null
-              ? step.endVelocityMps
-              : (finalStep && finalRoutePose ? 0.0 : flowThroughEndVelocity);
+          finalRoutePose
+              ? (step.endVelocityMps != null
+                  ? step.endVelocityMps
+                  : (finalStep ? 0.0 : flowThroughEndVelocity))
+              : flowThroughEndVelocity;
+      final int routeIndex = i;
       routeCommands.add(
-          new AutoAlignToPoseCommand(
-                  drive,
-                  routePoses.get(i),
-                  stepConstraintFactor,
-                  endVelocity,
-                  stepToleranceMeters,
-                  false,
-                  finalRoutePose && stepStopOnEnd)
-              .withTimeout(stepTimeoutSeconds));
+          Commands.sequence(
+              Commands.runOnce(
+                  () -> {
+                    activeRouteIndex = routeIndex;
+                    activeMarkerCommandName = "";
+                  }),
+              new AutoAlignToPoseCommand(
+                      drive,
+                      routePoses.get(i),
+                      stepConstraintFactor,
+                      endVelocity,
+                      routeToleranceMeters,
+                      false,
+                      finalRoutePose && stepStopOnEnd)
+                  .withTimeout(stepTimeoutSeconds)));
     }
 
     Command routeCommand = Commands.sequence(routeCommands.toArray(new Command[0]));
@@ -628,7 +754,9 @@ final class RebuiltAutoQueue {
         }
         steps.add(
             new QueueStateStep(
+                step.type,
                 step.spotId,
+                step.commandName,
                 step.displayLabel(spotLibrary),
                 step.requestedStateName,
                 statusForIndex(i).name(),
@@ -637,6 +765,7 @@ final class RebuiltAutoQueue {
                 step.xMeters,
                 step.yMeters,
                 step.headingDeg,
+                step.waitSeconds,
                 routeWaypoints));
       }
 
@@ -660,7 +789,7 @@ final class RebuiltAutoQueue {
               queueRevision,
               queueRunning,
               phase.name(),
-              queueRunning && !queueSteps.isEmpty() ? 0 : -1,
+              queueRunning ? activeSequenceIndex : -1,
               queueMessage,
               activeLabel,
               queuedStartPose == null
@@ -680,6 +809,12 @@ final class RebuiltAutoQueue {
     if (!queueRunning) {
       return index == 0 && phase == QueuePhase.READY ? StepStatus.READY : StepStatus.PENDING;
     }
+    if ("DEPLOY_AUTO_QUEUE".equals(executionSource)) {
+      if (index == activeSequenceIndex) {
+        return StepStatus.ACTIVE;
+      }
+      return index > activeSequenceIndex ? StepStatus.QUEUED : StepStatus.PENDING;
+    }
     if (index == 0) {
       return activeCommand != null ? StepStatus.ACTIVE : StepStatus.READY;
     }
@@ -691,6 +826,10 @@ final class RebuiltAutoQueue {
     Logger.recordOutput("AutoQueue/Phase", phase.name());
     Logger.recordOutput("AutoQueue/Length", queueSteps.size());
     Logger.recordOutput("AutoQueue/ActiveLabel", activeLabel);
+    Logger.recordOutput("AutoQueue/ExecutionSource", executionSource);
+    Logger.recordOutput("AutoQueue/DeployAutoActiveIndex", activeSequenceIndex);
+    Logger.recordOutput("AutoQueue/DeployAutoRouteIndex", activeRouteIndex);
+    Logger.recordOutput("AutoQueue/DeployAutoMarkerCommand", activeMarkerCommandName);
     Logger.recordOutput("AutoQueue/Message", queueMessage);
   }
 
@@ -729,6 +868,35 @@ final class RebuiltAutoQueue {
       for (int i = 0; i < queueSteps.size(); i++) {
         QueueStep step = queueSteps.get(i);
         String label = "Step " + (i + 1) + " • " + step.displayLabel(spotLibrary);
+        if (step.isNamedCommand()) {
+          if (step.commandName == null || !NamedCommands.hasCommand(step.commandName)) {
+            items.add(new QuickRunItem(label, "fail", "Named command is not registered."));
+            continue;
+          }
+          items.add(
+              new QuickRunItem(
+                  label, "pass", "Named command \"" + step.commandName + "\" is available."));
+          Optional<Pose2d> boundaryPose = step.resolvePose(spotLibrary, getRuntimeAlliance());
+          if (boundaryPose.isPresent()) {
+            previous = boundaryPose.get();
+          }
+          continue;
+        }
+        if (step.isWait()) {
+          items.add(
+              new QuickRunItem(
+                  label,
+                  "pass",
+                  String.format(
+                      Locale.ROOT,
+                      "Wait %.2f second(s)",
+                      step.waitSeconds == null ? 0.0 : step.waitSeconds)));
+          Optional<Pose2d> boundaryPose = step.resolvePose(spotLibrary, getRuntimeAlliance());
+          if (boundaryPose.isPresent()) {
+            previous = boundaryPose.get();
+          }
+          continue;
+        }
         Optional<Pose2d> pose = step.resolvePose(spotLibrary, getRuntimeAlliance());
         if (pose.isEmpty()) {
           items.add(new QuickRunItem(label, "fail", "Unable to resolve target pose."));
@@ -798,6 +966,43 @@ final class RebuiltAutoQueue {
         pose.getX(),
         pose.getY(),
         pose.getRotation().getDegrees());
+  }
+
+  private static double deriveConstraintFactor(Double maxVelocityMps, double fallbackFactor) {
+    if (maxVelocityMps == null || !Double.isFinite(maxVelocityMps) || maxVelocityMps <= 0.0) {
+      return Math.max(0.05, fallbackFactor);
+    }
+    double globalMax = AlignConstants.Auto.MAX_LINEAR_SPEED_MPS.get();
+    if (!Double.isFinite(globalMax) || globalMax <= 0.0) {
+      return Math.max(0.05, fallbackFactor);
+    }
+    return MathUtil.clamp(maxVelocityMps / globalMax, 0.05, 1.0);
+  }
+
+  private static double deriveTimeoutSeconds(
+      Double routeLengthMeters, Double maxVelocityMps, int routePointCount) {
+    double fallback = RebuiltAutoConstants.QUEUE_ALIGN_TIMEOUT_SEC.get();
+    if (routeLengthMeters == null
+        || !Double.isFinite(routeLengthMeters)
+        || routeLengthMeters <= EPSILON_METERS
+        || maxVelocityMps == null
+        || !Double.isFinite(maxVelocityMps)
+        || maxVelocityMps <= 0.0) {
+      return fallback;
+    }
+    double travelSeconds = routeLengthMeters / Math.max(0.1, maxVelocityMps);
+    double marginSeconds = 0.75 + (0.2 * Math.max(1, routePointCount));
+    return Math.max(0.2, travelSeconds + marginSeconds);
+  }
+
+  private static double derivePathToleranceMeters(
+      QueueStep step, double fallbackToleranceMeters, boolean stopOnEnd) {
+    if (step == null || !step.isPathStep()) {
+      return fallbackToleranceMeters;
+    }
+    return stopOnEnd
+        ? Math.max(fallbackToleranceMeters, STOPPING_PATH_TOLERANCE_METERS)
+        : Math.max(fallbackToleranceMeters, FLOW_THROUGH_TOLERANCE_METERS);
   }
 
   private void recordAction(String action, boolean accepted, String detail) {
@@ -928,8 +1133,10 @@ final class RebuiltAutoQueue {
   }
 
   private static final class QueueStep {
+    private final String type;
     private final String spotId;
     private final String requestedStateName;
+    private final String commandName;
     private final String label;
     private final String group;
     private final String alliance;
@@ -937,15 +1144,20 @@ final class RebuiltAutoQueue {
     private final Double yMeters;
     private final Double headingDeg;
     private final Double constraintFactor;
+    private final Double maxVelocityMps;
+    private final Double routeLengthMeters;
     private final Double toleranceMeters;
     private final Double timeoutSeconds;
+    private final Double waitSeconds;
     private final Double endVelocityMps;
     private final Boolean stopOnEnd;
     private final List<PoseSpec> routeWaypoints;
 
     private QueueStep(
+        String type,
         String spotId,
         String requestedStateName,
+        String commandName,
         String label,
         String group,
         String alliance,
@@ -953,13 +1165,18 @@ final class RebuiltAutoQueue {
         Double yMeters,
         Double headingDeg,
         Double constraintFactor,
+        Double maxVelocityMps,
+        Double routeLengthMeters,
         Double toleranceMeters,
         Double timeoutSeconds,
+        Double waitSeconds,
         Double endVelocityMps,
         Boolean stopOnEnd,
         List<PoseSpec> routeWaypoints) {
+      this.type = blankToNull(type);
       this.spotId = spotId;
       this.requestedStateName = requestedStateName;
+      this.commandName = blankToNull(commandName);
       this.label = label;
       this.group = group;
       this.alliance = alliance;
@@ -967,8 +1184,11 @@ final class RebuiltAutoQueue {
       this.yMeters = yMeters;
       this.headingDeg = headingDeg;
       this.constraintFactor = constraintFactor;
+      this.maxVelocityMps = maxVelocityMps;
+      this.routeLengthMeters = routeLengthMeters;
       this.toleranceMeters = toleranceMeters;
       this.timeoutSeconds = timeoutSeconds;
+      this.waitSeconds = waitSeconds;
       this.endVelocityMps = endVelocityMps;
       this.stopOnEnd = stopOnEnd;
       this.routeWaypoints = routeWaypoints;
@@ -978,11 +1198,14 @@ final class RebuiltAutoQueue {
       if (dto == null) {
         return Optional.empty();
       }
+      String type = blankToNull(dto.type);
       String spotId = blankToNull(dto.spotId);
       Double xMeters = sanitizeFinite(dto.xMeters);
       Double yMeters = sanitizeFinite(dto.yMeters);
       Double headingDeg = sanitizeFinite(dto.headingDeg);
-      if (spotId == null && (xMeters == null || yMeters == null)) {
+      boolean boundaryOnlyStep =
+          "NAMED_COMMAND".equalsIgnoreCase(type) || "WAIT".equalsIgnoreCase(type);
+      if (!boundaryOnlyStep && spotId == null && (xMeters == null || yMeters == null)) {
         return Optional.empty();
       }
       ArrayList<PoseSpec> routeWaypoints = new ArrayList<>();
@@ -993,8 +1216,10 @@ final class RebuiltAutoQueue {
       }
       return Optional.of(
           new QueueStep(
+              type,
               spotId,
               blankToNull(dto.requestedState),
+              blankToNull(dto.commandName),
               blankToNull(dto.label),
               blankToNull(dto.group),
               blankToNull(dto.alliance),
@@ -1002,8 +1227,11 @@ final class RebuiltAutoQueue {
               yMeters,
               headingDeg,
               sanitizeFinite(dto.constraintFactor),
+              sanitizeFinite(dto.maxVelocityMps),
+              sanitizeFinite(dto.routeLengthMeters),
               sanitizeFinite(dto.toleranceMeters),
               sanitizeFinite(dto.timeoutSeconds),
+              sanitizeFinite(dto.waitSeconds),
               sanitizeFinite(dto.endVelocityMps),
               dto.stopOnEnd,
               List.copyOf(routeWaypoints)));
@@ -1015,8 +1243,10 @@ final class RebuiltAutoQueue {
         PoseSpec.fromLibrary(waypoint).ifPresent(routeWaypoints::add);
       }
       return new QueueStep(
+          step.type(),
           step.spotId(),
           step.requestedState(),
+          step.commandName(),
           step.label(),
           step.group(),
           step.alliance(),
@@ -1024,8 +1254,11 @@ final class RebuiltAutoQueue {
           step.yMeters(),
           step.headingDeg(),
           step.constraintFactor(),
+          step.maxVelocityMps(),
+          step.routeLengthMeters(),
           step.toleranceMeters(),
           step.timeoutSeconds(),
+          step.waitSeconds(),
           step.endVelocityMps(),
           step.stopOnEnd(),
           List.copyOf(routeWaypoints));
@@ -1065,7 +1298,13 @@ final class RebuiltAutoQueue {
 
     String displayLabel(RebuiltSpotLibrary spotLibrary) {
       if (label != null) {
+        if (commandName != null) {
+          return label.equals(commandName) ? label : label + " • " + commandName;
+        }
         return requestedStateName == null ? label : label + " • " + requestedStateName;
+      }
+      if (commandName != null) {
+        return commandName;
       }
       if (spotId == null) {
         return requestedStateName == null ? "Custom Pose" : "Custom Pose • " + requestedStateName;
@@ -1078,6 +1317,18 @@ final class RebuiltAutoQueue {
                       ? spot.displayLabel()
                       : spot.displayLabel() + " • " + requestedStateName)
           .orElse(spotId);
+    }
+
+    boolean isNamedCommand() {
+      return "NAMED_COMMAND".equalsIgnoreCase(type);
+    }
+
+    boolean isWait() {
+      return "WAIT".equalsIgnoreCase(type);
+    }
+
+    boolean isPathStep() {
+      return type == null || "PATH".equalsIgnoreCase(type);
     }
   }
 
@@ -1237,8 +1488,10 @@ final class RebuiltAutoQueue {
   }
 
   private static final class QueueStepDto {
+    public String type;
     public String spotId;
     public String requestedState;
+    public String commandName;
     public String label;
     public String group;
     public String alliance;
@@ -1246,8 +1499,11 @@ final class RebuiltAutoQueue {
     public Double yMeters;
     public Double headingDeg;
     public Double constraintFactor;
+    public Double maxVelocityMps;
+    public Double routeLengthMeters;
     public Double toleranceMeters;
     public Double timeoutSeconds;
+    public Double waitSeconds;
     public Double endVelocityMps;
     public Boolean stopOnEnd;
     public List<PoseDto> routeWaypoints = List.of();
@@ -1289,7 +1545,9 @@ final class RebuiltAutoQueue {
       boolean locked) {}
 
   private record QueueStateStep(
+      String type,
       String spotId,
+      String commandName,
       String label,
       String requestedState,
       String status,
@@ -1298,6 +1556,7 @@ final class RebuiltAutoQueue {
       Double xMeters,
       Double yMeters,
       Double headingDeg,
+      Double waitSeconds,
       List<PoseState> routeWaypoints) {}
 
   private record QueueStatePayload(

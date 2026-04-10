@@ -33,7 +33,10 @@ public class Rollers extends SubsystemBase {
           ? new ShooterSubsystem(
               "Shooter",
               (GlobalConstants.MODE == GlobalConstants.RobotMode.SIM)
-                  ? new ShooterIOSim(DCMotor.getNeoVortex(2), 1, 1)
+                  ? new ShooterIOSim(
+                      DCMotor.getNeoVortex(2),
+                      ShooterConstants.REDUCTION,
+                      ShooterConstants.SIM_MOI_KG_METERS_SQUARED)
                   : new ShooterIOKraken())
           : null;
   public IndexerSubsystem indexer =
