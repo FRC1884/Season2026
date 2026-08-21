@@ -23,7 +23,11 @@ public final class Config {
     public static final boolean INTAKE_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean INDEXER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean TOOTH_ROLLOUT_ENABLED = false;
-    public static final boolean SPINDEXER_ENABLED = false;
+    public static final boolean SPINDEXER_ENABLED = isSpindexerEnabled(GlobalConstants.MODE);
+
+    public static boolean isSpindexerEnabled(GlobalConstants.RobotMode mode) {
+      return mode == GlobalConstants.RobotMode.SIM;
+    }
   }
 
   public static final class WebUIConfig {

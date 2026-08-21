@@ -27,6 +27,7 @@ import org.Griffins1884.frc2026.subsystems.groups.Arms;
 import org.Griffins1884.frc2026.subsystems.groups.Elevators;
 import org.Griffins1884.frc2026.subsystems.groups.Rollers;
 import org.Griffins1884.frc2026.subsystems.indexer.IndexerSubsystem.IndexerGoal;
+import org.Griffins1884.frc2026.subsystems.indexer.SpindexerSubsystem.SpindexerGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakePivotSubsystem.IntakePivotGoal;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem.IntakeGoal;
 import org.Griffins1884.frc2026.subsystems.leds.LEDIOPWM;
@@ -472,6 +473,7 @@ public class Superstructure extends SubsystemBase {
 
     setIntakePivotGoal(intakeDeployed ? IntakePivotGoal.PICKUP : IntakePivotGoal.IDLING);
     setIntakeGoal(resolveIntakeGoal(false));
+    setSpindexerGoal(spindexerGoalForState(currentState));
     applyAimingAndShooterSolution(target, shooterShouldSpin);
 
     boolean indexerActive = shouldEnableIndexer(shootEnabled, shooterShouldSpin);
@@ -547,6 +549,7 @@ public class Superstructure extends SubsystemBase {
     intakeDeployed = false;
     setIntakeGoal(IntakeGoal.IDLING);
     setIndexerGoal(IndexerGoal.IDLING);
+    setSpindexerGoal(SpindexerGoal.IDLING);
     setShooterTargetVelocity(0.0);
     intakeStowRollerActive = false;
     shootReadyLatched = false;
@@ -648,6 +651,7 @@ public class Superstructure extends SubsystemBase {
 
   private void applyState(SuperState state) {
     boolean indexerRequested = isIndexerRequested();
+    setSpindexerGoal(spindexerGoalForState(state));
     switch (state) {
       case IDLING -> applyIdle();
       case INTAKING -> applyIntaking();
@@ -656,6 +660,14 @@ public class Superstructure extends SubsystemBase {
       case FERRYING -> applyFerrying(indexerRequested);
       case TESTING -> applyTesting();
     }
+  }
+
+  static SpindexerGoal spindexerGoalForState(SuperState state) {
+    return switch (state) {
+      case IDLING -> SpindexerGoal.IDLING;
+      case INTAKING, SHOOTING, SHOOT_INTAKE, FERRYING -> SpindexerGoal.INDEXING;
+      case TESTING -> SpindexerGoal.TESTING;
+    };
   }
 
   private void applyIdle() {
@@ -753,6 +765,12 @@ public class Superstructure extends SubsystemBase {
     lastIndexerGoal = goal;
     if (rollers.indexer != null) {
       rollers.indexer.setGoal(goal);
+    }
+  }
+
+  private void setSpindexerGoal(SpindexerGoal goal) {
+    if (rollers.spindexer != null) {
+      rollers.spindexer.setGoal(goal);
     }
   }
 
