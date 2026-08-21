@@ -16,6 +16,7 @@ import org.Griffins1884.frc2026.subsystems.indexer.SpindexerSubsystem;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOKraken;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeIOSim;
 import org.Griffins1884.frc2026.subsystems.intake.IntakeSubsystem;
+import org.Griffins1884.frc2026.subsystems.intake.ToothRolloutIOSim;
 import org.Griffins1884.frc2026.subsystems.intake.ToothRolloutSubsystem;
 import org.Griffins1884.frc2026.subsystems.shooter.*;
 
@@ -46,16 +47,13 @@ public class Rollers extends SubsystemBase {
           : null;
   public ToothRolloutSubsystem toothRollout =
       TOOTH_ROLLOUT_ENABLED
-          ? new ToothRolloutSubsystem("ToothRollout", new ToothRolloutIOStub())
+          ? new ToothRolloutSubsystem("ToothRollout", new ToothRolloutIOSim())
           : null;
   public SpindexerSubsystem spindexer =
       SPINDEXER_ENABLED ? new SpindexerSubsystem("Spindexer", new SpindexerIOStub()) : null;
 
   @Override
   public void periodic() {}
-
-  private static final class ToothRolloutIOStub
-      implements org.Griffins1884.frc2026.subsystems.intake.ToothRolloutIO {}
 
   private static final class SpindexerIOStub
       implements org.Griffins1884.frc2026.subsystems.indexer.SpindexerIO {}

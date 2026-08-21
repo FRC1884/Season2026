@@ -22,7 +22,9 @@ public final class Config {
     public static final boolean INTAKE_PIVOT_ENABLED = true;
     public static final boolean INTAKE_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
     public static final boolean INDEXER_ENABLED = ROBOT != GlobalConstants.RobotType.DBOT;
-    public static final boolean TOOTH_ROLLOUT_ENABLED = false;
+    public static final boolean TOOTH_ROLLOUT_ENABLED =
+        ROBOT == GlobalConstants.RobotType.SIMBOT
+            && GlobalConstants.MODE == GlobalConstants.RobotMode.SIM;
     public static final boolean SPINDEXER_ENABLED = false;
   }
 

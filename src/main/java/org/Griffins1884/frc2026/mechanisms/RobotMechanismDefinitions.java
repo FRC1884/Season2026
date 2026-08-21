@@ -250,30 +250,28 @@ public final class RobotMechanismDefinitions {
 
   public static final MechanismDefinition TOOTH_ROLLOUT =
       MechanismDefinition.builder(
-              "toothRollout", "ToothRollout", MechanismDefinition.MechanismType.CUSTOM)
+              "toothRollout", "ToothRollout", MechanismDefinition.MechanismType.ROLLER)
           .config(
-              mechanismConfig(
+              openLoopOnlyMechanismConfig(
                   motorGroup(
-                      ToothRolloutConstants.MOTOR_CONTROLLER,
-                      ToothRolloutConstants.CAN_BUS,
+                      ToothRolloutConstants.SIMULATION_CONTROLLER,
+                      "",
                       List.of(
                           motor(
-                              ToothRolloutConstants.MOTOR_ID,
-                              ToothRolloutConstants.INVERTED,
+                              ToothRolloutConstants.SIMULATION_DEVICE_ID,
+                              false,
                               MechanismDefinition.FollowerMode.INDEPENDENT,
-                              ToothRolloutConstants.CURRENT_LIMIT_AMPS)),
-                      ToothRolloutConstants.REDUCTION,
-                      MechanismDefinition.FeedbackSensorType.INTERNAL,
-                      neutralMode(ToothRolloutConstants.BRAKE_MODE),
-                      ToothRolloutConstants.MAX_VOLTAGE,
+                              0)),
+                      ToothRolloutConstants.SIMULATION_REDUCTION,
+                      MechanismDefinition.FeedbackSensorType.SIMULATION_ONLY,
+                      MechanismDefinition.NeutralMode.COAST,
+                      ToothRolloutConstants.SIMULATION_MAX_OUTPUT_VOLTS,
                       0.0,
                       0.0,
                       softLimitsDisabled()),
-                  closedLoop(
-                      ToothRolloutConstants.GAINS, 0.0, 0.0, ToothRolloutConstants.MAX_VOLTAGE),
-                  MechanismDefinition.KrakenFeatureConfig.disabled()))
+                  ToothRolloutConstants.SIMULATION_MAX_OUTPUT_VOLTS))
           .telemetry(fullTelemetry())
-          .simulation(simulation(ToothRolloutConstants.REDUCTION, 0.0, false))
+          .simulation(simulation(ToothRolloutConstants.SIMULATION_REDUCTION, 0.0, false))
           .build();
 
   public static final MechanismDefinition SPINDEXER =
@@ -336,6 +334,21 @@ public final class RobotMechanismDefinitions {
       MechanismDefinition.KrakenFeatureConfig krakenFeatures) {
     return new MechanismDefinition.MechanismConfig(
         motorGroup, closedLoop, krakenFeatures, standardCapabilities);
+  }
+
+  private static MechanismDefinition.MechanismConfig openLoopOnlyMechanismConfig(
+      MechanismDefinition.MotorGroupConfig motorGroup, double maxVoltage) {
+    return new MechanismDefinition.MechanismConfig(
+        motorGroup,
+        new MechanismDefinition.ClosedLoopConfig(
+            new MechanismDefinition.PIDConfig(0.0, 0.0, 0.0),
+            new MechanismDefinition.FeedforwardConfig(0.0, 0.0, 0.0, 0.0),
+            null,
+            0.0,
+            0.0,
+            maxVoltage),
+        MechanismDefinition.KrakenFeatureConfig.disabled(),
+        MechanismDefinition.MechanismConfig.capabilities(MechanismDefinition.Capability.OPEN_LOOP));
   }
 
   private static MechanismDefinition.MotorConfig motor(
