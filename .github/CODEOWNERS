@@ -1,0 +1,14 @@
+# Managed by the central robotics harness.
+# Hosted branch protection and CODEOWNERS enforcement remain external GitHub controls.
+
+* @FRC1884/software-lead
+
+/.github/workflows/ @FRC1884/mentors
+/.github/CODEOWNERS @FRC1884/mentors
+/AGENTS.md @FRC1884/mentors
+/build.gradle @FRC1884/mentors @FRC1884/software-lead @FRC1884/approved-alumni-reviewers
+/settings.gradle @FRC1884/mentors @FRC1884/software-lead @FRC1884/approved-alumni-reviewers
+/gradle/ @FRC1884/mentors @FRC1884/software-lead @FRC1884/approved-alumni-reviewers
+/vendordeps/ @FRC1884/mentors @FRC1884/software-lead @FRC1884/approved-alumni-reviewers
+/src/main/deploy/ @FRC1884/mentors @FRC1884/software-lead @FRC1884/approved-alumni-reviewers
+/src/main/java/**/*Constants.java @FRC1884/mentors @FRC1884/software-lead @FRC1884/approved-alumni-reviewers

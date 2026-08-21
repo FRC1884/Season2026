@@ -1,0 +1,45 @@
+name: Agentic Review
+
+on:
+  workflow_run:
+    workflows:
+      - Phase 0 Validation
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Pull request number to review
+        required: true
+        type: number
+
+permissions: {}
+
+jobs:
+  agentic-review:
+    if: >-
+      ${{
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.event == 'pull_request' &&
+         github.event.workflow_run.pull_requests[0].number > 0) ||
+        github.event_name == 'workflow_dispatch'
+      }}
+    permissions:
+      actions: read
+      checks: write
+      contents: read
+      issues: write
+      pull-requests: write
+    uses: FRC1884/robotics-agentic-development-harness/.github/workflows/agentic-review.yml@6d39f5926adae0166a05bc3399be15e740f4fcc2
+    with:
+      harness_repository: FRC1884/robotics-agentic-development-harness
+      harness_ref: 6d39f5926adae0166a05bc3399be15e740f4fcc2
+      pull_request: >-
+        ${{ github.event_name == 'workflow_dispatch' &&
+            inputs.pull_request ||
+            github.event.workflow_run.pull_requests[0].number }}
+    secrets:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      HARNESS_READ_TOKEN: ${{ secrets.HARNESS_READ_TOKEN }}
+      FRC1884_GOVERNANCE_READ_TOKEN: ${{ secrets.FRC1884_GOVERNANCE_READ_TOKEN }}

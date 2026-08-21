@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "profile": "season2026",
+  "repository": "FRC1884/Season2026",
+  "default_branch": "main",
+  "harness_repository": "FRC1884/robotics-agentic-development-harness",
+  "harness_ref": "6d39f5926adae0166a05bc3399be15e740f4fcc2",
+  "policy_version": "frc1884-bootstrap-v1",
+  "commands": {
+    "build": "./gradlew build --no-daemon --console=plain",
+    "test": "./gradlew test --no-daemon --console=plain"
+  },
+  "teams": {
+    "mentor": "@FRC1884/mentors",
+    "programming_lead": "@FRC1884/software-lead",
+    "approved_alumni": "@FRC1884/approved-alumni-reviewers"
+  },
+  "external_adoption": {
+    "github_branch_protection": "PENDING EXTERNAL ADOPTION",
+    "github_required_checks": "PENDING EXTERNAL ADOPTION",
+    "github_team_permissions": "PENDING EXTERNAL ADOPTION",
+    "github_actions_access": "PENDING EXTERNAL ADOPTION",
+    "github_secrets": "PENDING EXTERNAL ADOPTION"
+  }
+}
