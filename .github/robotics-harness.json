@@ -4,14 +4,14 @@
   "repository": "FRC1884/Season2026",
   "default_branch": "main",
   "harness_repository": "FRC1884/robotics-agentic-development-harness",
-  "harness_ref": "843fc3fba16ec56c4a666fa4501d1f80e4583d46",
+  "harness_ref": "36a93e652165078f610ae4741123c995a00e9f70",
   "policy_version": "frc1884-bootstrap-v1",
   "architecture": "generated_self_contained_execution_plane",
   "execution_plane": {
     "runtime_version": "codex-agent-review-runtime-v1",
     "manifest_path": ".github/robotics-harness/execution-plane-manifest.json",
-    "manifest_sha256": "13c4cad1af27139c9680b8e223c80915a65a6bc6dd6c04180bf48667f12b253f",
-    "immutable_harness_ref": "843fc3fba16ec56c4a666fa4501d1f80e4583d46"
+    "manifest_sha256": "be7f6794619ba51f03c78f0015f5f6f35adb5130af2b8e899d64ee4a92738b6a",
+    "immutable_harness_ref": "36a93e652165078f610ae4741123c995a00e9f70"
   },
   "commands": {
     "build": "./gradlew build --no-daemon --console=plain",
@@ -26,7 +26,15 @@
     "ai_runtime": "CODEX_AGENT",
     "reviewer_config": ".codex/agents/automated-reviewer.toml",
     "review_skill": ".codex/skills/agentic-review/SKILL.md",
-    "required_health_dimensions": ["codex_capability","orchestration","state_validator","on_demand","auto_session","monitoring","required_checks"],
+    "required_health_dimensions": [
+      "codex_capability",
+      "orchestration",
+      "state_validator",
+      "on_demand",
+      "auto_session",
+      "monitoring",
+      "required_checks"
+    ],
     "active_session_triggers": [
       "on_demand_review_request",
       "post_harness_pr_creation"
@@ -37,8 +45,14 @@
     ],
     "unattended_agent_start": "NOT SUPPORTED WITHOUT A PERSISTENT SERVICE"
   },
-  "required_checks": ["build-and-test","Agentic Review"],
-  "required_workflows": ["phase-0-validation.yml","agentic-review.yml"],
+  "required_checks": [
+    "build-and-test",
+    "Agentic Review"
+  ],
+  "required_workflows": [
+    "phase-0-validation.yml",
+    "agentic-review.yml"
+  ],
   "external_adoption": {
     "github_branch_protection": "PENDING EXTERNAL ADOPTION",
     "github_required_checks": "PENDING EXTERNAL ADOPTION",

@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
+RUNTIME_ROOT="$SCRIPT_DIR/runtime"
+ACTUAL_VERIFIER_SHA=$(
+  python3 -B - "$SCRIPT_DIR/verify-runtime.py" <<'PY'
+import hashlib
+import pathlib
+import sys
+
+print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())
+PY
+)
+if [ "$ACTUAL_VERIFIER_SHA" != "78f97881609c4c68cd5b48d82720a37dec3a92e3179aa7477f808e84267abf71" ]; then
+  echo "runtime integrity failure: runtime verifier byte drift" >&2
+  exit 1
+fi
+python3 -B "$SCRIPT_DIR/verify-runtime.py"           --repo "$REPO_ROOT"           --expected-payload-sha "36f7b149543ba98ee51f803a1df4b47bf3f6515176be6ae49f0f6dabf523b244"           --expected-harness-ref "36a93e652165078f610ae4741123c995a00e9f70" >/dev/null
+export PYTHONPATH="$RUNTIME_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -B -m harness.execution_plane.runtime "$@"

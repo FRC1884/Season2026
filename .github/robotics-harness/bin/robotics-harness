@@ -1,8 +1,0 @@
-#!/bin/sh
-set -eu
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
-RUNTIME_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../runtime" && pwd)
-python3 -B "$SCRIPT_DIR/verify-runtime.py" --repo "$REPO_ROOT" --expected-manifest-sha "13c4cad1af27139c9680b8e223c80915a65a6bc6dd6c04180bf48667f12b253f" --expected-harness-ref "843fc3fba16ec56c4a666fa4501d1f80e4583d46" >/dev/null
-export PYTHONPATH="$RUNTIME_ROOT${PYTHONPATH:+:$PYTHONPATH}"
-exec python3 -B -m harness.execution_plane.runtime "$@"

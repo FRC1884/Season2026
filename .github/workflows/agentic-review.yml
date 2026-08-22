@@ -74,10 +74,10 @@ jobs:
 
       - name: Verify installed runtime bytes
         run: >-
-          python3 -B .github/robotics-harness/bin/verify-runtime.py
+          python3 -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "13c4cad1af27139c9680b8e223c80915a65a6bc6dd6c04180bf48667f12b253f"
-          --expected-harness-ref "843fc3fba16ec56c4a666fa4501d1f80e4583d46"
+          --expected-manifest-sha "be7f6794619ba51f03c78f0015f5f6f35adb5130af2b8e899d64ee4a92738b6a"
+          --expected-harness-ref "36a93e652165078f610ae4741123c995a00e9f70"
 
       - name: Resolve pull request context
         id: context
@@ -129,7 +129,7 @@ jobs:
         run: |
           command=(
             sh
-            .github/robotics-harness/bin/robotics-harness
+            .github/robotics-harness/robotics-harness
             review-validate-github
             --target-repo "$GITHUB_WORKSPACE"
             --runtime-root "$RUNNER_TEMP/agentic-review/state"
