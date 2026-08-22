@@ -36,6 +36,7 @@ from harness.private_io import write_private_text
 
 PLATFORM_REVIEW_REQUEST_PREFIX = "<!-- robotics-harness-codex-platform-review-request:"
 PLATFORM_REVIEW_REQUEST_SUFFIX = " -->"
+GITHUB_REVIEW_COMMENT_LIMIT = 60_000
 
 
 def _execution() -> Any:
@@ -575,13 +576,22 @@ def _latest_cycle(root: Path, repository: str, pull_request: int) -> ReviewCycle
 
 
 def _github_body(cycle: ReviewCycle, *, markdown_source: str = "") -> str:
-    return (
-        (markdown_source.strip() or render_review_markdown(cycle))
-        + "\n\n_Logical actor: Automated Reviewer. This marker is Harness orchestration "
-        "evidence, not publisher authentication. The required check independently "
+    source = markdown_source.strip() or render_review_markdown(cycle)
+    source = "\n".join(
+        line for line in source.splitlines() if not line.startswith(STATE_MARKER_PREFIX)
+    ).strip()
+    footer = (
+        "\n\n_Logical actor: Automated Reviewer. This hosted report is bounded; the full "
+        "validated Markdown/JSON remains in the external Harness evidence directory. "
+        "Local evidence is not publisher authentication. The required check independently "
         "requires a current-head review from the configured Codex GitHub identity. "
         "Human review remains required._\n"
     )
+    if len(source) + len(footer) > GITHUB_REVIEW_COMMENT_LIMIT:
+        notice = "\n\n> Hosted report truncated at the GitHub comment boundary."
+        source = source[: GITHUB_REVIEW_COMMENT_LIMIT - len(footer) - len(notice)].rstrip()
+        source += notice
+    return source + footer
 
 
 def _platform_request_marker(*, repository: str, pull_request: int, head_sha: str) -> str:
@@ -669,10 +679,12 @@ def _trusted_platform_response(
     repository: str,
     pull_request: int,
     head_sha: str,
-    request_comment_id: int,
     reviewer_login: str,
     reviewer_id: int,
     reviewer_type: str,
+    request_publisher_login: str,
+    request_publisher_id: int,
+    request_publisher_type: str,
 ) -> dict[str, Any]:
     reviews = _paged_values(
         runtime,
@@ -697,6 +709,33 @@ def _trusted_platform_response(
             "review_id": int(review.get("id", 0)),
             "review_state": str(review.get("state", "")),
         }
+    comments = _paged_values(
+        runtime,
+        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
+        cwd=repo,
+    )
+    request_comment = next(
+        (
+            comment
+            for comment in reversed(comments)
+            if _github_identity_matches(
+                comment.get("user"),
+                login=request_publisher_login,
+                account_id=request_publisher_id,
+                account_type=request_publisher_type,
+            )
+            and _matches_platform_request(
+                _decode_platform_request_marker(str(comment.get("body", ""))),
+                repository=repository,
+                pull_request=pull_request,
+                head_sha=head_sha,
+            )
+            and bool(str(comment.get("created_at", "")))
+            and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
+        ),
+        None,
+    )
+    request_comment_id = int(request_comment.get("id", 0)) if request_comment else 0
     if request_comment_id > 0:
         reactions = _paged_values(
             runtime,
@@ -720,8 +759,115 @@ def _trusted_platform_response(
             None,
         )
         if clean is not None:
-            return {"kind": "clean_reaction", "reaction_id": int(clean.get("id", 0))}
+            return {
+                "kind": "clean_reaction",
+                "reaction_id": int(clean.get("id", 0)),
+                "request_comment_id": request_comment_id,
+            }
     return {"kind": "pending"}
+
+
+def runtime_request_platform_review_github(
+    *,
+    target_repo: Path | str,
+    runtime_root: Path | str,
+    task_id: str,
+    repository: str,
+    pull_request: int,
+    expected_head: str,
+    request_publisher_login: str,
+    request_publisher_id: int,
+    request_publisher_type: str = "Bot",
+) -> dict[str, Any]:
+    runtime = _execution()
+    runtime._require_github_actions_token()
+    repo, root = _require_external(target_repo, runtime_root)
+    live = runtime._pull_request_state(repository=repository, pull_request=pull_request, cwd=repo)
+    current_head = str(live["head_sha"])
+    if not expected_head or expected_head.casefold() != current_head.casefold():
+        raise ValueError("platform review request head does not match the live pull request")
+    if not request_publisher_login.strip() or request_publisher_id < 1:
+        raise ValueError("platform review request requires a trusted publisher identity")
+    comments = _paged_values(
+        runtime,
+        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
+        cwd=repo,
+    )
+    existing = next(
+        (
+            comment
+            for comment in reversed(comments)
+            if _github_identity_matches(
+                comment.get("user"),
+                login=request_publisher_login,
+                account_id=request_publisher_id,
+                account_type=request_publisher_type,
+            )
+            and _matches_platform_request(
+                _decode_platform_request_marker(str(comment.get("body", ""))),
+                repository=repository,
+                pull_request=pull_request,
+                head_sha=current_head,
+            )
+            and bool(str(comment.get("created_at", "")))
+            and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
+        ),
+        None,
+    )
+    if existing is not None:
+        request = existing
+    else:
+        request = runtime._run_gh_api(
+            path=f"repos/{repository}/issues/{pull_request}/comments",
+            method="POST",
+            payload={
+                "body": (
+                    "@codex review\n\n"
+                    "Harness request: publish the independent current-head review through "
+                    "the Codex GitHub integration.\n\n"
+                    + _platform_request_marker(
+                        repository=repository,
+                        pull_request=pull_request,
+                        head_sha=current_head,
+                    )
+                )
+            },
+            cwd=repo,
+        )
+    if not isinstance(request, dict) or not _github_identity_matches(
+        request.get("user"),
+        login=request_publisher_login,
+        account_id=request_publisher_id,
+        account_type=request_publisher_type,
+    ):
+        raise ValueError("platform review request was not published by the trusted bot")
+    comment_id = int(request.get("id", 0))
+    if comment_id < 1:
+        raise ValueError("platform review request comment ID is missing")
+    _event(
+        root=root,
+        repo=repo,
+        event_type=EventType.REVIEW_AGENT_REQUESTED,
+        repository=repository,
+        pull_request=pull_request,
+        base_sha=str(live["base_sha"]),
+        head_sha=current_head,
+        task_id=task_id,
+        session_id=f"platform-review-request-pr-{pull_request}",
+        result="requested",
+        extra={
+            "request_comment_id": comment_id,
+            "request_publisher_login": request_publisher_login,
+            "request_publisher_id": request_publisher_id,
+        },
+    )
+    return {
+        "status": "requested",
+        "repository": repository,
+        "pull_request": pull_request,
+        "head_sha": current_head,
+        "request_comment_id": comment_id,
+    }
 
 
 def runtime_publish_review(
@@ -735,6 +881,9 @@ def runtime_publish_review(
     trusted_reviewer_login: str,
     trusted_reviewer_id: int,
     trusted_reviewer_type: str = "Bot",
+    trusted_request_publisher_login: str = "github-actions[bot]",
+    trusted_request_publisher_id: int = 41898282,
+    trusted_request_publisher_type: str = "Bot",
     platform_wait_seconds: int = 0,
     platform_poll_seconds: int = 5,
 ) -> dict[str, Any]:
@@ -753,7 +902,6 @@ def runtime_publish_review(
         cwd=repo,
     )
     existing_id = 0
-    existing_request_id = 0
     for comment in reversed(comments):
         user = comment.get("user") or {}
         if not isinstance(user, dict) or str(user.get("login", "")) != actor:
@@ -761,15 +909,7 @@ def runtime_publish_review(
         comment_body = str(comment.get("body", ""))
         if not existing_id and STATE_MARKER_PREFIX in comment_body:
             existing_id = int(comment["id"])
-        request = _decode_platform_request_marker(comment_body)
-        if not existing_request_id and _matches_platform_request(
-            request,
-            repository=repository,
-            pull_request=pull_request,
-            head_sha=cycle.head_sha,
-        ):
-            existing_request_id = int(comment["id"])
-        if existing_id and existing_request_id:
+        if existing_id:
             break
     if existing_id:
         summary = runtime._run_gh_api(
@@ -785,33 +925,21 @@ def runtime_publish_review(
             payload={"body": body},
             cwd=repo,
         )
-    if existing_request_id:
-        platform_request = {"id": existing_request_id}
-    else:
-        platform_request = runtime._run_gh_api(
-            path=f"repos/{repository}/issues/{pull_request}/comments",
-            method="POST",
-            payload={
-                "body": (
-                    "@codex review\n\n"
-                    "Harness request: publish the independent current-head review through "
-                    "the Codex GitHub integration.\n\n"
-                    + _platform_request_marker(
-                        repository=repository,
-                        pull_request=pull_request,
-                        head_sha=cycle.head_sha,
-                    )
-                )
-            },
-            cwd=repo,
-        )
-    request_comment_id = (
-        int(platform_request.get("id", 0)) if isinstance(platform_request, dict) else 0
-    )
     if not trusted_reviewer_login.strip() or trusted_reviewer_id < 1:
         raise ValueError("review publication requires an explicit trusted reviewer identity")
+    if not trusted_request_publisher_login.strip() or trusted_request_publisher_id < 1:
+        raise ValueError("review publication requires a trusted request publisher identity")
     if platform_wait_seconds < 0 or platform_poll_seconds < 1:
         raise ValueError("platform review wait values must be non-negative with a positive poll")
+    runtime._run_gh_api(
+        path=f"repos/{repository}/dispatches",
+        method="POST",
+        payload={
+            "event_type": "agentic_review_requested",
+            "client_payload": {"pull_request": pull_request, "head_sha": cycle.head_sha},
+        },
+        cwd=repo,
+    )
     deadline = time.monotonic() + platform_wait_seconds
     platform_response = _trusted_platform_response(
         runtime,
@@ -819,10 +947,12 @@ def runtime_publish_review(
         repository=repository,
         pull_request=pull_request,
         head_sha=cycle.head_sha,
-        request_comment_id=request_comment_id,
         reviewer_login=trusted_reviewer_login,
         reviewer_id=trusted_reviewer_id,
         reviewer_type=trusted_reviewer_type,
+        request_publisher_login=trusted_request_publisher_login,
+        request_publisher_id=trusted_request_publisher_id,
+        request_publisher_type=trusted_request_publisher_type,
     )
     while platform_response["kind"] == "pending" and time.monotonic() < deadline:
         time.sleep(min(platform_poll_seconds, max(0.0, deadline - time.monotonic())))
@@ -832,10 +962,12 @@ def runtime_publish_review(
             repository=repository,
             pull_request=pull_request,
             head_sha=cycle.head_sha,
-            request_comment_id=request_comment_id,
             reviewer_login=trusted_reviewer_login,
             reviewer_id=trusted_reviewer_id,
             reviewer_type=trusted_reviewer_type,
+            request_publisher_login=trusted_request_publisher_login,
+            request_publisher_id=trusted_request_publisher_id,
+            request_publisher_type=trusted_request_publisher_type,
         )
     dispatch_event = ""
     if platform_response["kind"] != "pending":
@@ -866,9 +998,9 @@ def runtime_publish_review(
         reviewer_session_id=cycle.reviewer_session_id,
         extra={
             "summary_comment_id": int(summary.get("id", 0)) if isinstance(summary, dict) else 0,
-            "platform_review_request_comment_id": int(platform_request.get("id", 0))
-            if isinstance(platform_request, dict)
-            else 0,
+            "platform_review_request_comment_id": int(
+                platform_response.get("request_comment_id", 0)
+            ),
             "integrity_hash": cycle.integrity_hash,
             "publisher_authentication": "pending_codex_github_identity",
             "platform_response": platform_response,
@@ -883,9 +1015,8 @@ def runtime_publish_review(
         "head_sha": cycle.head_sha,
         "summary_comment_id": int(summary.get("id", 0)) if isinstance(summary, dict) else 0,
         "review_id": 0,
-        "platform_review_request_comment_id": int(platform_request.get("id", 0))
-        if isinstance(platform_request, dict)
-        else 0,
+        "platform_review_request_comment_id": int(platform_response.get("request_comment_id", 0)),
+        "request_dispatch_event": "agentic_review_requested",
         "dispatch_event": dispatch_event,
         "platform_response": platform_response,
     }
@@ -902,6 +1033,9 @@ def runtime_validate_review_github(
     trusted_reviewer_login: str = "",
     trusted_reviewer_id: int = 0,
     trusted_reviewer_type: str = "Bot",
+    trusted_request_publisher_login: str = "github-actions[bot]",
+    trusted_request_publisher_id: int = 41898282,
+    trusted_request_publisher_type: str = "Bot",
 ) -> dict[str, Any]:
     runtime = _execution()
     runtime._require_github_actions_token()
@@ -912,35 +1046,26 @@ def runtime_validate_review_github(
     reviewer_type = trusted_reviewer_type.strip()
     if not reviewer_login or trusted_reviewer_id < 1 or not reviewer_type:
         raise ValueError("review validation requires an explicit trusted reviewer identity")
-    comments = _paged_values(
-        runtime,
-        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
-        cwd=repo,
-    )
-    request_comment_id = 0
-    for comment in reversed(comments):
-        request = _decode_platform_request_marker(str(comment.get("body", "")))
-        if not _matches_platform_request(
-            request,
-            repository=repository,
-            pull_request=pull_request,
-            head_sha=current_head,
-        ):
-            continue
-        comment_id = int(comment.get("id", 0))
-        if comment_id > 0:
-            request_comment_id = comment_id
-            break
+    request_publisher_login = trusted_request_publisher_login.strip()
+    request_publisher_type = trusted_request_publisher_type.strip()
+    if (
+        not request_publisher_login
+        or trusted_request_publisher_id < 1
+        or not request_publisher_type
+    ):
+        raise ValueError("review validation requires a trusted request publisher identity")
     platform_response = _trusted_platform_response(
         runtime,
         repo=repo,
         repository=repository,
         pull_request=pull_request,
         head_sha=current_head,
-        request_comment_id=request_comment_id,
         reviewer_login=reviewer_login,
         reviewer_id=trusted_reviewer_id,
         reviewer_type=reviewer_type,
+        request_publisher_login=request_publisher_login,
+        request_publisher_id=trusted_request_publisher_id,
+        request_publisher_type=request_publisher_type,
     )
     blockers: list[str] = []
     if expected_head and expected_head.casefold() != current_head.casefold():
@@ -986,6 +1111,9 @@ def runtime_validate_review_github(
             "trusted_reviewer_login": reviewer_login,
             "trusted_reviewer_id": trusted_reviewer_id,
             "trusted_reviewer_type": reviewer_type,
+            "trusted_request_publisher_login": request_publisher_login,
+            "trusted_request_publisher_id": trusted_request_publisher_id,
+            "trusted_request_publisher_type": request_publisher_type,
             "platform_response": platform_response,
             "local_cycle_security_authority": False,
             "check_id": int(check.get("id", 0)) if isinstance(check, dict) else 0,

@@ -18,6 +18,7 @@ from harness.agent_review.runtime import (
     runtime_publish_review,
     runtime_record_review,
     runtime_record_review_response,
+    runtime_request_platform_review_github,
     runtime_validate_review_github,
 )
 from harness.agent_review.service import (
@@ -69,6 +70,7 @@ __all__ = [
     "runtime_publish_review",
     "runtime_record_review",
     "runtime_record_review_response",
+    "runtime_request_platform_review_github",
     "runtime_validate_review_github",
     "validate_review_cycle",
     "write_review_cycle_artifacts",

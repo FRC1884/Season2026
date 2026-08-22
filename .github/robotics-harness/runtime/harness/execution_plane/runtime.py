@@ -120,6 +120,10 @@ _OPTIONAL_REVIEW_ADAPTERS = {
     "prepare": ("runtime_prepare_review", "prepare_review"),
     "record": ("runtime_record_review", "record_review"),
     "publish": ("runtime_publish_review", "publish_review"),
+    "request_github": (
+        "runtime_request_platform_review_github",
+        "request_platform_review_github",
+    ),
     "validate_github": ("runtime_validate_review_github", "validate_review_github"),
     "respond": ("runtime_record_review_response", "record_review_response"),
     "stale": ("runtime_mark_review_stale", "mark_review_stale"),
@@ -1392,6 +1396,35 @@ def record_review_bundle(
     }
 
 
+def request_platform_review_on_github(
+    *,
+    target_repo: Path | str,
+    runtime_root: Path | str,
+    task_id: str,
+    repository: str,
+    pull_request: int,
+    expected_head: str,
+    request_publisher_login: str,
+    request_publisher_id: int,
+    request_publisher_type: str = "Bot",
+) -> dict[str, Any]:
+    adapter = _call_optional_review_adapter(
+        "request_github",
+        target_repo=target_repo,
+        runtime_root=runtime_root,
+        task_id=task_id,
+        repository=repository,
+        pull_request=pull_request,
+        expected_head=expected_head,
+        request_publisher_login=request_publisher_login,
+        request_publisher_id=request_publisher_id,
+        request_publisher_type=request_publisher_type,
+    )
+    if adapter is _OPTIONAL_ADAPTER_MISSING:
+        raise ValueError("trusted Codex platform-request adapter is not installed")
+    return dict(adapter)
+
+
 def publish_review_bundle(
     *,
     target_repo: Path | str,
@@ -1403,6 +1436,9 @@ def publish_review_bundle(
     trusted_reviewer_login: str,
     trusted_reviewer_id: int,
     trusted_reviewer_type: str = "Bot",
+    trusted_request_publisher_login: str,
+    trusted_request_publisher_id: int,
+    trusted_request_publisher_type: str = "Bot",
     platform_wait_seconds: int = 600,
     platform_poll_seconds: int = 5,
 ) -> tuple[int, dict[str, Any]]:
@@ -1417,6 +1453,9 @@ def publish_review_bundle(
         trusted_reviewer_login=trusted_reviewer_login,
         trusted_reviewer_id=trusted_reviewer_id,
         trusted_reviewer_type=trusted_reviewer_type,
+        trusted_request_publisher_login=trusted_request_publisher_login,
+        trusted_request_publisher_id=trusted_request_publisher_id,
+        trusted_request_publisher_type=trusted_request_publisher_type,
         platform_wait_seconds=platform_wait_seconds,
         platform_poll_seconds=platform_poll_seconds,
     )
@@ -1563,6 +1602,9 @@ def validate_review_state_on_github(
     trusted_reviewer_login: str = "",
     trusted_reviewer_id: int = 0,
     trusted_reviewer_type: str = "Bot",
+    trusted_request_publisher_login: str = "github-actions[bot]",
+    trusted_request_publisher_id: int = 41898282,
+    trusted_request_publisher_type: str = "Bot",
 ) -> tuple[int, dict[str, Any]]:
     adapter = _call_optional_review_adapter(
         "validate_github",
@@ -1575,6 +1617,9 @@ def validate_review_state_on_github(
         trusted_reviewer_login=trusted_reviewer_login,
         trusted_reviewer_id=trusted_reviewer_id,
         trusted_reviewer_type=trusted_reviewer_type,
+        trusted_request_publisher_login=trusted_request_publisher_login,
+        trusted_request_publisher_id=trusted_request_publisher_id,
+        trusted_request_publisher_type=trusted_request_publisher_type,
     )
     if adapter is not _OPTIONAL_ADAPTER_MISSING:
         result = dict(adapter)
@@ -2098,6 +2143,17 @@ def main(argv: list[str] | None = None) -> int:
     review_started.add_argument("--requested-by-session-id", required=True)
     review_started.add_argument("--reviewer-session-id", required=True)
 
+    review_request = subparsers.add_parser("review-request-github")
+    review_request.add_argument("--target-repo", type=Path, required=True)
+    review_request.add_argument("--runtime-root", type=Path, required=True)
+    review_request.add_argument("--task-id", required=True)
+    review_request.add_argument("--repository", required=True)
+    review_request.add_argument("--pull-request", type=int, required=True)
+    review_request.add_argument("--expected-head", required=True)
+    review_request.add_argument("--request-publisher-login", required=True)
+    review_request.add_argument("--request-publisher-id", type=int, required=True)
+    review_request.add_argument("--request-publisher-type", default="Bot")
+
     review_publish = subparsers.add_parser("review-publish")
     review_publish.add_argument("--target-repo", type=Path, required=True)
     review_publish.add_argument("--runtime-root", type=Path, required=True)
@@ -2108,6 +2164,9 @@ def main(argv: list[str] | None = None) -> int:
     review_publish.add_argument("--trusted-reviewer-login", required=True)
     review_publish.add_argument("--trusted-reviewer-id", type=int, required=True)
     review_publish.add_argument("--trusted-reviewer-type", default="Bot")
+    review_publish.add_argument("--trusted-request-publisher-login", required=True)
+    review_publish.add_argument("--trusted-request-publisher-id", type=int, required=True)
+    review_publish.add_argument("--trusted-request-publisher-type", default="Bot")
     review_publish.add_argument("--platform-wait-seconds", type=int, default=600)
     review_publish.add_argument("--platform-poll-seconds", type=int, default=5)
 
@@ -2121,6 +2180,9 @@ def main(argv: list[str] | None = None) -> int:
     review_validate.add_argument("--trusted-reviewer-login", required=True)
     review_validate.add_argument("--trusted-reviewer-id", type=int, required=True)
     review_validate.add_argument("--trusted-reviewer-type", default="Bot")
+    review_validate.add_argument("--trusted-request-publisher-login", required=True)
+    review_validate.add_argument("--trusted-request-publisher-id", type=int, required=True)
+    review_validate.add_argument("--trusted-request-publisher-type", default="Bot")
 
     review_respond = subparsers.add_parser("review-respond")
     review_respond.add_argument("--target-repo", type=Path, required=True)
@@ -2333,6 +2395,21 @@ def main(argv: list[str] | None = None) -> int:
         print(_canonical_json(payload), end="")
         return 0
 
+    if args.command == "review-request-github":
+        payload = request_platform_review_on_github(
+            target_repo=args.target_repo,
+            runtime_root=args.runtime_root,
+            task_id=str(args.task_id),
+            repository=str(args.repository),
+            pull_request=int(args.pull_request),
+            expected_head=str(args.expected_head),
+            request_publisher_login=str(args.request_publisher_login),
+            request_publisher_id=int(args.request_publisher_id),
+            request_publisher_type=str(args.request_publisher_type),
+        )
+        print(_canonical_json(payload), end="")
+        return 0
+
     if args.command == "review-publish":
         exit_code, payload = publish_review_bundle(
             target_repo=args.target_repo,
@@ -2344,6 +2421,9 @@ def main(argv: list[str] | None = None) -> int:
             trusted_reviewer_login=str(args.trusted_reviewer_login),
             trusted_reviewer_id=int(args.trusted_reviewer_id),
             trusted_reviewer_type=str(args.trusted_reviewer_type),
+            trusted_request_publisher_login=str(args.trusted_request_publisher_login),
+            trusted_request_publisher_id=int(args.trusted_request_publisher_id),
+            trusted_request_publisher_type=str(args.trusted_request_publisher_type),
             platform_wait_seconds=int(args.platform_wait_seconds),
             platform_poll_seconds=int(args.platform_poll_seconds),
         )
@@ -2361,6 +2441,9 @@ def main(argv: list[str] | None = None) -> int:
             trusted_reviewer_login=str(args.trusted_reviewer_login),
             trusted_reviewer_id=int(args.trusted_reviewer_id),
             trusted_reviewer_type=str(args.trusted_reviewer_type),
+            trusted_request_publisher_login=str(args.trusted_request_publisher_login),
+            trusted_request_publisher_id=int(args.trusted_request_publisher_id),
+            trusted_request_publisher_type=str(args.trusted_request_publisher_type),
         )
         print(_canonical_json(payload), end="")
         return exit_code
