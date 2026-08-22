@@ -1550,7 +1550,9 @@ def validate_review_state_on_github(
     repository: str,
     pull_request: int,
     expected_head: str = "",
-    trusted_publisher: str = "",
+    trusted_reviewer_login: str = "",
+    trusted_reviewer_id: int = 0,
+    trusted_reviewer_type: str = "Bot",
 ) -> tuple[int, dict[str, Any]]:
     adapter = _call_optional_review_adapter(
         "validate_github",
@@ -1560,132 +1562,14 @@ def validate_review_state_on_github(
         repository=repository,
         pull_request=pull_request,
         expected_head=expected_head,
-        trusted_publisher=trusted_publisher,
+        trusted_reviewer_login=trusted_reviewer_login,
+        trusted_reviewer_id=trusted_reviewer_id,
+        trusted_reviewer_type=trusted_reviewer_type,
     )
     if adapter is not _OPTIONAL_ADAPTER_MISSING:
         result = dict(adapter)
         return (0 if str(result.get("status")) == "ok" else 1, result)
-    _require_github_actions_token()
-    repo, root = _require_external_runtime_root(target_repo, runtime_root)
-    state = _pull_request_state(repository=repository, pull_request=pull_request, cwd=repo)
-    current_head = str(state["head_sha"])
-    comments = _run_gh_api(
-        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
-        cwd=repo,
-    )
-    publisher = trusted_publisher.strip() or os.environ.get("GITHUB_ACTOR", "").strip()
-    if not publisher:
-        raise ValueError("review validation requires an explicit trusted publisher")
-    latest_state: dict[str, Any] | None = None
-    latest_body = ""
-    if isinstance(comments, list):
-        for comment in reversed(comments):
-            if not isinstance(comment, dict):
-                continue
-            user = comment.get("user") or {}
-            if (
-                not isinstance(user, dict)
-                or str(user.get("login", "")).casefold() != publisher.casefold()
-            ):
-                continue
-            body = str(comment.get("body", ""))
-            if _REVIEW_STATE_MARKER not in body:
-                continue
-            latest_state = _decode_review_state(body)
-            latest_body = body
-            break
-    blockers: list[str] = []
-    if expected_head and expected_head.strip().lower() != current_head:
-        blockers.append("expected_head_mismatch")
-    if latest_state is None:
-        blockers.append("missing_review_state")
-    else:
-        reviewed_head = str(latest_state.get("head_sha", "")).strip().lower()
-        if reviewed_head != current_head:
-            blockers.append("stale_review_state")
-        if not bool(latest_state.get("complete", False)):
-            blockers.append("review_incomplete")
-        review_result = str(latest_state.get("result", "")).strip().casefold()
-        findings = latest_state.get("findings", [])
-        has_blocking = isinstance(findings, list) and any(
-            isinstance(item, dict) and bool(item.get("blocking", False)) for item in findings
-        )
-        if review_result not in {"pass", "pass_with_suggestions"} or has_blocking:
-            blockers.append("blocking_review_result")
-    conclusion = "success" if not blockers else "failure"
-    title = "Agentic Review is current" if not blockers else "Agentic Review requires attention"
-    summary = latest_body if latest_body else "No published Agentic Review state marker was found."
-    check = _run_gh_api(
-        path=f"repos/{repository}/check-runs",
-        method="POST",
-        payload={
-            "name": _AGENTIC_REVIEW_CHECK,
-            "head_sha": current_head,
-            "status": "completed",
-            "conclusion": conclusion,
-            "external_id": f"runtime-agentic-review:pr-{pull_request}:{current_head}",
-            "output": {
-                "title": title,
-                "summary": summary[:65_535],
-            },
-        },
-        cwd=repo,
-    )
-    metadata = _review_event_metadata(
-        target_repo=repo,
-        repository=repository,
-        pull_request=pull_request,
-        base_sha=str(state["base_sha"]),
-        head_sha=current_head,
-        review_identity=""
-        if latest_state is None
-        else str(latest_state.get("review_identity", "")),
-        extra={
-            "expected_head": expected_head.strip().lower(),
-            "validation_blockers": blockers,
-            "check_id": int(check["id"]) if isinstance(check, dict) and "id" in check else 0,
-            "check_conclusion": conclusion,
-        },
-    )
-    event_store = _runtime_event_store(root)
-    if "stale_review_state" in blockers:
-        _append_review_event(
-            event_store=event_store,
-            event_type=EventType.REVIEW_STALE,
-            session_id=f"review-validate-pr-{pull_request}",
-            target_repo=repo,
-            repository=repository,
-            branch=str(state["head_ref"]),
-            task_id=task_id,
-            result="stale",
-            pull_request=pull_request,
-            head_sha=current_head,
-            metadata=metadata,
-        )
-    _append_review_event(
-        event_store=event_store,
-        event_type=EventType.REVIEW_VALIDATED,
-        session_id=f"review-validate-pr-{pull_request}",
-        target_repo=repo,
-        repository=repository,
-        branch=str(state["head_ref"]),
-        task_id=task_id,
-        result="ok" if not blockers else "blocked",
-        pull_request=pull_request,
-        head_sha=current_head,
-        metadata=metadata,
-    )
-    return (
-        0 if not blockers else 1,
-        {
-            "status": "ok" if not blockers else "blocked",
-            "repository": repository,
-            "pull_request": pull_request,
-            "head_sha": current_head,
-            "blockers": blockers,
-            "check_id": metadata["check_id"],
-        },
-    )
+    raise ValueError("trusted Codex review-state adapter is not installed")
 
 
 def record_review_response(
@@ -2219,7 +2103,9 @@ def main(argv: list[str] | None = None) -> int:
     review_validate.add_argument("--repository", required=True)
     review_validate.add_argument("--pull-request", type=int, required=True)
     review_validate.add_argument("--expected-head", default="")
-    review_validate.add_argument("--trusted-publisher", default="")
+    review_validate.add_argument("--trusted-reviewer-login", required=True)
+    review_validate.add_argument("--trusted-reviewer-id", type=int, required=True)
+    review_validate.add_argument("--trusted-reviewer-type", default="Bot")
 
     review_respond = subparsers.add_parser("review-respond")
     review_respond.add_argument("--target-repo", type=Path, required=True)
@@ -2452,7 +2338,9 @@ def main(argv: list[str] | None = None) -> int:
             repository=str(args.repository),
             pull_request=int(args.pull_request),
             expected_head=str(args.expected_head),
-            trusted_publisher=str(args.trusted_publisher),
+            trusted_reviewer_login=str(args.trusted_reviewer_login),
+            trusted_reviewer_id=int(args.trusted_reviewer_id),
+            trusted_reviewer_type=str(args.trusted_reviewer_type),
         )
         print(_canonical_json(payload), end="")
         return exit_code

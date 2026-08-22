@@ -9,6 +9,9 @@ on:
   repository_dispatch:
     types:
       - agentic_review_recorded
+  pull_request_review:
+    types:
+      - submitted
   workflow_dispatch:
     inputs:
       pull_request:
@@ -22,6 +25,7 @@ concurrency:
   group: >-
     agentic-review-${{ github.repository }}-${{
       github.event.workflow_run.pull_requests[0].number ||
+      github.event.pull_request.number ||
       github.event.client_payload.pull_request.number ||
       github.event.client_payload.pull_request ||
       inputs.pull_request ||
@@ -39,6 +43,8 @@ jobs:
          github.event.workflow_run.event == 'pull_request' &&
          github.event.workflow_run.pull_requests[0].number > 0) ||
         github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'pull_request_review' &&
+         github.event.review.user.login == 'chatgpt-codex-connector[bot]') ||
         (github.event_name == 'repository_dispatch' &&
          github.event.action == 'agentic_review_recorded')
       }}
@@ -49,9 +55,6 @@ jobs:
       contents: read
       issues: read
       pull-requests: read
-    env:
-      PYTHONPATH: ${{ github.workspace }}/.github/robotics-harness/runtime
-      PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - name: Check out target default branch
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -74,10 +77,10 @@ jobs:
 
       - name: Verify installed runtime bytes
         run: >-
-          python3 -B .github/robotics-harness/verify-runtime.py
+          python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "01b14ecee684800f2d60e69098b66f88ef69b819a1e9b5227b17157376907777"
-          --expected-harness-ref "f2980177e5733c3e567bb5bf2ec836df0ea6f12c"
+          --expected-manifest-sha "bb5e5db995d27e6938287b37b23840ca7a553f7f705539f24da94a718c0e2a89"
+          --expected-harness-ref "85ff703ab11166c62c89f8379d6d190c30b9544d"
 
       - name: Resolve pull request context
         id: context
@@ -104,6 +107,11 @@ jobs:
           elif event_name == "workflow_dispatch":
               raw_value = os.environ.get("WORKFLOW_DISPATCH_PULL_REQUEST", "").strip()
               pull_request = int(raw_value) if raw_value else None
+          elif event_name == "pull_request_review":
+              pull_request_payload = event.get("pull_request") or {}
+              review = event.get("review") or {}
+              pull_request = pull_request_payload.get("number")
+              expected_head = str(review.get("commit_id") or "").strip()
           elif event_name == "repository_dispatch":
               payload = event.get("client_payload") or {}
               candidate = payload.get("pull_request")
@@ -136,7 +144,9 @@ jobs:
             --task-id "agentic-review:${{ steps.context.outputs.pull_request }}"
             --repository "$GITHUB_REPOSITORY"
             --pull-request "${{ steps.context.outputs.pull_request }}"
-            --trusted-publisher "${{ github.event_name == 'workflow_run' && 'github-actions[bot]' || github.actor }}"
+            --trusted-reviewer-login "chatgpt-codex-connector[bot]"
+            --trusted-reviewer-id "199175422"
+            --trusted-reviewer-type "Bot"
           )
           if [ -n "${{ steps.context.outputs.expected_head }}" ]; then
             command+=(--expected-head "${{ steps.context.outputs.expected_head }}")

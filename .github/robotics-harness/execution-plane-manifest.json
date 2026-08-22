@@ -145,10 +145,10 @@
       "source_sha256": "a63e5aef3812258ee2803c5c686759aadb20ba9e2cf5be8fa922b61f12635dfa"
     },
     {
-      "content_sha256": "fb40c22f6a08869053860df261dbf77f8b4bc6497755e059f0d4445cf2c78da1",
+      "content_sha256": "ccedec5ab7dd9b5b134478afb7eb8cabbb739fcf56e28536faf727f4b7129621",
       "path": ".github/robotics-harness/runtime/harness/agent_review/runtime.py",
       "source": "harness/agent_review/runtime.py",
-      "source_sha256": "fb40c22f6a08869053860df261dbf77f8b4bc6497755e059f0d4445cf2c78da1"
+      "source_sha256": "ccedec5ab7dd9b5b134478afb7eb8cabbb739fcf56e28536faf727f4b7129621"
     },
     {
       "content_sha256": "12c92711596643702dd76e7f401ae4cdfca6e7eca6dba4c79d0941d464d58ef0",
@@ -169,10 +169,10 @@
       "source_sha256": "9119da4f02edab66428c53c03c42496bde3d0448f7d900b0a750232fd98c51a0"
     },
     {
-      "content_sha256": "c74ccb777f0cc4e34b442f19f8722f0a2919bae2705b02a01c0d2bfdb54b712b",
+      "content_sha256": "55f49edb2d22510af0426f26939b9f3c2f202577e804a37870c9f74851b6f376",
       "path": ".github/robotics-harness/runtime/harness/execution_plane/runtime.py",
       "source": "harness/execution_plane/runtime.py",
-      "source_sha256": "c74ccb777f0cc4e34b442f19f8722f0a2919bae2705b02a01c0d2bfdb54b712b"
+      "source_sha256": "55f49edb2d22510af0426f26939b9f3c2f202577e804a37870c9f74851b6f376"
     },
     {
       "content_sha256": "b83eaf8c3fd4ab907d16caed2f8210f272a3c76b4b5fd5985294a36eb49ce7f9",
@@ -301,21 +301,21 @@
       "source_sha256": "20d169f0ad2b0eb7dc647fff8d33721536d668f936f8fd079d80287646b426ca"
     },
     {
-      "content_sha256": "78f97881609c4c68cd5b48d82720a37dec3a92e3179aa7477f808e84267abf71",
+      "content_sha256": "089362bc86099598050ea0a42277e58d71401f160c508168617fd5cd17de2003",
       "path": ".github/robotics-harness/verify-runtime.py",
       "source": "generated:runtime-verifier",
-      "source_sha256": "78f97881609c4c68cd5b48d82720a37dec3a92e3179aa7477f808e84267abf71"
+      "source_sha256": "089362bc86099598050ea0a42277e58d71401f160c508168617fd5cd17de2003"
     },
     {
-      "content_sha256": "024ac0dfc65f4b6c77acdc4ae4502b1c82de43430d4e6e0c9fb06d6ddab71693",
+      "content_sha256": "81b54b16f14cd4d5c81a2304318bd3473785f24836ee16454704ef169de65df6",
       "path": ".github/robotics-harness/robotics-harness",
       "source": "generated:runtime-launcher",
-      "source_sha256": "024ac0dfc65f4b6c77acdc4ae4502b1c82de43430d4e6e0c9fb06d6ddab71693"
+      "source_sha256": "81b54b16f14cd4d5c81a2304318bd3473785f24836ee16454704ef169de65df6"
     }
   ],
-  "harness_revision": "f2980177e5733c3e567bb5bf2ec836df0ea6f12c",
-  "manifest_sha256": "01b14ecee684800f2d60e69098b66f88ef69b819a1e9b5227b17157376907777",
-  "payload_sha256": "59a66e0f9cfdf6372871cd889db1abecd3776ab452ed200c5e8b46590963e7f4",
+  "harness_revision": "85ff703ab11166c62c89f8379d6d190c30b9544d",
+  "manifest_sha256": "bb5e5db995d27e6938287b37b23840ca7a553f7f705539f24da94a718c0e2a89",
+  "payload_sha256": "37734bffb2853d1f7626209cad997927bbd9ad0878156c42576abedeec290392",
   "runtime_version": "codex-agent-review-runtime-v1",
   "schema_version": 2
 }

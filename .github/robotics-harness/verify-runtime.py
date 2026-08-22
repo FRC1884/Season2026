@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
 import sys
 from pathlib import Path, PurePosixPath
 
@@ -16,6 +18,118 @@ def _canonical(value: object) -> bytes:
 def _fail(message: str) -> int:
     print(f"runtime integrity failure: {message}", file=sys.stderr)
     return 1
+
+
+def _path_uses_symlink(root: Path, candidate: Path) -> bool:
+    try:
+        relative = candidate.relative_to(root)
+    except ValueError:
+        return True
+    current = root
+    for part in relative.parts:
+        current /= part
+        if current.is_symlink():
+            return True
+    return False
+
+
+def _expected_entrypoint_bytes() -> bytes:
+    return (
+        "from __future__ import annotations\n\n"
+        "from harness.execution_plane.runtime import main\n\n"
+        'if __name__ == "__main__":\n'
+        "    raise SystemExit(main())\n"
+    ).encode("utf-8")
+
+
+def _validate_bootstrap_version(
+    path: Path,
+    *,
+    root: Path,
+    expected_harness_ref: str,
+    manifest_sha256: str,
+    payload_sha256: str,
+    runtime_version: object,
+) -> tuple[int, dict[str, object] | None]:
+    if _path_uses_symlink(root, path) or path.is_symlink() or not path.is_file():
+        return _fail("runtime version record is missing or unsafe"), None
+    try:
+        raw = path.read_text(encoding="utf-8")
+        version = json.loads(raw)
+    except (OSError, json.JSONDecodeError) as error:
+        return _fail(f"runtime version record is invalid: {error}"), None
+    if not isinstance(version, dict):
+        return _fail("runtime version record must be an object"), None
+    expected = {
+        "schema_version": 1,
+        "runtime_version": runtime_version,
+        "harness_revision": expected_harness_ref,
+        "manifest_sha256": manifest_sha256,
+        "payload_sha256": payload_sha256,
+    }
+    if version != expected:
+        return _fail("runtime version record does not match trusted metadata"), None
+    if raw.encode("utf-8") != _canonical(expected):
+        return _fail("runtime version record serialization is invalid"), None
+    return 0, version
+
+
+def _validate_bootstrap_entrypoint(path: Path, *, root: Path) -> int:
+    if _path_uses_symlink(root, path) or path.is_symlink() or not path.is_file():
+        return _fail("runtime entrypoint is missing or unsafe")
+    if path.read_bytes() != _expected_entrypoint_bytes():
+        return _fail("runtime entrypoint byte drift")
+    return 0
+
+
+def _validate_tree_entries(
+    *,
+    root: Path,
+    tree_root: Path,
+    allowed_files: set[str],
+) -> int:
+    allowed_directories = {".github/robotics-harness"}
+    for relative in allowed_files:
+        current = PurePosixPath(relative).parent
+        while current != PurePosixPath("."):
+            allowed_directories.add(current.as_posix())
+            current = current.parent
+    if (
+        _path_uses_symlink(root, tree_root)
+        or tree_root.is_symlink()
+        or not tree_root.is_dir()
+    ):
+        return _fail("managed runtime root is missing or unsafe")
+    for current_root, dirnames, filenames in os.walk(
+        tree_root, topdown=True, followlinks=False
+    ):
+        current_path = Path(current_root)
+        if _path_uses_symlink(root, current_path):
+            return _fail("managed runtime root contains a symbolic link")
+        current_relative = current_path.relative_to(root).as_posix()
+        if current_relative not in allowed_directories:
+            return _fail(f"unexpected managed runtime directory: {current_relative}")
+        for name in dirnames:
+            candidate = current_path / name
+            relative = candidate.relative_to(root).as_posix()
+            entry = candidate.lstat()
+            if stat.S_ISLNK(entry.st_mode):
+                return _fail(f"unexpected managed runtime symlink: {relative}")
+            if not stat.S_ISDIR(entry.st_mode):
+                return _fail(f"unexpected managed runtime special entry: {relative}")
+            if relative not in allowed_directories:
+                return _fail(f"unexpected managed runtime directory: {relative}")
+        for name in filenames:
+            candidate = current_path / name
+            relative = candidate.relative_to(root).as_posix()
+            entry = candidate.lstat()
+            if stat.S_ISLNK(entry.st_mode):
+                return _fail(f"unexpected managed runtime symlink: {relative}")
+            if not stat.S_ISREG(entry.st_mode):
+                return _fail(f"unexpected managed runtime special entry: {relative}")
+            if relative not in allowed_files:
+                return _fail(f"unexpected managed runtime file: {relative}")
+    return 0
 
 
 def main() -> int:
@@ -50,6 +164,11 @@ def main() -> int:
     files = manifest.get("files")
     if not isinstance(files, list) or not files:
         return _fail("execution-plane manifest has no files")
+    allowed_files = {
+        ".github/robotics-harness/execution-plane-manifest.json",
+        ".github/robotics-harness/runtime/version.json",
+        ".github/robotics-harness/runtime/entrypoint.py",
+    }
     payload_files = [
         entry
         for entry in files
@@ -72,6 +191,8 @@ def main() -> int:
     declared_paths = {
         str(entry.get("path", "")) for entry in files if isinstance(entry, dict)
     }
+    if len(declared_paths) != len(files):
+        return _fail("execution-plane manifest contains duplicated or invalid paths")
     required_launchers = {
         ".github/robotics-harness/robotics-harness",
         ".github/robotics-harness/verify-runtime.py",
@@ -86,7 +207,11 @@ def main() -> int:
         if parsed.is_absolute() or ".." in parsed.parts:
             return _fail("execution-plane manifest contains an unsafe path")
         candidate = root / relative
-        if candidate.is_symlink() or not candidate.is_file():
+        if (
+            _path_uses_symlink(root, candidate)
+            or candidate.is_symlink()
+            or not candidate.is_file()
+        ):
             return _fail(f"managed runtime file is missing or unsafe: {relative}")
         resolved = candidate.resolve()
         if not resolved.is_relative_to(root):
@@ -97,16 +222,32 @@ def main() -> int:
         )
         if digest != expected_content_digest:
             return _fail(f"managed runtime byte drift: {relative}")
-    version_path = root / ".github/robotics-harness/runtime/version.json"
-    if version_path.is_symlink() or not version_path.is_file():
-        return _fail("runtime version record is missing or unsafe")
-    version = json.loads(version_path.read_text(encoding="utf-8"))
-    if str(version.get("harness_revision", "")) != args.expected_harness_ref:
-        return _fail("runtime version Harness revision does not match")
-    if str(version.get("manifest_sha256", "")) != declared:
-        return _fail("runtime version manifest digest does not match")
-    if str(version.get("payload_sha256", "")) != declared_payload:
-        return _fail("runtime version payload digest does not match")
+        allowed_files.add(relative)
+    tree_root = root / ".github/robotics-harness"
+    tree_status = _validate_tree_entries(
+        root=root,
+        tree_root=tree_root,
+        allowed_files=allowed_files,
+    )
+    if tree_status:
+        return tree_status
+    version_status, version = _validate_bootstrap_version(
+        root / ".github/robotics-harness/runtime/version.json",
+        root=root,
+        expected_harness_ref=args.expected_harness_ref,
+        manifest_sha256=declared,
+        payload_sha256=declared_payload,
+        runtime_version=manifest.get("runtime_version"),
+    )
+    if version_status:
+        return version_status
+    del version
+    entrypoint_status = _validate_bootstrap_entrypoint(
+        root / ".github/robotics-harness/runtime/entrypoint.py",
+        root=root,
+    )
+    if entrypoint_status:
+        return entrypoint_status
     print(json.dumps({"status": "ok", "manifest_sha256": declared}, sort_keys=True))
     return 0
 

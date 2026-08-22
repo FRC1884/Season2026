@@ -4,7 +4,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 RUNTIME_ROOT="$SCRIPT_DIR/runtime"
 ACTUAL_VERIFIER_SHA=$(
-  python3 -B - "$SCRIPT_DIR/verify-runtime.py" <<'PY'
+  python3 -I -S -B - "$SCRIPT_DIR/verify-runtime.py" <<'PY'
 import hashlib
 import pathlib
 import sys
@@ -12,10 +12,37 @@ import sys
 print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())
 PY
 )
-if [ "$ACTUAL_VERIFIER_SHA" != "78f97881609c4c68cd5b48d82720a37dec3a92e3179aa7477f808e84267abf71" ]; then
+if [ "$ACTUAL_VERIFIER_SHA" != "089362bc86099598050ea0a42277e58d71401f160c508168617fd5cd17de2003" ]; then
   echo "runtime integrity failure: runtime verifier byte drift" >&2
   exit 1
 fi
-python3 -B "$SCRIPT_DIR/verify-runtime.py"           --repo "$REPO_ROOT"           --expected-payload-sha "59a66e0f9cfdf6372871cd889db1abecd3776ab452ed200c5e8b46590963e7f4"           --expected-harness-ref "f2980177e5733c3e567bb5bf2ec836df0ea6f12c" >/dev/null
-export PYTHONPATH="$RUNTIME_ROOT${PYTHONPATH:+:$PYTHONPATH}"
-exec python3 -B -m harness.execution_plane.runtime "$@"
+python3 -I -S -B "$SCRIPT_DIR/verify-runtime.py"           --repo "$REPO_ROOT"           --expected-payload-sha "37734bffb2853d1f7626209cad997927bbd9ad0878156c42576abedeec290392"           --expected-harness-ref "85ff703ab11166c62c89f8379d6d190c30b9544d" >/dev/null
+exec python3 -I -S -B - "$RUNTIME_ROOT" "$@" <<'PY'
+import runpy
+import sys
+import sysconfig
+from pathlib import Path
+
+runtime_root = Path(sys.argv[1]).resolve()
+argv = sys.argv[2:]
+runtime_entrypoint = runtime_root / "entrypoint.py"
+stdlib_paths = []
+for key in ("stdlib", "platstdlib"):
+    value = sysconfig.get_path(key)
+    if value:
+        stdlib_paths.append(value)
+if stdlib_paths:
+    dynload = Path(stdlib_paths[0]) / "lib-dynload"
+    if dynload.is_dir():
+        stdlib_paths.append(str(dynload))
+clean_sys_path = []
+seen = set()
+for value in (str(runtime_root), *stdlib_paths):
+    resolved = str(Path(value).resolve())
+    if resolved not in seen:
+        clean_sys_path.append(resolved)
+        seen.add(resolved)
+sys.path[:] = clean_sys_path
+sys.argv = [str(runtime_entrypoint), *argv]
+runpy.run_path(str(runtime_entrypoint), run_name="__main__")
+PY

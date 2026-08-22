@@ -4,14 +4,14 @@
   "repository": "FRC1884/Season2026",
   "default_branch": "main",
   "harness_repository": "FRC1884/robotics-agentic-development-harness",
-  "harness_ref": "f2980177e5733c3e567bb5bf2ec836df0ea6f12c",
+  "harness_ref": "85ff703ab11166c62c89f8379d6d190c30b9544d",
   "policy_version": "frc1884-bootstrap-v1",
   "architecture": "generated_self_contained_execution_plane",
   "execution_plane": {
     "runtime_version": "codex-agent-review-runtime-v1",
     "manifest_path": ".github/robotics-harness/execution-plane-manifest.json",
-    "manifest_sha256": "01b14ecee684800f2d60e69098b66f88ef69b819a1e9b5227b17157376907777",
-    "immutable_harness_ref": "f2980177e5733c3e567bb5bf2ec836df0ea6f12c"
+    "manifest_sha256": "bb5e5db995d27e6938287b37b23840ca7a553f7f705539f24da94a718c0e2a89",
+    "immutable_harness_ref": "85ff703ab11166c62c89f8379d6d190c30b9544d"
   },
   "commands": {
     "build": "./gradlew build --no-daemon --console=plain",
@@ -26,6 +26,13 @@
     "ai_runtime": "CODEX_AGENT",
     "reviewer_config": ".codex/agents/automated-reviewer.toml",
     "review_skill": ".codex/skills/agentic-review/SKILL.md",
+    "publisher_authentication": {
+      "model": "CODEX_GITHUB_PLATFORM_IDENTITY",
+      "login": "chatgpt-codex-connector[bot]",
+      "account_id": 199175422,
+      "account_type": "Bot",
+      "local_integrity_hash_authenticates_publisher": false
+    },
     "required_health_dimensions": [
       "codex_capability",
       "orchestration",
@@ -41,7 +48,8 @@
     ],
     "deterministic_validator_triggers": [
       "workflow_run:Phase 0 Validation",
-      "repository_dispatch:agentic_review_recorded"
+      "repository_dispatch:agentic_review_recorded",
+      "pull_request_review:trusted Codex identity"
     ],
     "unattended_agent_start": "NOT SUPPORTED WITHOUT A PERSISTENT SERVICE"
   },
