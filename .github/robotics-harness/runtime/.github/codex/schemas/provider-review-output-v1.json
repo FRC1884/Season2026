@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "provider-review-output-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result",
+    "summary",
+    "risk_level",
+    "findings",
+    "analysed_chunk_ids",
+    "reviewer_role",
+    "reviewer_session_id",
+    "repository",
+    "pull_request",
+    "base_sha",
+    "head_sha",
+    "request_digest_sha256",
+    "markdown_report"
+  ],
+  "properties": {
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "pass_with_suggestions",
+        "changes_requested",
+        "escalate_to_safety_reviewer",
+        "review_incomplete"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "severity",
+          "confidence",
+          "category",
+          "path",
+          "start_line",
+          "end_line",
+          "line",
+          "diff_location",
+          "title",
+          "explanation",
+          "evidence",
+          "impact",
+          "recommendation",
+          "blocking",
+          "safety_review",
+          "stable_identifier"
+        ],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "correctness",
+              "robotics_safety",
+              "scope",
+              "tests",
+              "maintainability",
+              "security",
+              "governance"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "start_line": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "end_line": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "line": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "diff_location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "recommendation": {
+            "type": "string"
+          },
+          "blocking": {
+            "type": "boolean"
+          },
+          "safety_review": {
+            "type": "boolean"
+          },
+          "stable_identifier": {
+            "type": "string",
+            "pattern": "^AR-[0-9]{3}$"
+          }
+        }
+      }
+    },
+    "analysed_chunk_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "reviewer_role": {
+      "type": "string",
+      "const": "Automated Reviewer"
+    },
+    "reviewer_session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pull_request": {
+      "type": "integer"
+    },
+    "base_sha": {
+      "type": "string"
+    },
+    "head_sha": {
+      "type": "string"
+    },
+    "request_digest_sha256": {
+      "type": "string"
+    },
+    "markdown_report": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

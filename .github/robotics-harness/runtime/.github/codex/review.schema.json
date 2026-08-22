@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "codex-review-final-artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "review_kind",
+    "repository",
+    "pull_request",
+    "base_sha",
+    "head_sha",
+    "previous_head_sha",
+    "prompt_version",
+    "policy_version",
+    "model",
+    "reviewed_at",
+    "result",
+    "risk_level",
+    "complete",
+    "reviewed_files",
+    "omitted_files",
+    "diff_digest",
+    "findings",
+    "new_findings",
+    "still_present_findings",
+    "changed_findings",
+    "resolved_findings",
+    "human_review_required"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1" },
+    "review_kind": {
+      "type": "string",
+      "enum": ["pull_request", "repository_audit"]
+    },
+    "repository": { "type": "string" },
+    "pull_request": { "type": ["integer", "null"] },
+    "base_sha": { "type": "string" },
+    "head_sha": { "type": "string" },
+    "previous_head_sha": { "type": ["string", "null"] },
+    "prompt_version": { "type": "string" },
+    "policy_version": { "type": "string" },
+    "model": { "type": ["string", "null"] },
+    "reviewed_at": { "type": "string" },
+    "result": {
+      "type": "string",
+      "enum": ["pass", "findings", "incomplete"]
+    },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "complete": { "type": "boolean" },
+    "reviewed_files": { "type": "array", "items": { "type": "string" } },
+    "omitted_files": { "type": "array", "items": { "type": "string" } },
+    "diff_digest": { "type": "string" },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "new_findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "still_present_findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "changed_findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "resolved_findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "human_review_required": { "type": "boolean", "const": true }
+    ,
+    "review_identity": { "type": "string" },
+    "reviewer_role": { "type": "string", "const": "Automated Reviewer" },
+    "pass": { "type": "boolean" },
+    "incomplete": { "type": ["object", "null"] },
+    "prompt": { "type": "object" },
+    "policy": { "type": "object" },
+    "model_details": { "type": "object" },
+    "review_state": { "type": "object" },
+    "reviewed": { "type": "object" },
+    "omitted": { "type": "object" },
+    "digest": { "type": "object" },
+    "artifact": { "type": "object" },
+    "summary": { "type": "string" },
+    "markdown_report": { "type": "string" }
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "severity",
+        "confidence",
+        "category",
+        "path",
+        "start_line",
+        "end_line",
+        "title",
+        "explanation",
+        "evidence",
+        "impact",
+        "recommendation",
+        "blocking",
+        "safety_review",
+        "stable_identifier"
+      ],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"]
+        },
+        "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+        "category": { "type": "string" },
+        "path": { "type": "string" },
+        "start_line": { "type": ["integer", "null"] },
+        "end_line": { "type": ["integer", "null"] },
+        "line": { "type": ["integer", "null"] },
+        "diff_location": { "type": ["string", "null"] },
+        "title": { "type": "string" },
+        "explanation": { "type": "string" },
+        "evidence": { "type": "string" },
+        "impact": { "type": "string" },
+        "recommendation": { "type": "string" },
+        "blocking": { "type": "boolean" },
+        "safety_review": { "type": "boolean" },
+        "stable_identifier": {
+          "type": "string",
+          "pattern": "^AR-[0-9]{3}$"
+        },
+        "state": {
+          "type": "string",
+          "enum": ["new", "still_present", "changed", "resolved"]
+        },
+        "finding_id": { "type": "string" },
+        "fingerprint": { "type": "string" }
+      }
+    }
+  }
+}

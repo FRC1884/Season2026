@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "default_risk": "low",
+  "rules": [
+    {
+      "id": "documentation",
+      "risk": "low",
+      "paths": ["*.md", "**/*.md", "docs/**"],
+      "description": "documentation-only change"
+    },
+    {
+      "id": "tests",
+      "risk": "low",
+      "paths": ["tests/**", "**/tests/**", "src/test/**", "**/src/test/**"],
+      "description": "test code"
+    },
+    {
+      "id": "general-source",
+      "risk": "medium",
+      "paths": ["harness/**", "src/main/**", "**/src/main/**", "config/**"],
+      "description": "general source code or non-critical configuration"
+    },
+    {
+      "id": "robot-behaviour",
+      "risk": "high",
+      "paths": [
+        "commands/**",
+        "**/commands/**",
+        "autonomous/**",
+        "**/autonomous/**",
+        "safety/**",
+        "**/safety/**",
+        "**/*Constants.java"
+      ],
+      "content_patterns": [
+        "\\b(motor|actuator|solenoid|interlock)\\b",
+        "\\bMAX_[A-Z0-9_]*(SPEED|CURRENT|LIMIT)[A-Z0-9_]*\\b"
+      ],
+      "description": "robot command, actuator, autonomous, interlock, or protected limit"
+    },
+    {
+      "id": "deployment-or-emergency",
+      "risk": "critical",
+      "paths": [
+        ".github/workflows/**",
+        "build.gradle",
+        "settings.gradle",
+        "gradle/**",
+        "vendordeps/**",
+        "**/deploy/**",
+        "**/deployment/**",
+        "**/config/deployment*",
+        "config/risk_rules.yaml",
+        "config/github_governance.yaml",
+        "config/managed_files.yaml",
+        "config/review_policy.yaml",
+        "config/temporary_harness_access.schema.json",
+        ".github/CODEOWNERS",
+        ".github/codex/**",
+        ".github/robotics-harness/config/**",
+        ".github/robotics-harness/harness/**",
+        ".github/robotics-harness/runtime/config/**",
+        ".github/robotics-harness/runtime/harness/**",
+        "AGENTS.md",
+        "templates/AGENTS.md",
+        "templates/CODEOWNERS",
+        "harness/ai_review/**",
+        "harness/competition/**",
+        "harness/github_governance/**",
+        "harness/monitoring/**",
+        "harness/policy/**",
+        "harness/review_policy/**",
+        "harness/risk/**",
+        "harness/synchronization/**",
+        "scripts/codex-review",
+        "scripts/github-governance",
+        "scripts/harness-sync"
+      ],
+      "content_patterns": [
+        "\\b(disable|bypass|skip)[a-z0-9_ -]{0,40}(safety|interlock|policy|test)\\b",
+        "\\b(emergency[_ -]?(stop|behavio[u]?r)|competition[_ -]?deploy)\\b"
+      ],
+      "description": "deployment, emergency behaviour, CI/policy bypass, or risk-rule change"
+    }
+  ]
+}

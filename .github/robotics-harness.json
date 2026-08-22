@@ -1,11 +1,18 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "profile": "season2026",
   "repository": "FRC1884/Season2026",
   "default_branch": "main",
   "harness_repository": "FRC1884/robotics-agentic-development-harness",
-  "harness_ref": "6d39f5926adae0166a05bc3399be15e740f4fcc2",
+  "harness_ref": "843fc3fba16ec56c4a666fa4501d1f80e4583d46",
   "policy_version": "frc1884-bootstrap-v1",
+  "architecture": "generated_self_contained_execution_plane",
+  "execution_plane": {
+    "runtime_version": "codex-agent-review-runtime-v1",
+    "manifest_path": ".github/robotics-harness/execution-plane-manifest.json",
+    "manifest_sha256": "13c4cad1af27139c9680b8e223c80915a65a6bc6dd6c04180bf48667f12b253f",
+    "immutable_harness_ref": "843fc3fba16ec56c4a666fa4501d1f80e4583d46"
+  },
   "commands": {
     "build": "./gradlew build --no-daemon --console=plain",
     "test": "./gradlew test --no-daemon --console=plain"
@@ -15,11 +22,28 @@
     "programming_lead": "@FRC1884/software-lead",
     "approved_alumni": "@FRC1884/approved-alumni-reviewers"
   },
+  "agentic_review": {
+    "ai_runtime": "CODEX_AGENT",
+    "reviewer_config": ".codex/agents/automated-reviewer.toml",
+    "review_skill": ".codex/skills/agentic-review/SKILL.md",
+    "required_health_dimensions": ["codex_capability","orchestration","state_validator","on_demand","auto_session","monitoring","required_checks"],
+    "active_session_triggers": [
+      "on_demand_review_request",
+      "post_harness_pr_creation"
+    ],
+    "deterministic_validator_triggers": [
+      "workflow_run:Phase 0 Validation",
+      "repository_dispatch:agentic_review_recorded"
+    ],
+    "unattended_agent_start": "NOT SUPPORTED WITHOUT A PERSISTENT SERVICE"
+  },
+  "required_checks": ["build-and-test","Agentic Review"],
+  "required_workflows": ["phase-0-validation.yml","agentic-review.yml"],
   "external_adoption": {
     "github_branch_protection": "PENDING EXTERNAL ADOPTION",
     "github_required_checks": "PENDING EXTERNAL ADOPTION",
     "github_team_permissions": "PENDING EXTERNAL ADOPTION",
-    "github_actions_access": "PENDING EXTERNAL ADOPTION",
-    "github_secrets": "PENDING EXTERNAL ADOPTION"
+    "github_actions_access": "NOT REQUIRED FOR GENERATED RUNTIME",
+    "github_secrets": "NOT REQUIRED FOR DETERMINISTIC AGENTIC REVIEW"
   }
 }
