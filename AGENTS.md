@@ -3,7 +3,7 @@
 This repository is governed by the central harness distribution for
 `FRC1884/Season2026`.
 
-- Harness source: `FRC1884/robotics-agentic-development-harness@36a93e652165078f610ae4741123c995a00e9f70`
+- Harness source: `FRC1884/robotics-agentic-development-harness@f2980177e5733c3e567bb5bf2ec836df0ea6f12c`
 - Harness policy version: `frc1884-bootstrap-v1`
 - Protected default branch: `main`
 

@@ -76,8 +76,8 @@ jobs:
         run: >-
           python3 -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "be7f6794619ba51f03c78f0015f5f6f35adb5130af2b8e899d64ee4a92738b6a"
-          --expected-harness-ref "36a93e652165078f610ae4741123c995a00e9f70"
+          --expected-manifest-sha "01b14ecee684800f2d60e69098b66f88ef69b819a1e9b5227b17157376907777"
+          --expected-harness-ref "f2980177e5733c3e567bb5bf2ec836df0ea6f12c"
 
       - name: Resolve pull request context
         id: context
