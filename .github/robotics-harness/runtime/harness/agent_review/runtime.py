@@ -36,6 +36,8 @@ from harness.private_io import write_private_text
 
 PLATFORM_REVIEW_REQUEST_PREFIX = "<!-- robotics-harness-codex-platform-review-request:"
 PLATFORM_REVIEW_REQUEST_SUFFIX = " -->"
+REVIEW_SUMMARY_MARKER_PREFIX = "<!-- robotics-harness-agent-review-summary:"
+REVIEW_SUMMARY_MARKER_SUFFIX = " -->"
 GITHUB_REVIEW_COMMENT_LIMIT = 60_000
 
 
@@ -587,11 +589,50 @@ def _github_body(cycle: ReviewCycle, *, markdown_source: str = "") -> str:
         "requires a current-head review from the configured Codex GitHub identity. "
         "Human review remains required._\n"
     )
-    if len(source) + len(footer) > GITHUB_REVIEW_COMMENT_LIMIT:
+    marker = _review_summary_marker(repository=cycle.repository, pull_request=cycle.pull_request)
+    prefix = marker + "\n"
+    if len(prefix) + len(source) + len(footer) > GITHUB_REVIEW_COMMENT_LIMIT:
         notice = "\n\n> Hosted report truncated at the GitHub comment boundary."
-        source = source[: GITHUB_REVIEW_COMMENT_LIMIT - len(footer) - len(notice)].rstrip()
+        source = source[
+            : GITHUB_REVIEW_COMMENT_LIMIT - len(prefix) - len(footer) - len(notice)
+        ].rstrip()
         source += notice
-    return source + footer
+    return prefix + source + footer
+
+
+def _review_summary_marker(*, repository: str, pull_request: int) -> str:
+    payload = json.dumps(
+        {"repository": repository, "pull_request": pull_request},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    encoded = base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+    return f"{REVIEW_SUMMARY_MARKER_PREFIX}{encoded}{REVIEW_SUMMARY_MARKER_SUFFIX}"
+
+
+def _decode_review_summary_marker(text: str) -> dict[str, object] | None:
+    start = text.find(REVIEW_SUMMARY_MARKER_PREFIX)
+    if start < 0:
+        return None
+    start += len(REVIEW_SUMMARY_MARKER_PREFIX)
+    end = text.find(REVIEW_SUMMARY_MARKER_SUFFIX, start)
+    if end < 0:
+        return None
+    encoded = text[start:end].strip()
+    try:
+        padded = encoded + "=" * (-len(encoded) % 4)
+        value = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _matches_review_summary(value: object, *, repository: str, pull_request: int) -> bool:
+    return (
+        isinstance(value, dict)
+        and str(value.get("repository", "")).casefold() == repository.casefold()
+        and value.get("pull_request") == pull_request
+    )
 
 
 def _platform_request_marker(*, repository: str, pull_request: int, head_sha: str) -> str:
@@ -907,7 +948,11 @@ def runtime_publish_review(
         if not isinstance(user, dict) or str(user.get("login", "")) != actor:
             continue
         comment_body = str(comment.get("body", ""))
-        if not existing_id and STATE_MARKER_PREFIX in comment_body:
+        if not existing_id and _matches_review_summary(
+            _decode_review_summary_marker(comment_body),
+            repository=repository,
+            pull_request=pull_request,
+        ):
             existing_id = int(comment["id"])
         if existing_id:
             break

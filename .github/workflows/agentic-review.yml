@@ -24,7 +24,9 @@ permissions: {}
 
 concurrency:
   group: >-
-    agentic-review-${{ github.repository }}-${{
+    agentic-review-${{
+      github.event.action == 'agentic_review_requested' && 'request' || 'validate'
+    }}-${{ github.repository }}-${{
       github.event.workflow_run.pull_requests[0].number ||
       github.event.pull_request.number ||
       github.event.client_payload.pull_request.number ||
@@ -65,8 +67,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "cf4cfe7faa194e750d94bb309f31bdcbbfed4370b7d18e455dd686d88f2bb1de"
-          --expected-harness-ref "d5f72ebcf16e05090caead7127309c5fc396f8e9"
+          --expected-manifest-sha "777701ea9d27133fba2c8999af4b59bdd4dcb2e7258865fd4801fe728c4c6996"
+          --expected-harness-ref "b897541501332dd82763fd9a4c46af252d443f0c"
 
       - name: Publish immutable platform review request
         env:
@@ -129,8 +131,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "cf4cfe7faa194e750d94bb309f31bdcbbfed4370b7d18e455dd686d88f2bb1de"
-          --expected-harness-ref "d5f72ebcf16e05090caead7127309c5fc396f8e9"
+          --expected-manifest-sha "777701ea9d27133fba2c8999af4b59bdd4dcb2e7258865fd4801fe728c4c6996"
+          --expected-harness-ref "b897541501332dd82763fd9a4c46af252d443f0c"
 
       - name: Resolve pull request context
         id: context
