@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import json
 import subprocess
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -23,7 +24,6 @@ from harness.agent_review.service import (
     build_review_context,
     create_auto_review_request,
     create_review_cycle_with_findings,
-    decode_review_state_marker,
     mark_review_stale,
     parse_review_request,
     record_review_response,
@@ -390,13 +390,30 @@ def _next_cycle_number(directory: Path) -> int:
     return len(tuple(directory.glob("review-cycle-*.json"))) + 1
 
 
-def _write_cycle(root: Path, cycle: ReviewCycle) -> dict[str, str | int]:
+def _write_cycle(
+    root: Path,
+    cycle: ReviewCycle,
+    *,
+    provider_payload: dict[str, Any] | None = None,
+    provider_markdown: str = "",
+) -> dict[str, str | int]:
     directory = _cycle_directory(root, cycle.repository, cycle.pull_request)
     number = _next_cycle_number(directory)
     json_path = _write_json(directory / f"review-cycle-{number:03d}.json", cycle.to_dict())
+    canonical_markdown = render_review_markdown(cycle)
+    complete_markdown = canonical_markdown
+    if provider_markdown.strip():
+        complete_markdown += (
+            "\n\n## Automated Reviewer Source Report\n\n" + provider_markdown.strip() + "\n"
+        )
     markdown_path = write_private_text(
-        directory / f"review-cycle-{number:03d}.md", render_review_markdown(cycle)
+        directory / f"review-cycle-{number:03d}.md", complete_markdown
     )
+    provider_json = ""
+    if provider_payload is not None:
+        provider_json = str(
+            _write_json(directory / f"review-cycle-{number:03d}-provider.json", provider_payload)
+        )
     latest_json = _copy_text(json_path, directory / "latest-review.json")
     latest_markdown = _copy_text(markdown_path, directory / "latest-review.md")
     state_path = _copy_text(json_path, directory / "review-state.json")
@@ -407,6 +424,7 @@ def _write_cycle(root: Path, cycle: ReviewCycle) -> dict[str, str | int]:
         "latest_json": str(latest_json),
         "latest_markdown": str(latest_markdown),
         "state": str(state_path),
+        "provider_json": provider_json,
     }
 
 
@@ -483,7 +501,12 @@ def runtime_record_review(
     elif result == "pass" and not findings:
         cycle = cycle.with_state(ReviewState.PASS)
     validate_review_cycle(cycle, current_head_sha=head_sha)
-    paths = _write_cycle(root, cycle)
+    paths = _write_cycle(
+        root,
+        cycle,
+        provider_payload=payload,
+        provider_markdown=str(payload.get("markdown_report", "")),
+    )
     session_id = f"review-agent-{session}"
     common: dict[str, Any] = dict(
         root=root,
@@ -551,9 +574,9 @@ def _latest_cycle(root: Path, repository: str, pull_request: int) -> ReviewCycle
     return _load_cycle(path)
 
 
-def _github_body(cycle: ReviewCycle) -> str:
+def _github_body(cycle: ReviewCycle, *, markdown_source: str = "") -> str:
     return (
-        render_review_markdown(cycle)
+        (markdown_source.strip() or render_review_markdown(cycle))
         + "\n\n_Logical actor: Automated Reviewer. This marker is Harness orchestration "
         "evidence, not publisher authentication. The required check independently "
         "requires a current-head review from the configured Codex GitHub identity. "
@@ -639,6 +662,68 @@ def _github_identity_matches(
     )
 
 
+def _trusted_platform_response(
+    runtime: Any,
+    *,
+    repo: Path,
+    repository: str,
+    pull_request: int,
+    head_sha: str,
+    request_comment_id: int,
+    reviewer_login: str,
+    reviewer_id: int,
+    reviewer_type: str,
+) -> dict[str, Any]:
+    reviews = _paged_values(
+        runtime,
+        path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
+        cwd=repo,
+    )
+    matching_reviews = [
+        review
+        for review in reviews
+        if _github_identity_matches(
+            review.get("user"),
+            login=reviewer_login,
+            account_id=reviewer_id,
+            account_type=reviewer_type,
+        )
+        and str(review.get("commit_id", "")).casefold() == head_sha.casefold()
+    ]
+    if matching_reviews:
+        review = matching_reviews[-1]
+        return {
+            "kind": "review_with_findings",
+            "review_id": int(review.get("id", 0)),
+            "review_state": str(review.get("state", "")),
+        }
+    if request_comment_id > 0:
+        reactions = _paged_values(
+            runtime,
+            path=(
+                f"repos/{repository}/issues/comments/{request_comment_id}/reactions?per_page=100"
+            ),
+            cwd=repo,
+        )
+        clean = next(
+            (
+                reaction
+                for reaction in reversed(reactions)
+                if str(reaction.get("content", "")) == "+1"
+                and _github_identity_matches(
+                    reaction.get("user"),
+                    login=reviewer_login,
+                    account_id=reviewer_id,
+                    account_type=reviewer_type,
+                )
+            ),
+            None,
+        )
+        if clean is not None:
+            return {"kind": "clean_reaction", "reaction_id": int(clean.get("id", 0))}
+    return {"kind": "pending"}
+
+
 def runtime_publish_review(
     *,
     target_repo: Path | str,
@@ -647,13 +732,20 @@ def runtime_publish_review(
     repository: str,
     pull_request: int,
     bundle: Path | str,
+    trusted_reviewer_login: str,
+    trusted_reviewer_id: int,
+    trusted_reviewer_type: str = "Bot",
+    platform_wait_seconds: int = 0,
+    platform_poll_seconds: int = 5,
 ) -> dict[str, Any]:
     runtime = _execution()
     repo, root = _require_external(target_repo, runtime_root)
     cycle = _load_cycle(bundle)
     live = runtime._pull_request_state(repository=repository, pull_request=pull_request, cwd=repo)
     validate_review_cycle(cycle, current_head_sha=str(live["head_sha"]))
-    body = _github_body(cycle)
+    markdown_path = Path(bundle).with_suffix(".md")
+    markdown_source = markdown_path.read_text(encoding="utf-8") if markdown_path.is_file() else ""
+    body = _github_body(cycle, markdown_source=markdown_source)
     actor = runtime._gh_actor_login(cwd=repo)
     comments = _paged_values(
         runtime,
@@ -713,15 +805,50 @@ def runtime_publish_review(
             },
             cwd=repo,
         )
-    runtime._run_gh_api(
-        path=f"repos/{repository}/dispatches",
-        method="POST",
-        payload={
-            "event_type": "agentic_review_recorded",
-            "client_payload": {"pull_request": pull_request, "head_sha": cycle.head_sha},
-        },
-        cwd=repo,
+    request_comment_id = (
+        int(platform_request.get("id", 0)) if isinstance(platform_request, dict) else 0
     )
+    if not trusted_reviewer_login.strip() or trusted_reviewer_id < 1:
+        raise ValueError("review publication requires an explicit trusted reviewer identity")
+    if platform_wait_seconds < 0 or platform_poll_seconds < 1:
+        raise ValueError("platform review wait values must be non-negative with a positive poll")
+    deadline = time.monotonic() + platform_wait_seconds
+    platform_response = _trusted_platform_response(
+        runtime,
+        repo=repo,
+        repository=repository,
+        pull_request=pull_request,
+        head_sha=cycle.head_sha,
+        request_comment_id=request_comment_id,
+        reviewer_login=trusted_reviewer_login,
+        reviewer_id=trusted_reviewer_id,
+        reviewer_type=trusted_reviewer_type,
+    )
+    while platform_response["kind"] == "pending" and time.monotonic() < deadline:
+        time.sleep(min(platform_poll_seconds, max(0.0, deadline - time.monotonic())))
+        platform_response = _trusted_platform_response(
+            runtime,
+            repo=repo,
+            repository=repository,
+            pull_request=pull_request,
+            head_sha=cycle.head_sha,
+            request_comment_id=request_comment_id,
+            reviewer_login=trusted_reviewer_login,
+            reviewer_id=trusted_reviewer_id,
+            reviewer_type=trusted_reviewer_type,
+        )
+    dispatch_event = ""
+    if platform_response["kind"] != "pending":
+        runtime._run_gh_api(
+            path=f"repos/{repository}/dispatches",
+            method="POST",
+            payload={
+                "event_type": "agentic_review_recorded",
+                "client_payload": {"pull_request": pull_request, "head_sha": cycle.head_sha},
+            },
+            cwd=repo,
+        )
+        dispatch_event = "agentic_review_recorded"
     _event(
         root=root,
         repo=repo,
@@ -732,7 +859,9 @@ def runtime_publish_review(
         head_sha=cycle.head_sha,
         task_id=task_id,
         session_id=f"review-publish-{cycle.reviewer_session_id}",
-        result="published",
+        result=(
+            "published" if platform_response["kind"] != "pending" else "awaiting_platform_review"
+        ),
         requested_by_session_id=cycle.context.requested_by_session_id,
         reviewer_session_id=cycle.reviewer_session_id,
         extra={
@@ -742,10 +871,13 @@ def runtime_publish_review(
             else 0,
             "integrity_hash": cycle.integrity_hash,
             "publisher_authentication": "pending_codex_github_identity",
+            "platform_response": platform_response,
         },
     )
     return {
-        "status": "published",
+        "status": (
+            "published" if platform_response["kind"] != "pending" else "awaiting_platform_review"
+        ),
         "repository": repository,
         "pull_request": pull_request,
         "head_sha": cycle.head_sha,
@@ -754,21 +886,9 @@ def runtime_publish_review(
         "platform_review_request_comment_id": int(platform_request.get("id", 0))
         if isinstance(platform_request, dict)
         else 0,
-        "dispatch_event": "agentic_review_recorded",
+        "dispatch_event": dispatch_event,
+        "platform_response": platform_response,
     }
-
-
-def _published_cycles(value: object) -> list[ReviewCycle]:
-    if not isinstance(value, list):
-        return []
-    cycles: list[ReviewCycle] = []
-    for item in value:
-        if not isinstance(item, dict):
-            continue
-        cycle = decode_review_state_marker(str(item.get("body", "")))
-        if cycle is not None:
-            cycles.append(cycle)
-    return cycles
 
 
 def runtime_validate_review_github(
@@ -797,52 +917,7 @@ def runtime_validate_review_github(
         path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
         cwd=repo,
     )
-    reviews = _paged_values(
-        runtime,
-        path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
-        cwd=repo,
-    )
-    matching_cycles = [
-        cycle
-        for cycle in _published_cycles(comments)
-        if cycle.head_sha.casefold() == current_head.casefold()
-        and cycle.repository.casefold() == repository.casefold()
-        and cycle.pull_request == pull_request
-    ]
-    cycle = matching_cycles[-1] if matching_cycles else None
-
-    trusted_reviews = [
-        review
-        for review in reviews
-        if _github_identity_matches(
-            review.get("user"),
-            login=reviewer_login,
-            account_id=trusted_reviewer_id,
-            account_type=reviewer_type,
-        )
-        and str(review.get("commit_id", "")).casefold() == current_head.casefold()
-    ]
-    trusted_review = trusted_reviews[-1] if trusted_reviews else None
-    trusted_review_state = (
-        str(trusted_review.get("state", "")).casefold() if trusted_review is not None else ""
-    )
-    trusted_review_body = (
-        str(trusted_review.get("body", "")).strip() if trusted_review is not None else ""
-    )
-    trusted_review_comments: list[dict[str, Any]] = []
-    if trusted_review is not None:
-        review_id = int(trusted_review.get("id", 0))
-        if review_id > 0:
-            trusted_review_comments = _paged_values(
-                runtime,
-                path=(
-                    f"repos/{repository}/pulls/{pull_request}/reviews/{review_id}"
-                    "/comments?per_page=100"
-                ),
-                cwd=repo,
-            )
-
-    trusted_clean_reaction: dict[str, Any] | None = None
+    request_comment_id = 0
     for comment in reversed(comments):
         request = _decode_platform_request_marker(str(comment.get("body", "")))
         if not _matches_platform_request(
@@ -853,50 +928,26 @@ def runtime_validate_review_github(
         ):
             continue
         comment_id = int(comment.get("id", 0))
-        if comment_id < 1:
-            continue
-        reactions = _paged_values(
-            runtime,
-            path=f"repos/{repository}/issues/comments/{comment_id}/reactions?per_page=100",
-            cwd=repo,
-        )
-        trusted_clean_reaction = next(
-            (
-                reaction
-                for reaction in reversed(reactions)
-                if str(reaction.get("content", "")) == "+1"
-                and _github_identity_matches(
-                    reaction.get("user"),
-                    login=reviewer_login,
-                    account_id=trusted_reviewer_id,
-                    account_type=reviewer_type,
-                )
-            ),
-            None,
-        )
-        if trusted_clean_reaction is not None:
+        if comment_id > 0:
+            request_comment_id = comment_id
             break
+    platform_response = _trusted_platform_response(
+        runtime,
+        repo=repo,
+        repository=repository,
+        pull_request=pull_request,
+        head_sha=current_head,
+        request_comment_id=request_comment_id,
+        reviewer_login=reviewer_login,
+        reviewer_id=trusted_reviewer_id,
+        reviewer_type=reviewer_type,
+    )
     blockers: list[str] = []
     if expected_head and expected_head.casefold() != current_head.casefold():
         blockers.append("expected_head_mismatch")
-    if cycle is None:
-        blockers.append("missing_review_state")
-    else:
-        try:
-            validate_review_cycle(cycle, current_head_sha=current_head)
-        except ValueError as error:
-            blockers.append(f"invalid_review_state:{error}")
-        if cycle.state not in {ReviewState.PASS, ReviewState.COMMENT}:
-            blockers.append(f"review_state_not_successful:{cycle.state.value}")
-        if cycle.blocking_findings:
-            blockers.append("unresolved_blocking_findings")
-    if trusted_review is None and trusted_clean_reaction is None:
+    if platform_response["kind"] == "pending":
         blockers.append("missing_trusted_reviewer_attestation")
-    if trusted_review is not None and (
-        trusted_review_state != "commented"
-        or bool(trusted_review_body)
-        or bool(trusted_review_comments)
-    ):
+    elif platform_response["kind"] == "review_with_findings":
         blockers.append("trusted_reviewer_blocking_findings")
     conclusion = "success" if not blockers else "failure"
     check = runtime._run_gh_api(
@@ -909,28 +960,16 @@ def runtime_validate_review_github(
             "conclusion": conclusion,
             "external_id": f"codex-agent-review:pr-{pull_request}:{current_head}",
             "output": {
-                "title": "Agentic Review current" if not blockers else "Agentic Review blocked",
-                "summary": "Review state is current and valid."
+                "title": "Trusted Codex review current"
+                if not blockers
+                else "Trusted Codex review blocked",
+                "summary": "The pinned Codex GitHub identity recorded a clean exact-head result."
                 if not blockers
                 else "\n".join(f"- {item}" for item in blockers),
             },
         },
         cwd=repo,
     )
-    if cycle is not None and cycle.head_sha != current_head:
-        _event(
-            root=root,
-            repo=repo,
-            event_type=EventType.REVIEW_MARKED_STALE,
-            repository=repository,
-            pull_request=pull_request,
-            base_sha=cycle.base_sha,
-            head_sha=current_head,
-            task_id=task_id,
-            session_id=f"review-validator-pr-{pull_request}",
-            result="stale",
-            extra={"previous_head_sha": cycle.head_sha},
-        )
     _event(
         root=root,
         repo=repo,
@@ -947,15 +986,8 @@ def runtime_validate_review_github(
             "trusted_reviewer_login": reviewer_login,
             "trusted_reviewer_id": trusted_reviewer_id,
             "trusted_reviewer_type": reviewer_type,
-            "trusted_review_id": int(trusted_review.get("id", 0))
-            if trusted_review is not None
-            else 0,
-            "trusted_clean_reaction_id": int(trusted_clean_reaction.get("id", 0))
-            if trusted_clean_reaction is not None
-            else 0,
-            "trusted_review_finding_count": len(trusted_review_comments),
-            "trusted_review_state": trusted_review_state,
-            "trusted_review_body_present": bool(trusted_review_body),
+            "platform_response": platform_response,
+            "local_cycle_security_authority": False,
             "check_id": int(check.get("id", 0)) if isinstance(check, dict) else 0,
             "check_conclusion": conclusion,
         },
@@ -967,7 +999,8 @@ def runtime_validate_review_github(
         "head_sha": current_head,
         "blockers": blockers,
         "check_id": int(check.get("id", 0)) if isinstance(check, dict) else 0,
-        "trusted_review_id": int(trusted_review.get("id", 0)) if trusted_review is not None else 0,
+        "trusted_review_id": int(platform_response.get("review_id", 0)),
+        "trusted_clean_reaction_id": int(platform_response.get("reaction_id", 0)),
     }
 
 

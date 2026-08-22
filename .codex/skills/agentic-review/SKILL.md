@@ -21,7 +21,7 @@ Use this skill when either of these is true:
 5. Do not pass implementation conclusions, fix summaries, or "what changed" narratives from the implementer as reviewer instructions.
 6. Require strict normalized output matching `.github/codex/schemas/provider-review-output-v1.json`, including exact repository/PR/base/head/request digest, `reviewer_role`, reviewer session, and `markdown_report`.
 7. Record review artifacts outside the product diff, publish the human-readable Markdown marker, and request `@codex review` with the exact-head platform request marker. Recording must reject output without the matching reviewer-agent start event.
-8. Wait for the configured Codex GitHub identity to publish a review (or a clean `+1` attestation) for that exact head, then rerun deterministic validation. The dispatch sender and workflow actor are never reviewer authentication.
+8. Run `review-publish` with `--trusted-reviewer-login "chatgpt-codex-connector[bot]" --trusted-reviewer-id 199175422 --trusted-reviewer-type "Bot" --platform-wait-seconds 600`. It must wait for the configured Codex GitHub identity to publish findings or a clean `+1` result before dispatching deterministic validation. Retry from the active session if it times out. The dispatch sender and workflow actor are never reviewer authentication.
 9. If the PR head changes, record `review-fix-pushed`, mark the older review stale, and rerun both a fresh Automated Reviewer cycle and the trusted platform review for the new head.
 
 ## Boundaries
@@ -30,7 +30,7 @@ Use this skill when either of these is true:
 - It never approves, merges, edits, deploys, or completes student learning steps.
 - Public generated runtime distribution includes this skill and the reviewer agent without `OPENAI_API_KEY` or governance-token material.
 - Missing, malformed, stale, or incomplete bundles must fail as `review_incomplete`, not as a silent pass.
-- The local integrity hash detects mutation; it is not authentication. Agent-context independence is enforced by the Harness, while publisher authenticity comes from the pinned Codex GitHub identity on the exact reviewed commit.
+- The local integrity hash and session lifecycle are readable orchestration evidence, not required-check authentication. Agent-context independence is enforced by the Harness, while the required check derives solely from the pinned Codex GitHub identity's exact-head review result.
 
 ## Output expectations
 

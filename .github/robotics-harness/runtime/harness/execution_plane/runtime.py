@@ -1400,6 +1400,11 @@ def publish_review_bundle(
     repository: str,
     pull_request: int,
     bundle: Path | str,
+    trusted_reviewer_login: str,
+    trusted_reviewer_id: int,
+    trusted_reviewer_type: str = "Bot",
+    platform_wait_seconds: int = 600,
+    platform_poll_seconds: int = 5,
 ) -> tuple[int, dict[str, Any]]:
     adapter = _call_optional_review_adapter(
         "publish",
@@ -1409,6 +1414,11 @@ def publish_review_bundle(
         repository=repository,
         pull_request=pull_request,
         bundle=bundle,
+        trusted_reviewer_login=trusted_reviewer_login,
+        trusted_reviewer_id=trusted_reviewer_id,
+        trusted_reviewer_type=trusted_reviewer_type,
+        platform_wait_seconds=platform_wait_seconds,
+        platform_poll_seconds=platform_poll_seconds,
     )
     if adapter is not _OPTIONAL_ADAPTER_MISSING:
         result = dict(adapter)
@@ -2095,6 +2105,11 @@ def main(argv: list[str] | None = None) -> int:
     review_publish.add_argument("--repository", required=True)
     review_publish.add_argument("--pull-request", type=int, required=True)
     review_publish.add_argument("--bundle", type=Path, required=True)
+    review_publish.add_argument("--trusted-reviewer-login", required=True)
+    review_publish.add_argument("--trusted-reviewer-id", type=int, required=True)
+    review_publish.add_argument("--trusted-reviewer-type", default="Bot")
+    review_publish.add_argument("--platform-wait-seconds", type=int, default=600)
+    review_publish.add_argument("--platform-poll-seconds", type=int, default=5)
 
     review_validate = subparsers.add_parser("review-validate-github")
     review_validate.add_argument("--target-repo", type=Path, required=True)
@@ -2326,6 +2341,11 @@ def main(argv: list[str] | None = None) -> int:
             repository=str(args.repository),
             pull_request=int(args.pull_request),
             bundle=args.bundle,
+            trusted_reviewer_login=str(args.trusted_reviewer_login),
+            trusted_reviewer_id=int(args.trusted_reviewer_id),
+            trusted_reviewer_type=str(args.trusted_reviewer_type),
+            platform_wait_seconds=int(args.platform_wait_seconds),
+            platform_poll_seconds=int(args.platform_poll_seconds),
         )
         print(_canonical_json(payload), end="")
         return exit_code

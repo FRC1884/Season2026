@@ -4,14 +4,14 @@
   "repository": "FRC1884/Season2026",
   "default_branch": "main",
   "harness_repository": "FRC1884/robotics-agentic-development-harness",
-  "harness_ref": "85ff703ab11166c62c89f8379d6d190c30b9544d",
+  "harness_ref": "5ea175078fd385411da56e03a9e2d8e95c9de6a1",
   "policy_version": "frc1884-bootstrap-v1",
   "architecture": "generated_self_contained_execution_plane",
   "execution_plane": {
     "runtime_version": "codex-agent-review-runtime-v1",
     "manifest_path": ".github/robotics-harness/execution-plane-manifest.json",
-    "manifest_sha256": "bb5e5db995d27e6938287b37b23840ca7a553f7f705539f24da94a718c0e2a89",
-    "immutable_harness_ref": "85ff703ab11166c62c89f8379d6d190c30b9544d"
+    "manifest_sha256": "a4ecaa7383e1ec25bcf0d7de19760289204261e7398f419cddf95ad489b9f57e",
+    "immutable_harness_ref": "5ea175078fd385411da56e03a9e2d8e95c9de6a1"
   },
   "commands": {
     "build": "./gradlew build --no-daemon --console=plain",
@@ -31,7 +31,8 @@
       "login": "chatgpt-codex-connector[bot]",
       "account_id": 199175422,
       "account_type": "Bot",
-      "local_integrity_hash_authenticates_publisher": false
+      "local_integrity_hash_authenticates_publisher": false,
+      "required_check_authority": "CODEX_GITHUB_PLATFORM_RESULT_ONLY"
     },
     "required_health_dimensions": [
       "codex_capability",
