@@ -1407,6 +1407,10 @@ def request_platform_review_on_github(
     request_publisher_login: str,
     request_publisher_id: int,
     request_publisher_type: str = "Bot",
+    reviewer_login: str = "chatgpt-codex-connector[bot]",
+    reviewer_id: int = 199175422,
+    reviewer_type: str = "Bot",
+    retry_after_seconds: int = 900,
 ) -> dict[str, Any]:
     adapter = _call_optional_review_adapter(
         "request_github",
@@ -1419,6 +1423,10 @@ def request_platform_review_on_github(
         request_publisher_login=request_publisher_login,
         request_publisher_id=request_publisher_id,
         request_publisher_type=request_publisher_type,
+        reviewer_login=reviewer_login,
+        reviewer_id=reviewer_id,
+        reviewer_type=reviewer_type,
+        retry_after_seconds=retry_after_seconds,
     )
     if adapter is _OPTIONAL_ADAPTER_MISSING:
         raise ValueError("trusted Codex platform-request adapter is not installed")
@@ -2153,6 +2161,10 @@ def main(argv: list[str] | None = None) -> int:
     review_request.add_argument("--request-publisher-login", required=True)
     review_request.add_argument("--request-publisher-id", type=int, required=True)
     review_request.add_argument("--request-publisher-type", default="Bot")
+    review_request.add_argument("--reviewer-login", required=True)
+    review_request.add_argument("--reviewer-id", type=int, required=True)
+    review_request.add_argument("--reviewer-type", default="Bot")
+    review_request.add_argument("--retry-after-seconds", type=int, default=900)
 
     review_publish = subparsers.add_parser("review-publish")
     review_publish.add_argument("--target-repo", type=Path, required=True)
@@ -2406,6 +2418,10 @@ def main(argv: list[str] | None = None) -> int:
             request_publisher_login=str(args.request_publisher_login),
             request_publisher_id=int(args.request_publisher_id),
             request_publisher_type=str(args.request_publisher_type),
+            reviewer_login=str(args.reviewer_login),
+            reviewer_id=int(args.reviewer_id),
+            reviewer_type=str(args.reviewer_type),
+            retry_after_seconds=int(args.retry_after_seconds),
         )
         print(_canonical_json(payload), end="")
         return 0

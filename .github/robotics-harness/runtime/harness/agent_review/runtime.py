@@ -713,6 +713,16 @@ def _github_identity_matches(
     )
 
 
+def _github_datetime(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(UTC)
+    except ValueError:
+        return None
+
+
 def _trusted_platform_response(
     runtime: Any,
     *,
@@ -828,6 +838,10 @@ def runtime_request_platform_review_github(
     request_publisher_login: str,
     request_publisher_id: int,
     request_publisher_type: str = "Bot",
+    reviewer_login: str = "chatgpt-codex-connector[bot]",
+    reviewer_id: int = 199175422,
+    reviewer_type: str = "Bot",
+    retry_after_seconds: int = 900,
 ) -> dict[str, Any]:
     runtime = _execution()
     runtime._require_github_actions_token()
@@ -838,6 +852,93 @@ def runtime_request_platform_review_github(
         raise ValueError("platform review request head does not match the live pull request")
     if not request_publisher_login.strip() or request_publisher_id < 1:
         raise ValueError("platform review request requires a trusted publisher identity")
+    if not reviewer_login.strip() or reviewer_id < 1 or retry_after_seconds < 1:
+        raise ValueError("platform review request requires reviewer identity and retry window")
+    comments = _paged_values(
+        runtime,
+        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
+        cwd=repo,
+    )
+    previous = next(
+        (
+            comment
+            for comment in reversed(comments)
+            if _github_identity_matches(
+                comment.get("user"),
+                login=request_publisher_login,
+                account_id=request_publisher_id,
+                account_type=request_publisher_type,
+            )
+            and _matches_platform_request(
+                _decode_platform_request_marker(str(comment.get("body", ""))),
+                repository=repository,
+                pull_request=pull_request,
+                head_sha=current_head,
+            )
+            and bool(str(comment.get("created_at", "")))
+            and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
+        ),
+        None,
+    )
+    if previous is not None:
+        previous_id = int(previous.get("id", 0))
+        reactions = _paged_values(
+            runtime,
+            path=f"repos/{repository}/issues/comments/{previous_id}/reactions?per_page=100",
+            cwd=repo,
+        )
+        pending = any(
+            str(reaction.get("content", "")) == "eyes"
+            and _github_identity_matches(
+                reaction.get("user"),
+                login=reviewer_login,
+                account_id=reviewer_id,
+                account_type=reviewer_type,
+            )
+            for reaction in reactions
+        )
+        completed = any(
+            str(reaction.get("content", "")) == "+1"
+            and _github_identity_matches(
+                reaction.get("user"),
+                login=reviewer_login,
+                account_id=reviewer_id,
+                account_type=reviewer_type,
+            )
+            for reaction in reactions
+        )
+        previous_created = str(previous.get("created_at", ""))
+        if not completed:
+            reviews = _paged_values(
+                runtime,
+                path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
+                cwd=repo,
+            )
+            completed = any(
+                _github_identity_matches(
+                    review.get("user"),
+                    login=reviewer_login,
+                    account_id=reviewer_id,
+                    account_type=reviewer_type,
+                )
+                and str(review.get("commit_id", "")).casefold() == current_head.casefold()
+                and str(review.get("submitted_at", "")) >= previous_created
+                for review in reviews
+            )
+        created_at = _github_datetime(previous.get("created_at"))
+        within_grace = bool(
+            created_at is not None
+            and (datetime.now(UTC) - created_at).total_seconds() < retry_after_seconds
+        )
+        if not completed and (pending or within_grace):
+            return {
+                "status": "in_progress",
+                "repository": repository,
+                "pull_request": pull_request,
+                "head_sha": current_head,
+                "request_comment_id": previous_id,
+                "retry_after_seconds": retry_after_seconds,
+            }
     request = runtime._run_gh_api(
         path=f"repos/{repository}/issues/{pull_request}/comments",
         method="POST",

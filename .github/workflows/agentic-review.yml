@@ -67,8 +67,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "22f53eaffcf2b14857dd8399a8dc7b7856d3954a9d723f2c0537744f3aef3cf7"
-          --expected-harness-ref "22dcfb5631087722766463b39858d9a73742b33b"
+          --expected-manifest-sha "0a39318007a987c097527194eac69c4b87852b7e726472f3cd989ce75a33a7c0"
+          --expected-harness-ref "fbf43374e5fdedf8d5814b42288d7af5b5191452"
 
       - name: Publish immutable platform review request
         env:
@@ -85,6 +85,10 @@ jobs:
           --request-publisher-login "github-actions[bot]"
           --request-publisher-id "41898282"
           --request-publisher-type "Bot"
+          --reviewer-login "chatgpt-codex-connector[bot]"
+          --reviewer-id "199175422"
+          --reviewer-type "Bot"
+          --retry-after-seconds "900"
 
   validate-review-state:
     name: validate-current-review-state
@@ -131,8 +135,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "22f53eaffcf2b14857dd8399a8dc7b7856d3954a9d723f2c0537744f3aef3cf7"
-          --expected-harness-ref "22dcfb5631087722766463b39858d9a73742b33b"
+          --expected-manifest-sha "0a39318007a987c097527194eac69c4b87852b7e726472f3cd989ce75a33a7c0"
+          --expected-harness-ref "fbf43374e5fdedf8d5814b42288d7af5b5191452"
 
       - name: Resolve pull request context
         id: context
