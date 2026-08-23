@@ -907,6 +907,27 @@ def _trusted_platform_response(
             ),
             None,
         )
+        if clean is None:
+            issue_reactions = _paged_values(
+                runtime,
+                path=f"repos/{repository}/issues/{pull_request}/reactions?per_page=100",
+                cwd=repo,
+            )
+            clean = next(
+                (
+                    reaction
+                    for reaction in reversed(issue_reactions)
+                    if str(reaction.get("content", "")) == "+1"
+                    and _github_identity_matches(
+                        reaction.get("user"),
+                        login=reviewer_login,
+                        account_id=reviewer_id,
+                        account_type=reviewer_type,
+                    )
+                    and str(reaction.get("created_at", "")) >= request_created_at
+                ),
+                None,
+            )
     clean_created_at = str(clean.get("created_at", "")) if clean else ""
     if review is not None and review_created_at >= clean_created_at:
         return {
