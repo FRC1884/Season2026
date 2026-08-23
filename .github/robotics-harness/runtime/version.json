@@ -1,7 +1,7 @@
 {
-  "harness_revision": "e511fe9a50229c79ea1383762d0db9d99fbf242c",
-  "manifest_sha256": "2c6f32abbcf5e7888be81674b8ec0b416c75f3f5811fc037411bb1200bd4fe5e",
-  "payload_sha256": "0512491054f87b2739e2d0ac5b912e3166bb22e045a20d85a3398293cb3c7dea",
+  "harness_revision": "bc4c4404889c078e0f707164ab229f52733c709c",
+  "manifest_sha256": "ef33a55e32ae26042057f6ea01bdf56f34af3ea57a625610e1cf70a3ffc9e515",
+  "payload_sha256": "fa1fa17fe67e2fa9eab04fc03de8337b42ca8e0ff0d0e8b0274eef5beb7102f5",
   "runtime_version": "codex-agent-review-runtime-v1",
   "schema_version": 1
 }

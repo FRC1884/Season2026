@@ -145,10 +145,10 @@
       "source_sha256": "a63e5aef3812258ee2803c5c686759aadb20ba9e2cf5be8fa922b61f12635dfa"
     },
     {
-      "content_sha256": "f17a0a9de4f340f062507a751917a19f82c702dac3c311e970cde867ec04d7cc",
+      "content_sha256": "47910c32c0c11e25ebe9f8b3fc2a090709117974035f015ee00a2eafe2ebac40",
       "path": ".github/robotics-harness/runtime/harness/agent_review/runtime.py",
       "source": "harness/agent_review/runtime.py",
-      "source_sha256": "f17a0a9de4f340f062507a751917a19f82c702dac3c311e970cde867ec04d7cc"
+      "source_sha256": "47910c32c0c11e25ebe9f8b3fc2a090709117974035f015ee00a2eafe2ebac40"
     },
     {
       "content_sha256": "12c92711596643702dd76e7f401ae4cdfca6e7eca6dba4c79d0941d464d58ef0",
@@ -169,10 +169,10 @@
       "source_sha256": "9119da4f02edab66428c53c03c42496bde3d0448f7d900b0a750232fd98c51a0"
     },
     {
-      "content_sha256": "732fef789af5b9b3cb676b4fbe868086f1264cf51cf7e0c1feb76c4b52f12cff",
+      "content_sha256": "d7496ab7657444a19d6da48b93497dc26900a304baa0ba2c160d54c9f65ef716",
       "path": ".github/robotics-harness/runtime/harness/execution_plane/runtime.py",
       "source": "harness/execution_plane/runtime.py",
-      "source_sha256": "732fef789af5b9b3cb676b4fbe868086f1264cf51cf7e0c1feb76c4b52f12cff"
+      "source_sha256": "d7496ab7657444a19d6da48b93497dc26900a304baa0ba2c160d54c9f65ef716"
     },
     {
       "content_sha256": "b83eaf8c3fd4ab907d16caed2f8210f272a3c76b4b5fd5985294a36eb49ce7f9",
@@ -307,15 +307,15 @@
       "source_sha256": "089362bc86099598050ea0a42277e58d71401f160c508168617fd5cd17de2003"
     },
     {
-      "content_sha256": "5d8409fe831ccbb3c6dd39b73467288edda5d234857419a4d5cc345dec5e115a",
+      "content_sha256": "9c71bddce68b26c1ff3c63f9ec379aa9130a9a2beb69452d82de8385b293637e",
       "path": ".github/robotics-harness/robotics-harness",
       "source": "generated:runtime-launcher",
-      "source_sha256": "5d8409fe831ccbb3c6dd39b73467288edda5d234857419a4d5cc345dec5e115a"
+      "source_sha256": "9c71bddce68b26c1ff3c63f9ec379aa9130a9a2beb69452d82de8385b293637e"
     }
   ],
-  "harness_revision": "e511fe9a50229c79ea1383762d0db9d99fbf242c",
-  "manifest_sha256": "2c6f32abbcf5e7888be81674b8ec0b416c75f3f5811fc037411bb1200bd4fe5e",
-  "payload_sha256": "0512491054f87b2739e2d0ac5b912e3166bb22e045a20d85a3398293cb3c7dea",
+  "harness_revision": "bc4c4404889c078e0f707164ab229f52733c709c",
+  "manifest_sha256": "ef33a55e32ae26042057f6ea01bdf56f34af3ea57a625610e1cf70a3ffc9e515",
+  "payload_sha256": "fa1fa17fe67e2fa9eab04fc03de8337b42ca8e0ff0d0e8b0274eef5beb7102f5",
   "runtime_version": "codex-agent-review-runtime-v1",
   "schema_version": 2
 }

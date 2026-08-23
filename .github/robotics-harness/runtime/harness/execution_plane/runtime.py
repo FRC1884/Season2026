@@ -1410,7 +1410,7 @@ def request_platform_review_on_github(
     reviewer_login: str = "chatgpt-codex-connector[bot]",
     reviewer_id: int = 199175422,
     reviewer_type: str = "Bot",
-    retry_after_seconds: int = 540,
+    retry_after_seconds: int = 120,
 ) -> dict[str, Any]:
     adapter = _call_optional_review_adapter(
         "request_github",
@@ -2164,7 +2164,7 @@ def main(argv: list[str] | None = None) -> int:
     review_request.add_argument("--reviewer-login", required=True)
     review_request.add_argument("--reviewer-id", type=int, required=True)
     review_request.add_argument("--reviewer-type", default="Bot")
-    review_request.add_argument("--retry-after-seconds", type=int, default=540)
+    review_request.add_argument("--retry-after-seconds", type=int, default=120)
 
     review_publish = subparsers.add_parser("review-publish")
     review_publish.add_argument("--target-repo", type=Path, required=True)
