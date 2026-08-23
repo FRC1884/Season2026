@@ -1169,6 +1169,7 @@ def runtime_request_platform_review_github(
         ),
         None,
     )
+    prior_head_wait_expired = False
     if previous is not None:
         previous_progress = _platform_request_progress(
             runtime,
@@ -1181,7 +1182,6 @@ def runtime_request_platform_review_github(
             reviewer_type=reviewer_type,
         )
         previous_head = str(previous_progress["head_sha"])
-        pending = bool(previous_progress["pending"])
         completed = bool(previous_progress["completed"])
         created_at = _github_datetime(previous.get("created_at"))
         within_grace = bool(
@@ -1205,15 +1205,8 @@ def runtime_request_platform_review_github(
                     reviewer_type=reviewer_type,
                 )
                 completed = bool(previous_progress["completed"])
-            if not completed:
-                raise ValueError(
-                    "prior-head platform review did not complete before the bounded wait expired"
-                )
-        if (
-            previous_head.casefold() == current_head.casefold()
-            and not completed
-            and (pending or within_grace)
-        ):
+            prior_head_wait_expired = not completed
+        if previous_head.casefold() == current_head.casefold() and not completed and within_grace:
             request = previous
             request_status = "in_progress"
         else:
@@ -1292,6 +1285,7 @@ def runtime_request_platform_review_github(
             "acknowledgement_comment_id": acknowledgement_id,
             "request_publisher_login": request_publisher_login,
             "request_publisher_id": request_publisher_id,
+            "prior_head_wait_expired": prior_head_wait_expired,
         },
     )
     return {
@@ -1304,6 +1298,7 @@ def runtime_request_platform_review_github(
         "retry_after_seconds": retry_after_seconds,
         "prior_head_wait_seconds": prior_head_wait_seconds,
         "prior_head_poll_seconds": prior_head_poll_seconds,
+        "prior_head_wait_expired": prior_head_wait_expired,
     }
 
 

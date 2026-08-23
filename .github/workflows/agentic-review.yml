@@ -72,8 +72,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "55bd4d3e8be4c81c44fd9a1fda0d02d955acde6a45f43c81e41d216e322f49c5"
-          --expected-harness-ref "123f00b43f1251d2f4855a3a3c1a012819a7b358"
+          --expected-manifest-sha "e5526dceed05f1d279c4058f3e21220ae2e1b8969c07a6eee4d1647ae82f0918"
+          --expected-harness-ref "aec2bd3aa1dc21e4ba5e9852c9f7493964da8f4c"
 
       - name: Resolve trusted review request context
         id: request_context
@@ -187,8 +187,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "55bd4d3e8be4c81c44fd9a1fda0d02d955acde6a45f43c81e41d216e322f49c5"
-          --expected-harness-ref "123f00b43f1251d2f4855a3a3c1a012819a7b358"
+          --expected-manifest-sha "e5526dceed05f1d279c4058f3e21220ae2e1b8969c07a6eee4d1647ae82f0918"
+          --expected-harness-ref "aec2bd3aa1dc21e4ba5e9852c9f7493964da8f4c"
 
       - name: Resolve pull request context
         id: context
