@@ -940,7 +940,7 @@ def runtime_request_platform_review_github(
     reviewer_login: str = "chatgpt-codex-connector[bot]",
     reviewer_id: int = 199175422,
     reviewer_type: str = "Bot",
-    retry_after_seconds: int = 900,
+    retry_after_seconds: int = 540,
 ) -> dict[str, Any]:
     runtime = _execution()
     runtime._require_github_actions_token()
