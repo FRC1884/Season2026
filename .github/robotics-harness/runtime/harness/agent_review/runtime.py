@@ -36,6 +36,8 @@ from harness.private_io import write_private_text
 
 PLATFORM_REVIEW_REQUEST_PREFIX = "<!-- robotics-harness-codex-platform-review-request:"
 PLATFORM_REVIEW_REQUEST_SUFFIX = " -->"
+PLATFORM_REQUEST_ACK_PREFIX = "<!-- robotics-harness-platform-request-ack:"
+PLATFORM_REQUEST_ACK_SUFFIX = " -->"
 REVIEW_SUMMARY_MARKER_PREFIX = "<!-- robotics-harness-agent-review-summary:"
 REVIEW_SUMMARY_MARKER_SUFFIX = " -->"
 GITHUB_REVIEW_COMMENT_LIMIT = 60_000
@@ -678,6 +680,53 @@ def _matches_platform_request(
     )
 
 
+def _platform_request_ack_marker(
+    *, repository: str, pull_request: int, head_sha: str, request_comment_id: int
+) -> str:
+    payload = json.dumps(
+        {
+            "repository": repository,
+            "pull_request": pull_request,
+            "head_sha": head_sha,
+            "request_comment_id": request_comment_id,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    encoded = base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+    return f"{PLATFORM_REQUEST_ACK_PREFIX}{encoded}{PLATFORM_REQUEST_ACK_SUFFIX}"
+
+
+def _decode_platform_request_ack(text: str) -> dict[str, object] | None:
+    start = text.find(PLATFORM_REQUEST_ACK_PREFIX)
+    if start < 0:
+        return None
+    start += len(PLATFORM_REQUEST_ACK_PREFIX)
+    end = text.find(PLATFORM_REQUEST_ACK_SUFFIX, start)
+    if end < 0:
+        return None
+    encoded = text[start:end].strip()
+    try:
+        padded = encoded + "=" * (-len(encoded) % 4)
+        value = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
+    except (ValueError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    return value if isinstance(value, dict) else None
+
+
+def _matches_platform_request_ack(
+    value: object, *, repository: str, pull_request: int, head_sha: str
+) -> bool:
+    return (
+        isinstance(value, dict)
+        and str(value.get("repository", "")).casefold() == repository.casefold()
+        and value.get("pull_request") == pull_request
+        and str(value.get("head_sha", "")).casefold() == head_sha.casefold()
+        and isinstance(value.get("request_comment_id"), int)
+        and int(value["request_comment_id"]) > 0
+    )
+
+
 def _paged_values(runtime: Any, *, path: str, cwd: Path) -> list[dict[str, Any]]:
     values: list[dict[str, Any]] = []
     page = 1
@@ -723,6 +772,47 @@ def _github_datetime(value: object) -> datetime | None:
         return None
 
 
+def _latest_platform_request_ack(
+    runtime: Any,
+    *,
+    repo: Path,
+    repository: str,
+    pull_request: int,
+    head_sha: str,
+    request_publisher_login: str,
+    request_publisher_id: int,
+    request_publisher_type: str,
+    minimum_ack_comment_id: int = 0,
+) -> dict[str, Any] | None:
+    comments = _paged_values(
+        runtime,
+        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
+        cwd=repo,
+    )
+    return next(
+        (
+            comment
+            for comment in reversed(comments)
+            if int(comment.get("id", 0)) >= minimum_ack_comment_id
+            and _github_identity_matches(
+                comment.get("user"),
+                login=request_publisher_login,
+                account_id=request_publisher_id,
+                account_type=request_publisher_type,
+            )
+            and _matches_platform_request_ack(
+                _decode_platform_request_ack(str(comment.get("body", ""))),
+                repository=repository,
+                pull_request=pull_request,
+                head_sha=head_sha,
+            )
+            and bool(str(comment.get("created_at", "")))
+            and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
+        ),
+        None,
+    )
+
+
 def _trusted_platform_response(
     runtime: Any,
     *,
@@ -737,6 +827,7 @@ def _trusted_platform_response(
     request_publisher_id: int,
     request_publisher_type: str,
     minimum_request_comment_id: int = 0,
+    required_request_comment_id: int = 0,
 ) -> dict[str, Any]:
     comments = _paged_values(
         runtime,
@@ -762,6 +853,10 @@ def _trusted_platform_response(
             and bool(str(comment.get("created_at", "")))
             and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
             and int(comment.get("id", 0)) >= minimum_request_comment_id
+            and (
+                required_request_comment_id < 1
+                or int(comment.get("id", 0)) == required_request_comment_id
+            )
         ),
         None,
     )
@@ -935,31 +1030,32 @@ def runtime_request_platform_review_github(
             and (datetime.now(UTC) - created_at).total_seconds() < retry_after_seconds
         )
         if not completed and (pending or within_grace):
-            return {
-                "status": "in_progress",
-                "repository": repository,
-                "pull_request": pull_request,
-                "head_sha": current_head,
-                "request_comment_id": previous_id,
-                "retry_after_seconds": retry_after_seconds,
-            }
-    request = runtime._run_gh_api(
-        path=f"repos/{repository}/issues/{pull_request}/comments",
-        method="POST",
-        payload={
-            "body": (
-                "@codex review\n\n"
-                "Harness request: publish a fresh independent current-head review through "
-                "the Codex GitHub integration. Each retry uses a new immutable request.\n\n"
-                + _platform_request_marker(
-                    repository=repository,
-                    pull_request=pull_request,
-                    head_sha=current_head,
+            request = previous
+            request_status = "in_progress"
+        else:
+            request = None
+            request_status = "requested"
+    else:
+        request = None
+        request_status = "requested"
+    if request is None:
+        request = runtime._run_gh_api(
+            path=f"repos/{repository}/issues/{pull_request}/comments",
+            method="POST",
+            payload={
+                "body": (
+                    "@codex review\n\n"
+                    "Harness request: publish a fresh independent current-head review through "
+                    "the Codex GitHub integration. Each retry uses a new immutable request.\n\n"
+                    + _platform_request_marker(
+                        repository=repository,
+                        pull_request=pull_request,
+                        head_sha=current_head,
+                    )
                 )
-            )
-        },
-        cwd=repo,
-    )
+            },
+            cwd=repo,
+        )
     if not isinstance(request, dict) or not _github_identity_matches(
         request.get("user"),
         login=request_publisher_login,
@@ -970,6 +1066,32 @@ def runtime_request_platform_review_github(
     comment_id = int(request.get("id", 0))
     if comment_id < 1:
         raise ValueError("platform review request comment ID is missing")
+    acknowledgement = runtime._run_gh_api(
+        path=f"repos/{repository}/issues/{pull_request}/comments",
+        method="POST",
+        payload={
+            "body": (
+                "Harness platform review request acknowledged.\n\n"
+                + _platform_request_ack_marker(
+                    repository=repository,
+                    pull_request=pull_request,
+                    head_sha=current_head,
+                    request_comment_id=comment_id,
+                )
+            )
+        },
+        cwd=repo,
+    )
+    if not isinstance(acknowledgement, dict) or not _github_identity_matches(
+        acknowledgement.get("user"),
+        login=request_publisher_login,
+        account_id=request_publisher_id,
+        account_type=request_publisher_type,
+    ):
+        raise ValueError("platform review acknowledgement was not published by the trusted bot")
+    acknowledgement_id = int(acknowledgement.get("id", 0))
+    if acknowledgement_id < 1:
+        raise ValueError("platform review acknowledgement comment ID is missing")
     _event(
         root=root,
         repo=repo,
@@ -980,19 +1102,22 @@ def runtime_request_platform_review_github(
         head_sha=current_head,
         task_id=task_id,
         session_id=f"platform-review-request-pr-{pull_request}",
-        result="requested",
+        result=request_status,
         extra={
             "request_comment_id": comment_id,
+            "acknowledgement_comment_id": acknowledgement_id,
             "request_publisher_login": request_publisher_login,
             "request_publisher_id": request_publisher_id,
         },
     )
     return {
-        "status": "requested",
+        "status": request_status,
         "repository": repository,
         "pull_request": pull_request,
         "head_sha": current_head,
         "request_comment_id": comment_id,
+        "acknowledgement_comment_id": acknowledgement_id,
+        "retry_after_seconds": retry_after_seconds,
     }
 
 
@@ -1061,24 +1186,18 @@ def runtime_publish_review(
         raise ValueError("review publication requires a trusted request publisher identity")
     if platform_wait_seconds < 0 or platform_poll_seconds < 1:
         raise ValueError("platform review wait values must be non-negative with a positive poll")
-    prior_response = _trusted_platform_response(
+    prior_acknowledgement = _latest_platform_request_ack(
         runtime,
         repo=repo,
         repository=repository,
         pull_request=pull_request,
         head_sha=cycle.head_sha,
-        reviewer_login=trusted_reviewer_login,
-        reviewer_id=trusted_reviewer_id,
-        reviewer_type=trusted_reviewer_type,
         request_publisher_login=trusted_request_publisher_login,
         request_publisher_id=trusted_request_publisher_id,
         request_publisher_type=trusted_request_publisher_type,
     )
-    prior_request_id = int(prior_response.get("request_comment_id", 0))
-    minimum_request_id = (
-        prior_request_id
-        if prior_response["kind"] == "pending" and prior_request_id > 0
-        else prior_request_id + 1
+    prior_acknowledgement_id = (
+        int(prior_acknowledgement.get("id", 0)) if prior_acknowledgement else 0
     )
     runtime._run_gh_api(
         path=f"repos/{repository}/dispatches",
@@ -1090,22 +1209,51 @@ def runtime_publish_review(
         cwd=repo,
     )
     deadline = time.monotonic() + platform_wait_seconds
-    platform_response = _trusted_platform_response(
+    acknowledgement = _latest_platform_request_ack(
         runtime,
         repo=repo,
         repository=repository,
         pull_request=pull_request,
         head_sha=cycle.head_sha,
-        reviewer_login=trusted_reviewer_login,
-        reviewer_id=trusted_reviewer_id,
-        reviewer_type=trusted_reviewer_type,
         request_publisher_login=trusted_request_publisher_login,
         request_publisher_id=trusted_request_publisher_id,
         request_publisher_type=trusted_request_publisher_type,
-        minimum_request_comment_id=minimum_request_id,
+        minimum_ack_comment_id=prior_acknowledgement_id + 1,
     )
-    while platform_response["kind"] == "pending" and time.monotonic() < deadline:
+    while acknowledgement is None and time.monotonic() < deadline:
         time.sleep(min(platform_poll_seconds, max(0.0, deadline - time.monotonic())))
+        acknowledgement = _latest_platform_request_ack(
+            runtime,
+            repo=repo,
+            repository=repository,
+            pull_request=pull_request,
+            head_sha=cycle.head_sha,
+            request_publisher_login=trusted_request_publisher_login,
+            request_publisher_id=trusted_request_publisher_id,
+            request_publisher_type=trusted_request_publisher_type,
+            minimum_ack_comment_id=prior_acknowledgement_id + 1,
+        )
+    acknowledgement_payload = (
+        _decode_platform_request_ack(str(acknowledgement.get("body", "")))
+        if acknowledgement is not None
+        else None
+    )
+    raw_acknowledged_request_id = (
+        acknowledgement_payload.get("request_comment_id", 0)
+        if isinstance(acknowledgement_payload, dict)
+        else 0
+    )
+    acknowledged_request_id = (
+        raw_acknowledged_request_id
+        if isinstance(raw_acknowledged_request_id, int)
+        and not isinstance(raw_acknowledged_request_id, bool)
+        else 0
+    )
+    platform_response: dict[str, Any] = {
+        "kind": "pending",
+        "request_comment_id": acknowledged_request_id,
+    }
+    if acknowledged_request_id > 0:
         platform_response = _trusted_platform_response(
             runtime,
             repo=repo,
@@ -1118,8 +1266,24 @@ def runtime_publish_review(
             request_publisher_login=trusted_request_publisher_login,
             request_publisher_id=trusted_request_publisher_id,
             request_publisher_type=trusted_request_publisher_type,
-            minimum_request_comment_id=minimum_request_id,
+            required_request_comment_id=acknowledged_request_id,
         )
+        while platform_response["kind"] == "pending" and time.monotonic() < deadline:
+            time.sleep(min(platform_poll_seconds, max(0.0, deadline - time.monotonic())))
+            platform_response = _trusted_platform_response(
+                runtime,
+                repo=repo,
+                repository=repository,
+                pull_request=pull_request,
+                head_sha=cycle.head_sha,
+                reviewer_login=trusted_reviewer_login,
+                reviewer_id=trusted_reviewer_id,
+                reviewer_type=trusted_reviewer_type,
+                request_publisher_login=trusted_request_publisher_login,
+                request_publisher_id=trusted_request_publisher_id,
+                request_publisher_type=trusted_request_publisher_type,
+                required_request_comment_id=acknowledged_request_id,
+            )
     dispatch_event = ""
     if platform_response["kind"] != "pending":
         runtime._run_gh_api(
@@ -1152,6 +1316,9 @@ def runtime_publish_review(
             "platform_review_request_comment_id": int(
                 platform_response.get("request_comment_id", 0)
             ),
+            "platform_request_acknowledgement_comment_id": (
+                int(acknowledgement.get("id", 0)) if acknowledgement is not None else 0
+            ),
             "integrity_hash": cycle.integrity_hash,
             "publisher_authentication": "pending_codex_github_identity",
             "platform_response": platform_response,
@@ -1167,6 +1334,9 @@ def runtime_publish_review(
         "summary_comment_id": int(summary.get("id", 0)) if isinstance(summary, dict) else 0,
         "review_id": 0,
         "platform_review_request_comment_id": int(platform_response.get("request_comment_id", 0)),
+        "platform_request_acknowledgement_comment_id": (
+            int(acknowledgement.get("id", 0)) if acknowledgement is not None else 0
+        ),
         "request_dispatch_event": "agentic_review_requested",
         "dispatch_event": dispatch_event,
         "platform_response": platform_response,
