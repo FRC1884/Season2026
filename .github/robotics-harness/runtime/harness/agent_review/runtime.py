@@ -41,6 +41,7 @@ PLATFORM_REQUEST_ACK_SUFFIX = " -->"
 REVIEW_SUMMARY_MARKER_PREFIX = "<!-- robotics-harness-agent-review-summary:"
 REVIEW_SUMMARY_MARKER_SUFFIX = " -->"
 GITHUB_REVIEW_COMMENT_LIMIT = 60_000
+TRUSTED_CLEAN_COMMENT_PREFIX = "Codex Review: Didn't find any major issues."
 
 
 def _execution() -> Any:
@@ -781,6 +782,48 @@ def _github_datetime(value: object) -> datetime | None:
         return None
 
 
+def _trusted_clean_comment_matches_request(
+    comment: dict[str, Any],
+    *,
+    request_created_at: str,
+    reviewer_login: str,
+    reviewer_id: int,
+    reviewer_type: str,
+    request_head: str,
+) -> bool:
+    if not _github_identity_matches(
+        comment.get("user"),
+        login=reviewer_login,
+        account_id=reviewer_id,
+        account_type=reviewer_type,
+    ):
+        return False
+    created_at = str(comment.get("created_at", ""))
+    if (
+        not created_at
+        or created_at < request_created_at
+        or created_at != str(comment.get("updated_at", ""))
+    ):
+        return False
+    match = _extract_trusted_clean_reviewed_commit_prefix(str(comment.get("body", "")))
+    return bool(match and request_head.casefold().startswith(match))
+
+
+def _extract_trusted_clean_reviewed_commit_prefix(body: str) -> str:
+    lines = [line.strip() for line in body.splitlines() if line.strip()]
+    if not lines or not lines[0].startswith(TRUSTED_CLEAN_COMMENT_PREFIX):
+        return ""
+    for line in lines[1:]:
+        if not line.startswith("**Reviewed commit:** `") or not line.endswith("`"):
+            continue
+        candidate = line[len("**Reviewed commit:** `") : -1].strip()
+        if 10 <= len(candidate) <= 40 and all(
+            char in "0123456789abcdefABCDEF" for char in candidate
+        ):
+            return candidate.casefold()
+    return ""
+
+
 def _latest_platform_request_ack(
     runtime: Any,
     *,
@@ -911,7 +954,8 @@ def _trusted_platform_response(
     ]
     review = current_reviews[-1] if current_reviews else None
     review_created_at = str(review.get("submitted_at", "")) if review else ""
-    clean: dict[str, Any] | None = None
+    clean_reaction: dict[str, Any] | None = None
+    clean_comment: dict[str, Any] | None = None
     if request_comment_id > 0:
         reactions = _paged_values(
             runtime,
@@ -920,7 +964,7 @@ def _trusted_platform_response(
             ),
             cwd=repo,
         )
-        clean = next(
+        clean_reaction = next(
             (
                 reaction
                 for reaction in reversed(reactions)
@@ -935,28 +979,24 @@ def _trusted_platform_response(
             ),
             None,
         )
-        if clean is None:
-            issue_reactions = _paged_values(
-                runtime,
-                path=f"repos/{repository}/issues/{pull_request}/reactions?per_page=100",
-                cwd=repo,
-            )
-            clean = next(
-                (
-                    reaction
-                    for reaction in reversed(issue_reactions)
-                    if str(reaction.get("content", "")) == "+1"
-                    and _github_identity_matches(
-                        reaction.get("user"),
-                        login=reviewer_login,
-                        account_id=reviewer_id,
-                        account_type=reviewer_type,
-                    )
-                    and str(reaction.get("created_at", "")) >= request_created_at
-                ),
-                None,
-            )
-    clean_created_at = str(clean.get("created_at", "")) if clean else ""
+        clean_comment = next(
+            (
+                comment
+                for comment in reversed(comments)
+                if _trusted_clean_comment_matches_request(
+                    comment,
+                    request_created_at=request_created_at,
+                    reviewer_login=reviewer_login,
+                    reviewer_id=reviewer_id,
+                    reviewer_type=reviewer_type,
+                    request_head=head_sha,
+                )
+            ),
+            None,
+        )
+    clean_reaction_created_at = str(clean_reaction.get("created_at", "")) if clean_reaction else ""
+    clean_comment_created_at = str(clean_comment.get("created_at", "")) if clean_comment else ""
+    clean_created_at = max(clean_reaction_created_at, clean_comment_created_at)
     if review is not None and review_created_at >= clean_created_at:
         return {
             "kind": "review_with_findings",
@@ -966,14 +1006,105 @@ def _trusted_platform_response(
             "request_comment_id": request_comment_id,
             "result_created_at": review_created_at,
         }
-    if clean is not None:
+    if clean_comment is not None and clean_comment_created_at >= clean_reaction_created_at:
+        return {
+            "kind": "clean_comment",
+            "comment_id": int(clean_comment.get("id", 0)),
+            "request_comment_id": request_comment_id,
+            "result_created_at": clean_comment_created_at,
+        }
+    if clean_reaction is not None:
         return {
             "kind": "clean_reaction",
-            "reaction_id": int(clean.get("id", 0)),
+            "reaction_id": int(clean_reaction.get("id", 0)),
             "request_comment_id": request_comment_id,
-            "result_created_at": clean_created_at,
+            "result_created_at": clean_reaction_created_at,
         }
     return {"kind": "pending", "request_comment_id": request_comment_id}
+
+
+def _platform_request_progress(
+    runtime: Any,
+    *,
+    repo: Path,
+    repository: str,
+    pull_request: int,
+    request_comment: dict[str, Any],
+    reviewer_login: str,
+    reviewer_id: int,
+    reviewer_type: str,
+) -> dict[str, Any]:
+    request_comment_id = int(request_comment.get("id", 0))
+    request_created_at = str(request_comment.get("created_at", ""))
+    request_payload = _decode_platform_request_marker(str(request_comment.get("body", "")))
+    request_head = (
+        str(request_payload.get("head_sha", "")) if isinstance(request_payload, dict) else ""
+    )
+    reactions = _paged_values(
+        runtime,
+        path=f"repos/{repository}/issues/comments/{request_comment_id}/reactions?per_page=100",
+        cwd=repo,
+    )
+    pending = any(
+        str(reaction.get("content", "")) == "eyes"
+        and _github_identity_matches(
+            reaction.get("user"),
+            login=reviewer_login,
+            account_id=reviewer_id,
+            account_type=reviewer_type,
+        )
+        for reaction in reactions
+    )
+    completed = any(
+        str(reaction.get("content", "")) == "+1"
+        and _github_identity_matches(
+            reaction.get("user"),
+            login=reviewer_login,
+            account_id=reviewer_id,
+            account_type=reviewer_type,
+        )
+        and str(reaction.get("created_at", "")) >= request_created_at
+        for reaction in reactions
+    )
+    comments = _paged_values(
+        runtime,
+        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
+        cwd=repo,
+    )
+    completed = completed or any(
+        _trusted_clean_comment_matches_request(
+            comment,
+            request_created_at=request_created_at,
+            reviewer_login=reviewer_login,
+            reviewer_id=reviewer_id,
+            reviewer_type=reviewer_type,
+            request_head=request_head,
+        )
+        for comment in comments
+    )
+    if not completed:
+        reviews = _paged_values(
+            runtime,
+            path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
+            cwd=repo,
+        )
+        completed = any(
+            _github_identity_matches(
+                review.get("user"),
+                login=reviewer_login,
+                account_id=reviewer_id,
+                account_type=reviewer_type,
+            )
+            and str(review.get("commit_id", "")).casefold() == request_head.casefold()
+            and str(review.get("submitted_at", "")) >= request_created_at
+            for review in reviews
+        )
+    return {
+        "request_comment_id": request_comment_id,
+        "head_sha": request_head,
+        "pending": pending,
+        "completed": completed,
+    }
 
 
 def runtime_request_platform_review_github(
@@ -991,6 +1122,8 @@ def runtime_request_platform_review_github(
     reviewer_id: int = 199175422,
     reviewer_type: str = "Bot",
     retry_after_seconds: int = 120,
+    prior_head_wait_seconds: int = 480,
+    prior_head_poll_seconds: int = 5,
 ) -> dict[str, Any]:
     runtime = _execution()
     runtime._require_github_actions_token()
@@ -1001,8 +1134,16 @@ def runtime_request_platform_review_github(
         raise ValueError("platform review request head does not match the live pull request")
     if not request_publisher_login.strip() or request_publisher_id < 1:
         raise ValueError("platform review request requires a trusted publisher identity")
-    if not reviewer_login.strip() or reviewer_id < 1 or retry_after_seconds < 1:
-        raise ValueError("platform review request requires reviewer identity and retry window")
+    if (
+        not reviewer_login.strip()
+        or reviewer_id < 1
+        or retry_after_seconds < 1
+        or prior_head_wait_seconds < 1
+        or prior_head_poll_seconds < 1
+    ):
+        raise ValueError(
+            "platform review request requires reviewer identity, retry window, and prior-head wait"
+        )
     comments = _paged_values(
         runtime,
         path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
@@ -1029,87 +1170,49 @@ def runtime_request_platform_review_github(
         None,
     )
     if previous is not None:
-        previous_id = int(previous.get("id", 0))
-        previous_payload = _decode_platform_request_marker(str(previous.get("body", "")))
-        previous_head = (
-            str(previous_payload.get("head_sha", "")) if isinstance(previous_payload, dict) else ""
-        )
-        reactions = _paged_values(
+        previous_progress = _platform_request_progress(
             runtime,
-            path=f"repos/{repository}/issues/comments/{previous_id}/reactions?per_page=100",
-            cwd=repo,
+            repo=repo,
+            repository=repository,
+            pull_request=pull_request,
+            request_comment=previous,
+            reviewer_login=reviewer_login,
+            reviewer_id=reviewer_id,
+            reviewer_type=reviewer_type,
         )
-        pending = any(
-            str(reaction.get("content", "")) == "eyes"
-            and _github_identity_matches(
-                reaction.get("user"),
-                login=reviewer_login,
-                account_id=reviewer_id,
-                account_type=reviewer_type,
-            )
-            for reaction in reactions
-        )
-        completed = any(
-            str(reaction.get("content", "")) == "+1"
-            and _github_identity_matches(
-                reaction.get("user"),
-                login=reviewer_login,
-                account_id=reviewer_id,
-                account_type=reviewer_type,
-            )
-            for reaction in reactions
-        )
-        issue_reactions = _paged_values(
-            runtime,
-            path=f"repos/{repository}/issues/{pull_request}/reactions?per_page=100",
-            cwd=repo,
-        )
-        pending = pending or any(
-            str(reaction.get("content", "")) == "eyes"
-            and _github_identity_matches(
-                reaction.get("user"),
-                login=reviewer_login,
-                account_id=reviewer_id,
-                account_type=reviewer_type,
-            )
-            for reaction in issue_reactions
-        )
-        completed = completed or any(
-            str(reaction.get("content", "")) == "+1"
-            and _github_identity_matches(
-                reaction.get("user"),
-                login=reviewer_login,
-                account_id=reviewer_id,
-                account_type=reviewer_type,
-            )
-            and str(reaction.get("created_at", "")) >= str(previous.get("created_at", ""))
-            for reaction in issue_reactions
-        )
-        previous_created = str(previous.get("created_at", ""))
-        if not completed:
-            reviews = _paged_values(
-                runtime,
-                path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
-                cwd=repo,
-            )
-            completed = any(
-                _github_identity_matches(
-                    review.get("user"),
-                    login=reviewer_login,
-                    account_id=reviewer_id,
-                    account_type=reviewer_type,
-                )
-                and str(review.get("commit_id", "")).casefold() == previous_head.casefold()
-                and str(review.get("submitted_at", "")) >= previous_created
-                for review in reviews
-            )
+        previous_head = str(previous_progress["head_sha"])
+        pending = bool(previous_progress["pending"])
+        completed = bool(previous_progress["completed"])
         created_at = _github_datetime(previous.get("created_at"))
         within_grace = bool(
             created_at is not None
             and (datetime.now(UTC) - created_at).total_seconds() < retry_after_seconds
         )
-        if not completed and (
-            pending or within_grace or previous_head.casefold() != current_head.casefold()
+        if previous_head.casefold() != current_head.casefold() and not completed:
+            deadline = time.monotonic() + prior_head_wait_seconds
+            while not completed and time.monotonic() < deadline:
+                time.sleep(
+                    min(float(prior_head_poll_seconds), max(0.0, deadline - time.monotonic()))
+                )
+                previous_progress = _platform_request_progress(
+                    runtime,
+                    repo=repo,
+                    repository=repository,
+                    pull_request=pull_request,
+                    request_comment=previous,
+                    reviewer_login=reviewer_login,
+                    reviewer_id=reviewer_id,
+                    reviewer_type=reviewer_type,
+                )
+                completed = bool(previous_progress["completed"])
+            if not completed:
+                raise ValueError(
+                    "prior-head platform review did not complete before the bounded wait expired"
+                )
+        if (
+            previous_head.casefold() == current_head.casefold()
+            and not completed
+            and (pending or within_grace)
         ):
             request = previous
             request_status = "in_progress"
@@ -1199,6 +1302,8 @@ def runtime_request_platform_review_github(
         "request_comment_id": comment_id,
         "acknowledgement_comment_id": acknowledgement_id,
         "retry_after_seconds": retry_after_seconds,
+        "prior_head_wait_seconds": prior_head_wait_seconds,
+        "prior_head_poll_seconds": prior_head_poll_seconds,
     }
 
 
@@ -1530,6 +1635,7 @@ def runtime_validate_review_github(
         "blockers": blockers,
         "check_id": int(check.get("id", 0)) if isinstance(check, dict) else 0,
         "trusted_review_id": int(platform_response.get("review_id", 0)),
+        "trusted_clean_comment_id": int(platform_response.get("comment_id", 0)),
         "trusted_clean_reaction_id": int(platform_response.get("reaction_id", 0)),
     }
 

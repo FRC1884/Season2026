@@ -10,6 +10,10 @@ on:
     types:
       - agentic_review_requested
       - agentic_review_recorded
+  issue_comment:
+    types:
+      - created
+      - edited
   pull_request_review:
     types:
       - submitted
@@ -29,6 +33,7 @@ concurrency:
     }}-${{ github.repository }}-${{
       github.event.workflow_run.pull_requests[0].number ||
       github.event.pull_request.number ||
+      github.event.issue.number ||
       github.event.client_payload.pull_request.number ||
       github.event.client_payload.pull_request ||
       inputs.pull_request ||
@@ -67,28 +72,68 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "9ef3eab14ca7144109cb99c4fc5ff3afd4230549dfd43623b00b10627565cda0"
-          --expected-harness-ref "2d30f5de529376aba096bcdf740c1f65df4af447"
+          --expected-manifest-sha "5d8e2b27666e475bd3a6769eac5dcfa2e1223215483864c4b5c4db744dc6af68"
+          --expected-harness-ref "4118bce6188793b144747302e817a4d114ae6b68"
+
+      - name: Resolve trusted review request context
+        id: request_context
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import re
+          from os import environ
+          from pathlib import Path
+
+          event = json.loads(Path(environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
+          payload = event.get("client_payload") or {}
+          pull_request = payload.get("pull_request")
+          if isinstance(pull_request, dict):
+              pull_request = pull_request.get("number")
+          if (
+              isinstance(pull_request, bool)
+              or not isinstance(pull_request, int)
+              or pull_request < 1
+          ):
+              raise SystemExit("invalid repository_dispatch pull_request")
+
+          head_sha = str(payload.get("head_sha") or "").strip()
+          if re.fullmatch(r"[0-9a-fA-F]{40}", head_sha) is None:
+              raise SystemExit("invalid repository_dispatch head_sha")
+
+          with Path(environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"pull_request={pull_request}\n")
+              output.write(f"head_sha={head_sha.lower()}\n")
+          PY
 
       - name: Publish immutable platform review request
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: >-
-          sh .github/robotics-harness/robotics-harness
-          review-request-github
-          --target-repo "$GITHUB_WORKSPACE"
-          --runtime-root "$RUNNER_TEMP/agentic-review-request/state"
-          --task-id "agentic-review-request:${{ github.event.client_payload.pull_request }}"
-          --repository "$GITHUB_REPOSITORY"
-          --pull-request "${{ github.event.client_payload.pull_request }}"
-          --expected-head "${{ github.event.client_payload.head_sha }}"
-          --request-publisher-login "github-actions[bot]"
-          --request-publisher-id "41898282"
-          --request-publisher-type "Bot"
-          --reviewer-login "chatgpt-codex-connector[bot]"
-          --reviewer-id "199175422"
-          --reviewer-type "Bot"
-          --retry-after-seconds "120"
+          REVIEW_HEAD_SHA: ${{ steps.request_context.outputs.head_sha }}
+          REVIEW_PULL_REQUEST: ${{ steps.request_context.outputs.pull_request }}
+        shell: bash
+        run: |
+          command=(
+            sh
+            .github/robotics-harness/robotics-harness
+            review-request-github
+            --target-repo "$GITHUB_WORKSPACE"
+            --runtime-root "$RUNNER_TEMP/agentic-review-request/state"
+            --task-id "agentic-review-request:$REVIEW_PULL_REQUEST"
+            --repository "$GITHUB_REPOSITORY"
+            --pull-request "$REVIEW_PULL_REQUEST"
+            --expected-head "$REVIEW_HEAD_SHA"
+            --request-publisher-login "github-actions[bot]"
+            --request-publisher-id "41898282"
+            --request-publisher-type "Bot"
+            --reviewer-login "chatgpt-codex-connector[bot]"
+            --reviewer-id "199175422"
+            --reviewer-type "Bot"
+            --retry-after-seconds "120"
+            --prior-head-wait-seconds "480"
+            --prior-head-poll-seconds "5"
+          )
+          "${command[@]}"
 
   validate-review-state:
     name: validate-current-review-state
@@ -99,6 +144,13 @@ jobs:
          github.event.workflow_run.event == 'pull_request' &&
          github.event.workflow_run.pull_requests[0].number > 0) ||
         github.event_name == 'workflow_dispatch' ||
+        (github.event_name == 'issue_comment' &&
+         github.event.issue.pull_request &&
+         ((github.event.action == 'created' &&
+           github.event.comment.user.login == 'chatgpt-codex-connector[bot]') ||
+          (github.event.action == 'edited' &&
+           (github.event.comment.user.login == 'chatgpt-codex-connector[bot]' ||
+            github.event.comment.user.login == 'github-actions[bot]')))) ||
         (github.event_name == 'pull_request_review' &&
          github.event.review.user.login == 'chatgpt-codex-connector[bot]') ||
         (github.event_name == 'repository_dispatch' &&
@@ -135,8 +187,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "9ef3eab14ca7144109cb99c4fc5ff3afd4230549dfd43623b00b10627565cda0"
-          --expected-harness-ref "2d30f5de529376aba096bcdf740c1f65df4af447"
+          --expected-manifest-sha "5d8e2b27666e475bd3a6769eac5dcfa2e1223215483864c4b5c4db744dc6af68"
+          --expected-harness-ref "4118bce6188793b144747302e817a4d114ae6b68"
 
       - name: Resolve pull request context
         id: context
@@ -163,6 +215,9 @@ jobs:
           elif event_name == "workflow_dispatch":
               raw_value = os.environ.get("WORKFLOW_DISPATCH_PULL_REQUEST", "").strip()
               pull_request = int(raw_value) if raw_value else None
+          elif event_name == "issue_comment":
+              issue = event.get("issue") or {}
+              pull_request = issue.get("number")
           elif event_name == "pull_request_review":
               pull_request_payload = event.get("pull_request") or {}
               review = event.get("review") or {}
