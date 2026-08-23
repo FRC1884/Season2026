@@ -67,8 +67,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "0039104efa6736700b1a0bc3c03cd24ec4a4aba0d5a1c3ac6d3c09b9fbc45531"
-          --expected-harness-ref "0191f95db8d49a8d47ff41b1c214b70b33ad57ab"
+          --expected-manifest-sha "22f53eaffcf2b14857dd8399a8dc7b7856d3954a9d723f2c0537744f3aef3cf7"
+          --expected-harness-ref "22dcfb5631087722766463b39858d9a73742b33b"
 
       - name: Publish immutable platform review request
         env:
@@ -131,8 +131,8 @@ jobs:
         run: >-
           python3 -I -S -B .github/robotics-harness/verify-runtime.py
           --repo "$GITHUB_WORKSPACE"
-          --expected-manifest-sha "0039104efa6736700b1a0bc3c03cd24ec4a4aba0d5a1c3ac6d3c09b9fbc45531"
-          --expected-harness-ref "0191f95db8d49a8d47ff41b1c214b70b33ad57ab"
+          --expected-manifest-sha "22f53eaffcf2b14857dd8399a8dc7b7856d3954a9d723f2c0537744f3aef3cf7"
+          --expected-harness-ref "22dcfb5631087722766463b39858d9a73742b33b"
 
       - name: Resolve pull request context
         id: context

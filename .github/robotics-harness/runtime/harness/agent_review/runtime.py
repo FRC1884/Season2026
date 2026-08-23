@@ -727,29 +727,6 @@ def _trusted_platform_response(
     request_publisher_id: int,
     request_publisher_type: str,
 ) -> dict[str, Any]:
-    reviews = _paged_values(
-        runtime,
-        path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
-        cwd=repo,
-    )
-    matching_reviews = [
-        review
-        for review in reviews
-        if _github_identity_matches(
-            review.get("user"),
-            login=reviewer_login,
-            account_id=reviewer_id,
-            account_type=reviewer_type,
-        )
-        and str(review.get("commit_id", "")).casefold() == head_sha.casefold()
-    ]
-    if matching_reviews:
-        review = matching_reviews[-1]
-        return {
-            "kind": "review_with_findings",
-            "review_id": int(review.get("id", 0)),
-            "review_state": str(review.get("state", "")),
-        }
     comments = _paged_values(
         runtime,
         path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
@@ -777,6 +754,27 @@ def _trusted_platform_response(
         None,
     )
     request_comment_id = int(request_comment.get("id", 0)) if request_comment else 0
+    request_created_at = str(request_comment.get("created_at", "")) if request_comment else ""
+    reviews = _paged_values(
+        runtime,
+        path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
+        cwd=repo,
+    )
+    matching_reviews = [
+        review
+        for review in reviews
+        if _github_identity_matches(
+            review.get("user"),
+            login=reviewer_login,
+            account_id=reviewer_id,
+            account_type=reviewer_type,
+        )
+        and str(review.get("commit_id", "")).casefold() == head_sha.casefold()
+        and (not request_created_at or str(review.get("submitted_at", "")) >= request_created_at)
+    ]
+    review = matching_reviews[-1] if matching_reviews else None
+    review_created_at = str(review.get("submitted_at", "")) if review else ""
+    clean: dict[str, Any] | None = None
     if request_comment_id > 0:
         reactions = _paged_values(
             runtime,
@@ -796,15 +794,26 @@ def _trusted_platform_response(
                     account_id=reviewer_id,
                     account_type=reviewer_type,
                 )
+                and str(reaction.get("created_at", "")) >= request_created_at
             ),
             None,
         )
-        if clean is not None:
-            return {
-                "kind": "clean_reaction",
-                "reaction_id": int(clean.get("id", 0)),
-                "request_comment_id": request_comment_id,
-            }
+    clean_created_at = str(clean.get("created_at", "")) if clean else ""
+    if review is not None and review_created_at >= clean_created_at:
+        return {
+            "kind": "review_with_findings",
+            "review_id": int(review.get("id", 0)),
+            "review_state": str(review.get("state", "")),
+            "request_comment_id": request_comment_id,
+            "result_created_at": review_created_at,
+        }
+    if clean is not None:
+        return {
+            "kind": "clean_reaction",
+            "reaction_id": int(clean.get("id", 0)),
+            "request_comment_id": request_comment_id,
+            "result_created_at": clean_created_at,
+        }
     return {"kind": "pending"}
 
 

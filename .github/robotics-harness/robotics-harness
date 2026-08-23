@@ -16,7 +16,7 @@ if [ "$ACTUAL_VERIFIER_SHA" != "089362bc86099598050ea0a42277e58d71401f160c508168
   echo "runtime integrity failure: runtime verifier byte drift" >&2
   exit 1
 fi
-python3 -I -S -B "$SCRIPT_DIR/verify-runtime.py"           --repo "$REPO_ROOT"           --expected-payload-sha "07ca084db3f88a57907e3910e1e6bf9751b2b811ce34db6fe27aaa82bdaff5bb"           --expected-harness-ref "0191f95db8d49a8d47ff41b1c214b70b33ad57ab" >/dev/null
+python3 -I -S -B "$SCRIPT_DIR/verify-runtime.py"           --repo "$REPO_ROOT"           --expected-payload-sha "f1d6c70b93ac788c64e9f79cb1a6192dcc453a8c66740d4ca4a94bb5b9ca56ad"           --expected-harness-ref "22dcfb5631087722766463b39858d9a73742b33b" >/dev/null
 exec python3 -I -S -B - "$RUNTIME_ROOT" "$@" <<'PY'
 import runpy
 import sys
