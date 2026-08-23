@@ -4,14 +4,14 @@
   "repository": "FRC1884/Season2026",
   "default_branch": "main",
   "harness_repository": "FRC1884/robotics-agentic-development-harness",
-  "harness_ref": "b897541501332dd82763fd9a4c46af252d443f0c",
+  "harness_ref": "0191f95db8d49a8d47ff41b1c214b70b33ad57ab",
   "policy_version": "frc1884-bootstrap-v1",
   "architecture": "generated_self_contained_execution_plane",
   "execution_plane": {
     "runtime_version": "codex-agent-review-runtime-v1",
     "manifest_path": ".github/robotics-harness/execution-plane-manifest.json",
-    "manifest_sha256": "777701ea9d27133fba2c8999af4b59bdd4dcb2e7258865fd4801fe728c4c6996",
-    "immutable_harness_ref": "b897541501332dd82763fd9a4c46af252d443f0c"
+    "manifest_sha256": "0039104efa6736700b1a0bc3c03cd24ec4a4aba0d5a1c3ac6d3c09b9fbc45531",
+    "immutable_harness_ref": "0191f95db8d49a8d47ff41b1c214b70b33ad57ab"
   },
   "commands": {
     "build": "./gradlew build --no-daemon --console=plain",

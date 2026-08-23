@@ -829,52 +829,23 @@ def runtime_request_platform_review_github(
         raise ValueError("platform review request head does not match the live pull request")
     if not request_publisher_login.strip() or request_publisher_id < 1:
         raise ValueError("platform review request requires a trusted publisher identity")
-    comments = _paged_values(
-        runtime,
-        path=f"repos/{repository}/issues/{pull_request}/comments?per_page=100",
+    request = runtime._run_gh_api(
+        path=f"repos/{repository}/issues/{pull_request}/comments",
+        method="POST",
+        payload={
+            "body": (
+                "@codex review\n\n"
+                "Harness request: publish a fresh independent current-head review through "
+                "the Codex GitHub integration. Each retry uses a new immutable request.\n\n"
+                + _platform_request_marker(
+                    repository=repository,
+                    pull_request=pull_request,
+                    head_sha=current_head,
+                )
+            )
+        },
         cwd=repo,
     )
-    existing = next(
-        (
-            comment
-            for comment in reversed(comments)
-            if _github_identity_matches(
-                comment.get("user"),
-                login=request_publisher_login,
-                account_id=request_publisher_id,
-                account_type=request_publisher_type,
-            )
-            and _matches_platform_request(
-                _decode_platform_request_marker(str(comment.get("body", ""))),
-                repository=repository,
-                pull_request=pull_request,
-                head_sha=current_head,
-            )
-            and bool(str(comment.get("created_at", "")))
-            and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
-        ),
-        None,
-    )
-    if existing is not None:
-        request = existing
-    else:
-        request = runtime._run_gh_api(
-            path=f"repos/{repository}/issues/{pull_request}/comments",
-            method="POST",
-            payload={
-                "body": (
-                    "@codex review\n\n"
-                    "Harness request: publish the independent current-head review through "
-                    "the Codex GitHub integration.\n\n"
-                    + _platform_request_marker(
-                        repository=repository,
-                        pull_request=pull_request,
-                        head_sha=current_head,
-                    )
-                )
-            },
-            cwd=repo,
-        )
     if not isinstance(request, dict) or not _github_identity_matches(
         request.get("user"),
         login=request_publisher_login,
