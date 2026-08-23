@@ -736,6 +736,7 @@ def _trusted_platform_response(
     request_publisher_login: str,
     request_publisher_id: int,
     request_publisher_type: str,
+    minimum_request_comment_id: int = 0,
 ) -> dict[str, Any]:
     comments = _paged_values(
         runtime,
@@ -760,11 +761,14 @@ def _trusted_platform_response(
             )
             and bool(str(comment.get("created_at", "")))
             and str(comment.get("created_at", "")) == str(comment.get("updated_at", ""))
+            and int(comment.get("id", 0)) >= minimum_request_comment_id
         ),
         None,
     )
     request_comment_id = int(request_comment.get("id", 0)) if request_comment else 0
     request_created_at = str(request_comment.get("created_at", "")) if request_comment else ""
+    if request_comment is None and minimum_request_comment_id > 0:
+        return {"kind": "pending", "request_comment_id": 0}
     reviews = _paged_values(
         runtime,
         path=f"repos/{repository}/pulls/{pull_request}/reviews?per_page=100",
@@ -824,7 +828,7 @@ def _trusted_platform_response(
             "request_comment_id": request_comment_id,
             "result_created_at": clean_created_at,
         }
-    return {"kind": "pending"}
+    return {"kind": "pending", "request_comment_id": request_comment_id}
 
 
 def runtime_request_platform_review_github(
@@ -1057,6 +1061,25 @@ def runtime_publish_review(
         raise ValueError("review publication requires a trusted request publisher identity")
     if platform_wait_seconds < 0 or platform_poll_seconds < 1:
         raise ValueError("platform review wait values must be non-negative with a positive poll")
+    prior_response = _trusted_platform_response(
+        runtime,
+        repo=repo,
+        repository=repository,
+        pull_request=pull_request,
+        head_sha=cycle.head_sha,
+        reviewer_login=trusted_reviewer_login,
+        reviewer_id=trusted_reviewer_id,
+        reviewer_type=trusted_reviewer_type,
+        request_publisher_login=trusted_request_publisher_login,
+        request_publisher_id=trusted_request_publisher_id,
+        request_publisher_type=trusted_request_publisher_type,
+    )
+    prior_request_id = int(prior_response.get("request_comment_id", 0))
+    minimum_request_id = (
+        prior_request_id
+        if prior_response["kind"] == "pending" and prior_request_id > 0
+        else prior_request_id + 1
+    )
     runtime._run_gh_api(
         path=f"repos/{repository}/dispatches",
         method="POST",
@@ -1079,6 +1102,7 @@ def runtime_publish_review(
         request_publisher_login=trusted_request_publisher_login,
         request_publisher_id=trusted_request_publisher_id,
         request_publisher_type=trusted_request_publisher_type,
+        minimum_request_comment_id=minimum_request_id,
     )
     while platform_response["kind"] == "pending" and time.monotonic() < deadline:
         time.sleep(min(platform_poll_seconds, max(0.0, deadline - time.monotonic())))
@@ -1094,6 +1118,7 @@ def runtime_publish_review(
             request_publisher_login=trusted_request_publisher_login,
             request_publisher_id=trusted_request_publisher_id,
             request_publisher_type=trusted_request_publisher_type,
+            minimum_request_comment_id=minimum_request_id,
         )
     dispatch_event = ""
     if platform_response["kind"] != "pending":

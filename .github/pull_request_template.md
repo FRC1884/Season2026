@@ -8,4 +8,4 @@
 - [ ] Protected paths are called out if touched
 - [ ] Rollback plan is included
 
-Harness source: `FRC1884/robotics-agentic-development-harness@fbf43374e5fdedf8d5814b42288d7af5b5191452`
+Harness source: `FRC1884/robotics-agentic-development-harness@c21a5bb48f433c65b0c51fee9e6171409b5b59e0`
