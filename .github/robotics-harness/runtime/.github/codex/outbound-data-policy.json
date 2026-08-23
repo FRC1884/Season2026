@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "policy_version": "2026-08-09",
+  "max_input_bytes": 2000000,
+  "max_output_bytes": 256000,
+  "timeout_seconds": 180,
+  "maximum_provider_requests_per_review": 1,
+  "sensitive_path_patterns": [
+    ".env",
+    ".env.*",
+    "**/.env",
+    "**/.env.*",
+    "**/.codex/auth*",
+    "**/credentials.json",
+    "**/secrets.json",
+    "artifacts/codex-review-runtime/**",
+    "**/artifacts/codex-review-runtime/**",
+    "tmp/robotics-harness-runtime/**",
+    "**/tmp/robotics-harness-runtime/**",
+    ".github/robotics-harness/approval-state.json",
+    "**/.github/robotics-harness/approval-state.json",
+    "monitoring/service-events.jsonl",
+    "**/monitoring/service-events.jsonl",
+    "**/monitoring.jsonl",
+    "**/events.jsonl",
+    "**/*student-record*",
+    ".omx/**"
+  ]
+}

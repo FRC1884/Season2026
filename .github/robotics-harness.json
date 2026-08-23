@@ -1,11 +1,18 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "profile": "season2026",
   "repository": "FRC1884/Season2026",
   "default_branch": "main",
   "harness_repository": "FRC1884/robotics-agentic-development-harness",
-  "harness_ref": "6d39f5926adae0166a05bc3399be15e740f4fcc2",
+  "harness_ref": "aec2bd3aa1dc21e4ba5e9852c9f7493964da8f4c",
   "policy_version": "frc1884-bootstrap-v1",
+  "architecture": "generated_self_contained_execution_plane",
+  "execution_plane": {
+    "runtime_version": "codex-agent-review-runtime-v1",
+    "manifest_path": ".github/robotics-harness/execution-plane-manifest.json",
+    "manifest_sha256": "e5526dceed05f1d279c4058f3e21220ae2e1b8969c07a6eee4d1647ae82f0918",
+    "immutable_harness_ref": "aec2bd3aa1dc21e4ba5e9852c9f7493964da8f4c"
+  },
   "commands": {
     "build": "./gradlew build --no-daemon --console=plain",
     "test": "./gradlew test --no-daemon --console=plain"
@@ -15,11 +22,54 @@
     "programming_lead": "@FRC1884/software-lead",
     "approved_alumni": "@FRC1884/approved-alumni-reviewers"
   },
+  "agentic_review": {
+    "ai_runtime": "CODEX_AGENT",
+    "reviewer_config": ".codex/agents/automated-reviewer.toml",
+    "review_skill": ".codex/skills/agentic-review/SKILL.md",
+    "publisher_authentication": {
+      "model": "CODEX_GITHUB_PLATFORM_IDENTITY",
+      "login": "chatgpt-codex-connector[bot]",
+      "account_id": 199175422,
+      "account_type": "Bot",
+      "request_publisher_login": "github-actions[bot]",
+      "request_publisher_account_id": 41898282,
+      "request_publisher_account_type": "Bot",
+      "local_integrity_hash_authenticates_publisher": false,
+      "required_check_authority": "CODEX_GITHUB_PLATFORM_RESULT_ONLY"
+    },
+    "required_health_dimensions": [
+      "codex_capability",
+      "orchestration",
+      "state_validator",
+      "on_demand",
+      "auto_session",
+      "monitoring",
+      "required_checks"
+    ],
+    "active_session_triggers": [
+      "on_demand_review_request",
+      "post_harness_pr_creation"
+    ],
+    "deterministic_validator_triggers": [
+      "workflow_run:Phase 0 Validation",
+      "repository_dispatch:agentic_review_recorded",
+      "pull_request_review:trusted Codex identity"
+    ],
+    "unattended_agent_start": "NOT SUPPORTED WITHOUT A PERSISTENT SERVICE"
+  },
+  "required_checks": [
+    "build-and-test",
+    "Agentic Review"
+  ],
+  "required_workflows": [
+    "phase-0-validation.yml",
+    "agentic-review.yml"
+  ],
   "external_adoption": {
     "github_branch_protection": "PENDING EXTERNAL ADOPTION",
     "github_required_checks": "PENDING EXTERNAL ADOPTION",
     "github_team_permissions": "PENDING EXTERNAL ADOPTION",
-    "github_actions_access": "PENDING EXTERNAL ADOPTION",
-    "github_secrets": "PENDING EXTERNAL ADOPTION"
+    "github_actions_access": "NOT REQUIRED FOR GENERATED RUNTIME",
+    "github_secrets": "NOT REQUIRED FOR DETERMINISTIC AGENTIC REVIEW"
   }
 }
